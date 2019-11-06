@@ -25,6 +25,8 @@ option go_package = "tpb";
 
 import "enums.proto";
 import "common.proto";
+import "domain.proto";
+import "history.proto";
 
 message DataBlob {
     enums.EncodingType EncodingType = 1;
@@ -41,4 +43,148 @@ message ReapplyEventsRequest {
     string domainName = 1;
     common.WorkflowExecution workflowExecution = 2;
     DataBlob events = 3;
+}
+
+// VersionHistoryItem contains signal eventID and the corresponding version.
+message VersionHistoryItem {
+    int64 eventID = 1;
+    int64 version = 2;
+}
+
+// VersionHistory contains the version history of a branch.
+message VersionHistory {
+    bytes branchToken = 1;
+    repeated VersionHistoryItem items = 2;
+}
+
+// VersionHistories contains all version histories from all branches.
+message VersionHistories {
+    int32 currentVersionHistoryIndex = 1;
+    repeated VersionHistory histories = 2;
+}
+
+message DomainTaskAttributes {
+    enums.DomainOperation domainOperation = 1;
+    string id = 2;
+    domain.DomainInfo info = 3;
+    domain.DomainConfiguration config = 4;
+    domain.DomainReplicationConfiguration replicationConfig = 5;
+    int64 configVersion = 6;
+    int64 failoverVersion = 7;
+}
+
+message HistoryTaskAttributes {
+    repeated string targetClusters = 1;
+    string domainId = 2;
+    string workflowId = 3;
+    string runId = 4;
+    int64 firstEventId = 5;
+    int64 nextEventId = 6;
+    int64 version = 7;
+    map<string, ReplicationInfo> replicationInfo = 8;
+    history.History history = 9;
+    history.History newRunHistory = 10;
+    int32 eventStoreVersion = 11;
+    int32 newRunEventStoreVersion = 12;
+    bool resetWorkflow = 13;
+    bool newRunNDC = 14;
+}
+
+message HistoryMetadataTaskAttributes {
+    repeated string targetClusters = 1;
+    string domainId = 2;
+    string workflowId = 3;
+    string runId = 4;
+    int64 firstEventId = 5;
+    int64 nextEventId = 6;
+}
+
+message SyncShardStatusTaskAttributes {
+    string sourceCluster = 1;
+    int64 shardId = 2;
+    int64 timestamp = 3;
+}
+
+// TODO: Fix typo: Activity
+message SyncActicvityTaskAttributes {
+    string domainId = 1;
+    string workflowId = 2;
+    string runId = 3;
+    int64 version = 4;
+    int64 scheduledId = 5;
+    int64 scheduledTime = 6;
+    int64 startedId = 7;
+    int64 startedTime = 8;
+    int64 lastHeartbeatTime = 9;
+    bytes details = 10;
+    int32 attempt = 11;
+    string lastFailureReason = 12;
+    string lastWorkerIdentity = 13;
+    bytes lastFailureDetails = 14;
+    VersionHistory versionHistory = 15;
+}
+
+message HistoryTaskV2Attributes {
+    int64 taskId = 1;
+    string domainId = 2;
+    string workflowId = 3;
+    string runId = 4;
+    repeated VersionHistoryItem versionHistoryItems = 5;
+    DataBlob events = 6;
+    // New run events does not need version history since there is no prior events.
+    DataBlob newRunEvents = 7;
+}
+
+message ReplicationTask {
+    enums.ReplicationTaskType taskType = 1;
+    int64 sourceTaskId = 2;
+    DomainTaskAttributes domainTaskAttributes = 3;
+    // TODO: deprecate once NDC migration is done.
+    HistoryTaskAttributes historyTaskAttributes = 4;
+    SyncShardStatusTaskAttributes syncShardStatusTaskAttributes = 5;
+    SyncActicvityTaskAttributes syncActicvityTaskAttributes = 6;
+    // TODO: deprecate once kafka deprecation is done.
+    HistoryMetadataTaskAttributes historyMetadataTaskAttributes = 7;
+    HistoryTaskV2Attributes historyTaskV2Attributes = 8;
+}
+
+message ReplicationToken {
+    int32 shardID = 1;
+    // lastRetrievedMessageId is where the next fetch should begin with.
+    // TODO: Fix typo: Retrieved
+    int64 lastRetrivedMessageId = 2;
+    // lastProcessedMessageId is the last messageId that is processed on the passive side.
+    // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.
+    int64 lastProcessedMessageId = 3;
+}
+
+message ReplicationMessages {
+    repeated ReplicationTask replicationTasks = 1;
+    // This can be different than the last taskId in the above list, because sender can decide to skip tasks (e.g. for completed workflows).
+    int64 lastRetrivedMessageId = 2;
+    // Hint for flow control.
+    bool hasMore  = 3;
+}
+
+message GetReplicationMessagesRequest {
+    repeated ReplicationToken tokens = 1;
+}
+
+message GetReplicationMessagesResponse {
+    map<int32, ReplicationMessages> messagesByShard = 1;
+}
+
+message GetDomainReplicationMessagesRequest {
+    // lastRetrievedMessageId is where the next fetch should begin with.
+    // TODO: Fix typo: Retrieved
+    int64 lastRetrivedMessageId = 1;
+    // lastProcessedMessageId is the last messageId that is processed on the passive side.
+    // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.
+    int64 lastProcessedMessageId = 2;
+    // clusterName is the name of the pulling cluster.
+    string clusterName = 3;
+}
+
+message GetDomainReplicationMessagesResponse {
+    ReplicationMessages messages = 1;
 }

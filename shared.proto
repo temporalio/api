@@ -1,0 +1,1284 @@
+// Copyright (c) 2019 Temporal Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package shared;
+option go_package = "tpb";
+
+import "enums.proto";
+
+message Header {
+    map<string, bytes> fields = 1;
+}
+
+message WorkflowType {
+    string name = 1;
+}
+
+message ActivityType {
+    string name = 1;
+}
+
+message TaskList {
+    string name = 1;
+    enums.TaskListKind kind = 2;
+}
+
+message DataBlob {
+    enums.EncodingType EncodingType = 1;
+    bytes Data = 2;
+}
+
+message ReplicationInfo {
+    int64 version = 1;
+    int64 lastEventId = 2;
+}
+
+message TaskListMetadata {
+    double maxTasksPerSecond = 1;
+}
+
+message WorkflowExecution {
+    string workflowId = 1;
+    string runId = 2;
+}
+
+message Memo {
+    map<string, bytes> fields = 1;
+}
+
+message SearchAttributes {
+    map<string, bytes> indexedFields = 1;
+}
+
+message WorkflowExecutionInfo {
+    WorkflowExecution execution = 1;
+    WorkflowType type = 2;
+    int64 startTime = 3;
+    int64 closeTime = 4;
+    enums.WorkflowExecutionCloseStatus closeStatus = 5;
+    int64 historyLength = 6;
+    string parentDomainId = 7;
+    WorkflowExecution parentExecution = 8;
+    int64 executionTime = 9;
+    Memo memo = 10;
+    SearchAttributes searchAttributes = 11;
+    ResetPoints autoResetPoints = 12;
+}
+
+message WorkflowExecutionConfiguration {
+    TaskList taskList = 1;
+    int32 executionStartToCloseTimeoutSeconds = 2;
+    int32 taskStartToCloseTimeoutSeconds = 3;
+}
+
+message TransientDecisionInfo {
+    HistoryEvent scheduledEvent = 1;
+    HistoryEvent startedEvent = 2;
+}
+
+message ScheduleActivityTaskDecisionAttributes {
+    string activityId = 1;
+    ActivityType activityType = 2;
+    string domain = 3;
+    TaskList taskList = 4;
+    bytes input = 5;
+    int32 scheduleToCloseTimeoutSeconds = 6;
+    int32 scheduleToStartTimeoutSeconds = 7;
+    int32 startToCloseTimeoutSeconds = 8;
+    int32 heartbeatTimeoutSeconds = 9;
+    RetryPolicy retryPolicy = 10;
+    Header header = 11;
+}
+
+message RequestCancelActivityTaskDecisionAttributes {
+    string activityId = 1;
+}
+
+message StartTimerDecisionAttributes {
+    string timerId = 1;
+    int64 startToFireTimeoutSeconds = 2;
+}
+
+message CompleteWorkflowExecutionDecisionAttributes {
+    bytes result = 1;
+}
+
+message FailWorkflowExecutionDecisionAttributes {
+    string reason = 1;
+    bytes details = 2;
+}
+
+message CancelTimerDecisionAttributes {
+    string timerId = 1;
+}
+
+message CancelWorkflowExecutionDecisionAttributes {
+    bytes details = 1;
+}
+
+message RequestCancelExternalWorkflowExecutionDecisionAttributes {
+    string domain = 1;
+    string workflowId = 2;
+    string runId = 3;
+    bytes control = 4;
+    bool childWorkflowOnly = 5;
+}
+
+message SignalExternalWorkflowExecutionDecisionAttributes {
+    string domain = 1;
+    WorkflowExecution execution = 2;
+    string signalName = 3;
+    bytes input = 4;
+    bytes control = 5;
+    bool childWorkflowOnly = 6;
+}
+
+message UpsertWorkflowSearchAttributesDecisionAttributes {
+    SearchAttributes searchAttributes = 1;
+}
+
+message RecordMarkerDecisionAttributes {
+    string markerName = 1;
+    bytes details = 2;
+    Header header = 3;
+}
+
+message ContinueAsNewWorkflowExecutionDecisionAttributes {
+    WorkflowType workflowType = 1;
+    TaskList taskList = 2;
+    bytes input = 3;
+    int32 executionStartToCloseTimeoutSeconds = 4;
+    int32 taskStartToCloseTimeoutSeconds = 5;
+    int32 backoffStartIntervalInSeconds = 6;
+    RetryPolicy retryPolicy = 7;
+    enums.ContinueAsNewInitiator initiator = 8;
+    string failureReason = 9;
+    bytes failureDetails = 10;
+    bytes lastCompletionResult = 11;
+    string cronSchedule = 12;
+    Header header = 13;
+    Memo memo = 14;
+    SearchAttributes searchAttributes = 15;
+}
+
+message StartChildWorkflowExecutionDecisionAttributes {
+    string domain = 1;
+    string workflowId = 2;
+    WorkflowType workflowType = 3;
+    TaskList taskList = 4;
+    bytes input = 5;
+    int32 executionStartToCloseTimeoutSeconds = 6;
+    int32 taskStartToCloseTimeoutSeconds = 7;
+    enums.ParentClosePolicy parentClosePolicy = 8;
+    bytes control = 9;
+    enums.WorkflowIdReusePolicy workflowIdReusePolicy = 10;
+    RetryPolicy retryPolicy = 11;
+    string cronSchedule = 12;
+    Header header = 13;
+    Memo memo = 14;
+    SearchAttributes searchAttributes = 15;
+}
+
+message Decision {
+    enums.DecisionType decisionType = 1;
+    ScheduleActivityTaskDecisionAttributes scheduleActivityTaskDecisionAttributes = 2;
+    StartTimerDecisionAttributes startTimerDecisionAttributes = 3;
+    CompleteWorkflowExecutionDecisionAttributes completeWorkflowExecutionDecisionAttributes = 4;
+    FailWorkflowExecutionDecisionAttributes failWorkflowExecutionDecisionAttributes = 5;
+    RequestCancelActivityTaskDecisionAttributes requestCancelActivityTaskDecisionAttributes = 6;
+    CancelTimerDecisionAttributes cancelTimerDecisionAttributes = 7;
+    CancelWorkflowExecutionDecisionAttributes cancelWorkflowExecutionDecisionAttributes = 8;
+    RequestCancelExternalWorkflowExecutionDecisionAttributes requestCancelExternalWorkflowExecutionDecisionAttributes = 9;
+    RecordMarkerDecisionAttributes recordMarkerDecisionAttributes = 10;
+    ContinueAsNewWorkflowExecutionDecisionAttributes continueAsNewWorkflowExecutionDecisionAttributes = 11;
+    StartChildWorkflowExecutionDecisionAttributes startChildWorkflowExecutionDecisionAttributes = 12;
+    SignalExternalWorkflowExecutionDecisionAttributes signalExternalWorkflowExecutionDecisionAttributes = 13;
+    UpsertWorkflowSearchAttributesDecisionAttributes upsertWorkflowSearchAttributesDecisionAttributes = 14;
+}
+
+message WorkflowExecutionStartedEventAttributes {
+    WorkflowType workflowType = 1;
+    string parentWorkflowDomain = 2;
+    WorkflowExecution parentWorkflowExecution = 3;
+    int64 parentInitiatedEventId = 4;
+    TaskList taskList = 5;
+    bytes input = 6;
+    int32 executionStartToCloseTimeoutSeconds = 7;
+    int32 taskStartToCloseTimeoutSeconds = 8;
+    string continuedExecutionRunId = 9;
+    enums.ContinueAsNewInitiator initiator = 10;
+    string continuedFailureReason = 11;
+    bytes continuedFailureDetails = 12;
+    bytes lastCompletionResult = 13;
+    // This is the runID when the WorkflowExecutionStarted event is written.
+    string originalExecutionRunId = 14;
+    string identity = 15;
+    // This is the very first runID along the chain of ContinueAsNew and Reset.
+    string firstExecutionRunId = 16;
+    RetryPolicy retryPolicy = 17;
+    int32 attempt = 18;
+    int64 expirationTimestamp = 19;
+    string cronSchedule = 20;
+    int32 firstDecisionTaskBackoffSeconds = 21;
+    Memo memo = 22;
+    SearchAttributes searchAttributes = 23;
+    ResetPoints prevAutoResetPoints = 24;
+    Header header = 25;
+}
+
+message ResetPoints {
+    repeated ResetPointInfo points = 1;
+}
+
+message ResetPointInfo {
+    string bytesChecksum = 1;
+    string runId = 2;
+    int64 firstDecisionCompletedId = 3;
+    int64 createdTimeNano = 4;
+    // The time that the run is deleted due to retention.
+    int64 expiringTimeNano = 5;
+    // false if the reset point has pending childWFs/reqCancels/signalExternals.
+    bool resettable = 6;
+}
+
+message WorkflowExecutionCompletedEventAttributes {
+    bytes result = 1;
+    int64 decisionTaskCompletedEventId = 2;
+}
+
+message WorkflowExecutionFailedEventAttributes {
+    string reason = 1;
+    bytes details = 2;
+    int64 decisionTaskCompletedEventId = 3;
+}
+
+message WorkflowExecutionTimedOutEventAttributes {
+    enums.TimeoutType timeoutType = 2;
+}
+
+message WorkflowExecutionContinuedAsNewEventAttributes {
+    string newExecutionRunId = 1;
+    WorkflowType workflowType = 2;
+    TaskList taskList = 3;
+    bytes input = 4;
+    int32 executionStartToCloseTimeoutSeconds = 5;
+    int32 taskStartToCloseTimeoutSeconds = 6;
+    int64 decisionTaskCompletedEventId = 7;
+    int32 backoffStartIntervalInSeconds = 8;
+    enums.ContinueAsNewInitiator initiator = 9;
+    string failureReason = 10;
+    bytes failureDetails = 11;
+    bytes lastCompletionResult = 12;
+    Header header = 13;
+    Memo memo = 14;
+    SearchAttributes searchAttributes = 15;
+}
+
+message DecisionTaskScheduledEventAttributes {
+    TaskList taskList = 1;
+    int32 startToCloseTimeoutSeconds = 2;
+    int64 attempt = 3;
+}
+
+message DecisionTaskStartedEventAttributes {
+    int64 scheduledEventId = 1;
+    string identity = 2;
+    string requestId = 3;
+}
+
+message DecisionTaskCompletedEventAttributes {
+    bytes executionContext = 1;
+    int64 scheduledEventId = 2;
+    int64 startedEventId = 3;
+    string identity = 4;
+    string bytesChecksum = 5;
+}
+
+message DecisionTaskTimedOutEventAttributes {
+    int64 scheduledEventId = 1;
+    int64 startedEventId = 2;
+    enums.TimeoutType timeoutType = 3;
+}
+
+message DecisionTaskFailedEventAttributes {
+    int64 scheduledEventId = 1;
+    int64 startedEventId = 2;
+    enums.DecisionTaskFailedCause cause = 3;
+    bytes details = 4;
+    string identity = 5;
+    string reason = 6;
+    // for reset workflow
+    string baseRunId = 7;
+    string newRunId = 8;
+    int64 forkEventVersion = 9;
+}
+
+message ActivityTaskScheduledEventAttributes {
+    string activityId = 1;
+    ActivityType activityType = 2;
+    string domain = 3;
+    TaskList taskList = 4;
+    bytes input = 5;
+    int32 scheduleToCloseTimeoutSeconds = 6;
+    int32 scheduleToStartTimeoutSeconds = 7;
+    int32 startToCloseTimeoutSeconds = 8;
+    int32 heartbeatTimeoutSeconds = 9;
+    int64 decisionTaskCompletedEventId = 10;
+    RetryPolicy retryPolicy = 11;
+    Header header = 12;
+}
+
+message ActivityTaskStartedEventAttributes {
+    int64 scheduledEventId = 1;
+    string identity = 2;
+    string requestId = 3;
+    int32 attempt = 4;
+}
+
+message ActivityTaskCompletedEventAttributes {
+    bytes result = 1;
+    int64 scheduledEventId = 2;
+    int64 startedEventId = 3;
+    string identity = 4;
+}
+
+message ActivityTaskFailedEventAttributes {
+    string reason = 1;
+    bytes details = 2;
+    int64 scheduledEventId = 3;
+    int64 startedEventId = 4;
+    string identity = 5;
+}
+
+message ActivityTaskTimedOutEventAttributes {
+    bytes details = 1;
+    int64 scheduledEventId = 2;
+    int64 startedEventId = 3;
+    enums.TimeoutType timeoutType = 4;
+}
+
+message ActivityTaskCancelRequestedEventAttributes {
+    string activityId = 1;
+    int64 decisionTaskCompletedEventId = 2;
+}
+
+message RequestCancelActivityTaskFailedEventAttributes {
+    string activityId = 1;
+    string cause = 2;
+    int64 decisionTaskCompletedEventId = 3;
+}
+
+message ActivityTaskCanceledEventAttributes {
+    bytes details = 1;
+    int64 latestCancelRequestedEventId = 2;
+    int64 scheduledEventId = 3;
+    int64 startedEventId = 4;
+    string identity = 5;
+}
+
+message TimerStartedEventAttributes {
+    string timerId = 1;
+    int64 startToFireTimeoutSeconds = 2;
+    int64 decisionTaskCompletedEventId = 3;
+}
+
+message TimerFiredEventAttributes {
+    string timerId = 1;
+    int64 startedEventId = 2;
+}
+
+message TimerCanceledEventAttributes {
+    string timerId = 1;
+    int64 startedEventId = 2;
+    int64 decisionTaskCompletedEventId = 3;
+    string identity = 4;
+}
+
+message CancelTimerFailedEventAttributes {
+    string timerId = 1;
+    string cause = 2;
+    int64 decisionTaskCompletedEventId = 3;
+    string identity = 4;
+}
+
+message WorkflowExecutionCancelRequestedEventAttributes {
+    string cause = 1;
+    int64 externalInitiatedEventId = 2;
+    WorkflowExecution externalWorkflowExecution = 3;
+    string identity = 4;
+}
+
+message WorkflowExecutionCanceledEventAttributes {
+    int64 decisionTaskCompletedEventId = 1;
+    bytes details = 2;
+}
+
+message MarkerRecordedEventAttributes {
+    string markerName = 1;
+    bytes details = 2;
+    int64 decisionTaskCompletedEventId = 3;
+    Header header = 4;
+}
+
+message WorkflowExecutionSignaledEventAttributes {
+    string signalName = 1;
+    bytes input = 2;
+    string identity = 3;
+}
+
+message WorkflowExecutionTerminatedEventAttributes {
+    string reason = 1;
+    bytes details = 2;
+    string identity = 3;
+}
+
+message RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
+    int64 decisionTaskCompletedEventId = 1;
+    string domain = 2;
+    WorkflowExecution workflowExecution = 3;
+    bytes control = 4;
+    bool childWorkflowOnly = 5;
+}
+
+message RequestCancelExternalWorkflowExecutionFailedEventAttributes {
+    enums.CancelExternalWorkflowExecutionFailedCause cause = 1;
+    int64 decisionTaskCompletedEventId = 2;
+    string domain = 3;
+    WorkflowExecution workflowExecution = 4;
+    int64 initiatedEventId = 5;
+    bytes control = 6;
+}
+
+message ExternalWorkflowExecutionCancelRequestedEventAttributes {
+    int64 initiatedEventId = 1;
+    string domain = 2;
+    WorkflowExecution workflowExecution = 3;
+}
+
+message SignalExternalWorkflowExecutionInitiatedEventAttributes {
+    int64 decisionTaskCompletedEventId = 1;
+    string domain = 2;
+    WorkflowExecution workflowExecution = 3;
+    string signalName = 4;
+    bytes input = 5;
+    bytes control = 6;
+    bool childWorkflowOnly = 7;
+}
+
+message SignalExternalWorkflowExecutionFailedEventAttributes {
+    enums.SignalExternalWorkflowExecutionFailedCause cause = 1;
+    int64 decisionTaskCompletedEventId = 2;
+    string domain = 3;
+    WorkflowExecution workflowExecution = 4;
+    int64 initiatedEventId = 5;
+    bytes control = 6;
+}
+
+message ExternalWorkflowExecutionSignaledEventAttributes {
+    int64 initiatedEventId = 1;
+    string domain = 2;
+    WorkflowExecution workflowExecution = 3;
+    bytes control = 4;
+}
+
+message UpsertWorkflowSearchAttributesEventAttributes {
+    int64 decisionTaskCompletedEventId = 1;
+    SearchAttributes searchAttributes = 2;
+}
+
+message StartChildWorkflowExecutionInitiatedEventAttributes {
+    string domain = 1;
+    string workflowId = 2;
+    WorkflowType workflowType = 3;
+    TaskList taskList = 4;
+    bytes input = 5;
+    int32 executionStartToCloseTimeoutSeconds = 6;
+    int32 taskStartToCloseTimeoutSeconds = 7;
+    enums.ParentClosePolicy parentClosePolicy = 8;
+    bytes control = 9;
+    int64 decisionTaskCompletedEventId = 10;
+    enums.WorkflowIdReusePolicy workflowIdReusePolicy = 11;
+    RetryPolicy retryPolicy = 12;
+    string cronSchedule = 13;
+    Header header = 14;
+    Memo memo = 15;
+    SearchAttributes searchAttributes = 16;
+}
+
+message StartChildWorkflowExecutionFailedEventAttributes {
+    string domain = 1;
+    string workflowId = 2;
+    WorkflowType workflowType = 3;
+    enums.ChildWorkflowExecutionFailedCause cause = 4;
+    bytes control = 5;
+    int64 initiatedEventId = 6;
+    int64 decisionTaskCompletedEventId = 7;
+}
+
+message ChildWorkflowExecutionStartedEventAttributes {
+    string domain = 1;
+    int64 initiatedEventId = 2;
+    WorkflowExecution workflowExecution = 3;
+    WorkflowType workflowType = 4;
+    Header header = 5;
+}
+
+message ChildWorkflowExecutionCompletedEventAttributes {
+    bytes result = 1;
+    string domain = 2;
+    WorkflowExecution workflowExecution = 3;
+    WorkflowType workflowType = 4;
+    int64 initiatedEventId = 5;
+    int64 startedEventId = 6;
+}
+
+message ChildWorkflowExecutionFailedEventAttributes {
+    string reason = 1;
+    bytes details = 2;
+    string domain = 3;
+    WorkflowExecution workflowExecution = 4;
+    WorkflowType workflowType = 5;
+    int64 initiatedEventId = 6;
+    int64 startedEventId = 7;
+}
+
+message ChildWorkflowExecutionCanceledEventAttributes {
+    bytes details = 1;
+    string domain = 2;
+    WorkflowExecution workflowExecution = 3;
+    WorkflowType workflowType = 4;
+    int64 initiatedEventId = 5;
+    int64 startedEventId = 6;
+}
+
+message ChildWorkflowExecutionTimedOutEventAttributes {
+    enums.TimeoutType timeoutType = 1;
+    string domain = 2;
+    WorkflowExecution workflowExecution = 3;
+    WorkflowType workflowType = 4;
+    int64 initiatedEventId = 5;
+    int64 startedEventId = 6;
+}
+
+message ChildWorkflowExecutionTerminatedEventAttributes {
+    string domain = 1;
+    WorkflowExecution workflowExecution = 2;
+    WorkflowType workflowType = 3;
+    int64 initiatedEventId = 4;
+    int64 startedEventId = 5;
+}
+
+message HistoryEvent {
+    int64 eventId = 1;
+    int64 timestamp = 2;
+    enums.EventType eventType = 3;
+    int64 version = 4;
+    int64 taskId = 5;
+    WorkflowExecutionStartedEventAttributes workflowExecutionStartedEventAttributes = 6;
+    WorkflowExecutionCompletedEventAttributes workflowExecutionCompletedEventAttributes = 7;
+    WorkflowExecutionFailedEventAttributes workflowExecutionFailedEventAttributes = 8;
+    WorkflowExecutionTimedOutEventAttributes workflowExecutionTimedOutEventAttributes = 9;
+    DecisionTaskScheduledEventAttributes decisionTaskScheduledEventAttributes = 10;
+    DecisionTaskStartedEventAttributes decisionTaskStartedEventAttributes = 11;
+    DecisionTaskCompletedEventAttributes decisionTaskCompletedEventAttributes = 12;
+    DecisionTaskTimedOutEventAttributes decisionTaskTimedOutEventAttributes = 13;
+    DecisionTaskFailedEventAttributes decisionTaskFailedEventAttributes = 14;
+    ActivityTaskScheduledEventAttributes activityTaskScheduledEventAttributes = 15;
+    ActivityTaskStartedEventAttributes activityTaskStartedEventAttributes = 16;
+    ActivityTaskCompletedEventAttributes activityTaskCompletedEventAttributes = 17;
+    ActivityTaskFailedEventAttributes activityTaskFailedEventAttributes = 18;
+    ActivityTaskTimedOutEventAttributes activityTaskTimedOutEventAttributes = 19;
+    TimerStartedEventAttributes timerStartedEventAttributes = 20;
+    TimerFiredEventAttributes timerFiredEventAttributes = 21;
+    ActivityTaskCancelRequestedEventAttributes activityTaskCancelRequestedEventAttributes = 22;
+    RequestCancelActivityTaskFailedEventAttributes requestCancelActivityTaskFailedEventAttributes = 23;
+    ActivityTaskCanceledEventAttributes activityTaskCanceledEventAttributes = 24;
+    TimerCanceledEventAttributes timerCanceledEventAttributes = 25;
+    CancelTimerFailedEventAttributes cancelTimerFailedEventAttributes = 26;
+    MarkerRecordedEventAttributes markerRecordedEventAttributes = 27;
+    WorkflowExecutionSignaledEventAttributes workflowExecutionSignaledEventAttributes = 28;
+    WorkflowExecutionTerminatedEventAttributes workflowExecutionTerminatedEventAttributes = 29;
+    WorkflowExecutionCancelRequestedEventAttributes workflowExecutionCancelRequestedEventAttributes = 30;
+    WorkflowExecutionCanceledEventAttributes workflowExecutionCanceledEventAttributes = 31;
+    RequestCancelExternalWorkflowExecutionInitiatedEventAttributes requestCancelExternalWorkflowExecutionInitiatedEventAttributes = 32;
+    RequestCancelExternalWorkflowExecutionFailedEventAttributes requestCancelExternalWorkflowExecutionFailedEventAttributes = 33;
+    ExternalWorkflowExecutionCancelRequestedEventAttributes externalWorkflowExecutionCancelRequestedEventAttributes = 34;
+    WorkflowExecutionContinuedAsNewEventAttributes workflowExecutionContinuedAsNewEventAttributes = 35;
+    StartChildWorkflowExecutionInitiatedEventAttributes startChildWorkflowExecutionInitiatedEventAttributes = 36;
+    StartChildWorkflowExecutionFailedEventAttributes startChildWorkflowExecutionFailedEventAttributes = 37;
+    ChildWorkflowExecutionStartedEventAttributes childWorkflowExecutionStartedEventAttributes = 38;
+    ChildWorkflowExecutionCompletedEventAttributes childWorkflowExecutionCompletedEventAttributes = 39;
+    ChildWorkflowExecutionFailedEventAttributes childWorkflowExecutionFailedEventAttributes = 40;
+    ChildWorkflowExecutionCanceledEventAttributes childWorkflowExecutionCanceledEventAttributes = 41;
+    ChildWorkflowExecutionTimedOutEventAttributes childWorkflowExecutionTimedOutEventAttributes = 42;
+    ChildWorkflowExecutionTerminatedEventAttributes childWorkflowExecutionTerminatedEventAttributes = 43;
+    SignalExternalWorkflowExecutionInitiatedEventAttributes signalExternalWorkflowExecutionInitiatedEventAttributes = 44;
+    SignalExternalWorkflowExecutionFailedEventAttributes signalExternalWorkflowExecutionFailedEventAttributes = 45;
+    ExternalWorkflowExecutionSignaledEventAttributes externalWorkflowExecutionSignaledEventAttributes = 46;
+    UpsertWorkflowSearchAttributesEventAttributes upsertWorkflowSearchAttributesEventAttributes = 47;
+}
+
+message History {
+    repeated HistoryEvent events = 1;
+}
+
+message WorkflowExecutionFilter {
+    string workflowId = 1;
+    string runId = 2;
+}
+
+message WorkflowTypeFilter {
+    string name = 1;
+}
+
+message StartTimeFilter {
+    int64 earliestTime = 1;
+    int64 latestTime = 2;
+}
+
+message DomainInfo {
+    string name = 1;
+    enums.DomainStatus status = 2;
+    string description = 3;
+    string ownerEmail = 4;
+    // A key-value map for any customized purpose
+    map<string, string> data = 5;
+    string uuid = 6;
+}
+
+message DomainConfiguration {
+    int32 workflowExecutionRetentionPeriodInDays = 1;
+    bool emitMetric = 2;
+    BadBinaries badBinaries = 3;
+    enums.ArchivalStatus historyArchivalStatus = 4;
+    string historyArchivalURI = 5;
+    enums.ArchivalStatus visibilityArchivalStatus = 6;
+    string visibilityArchivalURI = 7;
+}
+
+message BadBinaries {
+    map<string, BadbytesInfo> binaries = 1;
+}
+
+message BadbytesInfo {
+    string reason = 1;
+    string operator = 2;
+    int64 createdTimeNano = 3;
+}
+
+message UpdateDomainInfo {
+    string description = 1;
+    string ownerEmail = 2;
+    // A key-value map for any customized purpose
+    map<string, string> data = 3;
+}
+
+message ClusterReplicationConfiguration {
+    string clusterName = 1;
+}
+
+message DomainReplicationConfiguration {
+    string activeClusterName = 1;
+    repeated ClusterReplicationConfiguration clusters = 2;
+}
+
+message RegisterDomainRequest {
+    string name = 1;
+    string description = 2;
+    string ownerEmail = 3;
+    int32 workflowExecutionRetentionPeriodInDays = 4;
+    bool emitMetric = 5;
+    repeated ClusterReplicationConfiguration clusters = 6;
+    string activeClusterName = 7;
+    // A key-value map for any customized purpose
+    map<string, string> data = 8;
+    string securityToken = 9;
+    bool isGlobalDomain = 10;
+    enums.ArchivalStatus historyArchivalStatus = 11;
+    string historyArchivalURI = 12;
+    enums.ArchivalStatus visibilityArchivalStatus = 13;
+    string visibilityArchivalURI = 14;
+}
+
+message ListDomainsRequest {
+    int32 pageSize = 1;
+    bytes nextPageToken = 2;
+}
+
+message ListDomainsResponse {
+    repeated DescribeDomainResponse domains = 1;
+    bytes nextPageToken = 2;
+}
+
+message DescribeDomainRequest {
+    string name = 1;
+    string uuid = 2;
+}
+
+message DescribeDomainResponse {
+    DomainInfo domainInfo = 1;
+    DomainConfiguration configuration = 2;
+    DomainReplicationConfiguration replicationConfiguration = 3;
+    int64 failoverVersion = 4;
+    bool isGlobalDomain = 5;
+}
+
+message UpdateDomainRequest {
+    string name = 1;
+    UpdateDomainInfo updatedInfo = 2;
+    DomainConfiguration configuration = 3;
+    DomainReplicationConfiguration replicationConfiguration = 4;
+    string securityToken = 5;
+    string deleteBadbytes = 6;
+}
+
+message UpdateDomainResponse {
+    DomainInfo domainInfo = 1;
+    DomainConfiguration configuration = 2;
+    DomainReplicationConfiguration replicationConfiguration = 3;
+    int64 failoverVersion = 4;
+    bool isGlobalDomain = 5;
+}
+
+message DeprecateDomainRequest {
+    string name = 1;
+    string securityToken = 2;
+}
+
+message StartWorkflowExecutionRequest {
+    string domain = 1;
+    string workflowId = 2;
+    WorkflowType workflowType = 3;
+    TaskList taskList = 4;
+    bytes input = 5;
+    int32 executionStartToCloseTimeoutSeconds = 6;
+    int32 taskStartToCloseTimeoutSeconds = 7;
+    string identity = 8;
+    string requestId = 9;
+    enums.WorkflowIdReusePolicy workflowIdReusePolicy = 10;
+    RetryPolicy retryPolicy = 11;
+    string cronSchedule = 12;
+    Memo memo = 13;
+    SearchAttributes searchAttributes = 14;
+    Header header = 15;
+}
+
+message StartWorkflowExecutionResponse {
+    string runId = 1;
+}
+
+message PollForDecisionTaskRequest {
+    string domain = 1;
+    TaskList taskList = 2;
+    string identity = 3;
+    string bytesChecksum = 4;
+}
+
+message PollForDecisionTaskResponse {
+    bytes taskToken = 1;
+    WorkflowExecution workflowExecution = 2;
+    WorkflowType workflowType = 3;
+    int64 previousStartedEventId = 4;
+    int64 startedEventId = 5;
+    int64 attempt = 6;
+    int64 backlogCountHint = 7;
+    History history = 8;
+    bytes nextPageToken = 9;
+    WorkflowQuery query = 10;
+    TaskList WorkflowExecutionTaskList = 11;
+    int64 scheduledTimestamp = 12;
+    int64 startedTimestamp = 13;
+    map<string, WorkflowQuery> queries = 14;
+}
+
+message StickyExecutionAttributes {
+    TaskList workerTaskList = 1;
+    int32 scheduleToStartTimeoutSeconds = 2;
+}
+
+message RespondDecisionTaskCompletedRequest {
+    bytes taskToken = 1;
+    repeated Decision decisions = 2;
+    bytes executionContext = 3;
+    string identity = 4;
+    StickyExecutionAttributes stickyAttributes = 5;
+    bool returnNewDecisionTask = 6;
+    bool forceCreateNewDecisionTask = 7;
+    string bytesChecksum = 8;
+    map<string, WorkflowQueryResult> queryResults = 9;
+}
+
+message RespondDecisionTaskCompletedResponse {
+    PollForDecisionTaskResponse decisionTask = 1;
+}
+
+message RespondDecisionTaskFailedRequest {
+    bytes taskToken = 1;
+    enums.DecisionTaskFailedCause cause = 2;
+    bytes details = 3;
+    string identity = 4;
+}
+
+message PollForActivityTaskRequest {
+    string domain = 1;
+    TaskList taskList = 2;
+    string identity = 3;
+    TaskListMetadata taskListMetadata = 4;
+}
+
+message PollForActivityTaskResponse {
+    bytes taskToken = 1;
+    WorkflowExecution workflowExecution = 2;
+    string activityId = 3;
+    ActivityType activityType = 4;
+    bytes input = 5;
+    int64 scheduledTimestamp = 6;
+    int32 scheduleToCloseTimeoutSeconds = 7;
+    int64 startedTimestamp = 8;
+    int32 startToCloseTimeoutSeconds = 9;
+    int32 heartbeatTimeoutSeconds = 10;
+    int32 attempt = 11;
+    int64 scheduledTimestampOfThisAttempt = 12;
+    bytes heartbeatDetails = 13;
+    WorkflowType workflowType = 14;
+    string workflowDomain = 15;
+    Header header = 16;
+}
+
+message RecordActivityTaskHeartbeatRequest {
+    bytes taskToken = 1;
+    bytes details = 2;
+    string identity = 3;
+}
+
+message RecordActivityTaskHeartbeatByIDRequest {
+    string domain = 1;
+    string workflowID = 2;
+    string runID = 3;
+    string activityID = 4;
+    bytes details = 5;
+    string identity = 6;
+}
+
+message RecordActivityTaskHeartbeatResponse {
+    bool cancelRequested = 1;
+}
+
+message RespondActivityTaskCompletedRequest {
+    bytes taskToken = 1;
+    bytes result = 2;
+    string identity = 3;
+}
+
+message RespondActivityTaskFailedRequest {
+    bytes taskToken = 1;
+    string reason = 2;
+    bytes details = 3;
+    string identity = 4;
+}
+
+message RespondActivityTaskCanceledRequest {
+    bytes taskToken = 1;
+    bytes details = 2;
+    string identity = 3;
+}
+
+message RespondActivityTaskCompletedByIDRequest {
+    string domain = 1;
+    string workflowID = 2;
+    string runID = 3;
+    string activityID = 4;
+    bytes result = 5;
+    string identity = 6;
+}
+
+message RespondActivityTaskFailedByIDRequest {
+    string domain = 1;
+    string workflowID = 2;
+    string runID = 3;
+    string activityID = 4;
+    string reason = 5;
+    bytes details = 6;
+    string identity = 7;
+}
+
+message RespondActivityTaskCanceledByIDRequest {
+    string domain = 1;
+    string workflowID = 2;
+    string runID = 3;
+    string activityID = 4;
+    bytes details = 5;
+    string identity = 6;
+}
+
+message RequestCancelWorkflowExecutionRequest {
+    string domain = 1;
+    WorkflowExecution workflowExecution = 2;
+    string identity = 3;
+    string requestId = 4;
+}
+
+message GetWorkflowExecutionHistoryRequest {
+    string domain = 1;
+    WorkflowExecution execution = 2;
+    int32 maximumPageSize = 3;
+    bytes nextPageToken = 4;
+    bool waitForNewEvent = 5;
+    enums.HistoryEventFilterType HistoryEventFilterType = 6;
+}
+
+message GetWorkflowExecutionHistoryResponse {
+    History history = 1;
+    bytes nextPageToken = 2;
+    bool archived = 3;
+}
+
+message SignalWorkflowExecutionRequest {
+    string domain = 1;
+    WorkflowExecution workflowExecution = 2;
+    string signalName = 3;
+    bytes input = 4;
+    string identity = 5;
+    string requestId = 6;
+    bytes control = 7;
+}
+
+message SignalWithStartWorkflowExecutionRequest {
+    string domain = 1;
+    string workflowId = 2;
+    WorkflowType workflowType = 3;
+    TaskList taskList = 4;
+    bytes input = 5;
+    int32 executionStartToCloseTimeoutSeconds = 6;
+    int32 taskStartToCloseTimeoutSeconds = 7;
+    string identity = 8;
+    string requestId = 9;
+    enums.WorkflowIdReusePolicy workflowIdReusePolicy = 10;
+    string signalName = 11;
+    bytes signalInput = 12;
+    bytes control = 13;
+    RetryPolicy retryPolicy = 14;
+    string cronSchedule = 15;
+    Memo memo = 16;
+    SearchAttributes searchAttributes = 17;
+    Header header = 18;
+}
+
+message TerminateWorkflowExecutionRequest {
+    string domain = 1;
+    WorkflowExecution workflowExecution = 2;
+    string reason = 3;
+    bytes details = 4;
+    string identity = 5;
+}
+
+message ResetWorkflowExecutionRequest {
+    string domain = 1;
+    WorkflowExecution workflowExecution = 2;
+    string reason = 3;
+    int64 decisionFinishEventId = 4;
+    string requestId = 5;
+}
+
+message ResetWorkflowExecutionResponse {
+    string runId = 1;
+}
+
+message ListOpenWorkflowExecutionsRequest {
+    string domain = 1;
+    int32 maximumPageSize = 2;
+    bytes nextPageToken = 3;
+    StartTimeFilter StartTimeFilter = 4;
+    WorkflowExecutionFilter executionFilter = 5;
+    WorkflowTypeFilter typeFilter = 6;
+}
+
+message ListOpenWorkflowExecutionsResponse {
+    repeated WorkflowExecutionInfo executions = 1;
+    bytes nextPageToken = 2;
+}
+
+message ListClosedWorkflowExecutionsRequest {
+    string domain = 1;
+    int32 maximumPageSize = 2;
+    bytes nextPageToken = 3;
+    StartTimeFilter StartTimeFilter = 4;
+    WorkflowExecutionFilter executionFilter = 5;
+    WorkflowTypeFilter typeFilter = 6;
+    enums.WorkflowExecutionCloseStatus statusFilter = 7;
+}
+
+message ListClosedWorkflowExecutionsResponse {
+    repeated WorkflowExecutionInfo executions = 1;
+    bytes nextPageToken = 2;
+}
+
+message ListWorkflowExecutionsRequest {
+    string domain = 1;
+    int32 pageSize = 2;
+    bytes nextPageToken = 3;
+    string query = 4;
+}
+
+message ListWorkflowExecutionsResponse {
+    repeated WorkflowExecutionInfo executions = 1;
+    bytes nextPageToken = 2;
+}
+
+message ListArchivedWorkflowExecutionsRequest {
+    string domain = 1;
+    int32 pageSize = 2;
+    bytes nextPageToken = 3;
+    string query = 4;
+}
+
+message ListArchivedWorkflowExecutionsResponse {
+    repeated WorkflowExecutionInfo executions = 1;
+    bytes nextPageToken = 2;
+}
+
+message CountWorkflowExecutionsRequest {
+    string domain = 1;
+    string query = 2;
+}
+
+message CountWorkflowExecutionsResponse {
+    int64 count = 1;
+}
+
+message GetSearchAttributesResponse {
+    map<string, enums.IndexedValueType> keys = 1;
+}
+
+message QueryWorkflowRequest {
+    string domain = 1;
+    WorkflowExecution execution = 2;
+    WorkflowQuery query = 3;
+    // QueryRejectCondition can used to reject the query if workflow state does not satisify condition
+    enums.QueryRejectCondition queryRejectCondition = 4;
+    enums.QueryConsistencyLevel queryConsistencyLevel = 5;
+}
+
+message QueryRejected {
+    enums.WorkflowExecutionCloseStatus closeStatus = 1;
+}
+
+message QueryWorkflowResponse {
+    bytes queryResult = 1;
+    QueryRejected queryRejected = 2;
+}
+
+message WorkflowQuery {
+    string queryType = 1;
+    bytes queryArgs = 2;
+}
+
+message ResetStickyTaskListRequest {
+    string domain = 1;
+    WorkflowExecution execution = 2;
+}
+
+message ResetStickyTaskListResponse {
+    // The reason to keep this response is to allow returning
+    // information in the future.
+}
+
+message RespondQueryTaskCompletedRequest {
+    bytes taskToken = 1;
+    enums.QueryTaskCompletedType completedType = 2;
+    bytes queryResult = 3;
+    string errorMessage = 4;
+}
+
+message WorkflowQueryResult {
+    enums.QueryResultType resultType = 1;
+    bytes answer = 2;
+    string errorReason = 3;
+    bytes errorDetails = 4;
+}
+
+message DescribeWorkflowExecutionRequest {
+    string domain = 1;
+    WorkflowExecution execution = 2;
+}
+
+message PendingActivityInfo {
+    string activityID = 1;
+    ActivityType activityType = 2;
+    enums.PendingActivityState state = 3;
+    bytes heartbeatDetails = 4;
+    int64 lastHeartbeatTimestamp = 5;
+    int64 lastStartedTimestamp = 6;
+    int32 attempt = 7;
+    int32 maximumAttempts = 8;
+    int64 scheduledTimestamp = 9;
+    int64 expirationTimestamp = 10;
+    string lastFailureReason = 11;
+    string lastWorkerIdentity = 12;
+    bytes lastFailureDetails = 13;
+}
+
+message PendingChildExecutionInfo {
+    string workflowID = 1;
+    string runID = 2;
+    string workflowTypName = 3;
+    int64 initiatedID = 4;
+    enums.ParentClosePolicy parentClosePolicy = 5;
+}
+
+message DescribeWorkflowExecutionResponse {
+    WorkflowExecutionConfiguration executionConfiguration = 1;
+    WorkflowExecutionInfo workflowExecutionInfo = 2;
+    repeated PendingActivityInfo pendingActivities = 3;
+    repeated PendingChildExecutionInfo pendingChildren = 4;
+}
+
+message DescribeTaskListRequest {
+    string domain = 1;
+    TaskList taskList = 2;
+    enums.TaskListType taskListType = 3;
+    bool includeTaskListStatus = 4;
+}
+
+message DescribeTaskListResponse {
+    repeated PollerInfo pollers = 1;
+    TaskListStatus taskListStatus = 2;
+}
+
+message TaskListStatus {
+    int64 backlogCountHint = 1;
+    int64 readLevel = 2;
+    int64 ackLevel = 3;
+    double ratePerSecond = 4;
+    TaskIDBlock taskIDBlock = 5;
+}
+
+message TaskIDBlock {
+    int64 startID = 1;
+    int64 endID = 2;
+}
+
+//At least one of the parameters needs to be provided
+message DescribeHistoryHostRequest {
+    //ip:port
+    string hostAddress = 1;
+    int32 shardIdForHost = 2;
+    WorkflowExecution executionForHost = 3;
+}
+
+message RemoveTaskRequest {
+    int32 shardID = 1;
+    int32 type = 2;
+    int64 taskID = 3;
+}
+
+message CloseShardRequest {
+    int32 shardID = 1;
+}
+
+message DescribeHistoryHostResponse {
+    int32 numberOfShards = 1;
+    repeated int32
+    shardIDs = 2;
+    DomainCacheInfo domainCache = 3;
+    string shardControllerStatus = 4;
+    string address = 5;
+}
+
+message DomainCacheInfo {
+    int64 numOfItemsInCacheByID = 1;
+    int64 numOfItemsInCacheByName = 2;
+}
+
+
+message PollerInfo {
+    // Unix Nano
+    int64 lastAccessTime = 1;
+    string identity = 2;
+    double ratePerSecond = 3;
+}
+
+message RetryPolicy {
+    // Interval of the first retry. If coefficient is 1.0 then it is used for all retries.
+    int32 initialIntervalInSeconds = 1;
+
+    // Coefficient used to calculate the next retry interval.
+    // The next retry interval is previous interval multiplied by the coefficient.
+    // Must be 1 or larger.
+    double backoffCoefficient = 2;
+
+    // Maximum interval between retries. Exponential backoff leads to interval increase.
+    // This value is the cap of the increase. Default is 100x of initial interval.
+    int32 maximumIntervalInSeconds = 3;
+
+    // Maximum number of attempts. When exceeded the retries stop even if not expired yet.
+    // Must be 1 or bigger. Default is unlimited.
+    int32 maximumAttempts = 4;
+
+    // Non-Retriable errors. Will stop retrying if error matches this list.
+    repeated string nonRetriableErrorReasons = 5;
+
+    // Expiration time for the whole retry process.
+    int32 expirationIntervalInSeconds = 6;
+}
+
+// HistoryBranchRange represents a piece of range for a branch.
+message HistoryBranchRange {
+    // branchID of original branch forked from
+    string branchID = 1;
+    // beinning node for the range, inclusive
+    int64 beginNodeID = 2;
+    // ending node for the range, exclusive
+    int64 endNodeID = 3;
+}
+
+// For history persistence to serialize/deserialize branch details
+message HistoryBranch {
+    string treeID = 1;
+    string branchID = 2;
+    repeated HistoryBranchRange ancestors = 3;
+}
+
+// VersionHistoryItem contains signal eventID and the corresponding version
+message VersionHistoryItem {
+    int64 eventID = 1;
+    int64 version = 2;
+}
+
+// VersionHistory contains the version history of a branch
+message VersionHistory {
+    bytes branchToken = 1;
+    repeated VersionHistoryItem items = 2;
+}
+
+// VersionHistories contains all version histories from all branches
+message VersionHistories {
+    int32 currentVersionHistoryIndex = 1;
+    repeated VersionHistory histories = 2;
+}
+
+// ReapplyEventsRequest is the request for reapply events API
+message ReapplyEventsRequest {
+    string domainName = 1;
+    WorkflowExecution workflowExecution = 2;
+    DataBlob events = 3;
+}

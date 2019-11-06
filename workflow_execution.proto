@@ -228,11 +228,6 @@ message CountWorkflowExecutionsResponse {
     int64 count = 1;
 }
 
-message DescribeWorkflowExecutionRequest {
-    string domain = 1;
-    common.WorkflowExecution execution = 2;
-}
-
 message PendingActivityInfo {
     string activityID = 1;
     common.ActivityType activityType = 2;
@@ -257,9 +252,57 @@ message PendingChildExecutionInfo {
     enums.ParentClosePolicy parentClosePolicy = 5;
 }
 
+message DescribeWorkflowExecutionRequest {
+    string domain = 1;
+    common.WorkflowExecution execution = 2;
+}
 message DescribeWorkflowExecutionResponse {
     WorkflowExecutionConfiguration executionConfiguration = 1;
     WorkflowExecutionInfo workflowExecutionInfo = 2;
     repeated PendingActivityInfo pendingActivities = 3;
     repeated PendingChildExecutionInfo pendingChildren = 4;
+}
+
+message DescribeWorkflowExecutionAdminResponse {
+    string shardId = 1;
+    string historyAddr = 2;
+    string mutableStateInCache = 3;
+    string mutableStateInDatabase = 4;
+}
+
+message GetWorkflowExecutionRawHistoryRequest {
+    string domain = 1;
+    common.WorkflowExecution execution = 2;
+    int64 firstEventId = 3;
+    int64 nextEventId = 4;
+    int32 maximumPageSize = 5;
+    bytes nextPageToken = 6;
+}
+
+message GetWorkflowExecutionRawHistoryResponse {
+    bytes nextPageToken = 1;
+    repeated common.DataBlob historyBatches = 2;
+    map<string, common.ReplicationInfo> replicationInfo = 3;
+    int32 eventStoreVersion = 4;
+}
+
+/**
+  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.
+  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.
+  **/
+message GetWorkflowExecutionRawHistoryV2Request {
+    string domain = 1;
+    common.WorkflowExecution execution = 2;
+    int64 startEventId = 3;
+    int64 startEventVersion = 4;
+    int64 endEventId = 5;
+    int64 endEventVersion = 6;
+    int32 maximumPageSize = 7;
+    bytes nextPageToken = 8;
+}
+
+message GetWorkflowExecutionRawHistoryV2Response {
+    bytes nextPageToken = 1;
+    repeated common.DataBlob historyBatches = 2;
+    common.VersionHistory versionHistory = 3;
 }

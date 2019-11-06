@@ -1,0 +1,105 @@
+// Copyright (c) 2019 Temporal Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package common;
+option go_package = "tpb";
+
+import "enums.proto";
+
+message WorkflowType {
+    string name = 1;
+}
+
+message WorkflowExecution {
+    string workflowId = 1;
+    string runId = 2;
+}
+
+message TaskList {
+    string name = 1;
+    enums.TaskListKind kind = 2;
+}
+
+message SearchAttributes {
+    map<string, bytes> indexedFields = 1;
+}
+
+message RetryPolicy {
+    // Interval of the first retry. If coefficient is 1.0 then it is used for all retries.
+    int32 initialIntervalInSeconds = 1;
+
+    // Coefficient used to calculate the next retry interval.
+    // The next retry interval is previous interval multiplied by the coefficient.
+    // Must be 1 or larger.
+    double backoffCoefficient = 2;
+
+    // Maximum interval between retries. Exponential backoff leads to interval increase.
+    // This value is the cap of the increase. Default is 100x of initial interval.
+    int32 maximumIntervalInSeconds = 3;
+
+    // Maximum number of attempts. When exceeded the retries stop even if not expired yet.
+    // Must be 1 or bigger. Default is unlimited.
+    int32 maximumAttempts = 4;
+
+    // Non-Retriable errors. Will stop retrying if error matches this list.
+    repeated string nonRetriableErrorReasons = 5;
+
+    // Expiration time for the whole retry process.
+    int32 expirationIntervalInSeconds = 6;
+}
+
+message Memo {
+    map<string, bytes> fields = 1;
+}
+
+message Header {
+    map<string, bytes> fields = 1;
+}
+
+message ResetPointInfo {
+    string binaryChecksum = 1;
+    string runId = 2;
+    int64 firstDecisionCompletedId = 3;
+    int64 createdTimeNano = 4;
+    // The time that the run is deleted due to retention.
+    int64 expiringTimeNano = 5;
+    // false if the reset point has pending childWFs/reqCancels/signalExternals.
+    bool resettable = 6;
+}
+
+message ResetPoints {
+    repeated ResetPointInfo points = 1;
+}
+
+message ActivityType {
+    string name = 1;
+}
+
+message TaskListMetadata {
+    double maxTasksPerSecond = 1;
+}
+
+message WorkflowQuery {
+    string queryType = 1;
+    bytes queryArgs = 2;
+}
+

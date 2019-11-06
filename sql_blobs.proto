@@ -20,47 +20,41 @@
 
 syntax = "proto3";
 
-package error_details;
+package sql_blobs;
 option go_package = "tpb";
 
-// These messages extend https://github.com/googleapis/googleapis/blob/master/google/rpc/error_details.proto
-
-message WorkflowExecutionAlreadyStartedFailure {
-    string message = 1;
-    string startRequestId = 2;
-    string runId = 3;
+// HistoryBranchRange represents a piece of range for a branch.
+message HistoryBranchRange {
+    // BranchID of original branch forked from.
+    string branchID = 1;
+    // Beginning node for the range, inclusive.
+    int64 beginNodeID = 2;
+    // Ending node for the range, exclusive.
+    int64 endNodeID = 3;
 }
 
-message DomainNotActiveFailure {
-    string message = 1;
-    string domainName = 2;
-    string currentCluster = 3;
-    string activeCluster = 4;
+// For history persistence to serialize/deserialize branch details.
+message HistoryBranch {
+    string treeID = 1;
+    string branchID = 2;
+    repeated HistoryBranchRange ancestors = 3;
 }
 
-message RetryTaskFailure {
-    string domainId = 1;
-    string workflowId = 2;
-    string runId = 3;
-    int64 nextEventId = 4;
+// VersionHistoryItem contains signal eventID and the corresponding version.
+message VersionHistoryItem {
+    int64 eventID = 1;
+    int64 version = 2;
 }
 
-message RetryTaskV2Failure {
-    string domainId = 1;
-    string workflowId = 2;
-    string runId = 3;
-    int64 startEventId = 4;
-    int64 startEventVersion = 5;
-    int64 endEventId = 6;
-    int64 endEventVersion = 7;
+// VersionHistory contains the version history of a branch.
+message VersionHistory {
+    bytes branchToken = 1;
+    repeated VersionHistoryItem items = 2;
 }
 
-message ClientVersionNotSupportedFailure {
-    string featureVersion = 1;
-    string clientImpl = 2;
-    string supportedVersions = 3;
+// VersionHistories contains all version histories from all branches.
+message VersionHistories {
+    int32 currentVersionHistoryIndex = 1;
+    repeated VersionHistory histories = 2;
 }
 
-message CurrentBranchChangedFailure {
-    bytes currentBranchToken = 1;
-}

@@ -20,47 +20,61 @@
 
 syntax = "proto3";
 
-package error_details;
+package task_list;
 option go_package = "tpb";
 
-// These messages extend https://github.com/googleapis/googleapis/blob/master/google/rpc/error_details.proto
+import "enums.proto";
+import "common.proto";
 
-message WorkflowExecutionAlreadyStartedFailure {
-    string message = 1;
-    string startRequestId = 2;
-    string runId = 3;
+message ResetStickyTaskListRequest {
+    string domain = 1;
+    common.WorkflowExecution execution = 2;
 }
 
-message DomainNotActiveFailure {
-    string message = 1;
-    string domainName = 2;
-    string currentCluster = 3;
-    string activeCluster = 4;
+message ResetStickyTaskListResponse {
 }
 
-message RetryTaskFailure {
-    string domainId = 1;
-    string workflowId = 2;
-    string runId = 3;
-    int64 nextEventId = 4;
+message RespondQueryTaskCompletedRequest {
+    bytes taskToken = 1;
+    enums.QueryTaskCompletedType completedType = 2;
+    bytes queryResult = 3;
+    string errorMessage = 4;
 }
 
-message RetryTaskV2Failure {
-    string domainId = 1;
-    string workflowId = 2;
-    string runId = 3;
-    int64 startEventId = 4;
-    int64 startEventVersion = 5;
-    int64 endEventId = 6;
-    int64 endEventVersion = 7;
+message DescribeTaskListRequest {
+    string domain = 1;
+    common.TaskList taskList = 2;
+    enums.TaskListType taskListType = 3;
+    bool includeTaskListStatus = 4;
 }
 
-message ClientVersionNotSupportedFailure {
-    string featureVersion = 1;
-    string clientImpl = 2;
-    string supportedVersions = 3;
+message DescribeTaskListResponse {
+    repeated PollerInfo pollers = 1;
+    TaskListStatus taskListStatus = 2;
 }
 
-message CurrentBranchChangedFailure {
-    bytes currentBranchToken = 1;
+message TaskListStatus {
+    int64 backlogCountHint = 1;
+    int64 readLevel = 2;
+    int64 ackLevel = 3;
+    double ratePerSecond = 4;
+    TaskIDBlock taskIDBlock = 5;
+}
+
+message TaskIDBlock {
+    int64 startID = 1;
+    int64 endID = 2;
+}
+
+message RemoveTaskRequest {
+    int32 shardID = 1;
+    int32 type = 2;
+    int64 taskID = 3;
+}
+
+message PollerInfo {
+    // Unix Nano
+    int64 lastAccessTime = 1;
+    string identity = 2;
+    double ratePerSecond = 3;
 }

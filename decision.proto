@@ -1,0 +1,212 @@
+// Copyright (c) 2019 Temporal Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package decision;
+option go_package = "tpb";
+
+import "enums.proto";
+import "common.proto";
+import "history.proto";
+
+message TransientDecisionInfo {
+    history.HistoryEvent scheduledEvent = 1;
+    history.HistoryEvent startedEvent = 2;
+}
+
+message ScheduleActivityTaskDecisionAttributes {
+    string activityId = 1;
+    common.ActivityType activityType = 2;
+    string domain = 3;
+    common.TaskList taskList = 4;
+    bytes input = 5;
+    int32 scheduleToCloseTimeoutSeconds = 6;
+    int32 scheduleToStartTimeoutSeconds = 7;
+    int32 startToCloseTimeoutSeconds = 8;
+    int32 heartbeatTimeoutSeconds = 9;
+    common.RetryPolicy retryPolicy = 10;
+    common.Header header = 11;
+}
+
+message RequestCancelActivityTaskDecisionAttributes {
+    string activityId = 1;
+}
+
+message StartTimerDecisionAttributes {
+    string timerId = 1;
+    int64 startToFireTimeoutSeconds = 2;
+}
+
+message CompleteWorkflowExecutionDecisionAttributes {
+    bytes result = 1;
+}
+
+message FailWorkflowExecutionDecisionAttributes {
+    string reason = 1;
+    bytes details = 2;
+}
+
+message CancelTimerDecisionAttributes {
+    string timerId = 1;
+}
+
+message CancelWorkflowExecutionDecisionAttributes {
+    bytes details = 1;
+}
+
+message RequestCancelExternalWorkflowExecutionDecisionAttributes {
+    string domain = 1;
+    string workflowId = 2;
+    string runId = 3;
+    bytes control = 4;
+    bool childWorkflowOnly = 5;
+}
+
+message SignalExternalWorkflowExecutionDecisionAttributes {
+    string domain = 1;
+    common.WorkflowExecution execution = 2;
+    string signalName = 3;
+    bytes input = 4;
+    bytes control = 5;
+    bool childWorkflowOnly = 6;
+}
+
+message UpsertWorkflowSearchAttributesDecisionAttributes {
+    common.SearchAttributes searchAttributes = 1;
+}
+
+message RecordMarkerDecisionAttributes {
+    string markerName = 1;
+    bytes details = 2;
+    common.Header header = 3;
+}
+
+message ContinueAsNewWorkflowExecutionDecisionAttributes {
+    common.WorkflowType workflowType = 1;
+    common.TaskList taskList = 2;
+    bytes input = 3;
+    int32 executionStartToCloseTimeoutSeconds = 4;
+    int32 taskStartToCloseTimeoutSeconds = 5;
+    int32 backoffStartIntervalInSeconds = 6;
+    common.RetryPolicy retryPolicy = 7;
+    enums.ContinueAsNewInitiator initiator = 8;
+    string failureReason = 9;
+    bytes failureDetails = 10;
+    bytes lastCompletionResult = 11;
+    string cronSchedule = 12;
+    common.Header header = 13;
+    common.Memo memo = 14;
+    common.SearchAttributes searchAttributes = 15;
+}
+
+message StartChildWorkflowExecutionDecisionAttributes {
+    string domain = 1;
+    string workflowId = 2;
+    common.WorkflowType workflowType = 3;
+    common.TaskList taskList = 4;
+    bytes input = 5;
+    int32 executionStartToCloseTimeoutSeconds = 6;
+    int32 taskStartToCloseTimeoutSeconds = 7;
+    enums.ParentClosePolicy parentClosePolicy = 8;
+    bytes control = 9;
+    enums.WorkflowIdReusePolicy workflowIdReusePolicy = 10;
+    common.RetryPolicy retryPolicy = 11;
+    string cronSchedule = 12;
+    common.Header header = 13;
+    common.Memo memo = 14;
+    common.SearchAttributes searchAttributes = 15;
+}
+
+message Decision {
+    enums.DecisionType decisionType = 1;
+    ScheduleActivityTaskDecisionAttributes scheduleActivityTaskDecisionAttributes = 2;
+    StartTimerDecisionAttributes startTimerDecisionAttributes = 3;
+    CompleteWorkflowExecutionDecisionAttributes completeWorkflowExecutionDecisionAttributes = 4;
+    FailWorkflowExecutionDecisionAttributes failWorkflowExecutionDecisionAttributes = 5;
+    RequestCancelActivityTaskDecisionAttributes requestCancelActivityTaskDecisionAttributes = 6;
+    CancelTimerDecisionAttributes cancelTimerDecisionAttributes = 7;
+    CancelWorkflowExecutionDecisionAttributes cancelWorkflowExecutionDecisionAttributes = 8;
+    RequestCancelExternalWorkflowExecutionDecisionAttributes requestCancelExternalWorkflowExecutionDecisionAttributes = 9;
+    RecordMarkerDecisionAttributes recordMarkerDecisionAttributes = 10;
+    ContinueAsNewWorkflowExecutionDecisionAttributes continueAsNewWorkflowExecutionDecisionAttributes = 11;
+    StartChildWorkflowExecutionDecisionAttributes startChildWorkflowExecutionDecisionAttributes = 12;
+    SignalExternalWorkflowExecutionDecisionAttributes signalExternalWorkflowExecutionDecisionAttributes = 13;
+    UpsertWorkflowSearchAttributesDecisionAttributes upsertWorkflowSearchAttributesDecisionAttributes = 14;
+}
+
+message PollForDecisionTaskRequest {
+    string domain = 1;
+    common.TaskList taskList = 2;
+    string identity = 3;
+    string binaryChecksum = 4;
+}
+
+message PollForDecisionTaskResponse {
+    bytes taskToken = 1;
+    common.WorkflowExecution workflowExecution = 2;
+    common.WorkflowType workflowType = 3;
+    int64 previousStartedEventId = 4;
+    int64 startedEventId = 5;
+    int64 attempt = 6;
+    int64 backlogCountHint = 7;
+    history.History history = 8;
+    bytes nextPageToken = 9;
+    common.WorkflowQuery query = 10;
+    common.TaskList WorkflowExecutionTaskList = 11;
+    int64 scheduledTimestamp = 12;
+    int64 startedTimestamp = 13;
+    map<string, common.WorkflowQuery> queries = 14;
+}
+
+message StickyExecutionAttributes {
+    common.TaskList workerTaskList = 1;
+    int32 scheduleToStartTimeoutSeconds = 2;
+}
+
+message RespondDecisionTaskCompletedRequest {
+    bytes taskToken = 1;
+    repeated Decision decisions = 2;
+    bytes executionContext = 3;
+    string identity = 4;
+    StickyExecutionAttributes stickyAttributes = 5;
+    bool returnNewDecisionTask = 6;
+    bool forceCreateNewDecisionTask = 7;
+    string binaryChecksum = 8;
+    map<string, WorkflowQueryResult> queryResults = 9;
+}
+
+message RespondDecisionTaskCompletedResponse {
+    PollForDecisionTaskResponse decisionTask = 1;
+}
+
+message RespondDecisionTaskFailedRequest {
+    bytes taskToken = 1;
+    enums.DecisionTaskFailedCause cause = 2;
+    bytes details = 3;
+    string identity = 4;
+}
+
+message WorkflowQueryResult {
+    enums.QueryResultType resultType = 1;
+    bytes answer = 2;
+    string errorReason = 3;
+    bytes errorDetails = 4;
+}

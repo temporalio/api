@@ -24,21 +24,287 @@ package workflow_service;
 option go_package = "tpb";
 
 import "domain.proto";
+import "workflow_execution.proto";
+import "decision.proto";
+import "activity.proto";
+import "search_attributes.proto";
+import "task_list.proto";
+import "workflow.proto";
+import "replication.proto";
 
 /**
-* WorkflowService API is exposed to provide support for long running applications. Application is expected to call
-* StartWorkflowExecution to create an instance for each instance of long running workflow. Such applications are expected
-* to have a worker which regularly polls for DecisionTask and ActivityTask from the WorkflowService. For each
-* DecisionTask, application is expected to process the history of events for that session and respond back with next
-* decisions. For each ActivityTask, application is expected to execute the actual logic for that task and respond back
-* with completion or failure. Worker is expected to regularly heartbeat while activity task is running.
+* WorkflowService API is exposed to provide support for long running applications.  Application is expected to call
+* StartWorkflowExecution to create an instance for each instance of long running workflow.  Such applications are expected
+* to have a worker which regularly polls for DecisionTask and ActivityTask from the WorkflowService.  For each
+* DecisionTask, application is expected to process th   e history of events for that session and respond back with next
+* decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back
+* with completion or failure.  Worker is expected to regularly heartbeat while activity task is running.
 **/
 service WorkflowService {
   /**
-  * RegisterDomain creates a new domain which can be used as a container for all resources. Domain is a top level
-  * entity within Temporal, used as a container for all resources like workflow executions, tasklists, etc. Domain
-  * acts as a sandbox and provides isolation for all resources within the domain. All resources belongs to exactly one
+  * RegisterDomain creates a new domain which can be used as a container for all resources.  Domain is a top level
+  * entity within Cadence, used as a container for all resources like workflow executions, tasklists, etc.  Domain
+  * acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
   * domain.
   **/
-  rpc RegisterDomain(domain.RegisterDomainRequest) returns (domain.RegisterDomainResponse) {}
+  rpc RegisterDomain(domain.RegisterDomainRequest) returns (domain.RegisterDomainResponse ) {}
+
+  /**
+  * DescribeDomain returns the information and configuration for a registered domain.
+  **/
+  rpc DescribeDomain(domain.DescribeDomainRequest) returns (domain.DescribeDomainResponse) {}
+
+  /**
+    * ListDomains returns the information and configuration for all domains.
+    **/
+    rpc ListDomains(domain.ListDomainsRequest) returns (domain.ListDomainsResponse) {}
+
+  /**
+  * UpdateDomain is used to update the information and configuration for a registered domain.
+  **/
+  rpc UpdateDomain(domain.UpdateDomainRequest) returns (domain.UpdateDomainResponse) {}
+
+  /**
+  * DeprecateDomain us used to update status of a registered domain to DEPRECATED.  Once the domain is deprecated
+  * it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on
+  * deprecated domains.
+  **/
+  rpc DeprecateDomain(domain.DeprecateDomainRequest) returns (void) {}
+
+  /**
+  * StartWorkflowExecution starts a new long running workflow instance.  It will create the instance with
+  * 'WorkflowExecutionStarted' event in history and also schedule the first DecisionTask for the worker to make the
+  * first decision for this instance.  It will return 'WorkflowExecutionAlreadyStartedError', if an instance already
+  * exists with same workflowId.
+  **/
+  rpc StartWorkflowExecution(workflow_execution.StartWorkflowExecutionRequest) returns (workflow_execution.StartWorkflowExecutionResponse) {}
+
+  /**
+  * Returns the history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow
+  * execution in unknown to the service.
+  **/
+  rpc GetWorkflowExecutionHistory(workflow_execution.GetWorkflowExecutionHistoryRequest) returns (workflow_execution.GetWorkflowExecutionHistoryResponse) {}
+
+  /**
+  * PollForDecisionTask is called by application worker to process DecisionTask from a specific taskList.  A
+  * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.
+  * Application is then expected to call 'RespondDecisionTaskCompleted' API when it is done processing the DecisionTask.
+  * It will also create a 'DecisionTaskStarted' event in the history for that session before handing off DecisionTask to
+  * application worker.
+  **/
+  rpc PollForDecisionTask(decision.PollForDecisionTaskRequest) returns (decision.PollForDecisionTaskResponse) {}
+
+  /**
+  * RespondDecisionTaskCompleted is called by application worker to complete a DecisionTask handed as a result of
+  * 'PollForDecisionTask' API call.  Completing a DecisionTask will result in new events for the workflow execution and
+  * potentially new ActivityTask being created for corresponding decisions.  It will also create a DecisionTaskCompleted
+  * event in the history for that session.  Use the 'taskToken' provided as response of PollForDecisionTask API call
+  * for completing the DecisionTask.
+  * The response could contain a new decision task if there is one or if the request asking for one.
+  **/
+  rpc RespondDecisionTaskCompleted(decision.RespondDecisionTaskCompletedRequest) returns (decision.RespondDecisionTaskCompletedResponse) {}
+
+  /**
+  * RespondDecisionTaskFailed is called by application worker to indicate failure.  This results in
+  * DecisionTaskFailedEvent written to the history and a new DecisionTask created.  This API can be used by client to
+  * either clear sticky tasklist or report any panics during DecisionTask processing.  Cadence will only append first
+  * DecisionTaskFailed event to the history of workflow execution for consecutive failures.
+  **/
+  rpc RespondDecisionTaskFailed(decision.RespondDecisionTaskFailedRequest) returns (void) {}
+
+  /**
+  * PollForActivityTask is called by application worker to process ActivityTask from a specific taskList.  ActivityTask
+  * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.
+  * Application is expected to call 'RespondActivityTaskCompleted' or 'RespondActivityTaskFailed' once it is done
+  * processing the task.
+  * Application also needs to call 'RecordActivityTaskHeartbeat' API within 'heartbeatTimeoutSeconds' interval to
+  * prevent the task from getting timed out.  An event 'ActivityTaskStarted' event is also written to workflow execution
+  * history before the ActivityTask is dispatched to application worker.
+  **/
+  rpc PollForActivityTask(activity.PollForActivityTaskRequest) returns (activity.PollForActivityTaskResponse) {}
+
+  /**
+  * RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails
+  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and
+  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will
+  * fail with 'EntityNotExistsError' in such situations.  Use the 'taskToken' provided as response of
+  * PollForActivityTask API call for heartbeating.
+  **/
+  rpc RecordActivityTaskHeartbeat(activity.RecordActivityTaskHeartbeatRequest) returns (activity.RecordActivityTaskHeartbeatResponse) {}
+
+  /**
+  * RecordActivityTaskHeartbeatByID is called by application worker while it is processing an ActivityTask.  If worker fails
+  * to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and
+  * 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeatByID' will
+  * fail with 'EntityNotExistsError' in such situations.  Instead of using 'taskToken' like in RecordActivityTaskHeartbeat,
+  * use Domain, WorkflowID and ActivityID
+  **/
+  rpc RecordActivityTaskHeartbeatByID(activity.RecordActivityTaskHeartbeatByIDRequest) returns (activity.RecordActivityTaskHeartbeatResponse) {}
+
+  /**
+  * RespondActivityTaskCompleted is called by application worker when it is done processing an ActivityTask.  It will
+  * result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
+  * created for the workflow so new decisions could be made.  Use the 'taskToken' provided as response of
+  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
+  * anymore due to activity timeout.
+  **/
+  rpc RespondActivityTaskCompleted(activity.RespondActivityTaskCompletedRequest) returns (void) {}
+
+  /**
+  * RespondActivityTaskCompletedByID is called by application worker when it is done processing an ActivityTask.
+  * It will result in a new 'ActivityTaskCompleted' event being written to the workflow history and a new DecisionTask
+  * created for the workflow so new decisions could be made.  Similar to RespondActivityTaskCompleted but use Domain,
+  * WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
+  * if the these IDs are not valid anymore due to activity timeout.
+  **/
+  rpc RespondActivityTaskCompletedByID(activity.RespondActivityTaskCompletedByIDRequest) returns (void) {}
+
+  /**
+  * RespondActivityTaskFailed is called by application worker when it is done processing an ActivityTask.  It will
+  * result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
+  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
+  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
+  * anymore due to activity timeout.
+  **/
+  rpc RespondActivityTaskFailed(activity.RespondActivityTaskFailedRequest) returns (void) {}
+
+  /**
+  * RespondActivityTaskFailedByID is called by application worker when it is done processing an ActivityTask.
+  * It will result in a new 'ActivityTaskFailed' event being written to the workflow history and a new DecisionTask
+  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskFailed but use
+  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
+  * if the these IDs are not valid anymore due to activity timeout.
+  **/
+  rpc RespondActivityTaskFailedByID(activity.RespondActivityTaskFailedByIDRequest) returns (void) {}
+
+  /**
+  * RespondActivityTaskCanceled is called by application worker when it is successfully canceled an ActivityTask.  It will
+  * result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
+  * created for the workflow instance so new decisions could be made.  Use the 'taskToken' provided as response of
+  * PollForActivityTask API call for completion. It fails with 'EntityNotExistsError' if the taskToken is not valid
+  * anymore due to activity timeout.
+  **/
+  rpc RespondActivityTaskCanceled(activity.RespondActivityTaskCanceledRequest) returns (void) {}
+
+  /**
+  * RespondActivityTaskCanceledByID is called by application worker when it is successfully canceled an ActivityTask.
+  * It will result in a new 'ActivityTaskCanceled' event being written to the workflow history and a new DecisionTask
+  * created for the workflow instance so new decisions could be made.  Similar to RespondActivityTaskCanceled but use
+  * Domain, WorkflowID and ActivityID instead of 'taskToken' for completion. It fails with 'EntityNotExistsError'
+  * if the these IDs are not valid anymore due to activity timeout.
+  **/
+  rpc RespondActivityTaskCanceledByID(activity.RespondActivityTaskCanceledByIDRequest) returns (void) {}
+
+  /**
+  * RequestCancelWorkflowExecution is called by application worker when it wants to request cancellation of a workflow instance.
+  * It will result in a new 'WorkflowExecutionCancelRequested' event being written to the workflow history and a new DecisionTask
+  * created for the workflow instance so new decisions could be made. It fails with 'EntityNotExistsError' if the workflow is not valid
+  * anymore due to completion or doesn't exist.
+  **/
+  rpc RequestCancelWorkflowExecution(workflow_execution.RequestCancelWorkflowExecutionRequest) returns (void) {}
+
+  /**
+  * SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
+  * WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
+  **/
+  rpc SignalWorkflowExecution(workflow_execution.SignalWorkflowExecutionRequest) returns (void) {}
+
+  /**
+  * SignalWithStartWorkflowExecution is used to ensure sending signal to a workflow.
+  * If the workflow is running, this results in WorkflowExecutionSignaled event being recorded in the history
+  * and a decision task being created for the execution.
+  * If the workflow is not running or not found, this results in WorkflowExecutionStarted and WorkflowExecutionSignaled
+  * events being recorded in history, and a decision task being created for the execution
+  **/
+  rpc SignalWithStartWorkflowExecution(workflow_execution.SignalWithStartWorkflowExecutionRequest) returns (workflow_execution.StartWorkflowExecutionResponse) {}
+
+  /**
+    * ResetWorkflowExecution reset an existing workflow execution to DecisionTaskCompleted event(exclusive).
+    * And it will immediately terminating the current execution instance.
+    **/
+  rpc ResetWorkflowExecution(workflow_execution.ResetWorkflowExecutionRequest) returns (workflow_execution.ResetWorkflowExecutionResponse) {}
+
+  /**
+  * TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
+  * in the history and immediately terminating the execution instance.
+  **/
+  rpc TerminateWorkflowExecution(workflow_execution.TerminateWorkflowExecutionRequest) returns (void) {}
+
+  /**
+  * ListOpenWorkflowExecutions is a visibility API to list the open executions in a specific domain.
+  **/
+  rpc ListOpenWorkflowExecutions(workflow_execution.ListOpenWorkflowExecutionsRequest) returns (workflow_execution.ListOpenWorkflowExecutionsResponse) {}
+
+  /**
+  * ListClosedWorkflowExecutions is a visibility API to list the closed executions in a specific domain.
+  **/
+  rpc ListClosedWorkflowExecutions(workflow_execution.ListClosedWorkflowExecutionsRequest) returns (workflow_execution.ListClosedWorkflowExecutionsResponse) {}
+
+  /**
+  * ListWorkflowExecutions is a visibility API to list workflow executions in a specific domain.
+  **/
+  rpc ListWorkflowExecutions(workflow_execution.ListWorkflowExecutionsRequest) returns (workflow_execution.ListWorkflowExecutionsResponse) {}
+
+  /**
+  * ListArchivedWorkflowExecutions is a visibility API to list archived workflow executions in a specific domain.
+  **/
+  rpc ListArchivedWorkflowExecutions(workflow_execution.ListArchivedWorkflowExecutionsRequest) returns (workflow_execution.ListArchivedWorkflowExecutionsResponse) {}
+
+  /**
+  * ScanWorkflowExecutions is a visibility API to list large amount of workflow executions in a specific domain without order.
+  **/
+  rpc ScanWorkflowExecutions(workflow_execution.ListWorkflowExecutionsRequest) returns (workflow_execution.ListWorkflowExecutionsResponse) {}
+
+  /**
+  * CountWorkflowExecutions is a visibility API to count of workflow executions in a specific domain.
+  **/
+  rpc CountWorkflowExecutions(workflow_execution.CountWorkflowExecutionsRequest) returns (workflow_execution.CountWorkflowExecutionsResponse) {}
+
+  /**
+  * GetSearchAttributes is a visibility API to get all legal keys that could be used in list APIs
+  **/
+  rpc GetSearchAttributes(void) returns (search_attributes.GetSearchAttributesResponse) {}
+
+  /**
+  * RespondQueryTaskCompleted is called by application worker to complete a QueryTask (which is a DecisionTask for query)
+  * as a result of 'PollForDecisionTask' API call. Completing a QueryTask will unblock the client call to 'QueryWorkflow'
+  * API and return the query result to client as a response to 'QueryWorkflow' API call.
+  **/
+  rpc RespondQueryTaskCompleted(task_list.RespondQueryTaskCompletedRequest) returns (void) {}
+
+  /**
+  * Reset the sticky tasklist related information in mutable state of a given workflow.
+  * Things cleared are:
+  * 1. StickyTaskList
+  * 2. StickyScheduleToStartTimeout
+  * 3. ClientLibraryVersion
+  * 4. ClientFeatureVersion
+  * 5. ClientImpl
+  **/
+  rpc ResetStickyTaskList(task_list.ResetStickyTaskListRequest) returns (task_list.ResetStickyTaskListResponse) {}
+
+  /**
+  * QueryWorkflow returns query result for a specified workflow execution
+  **/
+  rpc QueryWorkflow(workflow.QueryWorkflowRequest) returns (workflow.QueryWorkflowResponse) {}
+
+  /**
+  * DescribeWorkflowExecution returns information about the specified workflow execution.
+  **/
+  rpc DescribeWorkflowExecution(workflow_execution.DescribeWorkflowExecutionRequest) returns (workflow_execution.DescribeWorkflowExecutionResponse) {}
+
+  /**
+  * DescribeTaskList returns information about the target tasklist, right now this API returns the
+  * pollers which polled this tasklist in last few minutes.
+  **/
+  rpc DescribeTaskList(task_list.DescribeTaskListRequest) returns (task_list.DescribeTaskListResponse) {}
+
+  rpc GetReplicationMessages(replication.GetReplicationMessagesRequest) returns (replication.GetReplicationMessagesResponse) {}
+
+  rpc GetDomainReplicationMessages(replication.GetDomainReplicationMessagesRequest) returns (replication.GetDomainReplicationMessagesResponse) {}
+
+  /**
+  * ReapplyEvents applies stale events to the current workflow and current run
+  **/
+  rpc ReapplyEvents(replication.ReapplyEventsRequest) returns (void) {}
 }

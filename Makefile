@@ -9,11 +9,20 @@ grpc-install:
 	go get -u google.golang.org/grpc
 
 clean:
-	rm -f *.go
+	for dir in ./*/
+	do
+		rm -f ${dir}*.go
+	done
 
 yarpc: yarpc-install clean
-	protoc --proto_path=. --gogoslick_out=paths=source_relative:. *.proto 
-	protoc --proto_path=. --yarpc-go_out=. *.proto 
+	for dir in ./*/
+	do
+		protoc --proto_path=proto --gogoslick_out=paths=source_relative:proto ${dir}*.proto
+		protoc --proto_path=proto --yarpc-go_out=proto ${dir}*.proto
+	done
 
 grpc: grpc-install clean
-	protoc --proto_path=. --go_out=plugins=grpc,paths=source_relative:. *.proto 
+	for dir in ./*/
+	do
+		protoc --proto_path=proto --go_out=plugins=grpc,paths=source_relative:proto ${dir}*.proto
+	done

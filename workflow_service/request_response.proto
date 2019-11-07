@@ -1,0 +1,525 @@
+// Copyright (c) 2019 Temporal Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package workflow_service;
+option go_package = "github.com/temporalio/temporal/proto/workflow_service";
+
+import "enums/enums.proto";
+import "common/common.proto";
+import "domain/domain.proto";
+import "history/history.proto";
+import "decision/decision.proto";
+import "workflow_execution/workflow_execution.proto";
+import "workflow/workflow.proto";
+import "task_list/task_list.proto";
+import "replication/replication.proto";
+
+message RegisterDomainRequest {
+    string name = 1;
+    string description = 2;
+    string ownerEmail = 3;
+    int32 workflowExecutionRetentionPeriodInDays = 4;
+    bool emitMetric = 5;
+    repeated domain.ClusterReplicationConfiguration clusters = 6;
+    string activeClusterName = 7;
+    // A key-value map for any customized purpose.
+    map<string, string> data = 8;
+    string securityToken = 9;
+    bool isGlobalDomain = 10;
+    enums.ArchivalStatus historyArchivalStatus = 11;
+    string historyArchivalURI = 12;
+    enums.ArchivalStatus visibilityArchivalStatus = 13;
+    string visibilityArchivalURI = 14;
+}
+
+message RegisterDomainResponse {
+}
+
+message ListDomainsRequest {
+    int32 pageSize = 1;
+    bytes nextPageToken = 2;
+}
+
+message ListDomainsResponse {
+    repeated DescribeDomainResponse domains = 1;
+    bytes nextPageToken = 2;
+}
+
+message DescribeDomainRequest {
+    string name = 1;
+    string uuid = 2;
+}
+
+message DescribeDomainResponse {
+    domain.DomainInfo domainInfo = 1;
+    domain.DomainConfiguration configuration = 2;
+    domain.DomainReplicationConfiguration replicationConfiguration = 3;
+    int64 failoverVersion = 4;
+    bool isGlobalDomain = 5;
+}
+
+message UpdateDomainRequest {
+    string name = 1;
+    domain.UpdateDomainInfo updatedInfo = 2;
+    domain.DomainConfiguration configuration = 3;
+    domain.DomainReplicationConfiguration replicationConfiguration = 4;
+    string securityToken = 5;
+    string deleteBadBinary = 6;
+}
+
+message UpdateDomainResponse {
+    domain.DomainInfo domainInfo = 1;
+    domain.DomainConfiguration configuration = 2;
+    domain.DomainReplicationConfiguration replicationConfiguration = 3;
+    int64 failoverVersion = 4;
+    bool isGlobalDomain = 5;
+}
+
+message DeprecateDomainRequest {
+    string name = 1;
+    string securityToken = 2;
+}
+
+message DeprecateDomainResponse {
+}
+
+message StartWorkflowExecutionRequest {
+    string domain = 1;
+    string workflowId = 2;
+    common.WorkflowType workflowType = 3;
+    common.TaskList taskList = 4;
+    bytes input = 5;
+    int32 executionStartToCloseTimeoutSeconds = 6;
+    int32 taskStartToCloseTimeoutSeconds = 7;
+    string identity = 8;
+    string requestId = 9;
+    enums.WorkflowIdReusePolicy workflowIdReusePolicy = 10;
+    common.RetryPolicy retryPolicy = 11;
+    string cronSchedule = 12;
+    common.Memo memo = 13;
+    common.SearchAttributes searchAttributes = 14;
+    common.Header header = 15;
+}
+
+message StartWorkflowExecutionResponse {
+    string runId = 1;
+}
+
+message GetWorkflowExecutionHistoryRequest {
+    string domain = 1;
+    common.WorkflowExecution execution = 2;
+    int32 maximumPageSize = 3;
+    bytes nextPageToken = 4;
+    bool waitForNewEvent = 5;
+    enums.HistoryEventFilterType HistoryEventFilterType = 6;
+}
+
+message GetWorkflowExecutionHistoryResponse {
+    history.History history = 1;
+    bytes nextPageToken = 2;
+    bool archived = 3;
+}
+
+message PollForDecisionTaskRequest {
+    string domain = 1;
+    common.TaskList taskList = 2;
+    string identity = 3;
+    string binaryChecksum = 4;
+}
+
+message PollForDecisionTaskResponse {
+    bytes taskToken = 1;
+    common.WorkflowExecution workflowExecution = 2;
+    common.WorkflowType workflowType = 3;
+    int64 previousStartedEventId = 4;
+    int64 startedEventId = 5;
+    int64 attempt = 6;
+    int64 backlogCountHint = 7;
+    history.History history = 8;
+    bytes nextPageToken = 9;
+    common.WorkflowQuery query = 10;
+    common.TaskList WorkflowExecutionTaskList = 11;
+    int64 scheduledTimestamp = 12;
+    int64 startedTimestamp = 13;
+    map<string, common.WorkflowQuery> queries = 14;
+}
+
+message RespondDecisionTaskCompletedRequest {
+    bytes taskToken = 1;
+    repeated decision.Decision decisions = 2;
+    bytes executionContext = 3;
+    string identity = 4;
+    decision.StickyExecutionAttributes stickyAttributes = 5;
+    bool returnNewDecisionTask = 6;
+    bool forceCreateNewDecisionTask = 7;
+    string binaryChecksum = 8;
+    map<string, decision.WorkflowQueryResult> queryResults = 9;
+}
+
+message RespondDecisionTaskCompletedResponse {
+    PollForDecisionTaskResponse decisionTask = 1;
+}
+
+message RespondDecisionTaskFailedRequest {
+    bytes taskToken = 1;
+    enums.DecisionTaskFailedCause cause = 2;
+    bytes details = 3;
+    string identity = 4;
+}
+
+message RespondDecisionTaskFailedResponse {
+}
+
+message PollForActivityTaskRequest {
+    string domain = 1;
+    common.TaskList taskList = 2;
+    string identity = 3;
+    common.TaskListMetadata taskListMetadata = 4;
+}
+
+message PollForActivityTaskResponse {
+    bytes taskToken = 1;
+    common.WorkflowExecution workflowExecution = 2;
+    string activityId = 3;
+    common.ActivityType activityType = 4;
+    bytes input = 5;
+    int64 scheduledTimestamp = 6;
+    int32 scheduleToCloseTimeoutSeconds = 7;
+    int64 startedTimestamp = 8;
+    int32 startToCloseTimeoutSeconds = 9;
+    int32 heartbeatTimeoutSeconds = 10;
+    int32 attempt = 11;
+    int64 scheduledTimestampOfThisAttempt = 12;
+    bytes heartbeatDetails = 13;
+    common.WorkflowType workflowType = 14;
+    string workflowDomain = 15;
+    common.Header header = 16;
+}
+
+message RecordActivityTaskHeartbeatRequest {
+    bytes taskToken = 1;
+    bytes details = 2;
+    string identity = 3;
+}
+
+message RecordActivityTaskHeartbeatByIDRequest {
+    string domain = 1;
+    string workflowID = 2;
+    string runID = 3;
+    string activityID = 4;
+    bytes details = 5;
+    string identity = 6;
+}
+
+message RecordActivityTaskHeartbeatResponse {
+    bool cancelRequested = 1;
+}
+
+message RespondActivityTaskCompletedRequest {
+    bytes taskToken = 1;
+    bytes result = 2;
+    string identity = 3;
+}
+
+message RespondActivityTaskCompletedResponse {
+}
+
+message RespondActivityTaskCompletedByIDRequest {
+    string domain = 1;
+    string workflowID = 2;
+    string runID = 3;
+    string activityID = 4;
+    bytes result = 5;
+    string identity = 6;
+}
+
+message RespondActivityTaskCompletedByIDResponse {
+}
+
+message RespondActivityTaskFailedRequest {
+    bytes taskToken = 1;
+    string reason = 2;
+    bytes details = 3;
+    string identity = 4;
+}
+
+message RespondActivityTaskFailedResponse {
+}
+
+message RespondActivityTaskFailedByIDRequest {
+    string domain = 1;
+    string workflowID = 2;
+    string runID = 3;
+    string activityID = 4;
+    string reason = 5;
+    bytes details = 6;
+    string identity = 7;
+}
+
+message RespondActivityTaskFailedByIDResponse {
+}
+
+message RespondActivityTaskCanceledRequest {
+    bytes taskToken = 1;
+    bytes details = 2;
+    string identity = 3;
+}
+
+message RespondActivityTaskCanceledResponse {
+}
+
+message RespondActivityTaskCanceledByIDRequest {
+    string domain = 1;
+    string workflowID = 2;
+    string runID = 3;
+    string activityID = 4;
+    bytes details = 5;
+    string identity = 6;
+}
+
+message RespondActivityTaskCanceledByIDResponse {
+}
+
+message RequestCancelWorkflowExecutionRequest {
+    string domain = 1;
+    common.WorkflowExecution workflowExecution = 2;
+    string identity = 3;
+    string requestId = 4;
+}
+
+message RequestCancelWorkflowExecutionResponse {
+}
+
+message SignalWorkflowExecutionRequest {
+    string domain = 1;
+    common.WorkflowExecution workflowExecution = 2;
+    string signalName = 3;
+    bytes input = 4;
+    string identity = 5;
+    string requestId = 6;
+    bytes control = 7;
+}
+
+message SignalWorkflowExecutionResponse {
+}
+
+message SignalWithStartWorkflowExecutionRequest {
+    string domain = 1;
+    string workflowId = 2;
+    common.WorkflowType workflowType = 3;
+    common.TaskList taskList = 4;
+    bytes input = 5;
+    int32 executionStartToCloseTimeoutSeconds = 6;
+    int32 taskStartToCloseTimeoutSeconds = 7;
+    string identity = 8;
+    string requestId = 9;
+    enums.WorkflowIdReusePolicy workflowIdReusePolicy = 10;
+    string signalName = 11;
+    bytes signalInput = 12;
+    bytes control = 13;
+    common.RetryPolicy retryPolicy = 14;
+    string cronSchedule = 15;
+    common.Memo memo = 16;
+    common.SearchAttributes searchAttributes = 17;
+    common.Header header = 18;
+}
+
+message ResetWorkflowExecutionRequest {
+    string domain = 1;
+    common.WorkflowExecution workflowExecution = 2;
+    string reason = 3;
+    int64 decisionFinishEventId = 4;
+    string requestId = 5;
+}
+
+message ResetWorkflowExecutionResponse {
+    string runId = 1;
+}
+
+message TerminateWorkflowExecutionRequest {
+    string domain = 1;
+    common.WorkflowExecution workflowExecution = 2;
+    string reason = 3;
+    bytes details = 4;
+    string identity = 5;
+}
+
+message TerminateWorkflowExecutionResponse {
+}
+
+message ListOpenWorkflowExecutionsRequest {
+    string domain = 1;
+    int32 maximumPageSize = 2;
+    bytes nextPageToken = 3;
+    common.StartTimeFilter StartTimeFilter = 4;
+    common.WorkflowExecutionFilter executionFilter = 5;
+    common.WorkflowTypeFilter typeFilter = 6;
+}
+
+message ListOpenWorkflowExecutionsResponse {
+    repeated workflow_execution.WorkflowExecutionInfo executions = 1;
+    bytes nextPageToken = 2;
+}
+
+message ListClosedWorkflowExecutionsRequest {
+    string domain = 1;
+    int32 maximumPageSize = 2;
+    bytes nextPageToken = 3;
+    common.StartTimeFilter StartTimeFilter = 4;
+    common.WorkflowExecutionFilter executionFilter = 5;
+    common.WorkflowTypeFilter typeFilter = 6;
+    enums.WorkflowExecutionCloseStatus statusFilter = 7;
+}
+
+message ListClosedWorkflowExecutionsResponse {
+    repeated workflow_execution.WorkflowExecutionInfo executions = 1;
+    bytes nextPageToken = 2;
+}
+
+message ListWorkflowExecutionsRequest {
+    string domain = 1;
+    int32 pageSize = 2;
+    bytes nextPageToken = 3;
+    string query = 4;
+}
+
+message ListWorkflowExecutionsResponse {
+    repeated workflow_execution.WorkflowExecutionInfo executions = 1;
+    bytes nextPageToken = 2;
+}
+
+message ListArchivedWorkflowExecutionsRequest {
+    string domain = 1;
+    int32 pageSize = 2;
+    bytes nextPageToken = 3;
+    string query = 4;
+}
+
+message ListArchivedWorkflowExecutionsResponse {
+    repeated workflow_execution.WorkflowExecutionInfo executions = 1;
+    bytes nextPageToken = 2;
+}
+
+message CountWorkflowExecutionsRequest {
+    string domain = 1;
+    string query = 2;
+}
+
+message CountWorkflowExecutionsResponse {
+    int64 count = 1;
+}
+
+message GetSearchAttributesRequest {
+}
+
+message GetSearchAttributesResponse {
+    map<string, enums.IndexedValueType> keys = 1;
+}
+
+message RespondQueryTaskCompletedRequest {
+    bytes taskToken = 1;
+    enums.QueryTaskCompletedType completedType = 2;
+    bytes queryResult = 3;
+    string errorMessage = 4;
+}
+
+message RespondQueryTaskCompletedResponse {
+}
+
+message ResetStickyTaskListRequest {
+    string domain = 1;
+    common.WorkflowExecution execution = 2;
+}
+
+message ResetStickyTaskListResponse {
+}
+
+message QueryWorkflowRequest {
+    string domain = 1;
+    common.WorkflowExecution execution = 2;
+    common.WorkflowQuery query = 3;
+    // QueryRejectCondition can used to reject the query if workflow state does not satisfy condition
+    enums.QueryRejectCondition queryRejectCondition = 4;
+    enums.QueryConsistencyLevel queryConsistencyLevel = 5;
+}
+
+message QueryWorkflowResponse {
+    bytes queryResult = 1;
+    workflow.QueryRejected queryRejected = 2;
+}
+
+message DescribeWorkflowExecutionRequest {
+    string domain = 1;
+    common.WorkflowExecution execution = 2;
+}
+
+message DescribeWorkflowExecutionResponse {
+    workflow_execution.WorkflowExecutionConfiguration executionConfiguration = 1;
+    workflow_execution.WorkflowExecutionInfo workflowExecutionInfo = 2;
+    repeated workflow_execution.PendingActivityInfo pendingActivities = 3;
+    repeated workflow_execution.PendingChildExecutionInfo pendingChildren = 4;
+}
+
+message DescribeTaskListRequest {
+    string domain = 1;
+    common.TaskList taskList = 2;
+    enums.TaskListType taskListType = 3;
+    bool includeTaskListStatus = 4;
+}
+
+message DescribeTaskListResponse {
+    repeated task_list.PollerInfo pollers = 1;
+    task_list.TaskListStatus taskListStatus = 2;
+}
+
+message GetReplicationMessagesRequest {
+    repeated replication.ReplicationToken tokens = 1;
+}
+
+message GetReplicationMessagesResponse {
+    map<int32, replication.ReplicationMessages> messagesByShard = 1;
+}
+
+message GetDomainReplicationMessagesRequest {
+    // lastRetrievedMessageId is where the next fetch should begin with.
+    // TODO: Fix typo: Retrieved
+    int64 lastRetrivedMessageId = 1;
+    // lastProcessedMessageId is the last messageId that is processed on the passive side.
+    // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.
+    int64 lastProcessedMessageId = 2;
+    // clusterName is the name of the pulling cluster.
+    string clusterName = 3;
+}
+
+message GetDomainReplicationMessagesResponse {
+    replication.ReplicationMessages messages = 1;
+}
+
+// ReapplyEventsRequest is the request for reapply events API.
+message ReapplyEventsRequest {
+    string domainName = 1;
+    common.WorkflowExecution workflowExecution = 2;
+    common.DataBlob events = 3;
+}
+
+message ReapplyEventsResponse {
+}

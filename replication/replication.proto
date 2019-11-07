@@ -21,22 +21,13 @@
 syntax = "proto3";
 
 package replication;
-option go_package = "tpb";
+option go_package = "github.com/temporalio/temporal/proto/replication";
 
-import "enums.proto";
-import "common.proto";
-import "domain.proto";
-import "history.proto";
+import "enums/enums.proto";
+import "common/common.proto";
+import "domain/domain.proto";
+import "history/history.proto";
 
-// ReapplyEventsRequest is the request for reapply events API.
-message ReapplyEventsRequest {
-    string domainName = 1;
-    common.WorkflowExecution workflowExecution = 2;
-    common.DataBlob events = 3;
-}
-
-message ReapplyEventsResponse {
-}
 
 message DomainTaskAttributes {
     enums.DomainOperation domainOperation = 1;
@@ -136,30 +127,8 @@ message ReplicationToken {
 message ReplicationMessages {
     repeated ReplicationTask replicationTasks = 1;
     // This can be different than the last taskId in the above list, because sender can decide to skip tasks (e.g. for completed workflows).
+    // TODO: Fix typo: Retrieved
     int64 lastRetrivedMessageId = 2;
     // Hint for flow control.
     bool hasMore  = 3;
-}
-
-message GetReplicationMessagesRequest {
-    repeated ReplicationToken tokens = 1;
-}
-
-message GetReplicationMessagesResponse {
-    map<int32, ReplicationMessages> messagesByShard = 1;
-}
-
-message GetDomainReplicationMessagesRequest {
-    // lastRetrievedMessageId is where the next fetch should begin with.
-    // TODO: Fix typo: Retrieved
-    int64 lastRetrivedMessageId = 1;
-    // lastProcessedMessageId is the last messageId that is processed on the passive side.
-    // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.
-    int64 lastProcessedMessageId = 2;
-    // clusterName is the name of the pulling cluster.
-    string clusterName = 3;
-}
-
-message GetDomainReplicationMessagesResponse {
-    ReplicationMessages messages = 1;
 }

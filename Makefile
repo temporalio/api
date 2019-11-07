@@ -1,4 +1,4 @@
-.PHONY: grpc yarpc clean 
+.PHONY: grpc yarpc clean yarpc-install grpc-install
 
 yarpc-install:
 	go get -u github.com/gogo/protobuf/protoc-gen-gogoslick

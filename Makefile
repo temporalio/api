@@ -1,16 +1,18 @@
 .PHONY: grpc yarpc clean yarpc-install grpc-install
 $(VERBOSE).SILENT:
 
-SUBDIRS := $(dir $(wildcard */.))
+# List only subdirectories with *.proto files.
+# sort to remove duplicates.
+PROTO_DIRS := $(sort $(dir $(wildcard */*.proto)))
 
 yarpc: clean
 	echo "Compiling for YARPC..."
-	$(foreach dir,$(SUBDIRS),protoc --proto_path=. --gogoslick_out=paths=source_relative:. ${dir}*.proto;)
-	$(foreach dir,$(SUBDIRS),protoc --proto_path=. --yarpc-go_out=. ${dir}*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --gogoslick_out=paths=source_relative:. ${PROTO_DIR}*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --yarpc-go_out=. ${PROTO_DIR}*.proto;)
 
 grpc: clean
 	echo "Compiling for gRPC..."
-	$(foreach dir,$(SUBDIRS),protoc --proto_path=. --go_out=plugins=grpc,paths=source_relative:. ${dir}*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=plugins=grpc,paths=source_relative:. ${PROTO_DIR}*.proto;)
 
 yarpc-install:
 	echo "Installing/updaing YARPC plugin..."
@@ -24,4 +26,4 @@ grpc-install:
 
 clean:
 	echo "Deleting old files..."
-	$(foreach dir,$(SUBDIRS),rm -f ${dir}*.go;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),rm -f ${PROTO_DIR}*.go;)

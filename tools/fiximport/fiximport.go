@@ -21,28 +21,28 @@ func main() {
 	submoduleDir := flag.String("submodule_dir", "", "directory where submodule lives")
 	flag.Parse()
 
-	if *submoduleDir == ""{
+	if *submoduleDir == "" {
 		flag.Usage()
 		return
 	}
 
 	wd, err := os.Getwd()
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	goModPath, backPath, err := findGoMod(wd)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	moduleName, err := parseModuleName(goModPath)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	submoduleName, err := parseModuleName(path.Join(*submoduleDir, "go.mod"))
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -51,9 +51,9 @@ func main() {
 
 	numFilesFixed := 0
 	err = filepath.Walk(*submoduleDir, func(filePath string, info os.FileInfo, err error) error {
-		if !info.IsDir() && (strings.HasSuffix(filePath, "pb.go") || strings.HasSuffix(filePath, "pb.yarpc.go")){
+		if !info.IsDir() && (strings.HasSuffix(filePath, "pb.go") || strings.HasSuffix(filePath, "pb.yarpc.go")) {
 			err := replaceImport(filePath, oldImport, newImport)
-			if err != nil{
+			if err != nil {
 				log.Fatal(err)
 			} else {
 				numFilesFixed++
@@ -62,18 +62,18 @@ func main() {
 
 		return nil
 	})
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Printf("fixed imports in %d files\n", numFilesFixed)
 }
 
-func findGoMod(wd string) (string, string, error){
+func findGoMod(wd string) (string, string, error) {
 	dirCandidate := wd
 	for dirCandidate != "/" {
 		goModCandidate := path.Join(dirCandidate, "go.mod")
-		if _, err := os.Stat(goModCandidate); err == nil{
+		if _, err := os.Stat(goModCandidate); err == nil {
 			return goModCandidate, strings.Replace(wd, dirCandidate, "", 1), nil
 		}
 		dirCandidate = path.Dir(dirCandidate)
@@ -82,7 +82,7 @@ func findGoMod(wd string) (string, string, error){
 	return "", "", fmt.Errorf("unable find go.mod in %s and its parents", wd)
 }
 
-func parseModuleName(goModPath string) (string, error){
+func parseModuleName(goModPath string) (string, error) {
 	file, err := os.Open(goModPath)
 	if err != nil {
 		return "", err
@@ -92,9 +92,9 @@ func parseModuleName(goModPath string) (string, error){
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "module"){
+		if strings.HasPrefix(line, "module") {
 			moduleLine := strings.Split(line, " ")
-			if len(moduleLine) > 1{
+			if len(moduleLine) > 1 {
 				return moduleLine[1], nil
 			}
 		}
@@ -107,7 +107,7 @@ func parseModuleName(goModPath string) (string, error){
 	return "", errors.New("")
 }
 
-func replaceImport(goFilePath string, oldImportPrefix string, newImportPrefix string) error{
+func replaceImport(goFilePath string, oldImportPrefix string, newImportPrefix string) error {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, goFilePath, nil, parser.ParseComments)
 	if err != nil {
@@ -117,21 +117,21 @@ func replaceImport(goFilePath string, oldImportPrefix string, newImportPrefix st
 	needWrite := false
 	for _, importLine := range node.Imports {
 		trimmedImportLine := strings.Trim(importLine.Path.Value, "\"")
-		if strings.HasPrefix(trimmedImportLine, oldImportPrefix){
+		if strings.HasPrefix(trimmedImportLine, oldImportPrefix) {
 			importLine.Path.Value = fmt.Sprintf("\"%s%s\"", newImportPrefix, trimmedImportLine[len(oldImportPrefix):])
 			needWrite = true
 		}
 	}
 
-	if needWrite{
+	if needWrite {
 		dst, err := os.Create(goFilePath)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		defer dst.Close()
 
 		err = format.Node(dst, fset, node)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 	}

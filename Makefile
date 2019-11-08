@@ -3,12 +3,12 @@ $(VERBOSE).SILENT:
 
 SUBDIRS := $(dir $(wildcard */.))
 
-yarpc: yarpc-install clean
+yarpc: clean
 	echo "Compiling for YARPC..."
 	$(foreach dir,$(SUBDIRS),protoc --proto_path=. --gogoslick_out=paths=source_relative:. ${dir}*.proto;)
 	$(foreach dir,$(SUBDIRS),protoc --proto_path=. --yarpc-go_out=. ${dir}*.proto;)
 
-grpc: grpc-install clean
+grpc: clean
 	echo "Compiling for gRPC..."
 	$(foreach dir,$(SUBDIRS),protoc --proto_path=. --go_out=plugins=grpc,paths=source_relative:. ${dir}*.proto;)
 

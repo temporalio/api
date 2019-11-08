@@ -1,6 +1,6 @@
 # Temporal proto files  
 
-Install as git submodule to your project. For example into the `proto` dir.
+Install as git submodule to the project (for example into `proto` dir).
 
 See how to compile for YARPC and gRPC in [Makefile](Makefile).
 

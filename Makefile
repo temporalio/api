@@ -14,6 +14,10 @@ grpc: clean
 	echo "Compiling for gRPC..."
 	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=plugins=grpc,paths=source_relative:. ${PROTO_DIR}*.proto;)
 
+protobuf: clean
+	echo "Compiling for protobuf..."
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=paths=source_relative:. ${PROTO_DIR}*.proto;)
+
 yarpc-install:
 	echo "Installing/updaing YARPC plugin..."
 	go get -u github.com/gogo/protobuf/protoc-gen-gogoslick

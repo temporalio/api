@@ -8,32 +8,32 @@ default: yarpc
 # sort to remove duplicates.
 PROTO_DIRS := $(sort $(dir $(wildcard */*.proto)))
 PROTO_SERVICES := $(wildcard */service.proto)
-GEN_DIR = .gen/proto
+PROTO_GEN = .gen/proto
 
 yarpc: gogo-protobuf
 	echo "Compiling for YARPC..."
-	$(foreach PROTO_SERVICE,$(PROTO_SERVICES),protoc --proto_path=. --yarpc-go_out=$(GEN_DIR) $(PROTO_SERVICE);)
+	$(foreach PROTO_SERVICE,$(PROTO_SERVICES),protoc --proto_path=. --yarpc-go_out=$(PROTO_GEN) $(PROTO_SERVICE);)
 
 grpc: gogo-grpc
 
-gogo-grpc: clean $(GEN_DIR)
+gogo-grpc: clean $(PROTO_GEN)
 	echo "Compiling for gogo-gRPC..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --gogoslick_out=plugins=grpc,paths=source_relative:$(GEN_DIR) $(PROTO_DIR)*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --gogoslick_out=plugins=grpc,paths=source_relative:$(PROTO_GEN) $(PROTO_DIR)*.proto;)
 
-gogo-protobuf: clean $(GEN_DIR)
+gogo-protobuf: clean $(PROTO_GEN)
 	echo "Compiling for gogo-protobuf..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --gogoslick_out=paths=source_relative:$(GEN_DIR) $(PROTO_DIR)*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --gogoslick_out=paths=source_relative:$(PROTO_GEN) $(PROTO_DIR)*.proto;)
 
-go-protobuf: clean $(GEN_DIR)
+go-protobuf: clean $(PROTO_GEN)
 	echo "Compiling for go-protobuf..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=paths=source_relative:$(GEN_DIR) $(PROTO_DIR)*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=paths=source_relative:$(PROTO_GEN) $(PROTO_DIR)*.proto;)
 
-go-grpc: clean $(GEN_DIR)
+go-grpc: clean $(PROTO_GEN)
 	echo "Compiling for go-gRPC..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=plugins=grpc,paths=source_relative:$(GEN_DIR) $(PROTO_DIR)*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=plugins=grpc,paths=source_relative:$(PROTO_GEN) $(PROTO_DIR)*.proto;)
 
-$(GEN_DIR):
-	mkdir -p $(GEN_DIR)
+$(PROTO_GEN):
+	mkdir -p $(PROTO_GEN)
 
 yarpc-install: gogo-protobuf-install
 	echo "Installing/updaing YARPC plugins..."

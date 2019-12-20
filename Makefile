@@ -1,33 +1,39 @@
 .PHONY: grpc yarpc clean yarpc-install grpc-install
 $(VERBOSE).SILENT:
 
+# default target
+default: yarpc
+
 # List only subdirectories with *.proto files.
 # sort to remove duplicates.
 PROTO_DIRS := $(sort $(dir $(wildcard */*.proto)))
-
 PROTO_SERVICES := $(wildcard */service.proto)
+GEN_DIR = .gen/proto
 
-yarpc: clean gogo-protobuf
+yarpc: gogo-protobuf
 	echo "Compiling for YARPC..."
-	$(foreach PROTO_SERVICE,$(PROTO_SERVICES),protoc --proto_path=. --yarpc-go_out=. ${PROTO_SERVICE};)
+	$(foreach PROTO_SERVICE,$(PROTO_SERVICES),protoc --proto_path=. --yarpc-go_out=$(GEN_DIR) $(PROTO_SERVICE);)
 
-grpc: clean gogo-grpc
+grpc: gogo-grpc
 
-gogo-grpc: clean
+gogo-grpc: clean $(GEN_DIR)
 	echo "Compiling for gogo-gRPC..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --gogoslick_out=plugins=grpc,paths=source_relative:. ${PROTO_DIR}*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --gogoslick_out=plugins=grpc,paths=source_relative:$(GEN_DIR) $(PROTO_DIR)*.proto;)
 
-gogo-protobuf: clean
+gogo-protobuf: clean $(GEN_DIR)
 	echo "Compiling for gogo-protobuf..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --gogoslick_out=paths=source_relative:. ${PROTO_DIR}*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --gogoslick_out=paths=source_relative:$(GEN_DIR) $(PROTO_DIR)*.proto;)
 
-go-protobuf: clean
+go-protobuf: clean $(GEN_DIR)
 	echo "Compiling for go-protobuf..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=paths=source_relative:. ${PROTO_DIR}*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=paths=source_relative:$(GEN_DIR) $(PROTO_DIR)*.proto;)
 
-go-grpc: clean
+go-grpc: clean $(GEN_DIR)
 	echo "Compiling for go-gRPC..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=plugins=grpc,paths=source_relative:. ${PROTO_DIR}*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=. --go_out=plugins=grpc,paths=source_relative:$(GEN_DIR) $(PROTO_DIR)*.proto;)
+
+$(GEN_DIR):
+	mkdir -p $(GEN_DIR)
 
 yarpc-install: gogo-protobuf-install
 	echo "Installing/updaing YARPC plugins..."
@@ -45,4 +51,4 @@ go-protobuf-install:
 
 clean:
 	echo "Deleting generated go files..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),rm -f ${PROTO_DIR}*.go;)
+	rm -rf .gen/proto

@@ -51,4 +51,4 @@ go-protobuf-install:
 
 clean:
 	echo "Deleting generated go files..."
-	rm -rf .gen/proto
+	rm -rf $(PROTO_GEN)

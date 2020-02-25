@@ -1,4 +1,4 @@
-.PHONY: grpc clean grpc-install
+.PHONY: go-grpc clean grpc-install
 $(VERBOSE).SILENT:
 
 # default target

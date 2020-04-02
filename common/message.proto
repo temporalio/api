@@ -26,56 +26,53 @@ option go_package = "go.temporal.io/temporal-proto/common";
 option java_package = "io.temporal.proto.common";
 option java_multiple_files = true;
 
-import "enums/enums.proto";
-import "google/protobuf/wrappers.proto";
+import "common/enum.proto";
 
-message NamespaceInfo {
+message DataBlob {
+    EncodingType encodingType = 1;
+    bytes data = 2;
+}
+
+message WorkflowType {
     string name = 1;
-    enums.NamespaceStatus status = 2;
-    string description = 3;
-    string ownerEmail = 4;
-    // A key-value map for any customized purpose.
-    map<string, string> data = 5;
-    string id = 6;
 }
 
-message NamespaceConfiguration {
-    int32 workflowExecutionRetentionPeriodInDays = 1;
-    google.protobuf.BoolValue emitMetric = 2;
-    BadBinaries badBinaries = 3;
-    enums.ArchivalStatus historyArchivalStatus = 4;
-    string historyArchivalURI = 5;
-    enums.ArchivalStatus visibilityArchivalStatus = 6;
-    string visibilityArchivalURI = 7;
+message ActivityType {
+    string name = 1;
 }
 
-message BadBinaries {
-    map<string, BadBinaryInfo> binaries = 1;
+message SearchAttributes {
+    map<string, bytes> indexedFields = 1;
 }
 
-message BadBinaryInfo {
-    string reason = 1;
-    string operator = 2;
-    int64 createdTimeNano = 3;
+message Memo {
+    map<string, bytes> fields = 1;
 }
 
-message UpdateNamespaceInfo {
-    string description = 1;
-    string ownerEmail = 2;
-    // A key-value map for any customized purpose.
-    map<string, string> data = 3;
+message Header {
+    map<string, bytes> fields = 1;
 }
 
-message ClusterReplicationConfiguration {
-    string clusterName = 1;
-}
+message RetryPolicy {
+    // Interval of the first retry. If coefficient is 1.0 then it is used for all retries.
+    int32 initialIntervalInSeconds = 1;
 
-message NamespaceReplicationConfiguration {
-    string activeClusterName = 1;
-    repeated ClusterReplicationConfiguration clusters = 2;
-}
+    // Coefficient used to calculate the next retry interval.
+    // The next retry interval is previous interval multiplied by the coefficient.
+    // Must be 1 or larger.
+    double backoffCoefficient = 2;
 
-message NamespaceCacheInfo {
-    int64 numOfItemsInCacheById = 1;
-    int64 numOfItemsInCacheByName = 2;
+    // Maximum interval between retries. Exponential backoff leads to interval increase.
+    // This value is the cap of the increase. Default is 100x of initial interval.
+    int32 maximumIntervalInSeconds = 3;
+
+    // Maximum number of attempts. When exceeded the retries stop even if not expired yet.
+    // Must be 1 or bigger. Default is unlimited.
+    int32 maximumAttempts = 4;
+
+    // Non-Retriable errors. Will stop retrying if error matches this list.
+    repeated string nonRetriableErrorReasons = 5;
+
+    // Expiration time for the whole retry process.
+    int32 expirationIntervalInSeconds = 6;
 }

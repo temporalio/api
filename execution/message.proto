@@ -20,30 +20,15 @@
 
 syntax = "proto3";
 
-package common;
+package execution;
 
-option go_package = "go.temporal.io/temporal-proto/common";
-option java_package = "io.temporal.proto.common";
+option go_package = "go.temporal.io/temporal-proto/execution";
+option java_package = "io.temporal.proto.execution";
 option java_multiple_files = true;
 
 import "enums/enums.proto";
 import "common/common.proto";
 import "google/protobuf/wrappers.proto";
-
-message WorkflowExecution {
-    string workflowId = 1;
-    string runId = 2;
-}
-
-message WorkflowExecutionFilter {
-    string workflowId = 1;
-    string runId = 2;
-}
-
-message WorkerVersionInfo {
-    string impl = 1;
-    string featureVersion = 2;
-}
 
 message WorkflowExecutionInfo {
     WorkflowExecution execution = 1;
@@ -90,11 +75,18 @@ message PendingChildExecutionInfo {
     enums.ParentClosePolicy parentClosePolicy = 5;
 }
 
-
-//==============================
-message ParentExecutionInfo {
-    string namespaceId = 1;
-    string namespace = 2;
-    WorkflowExecution execution = 3;
-    int64 initiatedId = 4;
+message ResetPoints {
+    repeated ResetPointInfo points = 1;
 }
+
+message ResetPointInfo {
+    string binaryChecksum = 1;
+    string runId = 2;
+    int64 firstDecisionCompletedId = 3;
+    int64 createdTimeNano = 4;
+    // The time that the run is deleted due to retention.
+    int64 expiringTimeNano = 5;
+    // false if the reset point has pending childWFs/reqCancels/signalExternals.
+    bool resettable = 6;
+}
+

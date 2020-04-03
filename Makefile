@@ -1,16 +1,18 @@
-.PHONY: go-grpc clean grpc-install
 $(VERBOSE).SILENT:
 
 # default target
 default: all-install all
 
-# List only subdirectories with *.proto files.
-# sort to remove duplicates.
+ifndef GOPATH
+GOPATH := $(shell go env GOPATH)
+endif
+
 PROTO_ROOT := .
+# List only subdirectories with *.proto files. Sort to remove duplicates.
 PROTO_DIRS = $(sort $(dir $(wildcard $(PROTO_ROOT)/*/*.proto)))
 PROTO_SERVICES = $(wildcard $(PROTO_ROOT)/*/service.proto)
 PROTO_OUT := .gen
-PROTO_IMPORT := $(PROTO_ROOT)
+PROTO_IMPORT := $(PROTO_ROOT):$(GOPATH)/src/github.com/gogo/protobuf
 
 all: grpc
 
@@ -30,7 +32,6 @@ go-grpc: clean $(PROTO_OUT)
 gogo-grpc: clean $(PROTO_OUT)
 	echo "Compiling for gogo-gRPC..."
 	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=$(PROTO_IMPORT) --gogoslick_out=Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) $(PROTO_DIR)*.proto;)
-
 
 # Plugins & tools
 

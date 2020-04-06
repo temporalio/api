@@ -12,7 +12,7 @@ PROTO_ROOT := .
 PROTO_DIRS = $(sort $(dir $(wildcard $(PROTO_ROOT)/*/*.proto)))
 PROTO_SERVICES = $(wildcard $(PROTO_ROOT)/*/service.proto)
 PROTO_OUT := .gen
-PROTO_IMPORT := $(PROTO_ROOT):$(GOPATH)/src/github.com/gogo/protobuf
+PROTO_IMPORT := $(PROTO_ROOT):$(GOPATH)/src/github.com/gogo/protobuf/protobuf
 
 all: grpc
 
@@ -31,7 +31,7 @@ go-grpc: clean $(PROTO_OUT)
 
 gogo-grpc: clean $(PROTO_OUT)
 	echo "Compiling for gogo-gRPC..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=$(PROTO_IMPORT) --gogoslick_out=Mprotobuf/google/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mprotobuf/google/protobuf/timestamp.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) $(PROTO_DIR)*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=$(PROTO_IMPORT) --gogoslick_out=Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) $(PROTO_DIR)*.proto;)
 
 # Plugins & tools
 

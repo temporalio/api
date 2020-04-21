@@ -52,20 +52,10 @@ message ScheduleActivityTaskDecisionAttributes {
     int32 startToCloseTimeoutSeconds = 9;
     // Maximum time between successful worker heartbeats.
     int32 heartbeatTimeoutSeconds = 10;
-    // Interval of the first retry. If retryBackoffCoefficient is 1.0 then it is used for all retries.
-    int32 initialRetryIntervalInSeconds = 11;
-    // Coefficient used to calculate the next retry interval.
-    // The next retry interval is previous interval multiplied by the coefficient.
-    // Must be 1 or larger.
-    double retryBackoffCoefficient = 12;
-    // Maximum interval between retries. Exponential backoff leads to interval increase.
-    // This value is the cap of the increase. Default is 100x of the initial interval.
-    int32 maximumRetryIntervalInSeconds = 13;
-    // Maximum number of attempts. When exceeded the retries stop even if not expired yet.
-    // 1 disables retries. 0 means unlimited (up to the timeouts)
-    int32 maximumAttempts = 14;
-    // Non-Retriable errors. Will stop retrying if error matches this list.
-    repeated string nonRetriableErrorReasons = 15;
+    // Retry parameters. Note that activity is retried by default according to a default retry policy.
+    // To disable retries provide a retry policy with maximumAttempts equals to 1.
+    // The retries happen up to scheduleToCloseTimeout.
+    common.RetryPolicy retryPolicy = 11;
 }
 
 message RequestCancelActivityTaskDecisionAttributes {
@@ -128,7 +118,7 @@ message ContinueAsNewWorkflowExecutionDecisionAttributes {
     int32 executionStartToCloseTimeoutSeconds = 4;
     int32 taskStartToCloseTimeoutSeconds = 5;
     int32 backoffStartIntervalInSeconds = 6;
-    common.WorkflowRetryPolicy retryPolicy = 7;
+    common.RetryPolicy retryPolicy = 7;
     common.ContinueAsNewInitiator initiator = 8;
     string failureReason = 9;
     bytes failureDetails = 10;
@@ -150,7 +140,7 @@ message StartChildWorkflowExecutionDecisionAttributes {
     common.ParentClosePolicy parentClosePolicy = 8;
     bytes control = 9;
     common.WorkflowIdReusePolicy workflowIdReusePolicy = 10;
-    common.WorkflowRetryPolicy retryPolicy = 11;
+    common.RetryPolicy retryPolicy = 11;
     string cronSchedule = 12;
     common.Header header = 13;
     common.Memo memo = 14;

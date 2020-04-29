@@ -39,27 +39,33 @@ message WorkflowExecutionStartedEventAttributes {
     int64 parentInitiatedEventId = 4;
     tasklist.TaskList taskList = 5;
     common.Payload input = 6;
-    int32 executionStartToCloseTimeoutSeconds = 7;
-    int32 taskStartToCloseTimeoutSeconds = 8;
-    string continuedExecutionRunId = 9;
-    common.ContinueAsNewInitiator initiator = 10;
-    string continuedFailureReason = 11;
-    common.Payload continuedFailureDetails = 12;
-    common.Payload lastCompletionResult = 13;
+    // Total workflow execution timeout including retries and continue as new
+    int32 workflowExecutionTimeoutSeconds = 7;
+    // Timeout of a single workflow run
+    int32 workflowRunTimeoutSeconds = 8;
+    // Timeout of a single workflow task
+    int32 workflowTaskTimeoutSeconds = 9;
+    string continuedExecutionRunId = 10;
+    common.ContinueAsNewInitiator initiator = 11;
+    string continuedFailureReason = 12;
+    common.Payload continuedFailureDetails = 13;
+    common.Payload lastCompletionResult = 14;
     // This is the runId when the WorkflowExecutionStarted event is written.
-    string originalExecutionRunId = 14;
-    string identity = 15;
+    string originalExecutionRunId = 15;
+    string identity = 16;
     // This is the very first runId along the chain of ContinueAsNew and Reset.
-    string firstExecutionRunId = 16;
-    common.RetryPolicy retryPolicy = 17;
-    int32 attempt = 18;
-    int64 expirationTimestamp = 19;
-    string cronSchedule = 20;
-    int32 firstDecisionTaskBackoffSeconds = 21;
-    common.Memo memo = 22;
-    common.SearchAttributes searchAttributes = 23;
-    execution.ResetPoints prevAutoResetPoints = 24;
-    common.Header header = 25;
+    string firstExecutionRunId = 17;
+    common.RetryPolicy retryPolicy = 18;
+    int32 attempt = 19;
+    // The absolute time at which workflow is timed out.
+    // This time is passed without change to the next run/retry of a workflow.
+    int64 workflowExecutionExpirationTimestamp = 20;
+    string cronSchedule = 21;
+    int32 firstDecisionTaskBackoffSeconds = 22;
+    common.Memo memo = 23;
+    common.SearchAttributes searchAttributes = 24;
+    execution.ResetPoints prevAutoResetPoints = 25;
+    common.Header header = 26;
 }
 
 message WorkflowExecutionCompletedEventAttributes {
@@ -82,8 +88,11 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     common.WorkflowType workflowType = 2;
     tasklist.TaskList taskList = 3;
     common.Payload input = 4;
-    int32 executionStartToCloseTimeoutSeconds = 5;
-    int32 taskStartToCloseTimeoutSeconds = 6;
+    // workflowExecutionTimeout is omitted as it shouldn'be overridden from within a workflow
+    // Timeout of a single workflow run
+    int32 workflowRunTimeoutSeconds = 5;
+    // Timeout of a single workflow task
+    int32 workflowTaskTimeoutSeconds = 6;
     int64 decisionTaskCompletedEventId = 7;
     int32 backoffStartIntervalInSeconds = 8;
     common.ContinueAsNewInitiator initiator = 9;
@@ -139,14 +148,25 @@ message ActivityTaskScheduledEventAttributes {
     common.ActivityType activityType = 2;
     string namespace = 3;
     tasklist.TaskList taskList = 4;
-    common.Payload input = 5;
-    int32 scheduleToCloseTimeoutSeconds = 6;
-    int32 scheduleToStartTimeoutSeconds = 7;
-    int32 startToCloseTimeoutSeconds = 8;
-    int32 heartbeatTimeoutSeconds = 9;
-    int64 decisionTaskCompletedEventId = 10;
-    common.RetryPolicy retryPolicy = 11;
-    common.Header header = 12;
+    common.Header header = 5;
+    common.Payload input = 6;
+    // Indicates how long the caller is willing to wait for an activity completion.
+    // Limits for how long retries are happening. Either this or startToCloseTimeoutSeconds is required.
+    int32 scheduleToCloseTimeoutSeconds = 7;
+    // Limits time an activity task can stay in a task queue before a worker picks it up.
+    // This timeout is always non retriable as all a retry would achieve is to put it back into the same queue.
+    // Defaults to scheduleToCloseTimeoutSeconds or workflow execution timeout if not specified.
+    int32 scheduleToStartTimeoutSeconds = 8;
+    // Maximum time an activity is allowed to execute after a pick up by a worker.
+    // This timeout is always retriable. Either this or scheduleToCloseTimeoutSeconds is required.
+    int32 startToCloseTimeoutSeconds = 9;
+    // Maximum time between successful worker heartbeats.
+    int32 heartbeatTimeoutSeconds = 10;
+    int64 decisionTaskCompletedEventId = 11;
+    // Activities are provided by a default retry policy controlled through the service dynamic configuration.
+    // Retries are happening up to scheduleToCloseTimeout.
+    // To disable retries set retryPolicy.maximumAttempts to 1.
+    common.RetryPolicy retryPolicy = 12;
 }
 
 message ActivityTaskStartedEventAttributes {
@@ -319,17 +339,21 @@ message StartChildWorkflowExecutionInitiatedEventAttributes {
     common.WorkflowType workflowType = 3;
     tasklist.TaskList taskList = 4;
     common.Payload input = 5;
-    int32 executionStartToCloseTimeoutSeconds = 6;
-    int32 taskStartToCloseTimeoutSeconds = 7;
-    common.ParentClosePolicy parentClosePolicy = 8;
-    string control = 9;
-    int64 decisionTaskCompletedEventId = 10;
-    common.WorkflowIdReusePolicy workflowIdReusePolicy = 11;
-    common.RetryPolicy retryPolicy = 12;
-    string cronSchedule = 13;
-    common.Header header = 14;
-    common.Memo memo = 15;
-    common.SearchAttributes searchAttributes = 16;
+    // Total workflow execution timeout including retries and continue as new
+    int32 workflowExecutionTimeoutSeconds = 6;
+    // Timeout of a single workflow run
+    int32 workflowRunTimeoutSeconds = 7;
+    // Timeout of a single workflow task
+    int32 workflowTaskTimeoutSeconds = 8;
+    common.ParentClosePolicy parentClosePolicy = 9;
+    string control = 10;
+    int64 decisionTaskCompletedEventId = 11;
+    common.WorkflowIdReusePolicy workflowIdReusePolicy = 12;
+    common.RetryPolicy retryPolicy = 13;
+    string cronSchedule = 14;
+    common.Header header = 15;
+    common.Memo memo = 16;
+    common.SearchAttributes searchAttributes = 17;
 }
 
 message StartChildWorkflowExecutionFailedEventAttributes {

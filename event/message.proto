@@ -171,7 +171,7 @@ message ActivityTaskStartedEventAttributes {
     string identity = 2;
     string requestId = 3;
     int32 attempt = 4;
-    failure.Failure failure = 5;
+    failure.Failure lastFailure = 5;
 }
 
 message ActivityTaskCompletedEventAttributes {
@@ -183,19 +183,19 @@ message ActivityTaskCompletedEventAttributes {
 
 message ActivityTaskFailedEventAttributes {
     failure.Failure failure = 1;
-    // TODO: ????
     int64 scheduledEventId = 2;
     int64 startedEventId = 3;
     string identity = 4;
 }
 
 message ActivityTaskTimedOutEventAttributes {
-    failure.Failure failure = 1;
+    common.Payloads lastHeartbeatDetails = 1;
     int64 scheduledEventId = 2;
     int64 startedEventId = 3;
+    common.TimeoutType timeoutType = 4;
     // For retry activity, it may have a failure before timeout. It's important to keep those information for debug.
     // Client can also provide the info for making next decision
-    failure.Failure lastFailure = 4;
+    failure.Failure lastFailure = 5;
 }
 
 message ActivityTaskCancelRequestedEventAttributes {
@@ -268,8 +268,9 @@ message WorkflowExecutionSignaledEventAttributes {
 }
 
 message WorkflowExecutionTerminatedEventAttributes {
-    failure.Failure failure = 1;
-    string identity = 2;
+    string reason = 1;
+    common.Payloads details = 2;
+    string identity = 3;
 }
 
 message RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {

@@ -100,77 +100,61 @@ message EventAlreadyStarted {
 }
 
 //-----------------------------------------------------
-message CustomFailureInfo{
-    string sdk = 1;
-    string message = 2;
-    string type = 3;
-    bool retryable = 4;
-    common.Payloads details = 5;
+message ApplicationFailureInfo{
+    string type = 1;
+    bool retryable = 2;
+    common.Payloads details = 3;
 }
 
-message GenericFailureInfo{
-    string sdk = 1;
-    string message = 2;
-    string type = 3;
-}
+//message GenericFailureInfo{
+//    string sdk = 1;
+//    string message = 2;
+//    string type = 3;
+//}
 
 message TimeoutFailureInfo{
-    string sdk = 1;
-    common.TimeoutType timeoutType = 2;
-    common.Payloads details = 3;
+    common.TimeoutType timeoutType = 1;
+    common.Payloads lastHeartbeatDetails = 2;
+    failure.Failure lastFailure = 3;
 }
 
 message CanceledFailureInfo{
-    string sdk = 1;
-    common.Payloads details = 2;
+    common.Payloads details = 1;
 }
 
-message TerminatedFailureInfo{
-    string sdk = 1;
-    string message = 2;
-    common.Payloads details = 3;
+//message TerminatedFailureInfo{
+//    string message = 1;
+//    common.Payloads details = 2;
+//}
+
+//message PanicFailureInfo{
+//    string message = 1;
+//}
+
+message ActivityTaskFailureInfo {
+    int64 scheduledEventId = 1;
+    int64 startedEventId = 2;
+    string identity = 3;
 }
 
-message PanicFailureInfo{
-    string sdk = 1;
-    string message = 2;
-    string stackTrace = 4;
+message ChildWorkflowExecutionFailureInfo {
+    string namespace = 1;
+    // execution.WorkflowExecution workflowExecution = 2;
+    common.WorkflowType workflowType = 3;
+    int64 initiatedEventId = 4;
+    int64 startedEventId = 5;
 }
-
-//message ApplicationFailureInfo {
-//    string sdk = 1; // java, go, python, etc
-//    string message = 2;
-//    string type = 3; // Exception class,  Go error type, etc.
-//    bool retryable = 4;
-//    common.Payloads details = 5; // Possibly error payload beyond the message.
-//}
-//
-//message ActivityTaskFailureInfo {
-//    int64 scheduledEventId = 1;
-//    int64 startedEventId = 2;
-//    string identity = 3;
-//}
-//
-//message ChildWorkflowExecutionFailureInfo {
-//    string namespace = 1;
-//    execution.WorkflowExecution workflowExecution = 2;
-//    common.WorkflowType workflowType = 3;
-//    int64 initiatedEventId = 4;
-//    int64 startedEventId = 5;
-//}
 
 message Failure {
+    string source = 1;
+    string message = 2;
+    Failure innerFailure = 3;
+    string stackTrace = 4;
     oneof failureInfo {
-        //ActivityTaskFailureInfo activityTaskFailureInfo = 1;
-        //ChildWorkflowExecutionFailureInfo childWorkflowExecutionFailureInfo = 2;
-        //ApplicationFailureInfo applicationFailureInfo = 3;
-        CustomFailureInfo customFailureInfo = 3;
-        GenericFailureInfo genericFailureInfo = 4;
-        TimeoutFailureInfo timeoutFailureInfo = 5;
-        CanceledFailureInfo canceledFailureInfo = 6;
-        TerminatedFailureInfo terminatedFailureInfo = 7;
-        PanicFailureInfo panicFailureInfo = 8;
+        ApplicationFailureInfo applicationFailureInfo = 5;
+        TimeoutFailureInfo timeoutFailureInfo = 6;
+        CanceledFailureInfo canceledFailureInfo = 7;
+        ActivityTaskFailureInfo activityTaskFailureInfo = 8;
+        ChildWorkflowExecutionFailureInfo childWorkflowExecutionFailureInfo = 9;
     }
-    Failure innerFailure = 22;
-    //repeated string backtrace = 4;
 }

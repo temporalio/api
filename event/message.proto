@@ -36,7 +36,7 @@ import "tasklist/message.proto";
 message WorkflowExecutionStartedEventAttributes {
     common.WorkflowType workflowType = 1;
     string parentWorkflowNamespace = 2;
-    execution.WorkflowExecution parentWorkflowExecution = 3;
+    common.WorkflowExecution parentWorkflowExecution = 3;
     int64 parentInitiatedEventId = 4;
     tasklist.TaskList taskList = 5;
     common.Payloads input = 6;
@@ -151,11 +151,11 @@ message ActivityTaskScheduledEventAttributes {
     // Limits for how long retries are happening. Either this or startToCloseTimeoutSeconds is required.
     int32 scheduleToCloseTimeoutSeconds = 7;
     // Limits time an activity task can stay in a task queue before a worker picks it up.
-    // This timeout is always non retriable as all a retry would achieve is to put it back into the same queue.
+    // This timeout is always non retryable as all a retry would achieve is to put it back into the same queue.
     // Defaults to scheduleToCloseTimeoutSeconds or workflow execution timeout if not specified.
     int32 scheduleToStartTimeoutSeconds = 8;
     // Maximum time an activity is allowed to execute after a pick up by a worker.
-    // This timeout is always retriable. Either this or scheduleToCloseTimeoutSeconds is required.
+    // This timeout is always retryable. Either this or scheduleToCloseTimeoutSeconds is required.
     int32 startToCloseTimeoutSeconds = 9;
     // Maximum time between successful worker heartbeats.
     int32 heartbeatTimeoutSeconds = 10;
@@ -199,14 +199,8 @@ message ActivityTaskTimedOutEventAttributes {
 }
 
 message ActivityTaskCancelRequestedEventAttributes {
-    string activityId = 1;
+    int64 scheduledEventId = 1;
     int64 decisionTaskCompletedEventId = 2;
-}
-
-message RequestCancelActivityTaskFailedEventAttributes {
-    string activityId = 1;
-    string cause = 2;
-    int64 decisionTaskCompletedEventId = 3;
 }
 
 message ActivityTaskCanceledEventAttributes {
@@ -245,7 +239,7 @@ message CancelTimerFailedEventAttributes {
 message WorkflowExecutionCancelRequestedEventAttributes {
     string cause = 1;
     int64 externalInitiatedEventId = 2;
-    execution.WorkflowExecution externalWorkflowExecution = 3;
+    common.WorkflowExecution externalWorkflowExecution = 3;
     string identity = 4;
 }
 
@@ -276,7 +270,7 @@ message WorkflowExecutionTerminatedEventAttributes {
 message RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
     int64 decisionTaskCompletedEventId = 1;
     string namespace = 2;
-    execution.WorkflowExecution workflowExecution = 3;
+    common.WorkflowExecution workflowExecution = 3;
     string control = 4;
     bool childWorkflowOnly = 5;
 }
@@ -285,7 +279,7 @@ message RequestCancelExternalWorkflowExecutionFailedEventAttributes {
     WorkflowExecutionFailedCause cause = 1;
     int64 decisionTaskCompletedEventId = 2;
     string namespace = 3;
-    execution.WorkflowExecution workflowExecution = 4;
+    common.WorkflowExecution workflowExecution = 4;
     int64 initiatedEventId = 5;
     string control = 6;
 }
@@ -293,13 +287,13 @@ message RequestCancelExternalWorkflowExecutionFailedEventAttributes {
 message ExternalWorkflowExecutionCancelRequestedEventAttributes {
     int64 initiatedEventId = 1;
     string namespace = 2;
-    execution.WorkflowExecution workflowExecution = 3;
+    common.WorkflowExecution workflowExecution = 3;
 }
 
 message SignalExternalWorkflowExecutionInitiatedEventAttributes {
     int64 decisionTaskCompletedEventId = 1;
     string namespace = 2;
-    execution.WorkflowExecution workflowExecution = 3;
+    common.WorkflowExecution workflowExecution = 3;
     string signalName = 4;
     common.Payloads input = 5;
     string control = 6;
@@ -310,7 +304,7 @@ message SignalExternalWorkflowExecutionFailedEventAttributes {
     WorkflowExecutionFailedCause cause = 1;
     int64 decisionTaskCompletedEventId = 2;
     string namespace = 3;
-    execution.WorkflowExecution workflowExecution = 4;
+    common.WorkflowExecution workflowExecution = 4;
     int64 initiatedEventId = 5;
     string control = 6;
 }
@@ -318,7 +312,7 @@ message SignalExternalWorkflowExecutionFailedEventAttributes {
 message ExternalWorkflowExecutionSignaledEventAttributes {
     int64 initiatedEventId = 1;
     string namespace = 2;
-    execution.WorkflowExecution workflowExecution = 3;
+    common.WorkflowExecution workflowExecution = 3;
     string control = 4;
 }
 
@@ -363,7 +357,7 @@ message StartChildWorkflowExecutionFailedEventAttributes {
 message ChildWorkflowExecutionStartedEventAttributes {
     string namespace = 1;
     int64 initiatedEventId = 2;
-    execution.WorkflowExecution workflowExecution = 3;
+    common.WorkflowExecution workflowExecution = 3;
     common.WorkflowType workflowType = 4;
     common.Header header = 5;
 }
@@ -371,7 +365,7 @@ message ChildWorkflowExecutionStartedEventAttributes {
 message ChildWorkflowExecutionCompletedEventAttributes {
     common.Payloads result = 1;
     string namespace = 2;
-    execution.WorkflowExecution workflowExecution = 3;
+    common.WorkflowExecution workflowExecution = 3;
     common.WorkflowType workflowType = 4;
     int64 initiatedEventId = 5;
     int64 startedEventId = 6;
@@ -380,7 +374,7 @@ message ChildWorkflowExecutionCompletedEventAttributes {
 message ChildWorkflowExecutionFailedEventAttributes {
     failure.Failure failure = 1;
     string namespace = 2;
-    execution.WorkflowExecution workflowExecution = 3;
+    common.WorkflowExecution workflowExecution = 3;
     common.WorkflowType workflowType = 4;
     int64 initiatedEventId = 5;
     int64 startedEventId = 6;
@@ -389,7 +383,7 @@ message ChildWorkflowExecutionFailedEventAttributes {
 message ChildWorkflowExecutionCanceledEventAttributes {
     common.Payloads details = 1;
     string namespace = 2;
-    execution.WorkflowExecution workflowExecution = 3;
+    common.WorkflowExecution workflowExecution = 3;
     common.WorkflowType workflowType = 4;
     int64 initiatedEventId = 5;
     int64 startedEventId = 6;
@@ -398,7 +392,7 @@ message ChildWorkflowExecutionCanceledEventAttributes {
 message ChildWorkflowExecutionTimedOutEventAttributes {
     common.TimeoutType timeoutType = 1;
     string namespace = 2;
-    execution.WorkflowExecution workflowExecution = 3;
+    common.WorkflowExecution workflowExecution = 3;
     common.WorkflowType workflowType = 4;
     int64 initiatedEventId = 5;
     int64 startedEventId = 6;
@@ -406,7 +400,7 @@ message ChildWorkflowExecutionTimedOutEventAttributes {
 
 message ChildWorkflowExecutionTerminatedEventAttributes {
     string namespace = 1;
-    execution.WorkflowExecution workflowExecution = 2;
+    common.WorkflowExecution workflowExecution = 2;
     common.WorkflowType workflowType = 3;
     int64 initiatedEventId = 4;
     int64 startedEventId = 5;
@@ -436,31 +430,30 @@ message HistoryEvent {
         TimerStartedEventAttributes timerStartedEventAttributes = 20;
         TimerFiredEventAttributes timerFiredEventAttributes = 21;
         ActivityTaskCancelRequestedEventAttributes activityTaskCancelRequestedEventAttributes = 22;
-        RequestCancelActivityTaskFailedEventAttributes requestCancelActivityTaskFailedEventAttributes = 23;
-        ActivityTaskCanceledEventAttributes activityTaskCanceledEventAttributes = 24;
-        TimerCanceledEventAttributes timerCanceledEventAttributes = 25;
-        CancelTimerFailedEventAttributes cancelTimerFailedEventAttributes = 26;
-        MarkerRecordedEventAttributes markerRecordedEventAttributes = 27;
-        WorkflowExecutionSignaledEventAttributes workflowExecutionSignaledEventAttributes = 28;
-        WorkflowExecutionTerminatedEventAttributes workflowExecutionTerminatedEventAttributes = 29;
-        WorkflowExecutionCancelRequestedEventAttributes workflowExecutionCancelRequestedEventAttributes = 30;
-        WorkflowExecutionCanceledEventAttributes workflowExecutionCanceledEventAttributes = 31;
-        RequestCancelExternalWorkflowExecutionInitiatedEventAttributes requestCancelExternalWorkflowExecutionInitiatedEventAttributes = 32;
-        RequestCancelExternalWorkflowExecutionFailedEventAttributes requestCancelExternalWorkflowExecutionFailedEventAttributes = 33;
-        ExternalWorkflowExecutionCancelRequestedEventAttributes externalWorkflowExecutionCancelRequestedEventAttributes = 34;
-        WorkflowExecutionContinuedAsNewEventAttributes workflowExecutionContinuedAsNewEventAttributes = 35;
-        StartChildWorkflowExecutionInitiatedEventAttributes startChildWorkflowExecutionInitiatedEventAttributes = 36;
-        StartChildWorkflowExecutionFailedEventAttributes startChildWorkflowExecutionFailedEventAttributes = 37;
-        ChildWorkflowExecutionStartedEventAttributes childWorkflowExecutionStartedEventAttributes = 38;
-        ChildWorkflowExecutionCompletedEventAttributes childWorkflowExecutionCompletedEventAttributes = 39;
-        ChildWorkflowExecutionFailedEventAttributes childWorkflowExecutionFailedEventAttributes = 40;
-        ChildWorkflowExecutionCanceledEventAttributes childWorkflowExecutionCanceledEventAttributes = 41;
-        ChildWorkflowExecutionTimedOutEventAttributes childWorkflowExecutionTimedOutEventAttributes = 42;
-        ChildWorkflowExecutionTerminatedEventAttributes childWorkflowExecutionTerminatedEventAttributes = 43;
-        SignalExternalWorkflowExecutionInitiatedEventAttributes signalExternalWorkflowExecutionInitiatedEventAttributes = 44;
-        SignalExternalWorkflowExecutionFailedEventAttributes signalExternalWorkflowExecutionFailedEventAttributes = 45;
-        ExternalWorkflowExecutionSignaledEventAttributes externalWorkflowExecutionSignaledEventAttributes = 46;
-        UpsertWorkflowSearchAttributesEventAttributes upsertWorkflowSearchAttributesEventAttributes = 47;
+        ActivityTaskCanceledEventAttributes activityTaskCanceledEventAttributes = 23;
+        TimerCanceledEventAttributes timerCanceledEventAttributes = 24;
+        CancelTimerFailedEventAttributes cancelTimerFailedEventAttributes = 25;
+        MarkerRecordedEventAttributes markerRecordedEventAttributes = 26;
+        WorkflowExecutionSignaledEventAttributes workflowExecutionSignaledEventAttributes = 27;
+        WorkflowExecutionTerminatedEventAttributes workflowExecutionTerminatedEventAttributes = 28;
+        WorkflowExecutionCancelRequestedEventAttributes workflowExecutionCancelRequestedEventAttributes = 29;
+        WorkflowExecutionCanceledEventAttributes workflowExecutionCanceledEventAttributes = 30;
+        RequestCancelExternalWorkflowExecutionInitiatedEventAttributes requestCancelExternalWorkflowExecutionInitiatedEventAttributes = 31;
+        RequestCancelExternalWorkflowExecutionFailedEventAttributes requestCancelExternalWorkflowExecutionFailedEventAttributes = 32;
+        ExternalWorkflowExecutionCancelRequestedEventAttributes externalWorkflowExecutionCancelRequestedEventAttributes = 33;
+        WorkflowExecutionContinuedAsNewEventAttributes workflowExecutionContinuedAsNewEventAttributes = 34;
+        StartChildWorkflowExecutionInitiatedEventAttributes startChildWorkflowExecutionInitiatedEventAttributes = 35;
+        StartChildWorkflowExecutionFailedEventAttributes startChildWorkflowExecutionFailedEventAttributes = 36;
+        ChildWorkflowExecutionStartedEventAttributes childWorkflowExecutionStartedEventAttributes = 37;
+        ChildWorkflowExecutionCompletedEventAttributes childWorkflowExecutionCompletedEventAttributes = 38;
+        ChildWorkflowExecutionFailedEventAttributes childWorkflowExecutionFailedEventAttributes = 39;
+        ChildWorkflowExecutionCanceledEventAttributes childWorkflowExecutionCanceledEventAttributes = 40;
+        ChildWorkflowExecutionTimedOutEventAttributes childWorkflowExecutionTimedOutEventAttributes = 41;
+        ChildWorkflowExecutionTerminatedEventAttributes childWorkflowExecutionTerminatedEventAttributes = 42;
+        SignalExternalWorkflowExecutionInitiatedEventAttributes signalExternalWorkflowExecutionInitiatedEventAttributes = 43;
+        SignalExternalWorkflowExecutionFailedEventAttributes signalExternalWorkflowExecutionFailedEventAttributes = 44;
+        ExternalWorkflowExecutionSignaledEventAttributes externalWorkflowExecutionSignaledEventAttributes = 45;
+        UpsertWorkflowSearchAttributesEventAttributes upsertWorkflowSearchAttributesEventAttributes = 46;
     }
 }
 

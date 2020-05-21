@@ -25,3 +25,66 @@ package failure;
 option go_package = "go.temporal.io/temporal-proto/failure";
 option java_package = "io.temporal.proto.failure";
 option java_multiple_files = true;
+
+
+import "common/message.proto";
+import "common/enum.proto";
+
+message ApplicationFailureInfo{
+    string type = 1;
+    bool nonRetryable = 2;
+    common.Payloads details = 3;
+}
+
+message TimeoutFailureInfo{
+    common.TimeoutType timeoutType = 1;
+    common.Payloads lastHeartbeatDetails = 2;
+    failure.Failure lastFailure = 3;
+}
+
+message CanceledFailureInfo{
+    common.Payloads details = 1;
+}
+
+message TerminatedFailureInfo{
+}
+
+message ServerFailureInfo{
+    bool nonRetryable = 1;
+}
+
+message ResetWorkflowFailureInfo{
+    common.Payloads lastHeartbeatDetails = 1;
+}
+
+message ActivityTaskFailureInfo {
+    int64 scheduledEventId = 1;
+    int64 startedEventId = 2;
+    string identity = 3;
+}
+
+message ChildWorkflowExecutionFailureInfo {
+    string namespace = 1;
+    common.WorkflowExecution workflowExecution = 2;
+    common.WorkflowType workflowType = 3;
+    int64 initiatedEventId = 4;
+    int64 startedEventId = 5;
+}
+
+message Failure {
+    string message = 1;
+    string source = 2;
+    string stackTrace = 3;
+    Failure cause = 4;
+    oneof failureInfo {
+        ApplicationFailureInfo applicationFailureInfo = 5;
+        TimeoutFailureInfo timeoutFailureInfo = 6;
+        CanceledFailureInfo canceledFailureInfo = 7;
+        TerminatedFailureInfo terminatedFailureInfo = 8;
+        ServerFailureInfo serverFailureInfo = 9;
+        ResetWorkflowFailureInfo resetWorkflowFailureInfo = 10;
+        ActivityTaskFailureInfo activityTaskFailureInfo = 11;
+        ChildWorkflowExecutionFailureInfo childWorkflowExecutionFailureInfo = 12;
+        WorkflowExecutionFailureInfo workflowExecutionFailureInfo = 13;
+    }
+}

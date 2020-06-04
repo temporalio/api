@@ -77,11 +77,13 @@ message WorkflowExecutionCompletedEventAttributes {
 
 message WorkflowExecutionFailedEventAttributes {
     failure.Failure failure = 1;
-    int64 decisionTaskCompletedEventId = 2;
+    common.RetryStatus retryStatus = 2;
+    int64 decisionTaskCompletedEventId = 3;
 }
 
 message WorkflowExecutionTimedOutEventAttributes {
-    common.TimeoutType timeoutType = 1;
+    common.RetryStatus retryStatus = 1;
+    common.TimeoutType timeoutType = 2;
 }
 
 message WorkflowExecutionContinuedAsNewEventAttributes {
@@ -188,16 +190,15 @@ message ActivityTaskFailedEventAttributes {
     int64 scheduledEventId = 2;
     int64 startedEventId = 3;
     string identity = 4;
+    common.RetryStatus retryStatus = 5;
 }
 
 message ActivityTaskTimedOutEventAttributes {
-    common.Payloads lastHeartbeatDetails = 1;
+    // For retry activity, it may have a failure before timeout. It is stored as `cause` in `failure`.
+    failure.Failure failure = 1;
     int64 scheduledEventId = 2;
     int64 startedEventId = 3;
-    common.TimeoutType timeoutType = 4;
-    // For retry activity, it may have a failure before timeout. It's important to keep those information for debug.
-    // Client can also provide the info for making next decision
-    failure.Failure lastFailure = 5;
+    common.RetryStatus retryStatus = 4;
 }
 
 message ActivityTaskCancelRequestedEventAttributes {
@@ -381,6 +382,7 @@ message ChildWorkflowExecutionFailedEventAttributes {
     common.WorkflowType workflowType = 4;
     int64 initiatedEventId = 5;
     int64 startedEventId = 6;
+    common.RetryStatus retryStatus = 7;
 }
 
 message ChildWorkflowExecutionCanceledEventAttributes {
@@ -399,6 +401,7 @@ message ChildWorkflowExecutionTimedOutEventAttributes {
     common.WorkflowType workflowType = 4;
     int64 initiatedEventId = 5;
     int64 startedEventId = 6;
+    common.RetryStatus retryStatus = 7;
 }
 
 message ChildWorkflowExecutionTerminatedEventAttributes {

@@ -22,23 +22,49 @@
 
 syntax = "proto3";
 
-package tasklist;
+package namespace.v1;
 
-option go_package = "go.temporal.io/temporal-proto/tasklist";
-option java_package = "io.temporal.proto.tasklist";
+option go_package = "go.temporal.io/temporal-proto/namespace.v1;namespace";
+option java_package = "io.temporal.proto.namespace.v1";
 option java_multiple_files = true;
+option java_outer_classname = "MessageProto";
 
-enum TaskListKind {
-    TASK_LIST_KIND_UNSPECIFIED = 0;
-    TASK_LIST_KIND_NORMAL = 1;
-    TASK_LIST_KIND_STICKY = 2;
+import "enums/v1/namespace.proto";
+import "google/protobuf/wrappers.proto";
+
+message NamespaceInfo {
+    string name = 1;
+    enums.v1.NamespaceStatus status = 2;
+    string description = 3;
+    string ownerEmail = 4;
+    // A key-value map for any customized purpose.
+    map<string, string> data = 5;
+    string id = 6;
 }
 
-enum TaskListType {
-    TASK_LIST_TYPE_UNSPECIFIED = 0;
-    // Decision type of task list.
-    TASK_LIST_TYPE_DECISION = 1;
-    // Activity type of task list.
-    TASK_LIST_TYPE_ACTIVITY = 2;
+message NamespaceConfiguration {
+    int32 workflowExecutionRetentionPeriodInDays = 1;
+    google.protobuf.BoolValue emitMetric = 2;
+    BadBinaries badBinaries = 3;
+    enums.v1.ArchivalStatus historyArchivalStatus = 4;
+    string historyArchivalURI = 5;
+    enums.v1.ArchivalStatus visibilityArchivalStatus = 6;
+    string visibilityArchivalURI = 7;
 }
 
+message BadBinaries {
+    map<string, BadBinaryInfo> binaries = 1;
+}
+
+message BadBinaryInfo {
+    string reason = 1;
+    string operator = 2;
+    int64 createdTimeNano = 3;
+}
+
+message UpdateNamespaceInfo {
+    string description = 1;
+    string ownerEmail = 2;
+    // A key-value map for any customized purpose.
+    map<string, string> data = 3;
+}

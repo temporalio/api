@@ -22,15 +22,51 @@
 
 syntax = "proto3";
 
-package filter;
+package tasklist.v1;
 
-option go_package = "go.temporal.io/temporal-proto/filter";
-option java_package = "io.temporal.proto.filter";
+option go_package = "go.temporal.io/temporal-proto/tasklist.v1;tasklist";
+option java_package = "io.temporal.proto.tasklist.v1";
 option java_multiple_files = true;
+option java_outer_classname = "MessageProto";
 
-enum HistoryEventFilterType {
-    HISTORY_EVENT_FILTER_TYPE_UNSPECIFIED = 0;
-    HISTORY_EVENT_FILTER_TYPE_ALL_EVENT = 1;
-    HISTORY_EVENT_FILTER_TYPE_CLOSE_EVENT = 2;
+import "enums/v1/task_list.proto";
+import "google/protobuf/wrappers.proto";
+
+message TaskList {
+    string name = 1;
+    enums.v1.TaskListKind kind = 2;
 }
 
+message TaskListMetadata {
+    google.protobuf.DoubleValue maxTasksPerSecond = 1;
+}
+
+message TaskListStatus {
+    int64 backlogCountHint = 1;
+    int64 readLevel = 2;
+    int64 ackLevel = 3;
+    double ratePerSecond = 4;
+    TaskIdBlock taskIdBlock = 5;
+}
+
+message TaskIdBlock {
+    int64 startId = 1;
+    int64 endId = 2;
+}
+
+message TaskListPartitionMetadata {
+    string key = 1;
+    string ownerHostName = 2;
+}
+
+message PollerInfo {
+    // Unix Nano
+    int64 lastAccessTime = 1;
+    string identity = 2;
+    double ratePerSecond = 3;
+}
+
+message StickyExecutionAttributes {
+    TaskList workerTaskList = 1;
+    int32 scheduleToStartTimeoutSeconds = 2;
+}

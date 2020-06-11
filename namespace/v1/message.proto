@@ -22,46 +22,49 @@
 
 syntax = "proto3";
 
-package tasklist;
+package namespace.v1;
 
-option go_package = "go.temporal.io/temporal-proto/tasklist";
-option java_package = "io.temporal.proto.tasklist";
+option go_package = "go.temporal.io/temporal-proto/namespace/v1;namespace";
+option java_package = "io.temporal.proto.namespace.v1";
 option java_multiple_files = true;
+option java_outer_classname = "MessageProto";
 
-import "tasklist/enum.proto";
+import "enums/v1/namespace.proto";
 import "google/protobuf/wrappers.proto";
 
-message TaskList {
+message NamespaceInfo {
     string name = 1;
-    TaskListKind kind = 2;
+    enums.v1.NamespaceStatus status = 2;
+    string description = 3;
+    string owner_email = 4;
+    // A key-value map for any customized purpose.
+    map<string, string> data = 5;
+    string id = 6;
 }
 
-message TaskListMetadata {
-    google.protobuf.DoubleValue maxTasksPerSecond = 1;
+message NamespaceConfiguration {
+    int32 workflow_execution_retention_period_in_days = 1;
+    google.protobuf.BoolValue emit_metric = 2;
+    BadBinaries bad_binaries = 3;
+    enums.v1.ArchivalStatus history_archival_status = 4;
+    string history_archival_u_r_i = 5;
+    enums.v1.ArchivalStatus visibility_archival_status = 6;
+    string visibility_archival_u_r_i = 7;
 }
 
-message TaskListStatus {
-    int64 backlogCountHint = 1;
-    int64 readLevel = 2;
-    int64 ackLevel = 3;
-    double ratePerSecond = 4;
-    TaskIdBlock taskIdBlock = 5;
+message BadBinaries {
+    map<string, BadBinaryInfo> binaries = 1;
 }
 
-message TaskIdBlock {
-    int64 startId = 1;
-    int64 endId = 2;
+message BadBinaryInfo {
+    string reason = 1;
+    string operator = 2;
+    int64 created_time_nano = 3;
 }
 
-message TaskListPartitionMetadata {
-    string key = 1;
-    string ownerHostName = 2;
+message UpdateNamespaceInfo {
+    string description = 1;
+    string owner_email = 2;
+    // A key-value map for any customized purpose.
+    map<string, string> data = 3;
 }
-
-message PollerInfo {
-    // Unix Nano
-    int64 lastAccessTime = 1;
-    string identity = 2;
-    double ratePerSecond = 3;
-}
-

@@ -22,26 +22,51 @@
 
 syntax = "proto3";
 
-package decision;
+package tasklist.v1;
 
-option go_package = "go.temporal.io/temporal-proto/decision";
-option java_package = "io.temporal.proto.decision";
+option go_package = "go.temporal.io/temporal-proto/tasklist/v1;tasklist";
+option java_package = "io.temporal.proto.tasklist.v1";
 option java_multiple_files = true;
+option java_outer_classname = "MessageProto";
 
-// Whenever this list of decision is changed do change the function shouldBufferEvent in mutableStateBuilder.go to make sure to do the correct event ordering.
-enum DecisionType {
-    DECISION_TYPE_UNSPECIFIED = 0;
-    DECISION_TYPE_SCHEDULE_ACTIVITY_TASK = 1;
-    DECISION_TYPE_REQUEST_CANCEL_ACTIVITY_TASK = 2;
-    DECISION_TYPE_START_TIMER = 3;
-    DECISION_TYPE_COMPLETE_WORKFLOW_EXECUTION = 4;
-    DECISION_TYPE_FAIL_WORKFLOW_EXECUTION = 5;
-    DECISION_TYPE_CANCEL_TIMER = 6;
-    DECISION_TYPE_CANCEL_WORKFLOW_EXECUTION = 7;
-    DECISION_TYPE_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION = 8;
-    DECISION_TYPE_RECORD_MARKER = 9;
-    DECISION_TYPE_CONTINUE_AS_NEW_WORKFLOW_EXECUTION = 10;
-    DECISION_TYPE_START_CHILD_WORKFLOW_EXECUTION = 11;
-    DECISION_TYPE_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION = 12;
-    DECISION_TYPE_UPSERT_WORKFLOW_SEARCH_ATTRIBUTES = 13;
+import "enums/v1/task_list.proto";
+import "google/protobuf/wrappers.proto";
+
+message TaskList {
+    string name = 1;
+    enums.v1.TaskListKind kind = 2;
+}
+
+message TaskListMetadata {
+    google.protobuf.DoubleValue max_tasks_per_second = 1;
+}
+
+message TaskListStatus {
+    int64 backlog_count_hint = 1;
+    int64 read_level = 2;
+    int64 ack_level = 3;
+    double rate_per_second = 4;
+    TaskIdBlock task_id_block = 5;
+}
+
+message TaskIdBlock {
+    int64 start_id = 1;
+    int64 end_id = 2;
+}
+
+message TaskListPartitionMetadata {
+    string key = 1;
+    string owner_host_name = 2;
+}
+
+message PollerInfo {
+    // Unix Nano
+    int64 last_access_time = 1;
+    string identity = 2;
+    double rate_per_second = 3;
+}
+
+message StickyExecutionAttributes {
+    TaskList worker_task_list = 1;
+    int32 schedule_to_start_timeout_seconds = 2;
 }

@@ -23,7 +23,7 @@ $(PROTO_OUT):
 
 # Compile proto files to go
 
-grpc: go-grpc gogo-grpc
+grpc: gogo-grpc fix-path
 
 go-grpc: clean $(PROTO_OUT)
 	echo "Compiling for go-gRPC..."
@@ -32,6 +32,9 @@ go-grpc: clean $(PROTO_OUT)
 gogo-grpc: clean $(PROTO_OUT)
 	echo "Compiling for gogo-gRPC..."
 	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --proto_path=$(PROTO_IMPORT) --gogoslick_out=Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) $(PROTO_DIR)*.proto;)
+
+fix-path:
+	mv -f $(PROTO_OUT)/temporal/* $(PROTO_OUT) && rm -d $(PROTO_OUT)/temporal
 
 # Plugins & tools
 

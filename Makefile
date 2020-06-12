@@ -9,8 +9,8 @@ endif
 
 PROTO_ROOT := .
 # List only subdirectories with *.proto files. Sort to remove duplicates.
-PROTO_DIRS = $(sort $(dir $(wildcard $(PROTO_ROOT)/*/*/*.proto)))
-PROTO_SERVICES = $(wildcard $(PROTO_ROOT)/*/service.proto)
+PROTO_DIRS = $(sort $(dir $(wildcard $(PROTO_ROOT)/temporal/*/*/*.proto)))
+PROTO_SERVICES = $(wildcard $(PROTO_ROOT)/temporal/*/service.proto)
 PROTO_OUT := .gen
 PROTO_IMPORT := $(PROTO_ROOT):$(GOPATH)/src/github.com/temporalio/gogo-protobuf/protobuf
 

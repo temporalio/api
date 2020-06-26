@@ -34,7 +34,7 @@ import "temporal/enums/v1/namespace.proto";
 import "temporal/enums/v1/failed_cause.proto";
 import "temporal/enums/v1/common.proto";
 import "temporal/enums/v1/query.proto";
-import "temporal/enums/v1/task_list.proto";
+import "temporal/enums/v1/task_queue.proto";
 import "temporal/common/v1/message.proto";
 import "temporal/history/v1/message.proto";
 import "temporal/workflow/v1/message.proto";
@@ -44,7 +44,7 @@ import "temporal/filter/v1/message.proto";
 import "temporal/namespace/v1/message.proto";
 import "temporal/query/v1/message.proto";
 import "temporal/replication/v1/message.proto";
-import "temporal/tasklist/v1/message.proto";
+import "temporal/taskqueue/v1/message.proto";
 import "temporal/version/v1/message.proto";
 
 message RegisterNamespaceRequest {
@@ -120,7 +120,7 @@ message StartWorkflowExecutionRequest {
     string namespace = 1;
     string workflow_id = 2;
     temporal.common.v1.WorkflowType workflow_type = 3;
-    temporal.tasklist.v1.TaskList task_list = 4;
+    temporal.taskqueue.v1.TaskQueue task_queue = 4;
     temporal.common.v1.Payloads input = 5;
     // Total workflow execution timeout including retries and continue as new.
     int32 workflow_execution_timeout_seconds = 6;
@@ -162,7 +162,7 @@ message GetWorkflowExecutionHistoryResponse {
 
 message PollForDecisionTaskRequest {
     string namespace = 1;
-    temporal.tasklist.v1.TaskList task_list = 2;
+    temporal.taskqueue.v1.TaskQueue task_queue = 2;
     string identity = 3;
     string binary_checksum = 4;
 }
@@ -178,7 +178,7 @@ message PollForDecisionTaskResponse {
     temporal.history.v1.History history = 8;
     bytes next_page_token = 9;
     temporal.query.v1.WorkflowQuery query = 10;
-    temporal.tasklist.v1.TaskList workflow_execution_task_list = 11;
+    temporal.taskqueue.v1.TaskQueue workflow_execution_task_queue = 11;
     int64 scheduled_timestamp = 12;
     int64 started_timestamp = 13;
     map<string, temporal.query.v1.WorkflowQuery> queries = 14;
@@ -188,7 +188,7 @@ message RespondDecisionTaskCompletedRequest {
     bytes task_token = 1;
     repeated temporal.decision.v1.Decision decisions = 2;
     string identity = 3;
-    temporal.tasklist.v1.StickyExecutionAttributes sticky_attributes = 4;
+    temporal.taskqueue.v1.StickyExecutionAttributes sticky_attributes = 4;
     bool return_new_decision_task = 5;
     bool force_create_new_decision_task = 6;
     string binary_checksum = 7;
@@ -212,9 +212,9 @@ message RespondDecisionTaskFailedResponse {
 
 message PollForActivityTaskRequest {
     string namespace = 1;
-    temporal.tasklist.v1.TaskList task_list = 2;
+    temporal.taskqueue.v1.TaskQueue task_queue = 2;
     string identity = 3;
-    temporal.tasklist.v1.TaskListMetadata task_list_metadata = 4;
+    temporal.taskqueue.v1.TaskQueueMetadata task_queue_metadata = 4;
 }
 
 message PollForActivityTaskResponse {
@@ -354,7 +354,7 @@ message SignalWithStartWorkflowExecutionRequest {
     string namespace = 1;
     string workflow_id = 2;
     temporal.common.v1.WorkflowType workflow_type = 3;
-    temporal.tasklist.v1.TaskList task_list = 4;
+    temporal.taskqueue.v1.TaskQueue task_queue = 4;
     temporal.common.v1.Payloads input = 5;
     // Total workflow execution timeout including retries and continue as new
     int32 workflow_execution_timeout_seconds = 6;
@@ -499,12 +499,12 @@ message RespondQueryTaskCompletedRequest {
 message RespondQueryTaskCompletedResponse {
 }
 
-message ResetStickyTaskListRequest {
+message ResetStickyTaskQueueRequest {
     string namespace = 1;
     temporal.common.v1.WorkflowExecution execution = 2;
 }
 
-message ResetStickyTaskListResponse {
+message ResetStickyTaskQueueResponse {
 }
 
 message QueryWorkflowRequest {
@@ -532,16 +532,16 @@ message DescribeWorkflowExecutionResponse {
     repeated temporal.workflow.v1.PendingChildExecutionInfo pending_children = 4;
 }
 
-message DescribeTaskListRequest {
+message DescribeTaskQueueRequest {
     string namespace = 1;
-    temporal.tasklist.v1.TaskList task_list = 2;
-    temporal.enums.v1.TaskListType task_list_type = 3;
-    bool include_task_list_status = 4;
+    temporal.taskqueue.v1.TaskQueue task_queue = 2;
+    temporal.enums.v1.TaskQueueType task_queue_type = 3;
+    bool include_task_queue_status = 4;
 }
 
-message DescribeTaskListResponse {
-    repeated temporal.tasklist.v1.PollerInfo pollers = 1;
-    temporal.tasklist.v1.TaskListStatus task_list_status = 2;
+message DescribeTaskQueueResponse {
+    repeated temporal.taskqueue.v1.PollerInfo pollers = 1;
+    temporal.taskqueue.v1.TaskQueueStatus task_queue_status = 2;
 }
 
 message GetClusterInfoRequest {
@@ -552,12 +552,12 @@ message GetClusterInfoResponse {
     temporal.version.v1.SupportedSDKVersions supported_sdk_versions = 1;
 }
 
-message ListTaskListPartitionsRequest {
+message ListTaskQueuePartitionsRequest {
     string namespace = 1;
-    temporal.tasklist.v1.TaskList task_list = 2;
+    temporal.taskqueue.v1.TaskQueue task_queue = 2;
 }
 
-message ListTaskListPartitionsResponse {
-    repeated temporal.tasklist.v1.TaskListPartitionMetadata activity_task_list_partitions = 1;
-    repeated temporal.tasklist.v1.TaskListPartitionMetadata decision_task_list_partitions = 2;
+message ListTaskQueuePartitionsResponse {
+    repeated temporal.taskqueue.v1.TaskQueuePartitionMetadata activity_task_queue_partitions = 1;
+    repeated temporal.taskqueue.v1.TaskQueuePartitionMetadata decision_task_queue_partitions = 2;
 }

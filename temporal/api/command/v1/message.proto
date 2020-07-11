@@ -22,20 +22,20 @@
 
 syntax = "proto3";
 
-package temporal.api.decision.v1;
+package temporal.api.command.v1;
 
-option go_package = "go.temporal.io/api/decision/v1;decision";
-option java_package = "io.temporal.api.decision.v1";
+option go_package = "go.temporal.io/api/command/v1;command";
+option java_package = "io.temporal.api.command.v1";
 option java_multiple_files = true;
 option java_outer_classname = "MessageProto";
 
 import "temporal/api/enums/v1/workflow.proto";
-import "temporal/api/enums/v1/decision_type.proto";
+import "temporal/api/enums/v1/command_type.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 
-message ScheduleActivityTaskDecisionAttributes {
+message ScheduleActivityTaskCommandAttributes {
     string activity_id = 1;
     temporal.api.common.v1.ActivityType activity_type = 2;
     string namespace = 3;
@@ -61,32 +61,32 @@ message ScheduleActivityTaskDecisionAttributes {
     temporal.api.common.v1.RetryPolicy retry_policy = 11;
 }
 
-message RequestCancelActivityTaskDecisionAttributes {
+message RequestCancelActivityTaskCommandAttributes {
     int64 scheduled_event_id = 1;
 }
 
-message StartTimerDecisionAttributes {
+message StartTimerCommandAttributes {
     string timer_id = 1;
     int64 start_to_fire_timeout_seconds = 2;
 }
 
-message CompleteWorkflowExecutionDecisionAttributes {
+message CompleteWorkflowExecutionCommandAttributes {
     temporal.api.common.v1.Payloads result = 1;
 }
 
-message FailWorkflowExecutionDecisionAttributes {
+message FailWorkflowExecutionCommandAttributes {
     temporal.api.failure.v1.Failure failure = 1;
 }
 
-message CancelTimerDecisionAttributes {
+message CancelTimerCommandAttributes {
     string timer_id = 1;
 }
 
-message CancelWorkflowExecutionDecisionAttributes {
+message CancelWorkflowExecutionCommandAttributes {
     temporal.api.common.v1.Payloads details = 1;
 }
 
-message RequestCancelExternalWorkflowExecutionDecisionAttributes {
+message RequestCancelExternalWorkflowExecutionCommandAttributes {
     string namespace = 1;
     string workflow_id = 2;
     string run_id = 3;
@@ -94,7 +94,7 @@ message RequestCancelExternalWorkflowExecutionDecisionAttributes {
     bool child_workflow_only = 5;
 }
 
-message SignalExternalWorkflowExecutionDecisionAttributes {
+message SignalExternalWorkflowExecutionCommandAttributes {
     string namespace = 1;
     temporal.api.common.v1.WorkflowExecution execution = 2;
     string signal_name = 3;
@@ -103,25 +103,25 @@ message SignalExternalWorkflowExecutionDecisionAttributes {
     bool child_workflow_only = 6;
 }
 
-message UpsertWorkflowSearchAttributesDecisionAttributes {
+message UpsertWorkflowSearchAttributesCommandAttributes {
     temporal.api.common.v1.SearchAttributes search_attributes = 1;
 }
 
-message RecordMarkerDecisionAttributes {
+message RecordMarkerCommandAttributes {
     string marker_name = 1;
     map<string, temporal.api.common.v1.Payloads> details = 2;
     temporal.api.common.v1.Header header = 3;
     temporal.api.failure.v1.Failure failure = 4;
 }
 
-message ContinueAsNewWorkflowExecutionDecisionAttributes {
+message ContinueAsNewWorkflowExecutionCommandAttributes {
     temporal.api.common.v1.WorkflowType workflow_type = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
     temporal.api.common.v1.Payloads input = 3;
-    // workflowExecutionTimeout is omitted as it shouldn'be overridden from within a workflow
-    // Timeout of a single workflow run
+    // workflow_execution_timeout is omitted as it shouldn'be overridden from within a workflow.
+    // Timeout of a single workflow run.
     int32 workflow_run_timeout_seconds = 4;
-    // Timeout of a single workflow task
+    // Timeout of a single workflow task.
     int32 workflow_task_timeout_seconds = 5;
     int32 backoff_start_interval_in_seconds = 6;
     temporal.api.common.v1.RetryPolicy retry_policy = 7;
@@ -134,17 +134,17 @@ message ContinueAsNewWorkflowExecutionDecisionAttributes {
     temporal.api.common.v1.SearchAttributes search_attributes = 14;
 }
 
-message StartChildWorkflowExecutionDecisionAttributes {
+message StartChildWorkflowExecutionCommandAttributes {
     string namespace = 1;
     string workflow_id = 2;
     temporal.api.common.v1.WorkflowType workflow_type = 3;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 4;
     temporal.api.common.v1.Payloads input = 5;
-    // Total workflow execution timeout including retries and continue as new
+    // Total workflow execution timeout including retries and continue as new.
     int32 workflow_execution_timeout_seconds = 6;
-    // Timeout of a single workflow run
+    // Timeout of a single workflow run.
     int32 workflow_run_timeout_seconds = 7;
-    // Timeout of a single workflow task
+    // Timeout of a single workflow task.
     int32 workflow_task_timeout_seconds = 8;
     // Default: PARENT_CLOSE_POLICY_TERMINATE.
     temporal.api.enums.v1.ParentClosePolicy parent_close_policy = 9;
@@ -158,21 +158,21 @@ message StartChildWorkflowExecutionDecisionAttributes {
     temporal.api.common.v1.SearchAttributes search_attributes = 16;
 }
 
-message Decision {
-    temporal.api.enums.v1.DecisionType decision_type = 1;
+message Command {
+    temporal.api.enums.v1.CommandType command_type = 1;
     oneof attributes {
-        ScheduleActivityTaskDecisionAttributes schedule_activity_task_decision_attributes = 2;
-        StartTimerDecisionAttributes start_timer_decision_attributes = 3;
-        CompleteWorkflowExecutionDecisionAttributes complete_workflow_execution_decision_attributes = 4;
-        FailWorkflowExecutionDecisionAttributes fail_workflow_execution_decision_attributes = 5;
-        RequestCancelActivityTaskDecisionAttributes request_cancel_activity_task_decision_attributes = 6;
-        CancelTimerDecisionAttributes cancel_timer_decision_attributes = 7;
-        CancelWorkflowExecutionDecisionAttributes cancel_workflow_execution_decision_attributes = 8;
-        RequestCancelExternalWorkflowExecutionDecisionAttributes request_cancel_external_workflow_execution_decision_attributes = 9;
-        RecordMarkerDecisionAttributes record_marker_decision_attributes = 10;
-        ContinueAsNewWorkflowExecutionDecisionAttributes continue_as_new_workflow_execution_decision_attributes = 11;
-        StartChildWorkflowExecutionDecisionAttributes start_child_workflow_execution_decision_attributes = 12;
-        SignalExternalWorkflowExecutionDecisionAttributes signal_external_workflow_execution_decision_attributes = 13;
-        UpsertWorkflowSearchAttributesDecisionAttributes upsert_workflow_search_attributes_decision_attributes = 14;
+        ScheduleActivityTaskCommandAttributes schedule_activity_task_command_attributes = 2;
+        StartTimerCommandAttributes start_timer_command_attributes = 3;
+        CompleteWorkflowExecutionCommandAttributes complete_workflow_execution_command_attributes = 4;
+        FailWorkflowExecutionCommandAttributes fail_workflow_execution_command_attributes = 5;
+        RequestCancelActivityTaskCommandAttributes request_cancel_activity_task_command_attributes = 6;
+        CancelTimerCommandAttributes cancel_timer_command_attributes = 7;
+        CancelWorkflowExecutionCommandAttributes cancel_workflow_execution_command_attributes = 8;
+        RequestCancelExternalWorkflowExecutionCommandAttributes request_cancel_external_workflow_execution_command_attributes = 9;
+        RecordMarkerCommandAttributes record_marker_command_attributes = 10;
+        ContinueAsNewWorkflowExecutionCommandAttributes continue_as_new_workflow_execution_command_attributes = 11;
+        StartChildWorkflowExecutionCommandAttributes start_child_workflow_execution_command_attributes = 12;
+        SignalExternalWorkflowExecutionCommandAttributes signal_external_workflow_execution_command_attributes = 13;
+        UpsertWorkflowSearchAttributesCommandAttributes upsert_workflow_search_attributes_command_attributes = 14;
     }
 }

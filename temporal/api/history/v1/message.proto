@@ -65,7 +65,7 @@ message WorkflowExecutionStartedEventAttributes {
     // This time is passed without change to the next run/retry of a workflow.
     int64 workflow_execution_expiration_timestamp = 19;
     string cron_schedule = 20;
-    int32 first_decision_task_backoff_seconds = 21;
+    int32 first_workflow_task_backoff_seconds = 21;
     temporal.api.common.v1.Memo memo = 22;
     temporal.api.common.v1.SearchAttributes search_attributes = 23;
     temporal.api.workflow.v1.ResetPoints prev_auto_reset_points = 24;
@@ -74,13 +74,13 @@ message WorkflowExecutionStartedEventAttributes {
 
 message WorkflowExecutionCompletedEventAttributes {
     temporal.api.common.v1.Payloads result = 1;
-    int64 decision_task_completed_event_id = 2;
+    int64 workflow_task_completed_event_id = 2;
 }
 
 message WorkflowExecutionFailedEventAttributes {
     temporal.api.failure.v1.Failure failure = 1;
     temporal.api.enums.v1.RetryState retry_state = 2;
-    int64 decision_task_completed_event_id = 3;
+    int64 workflow_task_completed_event_id = 3;
 }
 
 message WorkflowExecutionTimedOutEventAttributes {
@@ -97,7 +97,7 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     int32 workflow_run_timeout_seconds = 5;
     // Timeout of a single workflow task.
     int32 workflow_task_timeout_seconds = 6;
-    int64 decision_task_completed_event_id = 7;
+    int64 workflow_task_completed_event_id = 7;
     int32 backoff_start_interval_in_seconds = 8;
     temporal.api.enums.v1.ContinueAsNewInitiator initiator = 9;
     temporal.api.failure.v1.Failure failure = 10;
@@ -107,35 +107,35 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     temporal.api.common.v1.SearchAttributes search_attributes = 14;
 }
 
-message DecisionTaskScheduledEventAttributes {
+message WorkflowTaskScheduledEventAttributes {
     temporal.api.taskqueue.v1.TaskQueue task_queue = 1;
     int32 start_to_close_timeout_seconds = 2;
     int64 attempt = 3;
 }
 
-message DecisionTaskStartedEventAttributes {
+message WorkflowTaskStartedEventAttributes {
     int64 scheduled_event_id = 1;
     string identity = 2;
     string request_id = 3;
 }
 
-message DecisionTaskCompletedEventAttributes {
+message WorkflowTaskCompletedEventAttributes {
     int64 scheduled_event_id = 1;
     int64 started_event_id = 2;
     string identity = 3;
     string binary_checksum = 4;
 }
 
-message DecisionTaskTimedOutEventAttributes {
+message WorkflowTaskTimedOutEventAttributes {
     int64 scheduled_event_id = 1;
     int64 started_event_id = 2;
     temporal.api.enums.v1.TimeoutType timeout_type = 3;
 }
 
-message DecisionTaskFailedEventAttributes {
+message WorkflowTaskFailedEventAttributes {
     int64 scheduled_event_id = 1;
     int64 started_event_id = 2;
-    temporal.api.enums.v1.DecisionTaskFailedCause cause = 3;
+    temporal.api.enums.v1.WorkflowTaskFailedCause cause = 3;
     temporal.api.failure.v1.Failure failure = 4;
     string identity = 5;
     // For reset workflow.
@@ -164,7 +164,7 @@ message ActivityTaskScheduledEventAttributes {
     int32 start_to_close_timeout_seconds = 9;
     // Maximum time between successful worker heartbeats.
     int32 heartbeat_timeout_seconds = 10;
-    int64 decision_task_completed_event_id = 11;
+    int64 workflow_task_completed_event_id = 11;
     // Activities are provided by a default retry policy controlled through the service dynamic configuration.
     // Retries are happening up to schedule_to_close_timeout.
     // To disable retries set retry_policy.maximum_attempts to 1.
@@ -204,7 +204,7 @@ message ActivityTaskTimedOutEventAttributes {
 
 message ActivityTaskCancelRequestedEventAttributes {
     int64 scheduled_event_id = 1;
-    int64 decision_task_completed_event_id = 2;
+    int64 workflow_task_completed_event_id = 2;
 }
 
 message ActivityTaskCanceledEventAttributes {
@@ -218,7 +218,7 @@ message ActivityTaskCanceledEventAttributes {
 message TimerStartedEventAttributes {
     string timer_id = 1;
     int64 start_to_fire_timeout_seconds = 2;
-    int64 decision_task_completed_event_id = 3;
+    int64 workflow_task_completed_event_id = 3;
 }
 
 message TimerFiredEventAttributes {
@@ -229,14 +229,14 @@ message TimerFiredEventAttributes {
 message TimerCanceledEventAttributes {
     string timer_id = 1;
     int64 started_event_id = 2;
-    int64 decision_task_completed_event_id = 3;
+    int64 workflow_task_completed_event_id = 3;
     string identity = 4;
 }
 
 message CancelTimerFailedEventAttributes {
     string timer_id = 1;
     string cause = 2;
-    int64 decision_task_completed_event_id = 3;
+    int64 workflow_task_completed_event_id = 3;
     string identity = 4;
 }
 
@@ -248,14 +248,14 @@ message WorkflowExecutionCancelRequestedEventAttributes {
 }
 
 message WorkflowExecutionCanceledEventAttributes {
-    int64 decision_task_completed_event_id = 1;
+    int64 workflow_task_completed_event_id = 1;
     temporal.api.common.v1.Payloads details = 2;
 }
 
 message MarkerRecordedEventAttributes {
     string marker_name = 1;
     map<string, temporal.api.common.v1.Payloads> details = 2;
-    int64 decision_task_completed_event_id = 3;
+    int64 workflow_task_completed_event_id = 3;
     temporal.api.common.v1.Header header = 4;
     temporal.api.failure.v1.Failure failure = 5;
 }
@@ -273,7 +273,7 @@ message WorkflowExecutionTerminatedEventAttributes {
 }
 
 message RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
-    int64 decision_task_completed_event_id = 1;
+    int64 workflow_task_completed_event_id = 1;
     string namespace = 2;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 3;
     string control = 4;
@@ -282,7 +282,7 @@ message RequestCancelExternalWorkflowExecutionInitiatedEventAttributes {
 
 message RequestCancelExternalWorkflowExecutionFailedEventAttributes {
     temporal.api.enums.v1.CancelExternalWorkflowExecutionFailedCause cause = 1;
-    int64 decision_task_completed_event_id = 2;
+    int64 workflow_task_completed_event_id = 2;
     string namespace = 3;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 4;
     int64 initiated_event_id = 5;
@@ -296,7 +296,7 @@ message ExternalWorkflowExecutionCancelRequestedEventAttributes {
 }
 
 message SignalExternalWorkflowExecutionInitiatedEventAttributes {
-    int64 decision_task_completed_event_id = 1;
+    int64 workflow_task_completed_event_id = 1;
     string namespace = 2;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 3;
     string signal_name = 4;
@@ -307,7 +307,7 @@ message SignalExternalWorkflowExecutionInitiatedEventAttributes {
 
 message SignalExternalWorkflowExecutionFailedEventAttributes {
     temporal.api.enums.v1.SignalExternalWorkflowExecutionFailedCause cause = 1;
-    int64 decision_task_completed_event_id = 2;
+    int64 workflow_task_completed_event_id = 2;
     string namespace = 3;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 4;
     int64 initiated_event_id = 5;
@@ -322,7 +322,7 @@ message ExternalWorkflowExecutionSignaledEventAttributes {
 }
 
 message UpsertWorkflowSearchAttributesEventAttributes {
-    int64 decision_task_completed_event_id = 1;
+    int64 workflow_task_completed_event_id = 1;
     temporal.api.common.v1.SearchAttributes search_attributes = 2;
 }
 
@@ -341,7 +341,7 @@ message StartChildWorkflowExecutionInitiatedEventAttributes {
     // Default: PARENT_CLOSE_POLICY_TERMINATE.
     temporal.api.enums.v1.ParentClosePolicy parent_close_policy = 9;
     string control = 10;
-    int64 decision_task_completed_event_id = 11;
+    int64 workflow_task_completed_event_id = 11;
     // Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
     temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 12;
     temporal.api.common.v1.RetryPolicy retry_policy = 13;
@@ -358,7 +358,7 @@ message StartChildWorkflowExecutionFailedEventAttributes {
     temporal.api.enums.v1.StartChildWorkflowExecutionFailedCause cause = 4;
     string control = 5;
     int64 initiated_event_id = 6;
-    int64 decision_task_completed_event_id = 7;
+    int64 workflow_task_completed_event_id = 7;
 }
 
 message ChildWorkflowExecutionStartedEventAttributes {
@@ -425,11 +425,11 @@ message HistoryEvent {
         WorkflowExecutionCompletedEventAttributes workflow_execution_completed_event_attributes = 7;
         WorkflowExecutionFailedEventAttributes workflow_execution_failed_event_attributes = 8;
         WorkflowExecutionTimedOutEventAttributes workflow_execution_timed_out_event_attributes = 9;
-        DecisionTaskScheduledEventAttributes decision_task_scheduled_event_attributes = 10;
-        DecisionTaskStartedEventAttributes decision_task_started_event_attributes = 11;
-        DecisionTaskCompletedEventAttributes decision_task_completed_event_attributes = 12;
-        DecisionTaskTimedOutEventAttributes decision_task_timed_out_event_attributes = 13;
-        DecisionTaskFailedEventAttributes decision_task_failed_event_attributes = 14;
+        WorkflowTaskScheduledEventAttributes workflow_task_scheduled_event_attributes = 10;
+        WorkflowTaskStartedEventAttributes workflow_task_started_event_attributes = 11;
+        WorkflowTaskCompletedEventAttributes workflow_task_completed_event_attributes = 12;
+        WorkflowTaskTimedOutEventAttributes workflow_task_timed_out_event_attributes = 13;
+        WorkflowTaskFailedEventAttributes workflow_task_failed_event_attributes = 14;
         ActivityTaskScheduledEventAttributes activity_task_scheduled_event_attributes = 15;
         ActivityTaskStartedEventAttributes activity_task_started_event_attributes = 16;
         ActivityTaskCompletedEventAttributes activity_task_completed_event_attributes = 17;

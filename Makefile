@@ -27,7 +27,7 @@ $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
 
 ##### Compile proto files for go #####
-grpc: buf-lint api-linter gogo-grpc fix-path
+grpc: buf-lint api-linter buf-breaking gogo-grpc fix-path
 
 go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
@@ -68,13 +68,9 @@ buf-lint:
 	printf $(COLOR) "Run buf linter..."
 	(cd $(PROTO_ROOT) && buf check lint)
 
-buf-build:
-	@printf $(COLOR) "Build image.bin with buf..."
-	@(cd $(PROTO_ROOT) && buf image build -o image.bin)
-
 buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against image.bin..."
-	@(cd $(PROTO_ROOT) && buf check breaking --against-input image.bin)
+	@printf $(COLOR) "Run buf breaking changes check against master branch..."
+	@(cd $(PROTO_ROOT) && buf check breaking --against-input '.git#branch=master')
 
 ##### Clean #####
 clean:

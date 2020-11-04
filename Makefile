@@ -13,7 +13,7 @@ GOPATH := $(shell go env GOPATH)
 endif
 
 GOBIN := $(if $(shell go env GOBIN),$(shell go env GOBIN),$(GOPATH)/bin)
-SHELL := PATH=$(GOBIN):$(PATH) /bin/bash
+SHELL := PATH=$(GOBIN):$(PATH) /bin/sh
 
 COLOR := "\e[1;36m%s\e[0m\n"
 

@@ -43,21 +43,21 @@ fix-path:
 ##### Plugins & tools #####
 grpc-install: gogo-protobuf-install
 	printf $(COLOR) "Install/update gRPC plugins..."
-	go get -u google.golang.org/grpc
+	GO111MODULE=on go get google.golang.org/grpc@v1.34.0
 
 gogo-protobuf-install: go-protobuf-install
-	go get -u github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
+	GO111MODULE=on go get github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
 
 go-protobuf-install:
-	go get -u github.com/golang/protobuf/protoc-gen-go
+	GO111MODULE=on go get github.com/golang/protobuf/protoc-gen-go@v1.4.3
 
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."
-	go get -u github.com/googleapis/api-linter/cmd/api-linter
+	GO111MODULE=on go get github.com/googleapis/api-linter/cmd/api-linter@v1.10.0
 
 buf-install:
 	printf $(COLOR) "Install/update buf..."
-	go get -u github.com/bufbuild/buf/cmd/buf
+	GO111MODULE=on go get github.com/bufbuild/buf/cmd/buf@v0.33.0
 
 ##### Linters #####
 api-linter:

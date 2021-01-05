@@ -1,4 +1,4 @@
-FROM golang:1.14
+FROM golang:1.15.6
 
 RUN apt update && apt install -y --no-install-recommends \
       protobuf-compiler \

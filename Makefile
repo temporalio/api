@@ -46,7 +46,7 @@ grpc-install: gogo-protobuf-install
 	GO111MODULE=on go get google.golang.org/grpc@v1.34.0
 
 gogo-protobuf-install: go-protobuf-install
-	GO111MODULE=on go get github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
+	go get github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
 
 go-protobuf-install:
 	GO111MODULE=on go get github.com/golang/protobuf/protoc-gen-go@v1.4.3

@@ -47,14 +47,24 @@ service WorkflowService {
     // acts as a sandbox and provides isolation for all resources within the namespace.  All resources belongs to exactly one
     // namespace.
     rpc RegisterNamespace (RegisterNamespaceRequest) returns (RegisterNamespaceResponse) {
+        option (google.api.http) = {
+            post: "/v1/namespaces"
+            body: "*"
+          };
     }
 
     // DescribeNamespace returns the information and configuration for a registered namespace.
     rpc DescribeNamespace (DescribeNamespaceRequest) returns (DescribeNamespaceResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces/{namespace}"
+          };
     }
 
     // ListNamespaces returns the information and configuration for all namespaces.
     rpc ListNamespaces (ListNamespacesRequest) returns (ListNamespacesResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces"
+          };
     }
 
     // (-- api-linter: core::0134::method-signature=disabled
@@ -63,12 +73,19 @@ service WorkflowService {
     //     aip.dev/not-precedent: UpdateNamespace RPC doesn't follow Google API format. --)
     // UpdateNamespace is used to update the information and configuration for a registered namespace.
     rpc UpdateNamespace (UpdateNamespaceRequest) returns (UpdateNamespaceResponse) {
+        option (google.api.http) = {
+            put: "/v1/namespaces/{namespace}"
+            body: "*"
+          };
     }
 
     // DeprecateNamespace is used to update state of a registered namespace to DEPRECATED.  Once the namespace is deprecated
     // it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on
     // deprecated namespaces.
     rpc DeprecateNamespace (DeprecateNamespaceRequest) returns (DeprecateNamespaceResponse) {
+        option (google.api.http) = {
+            delete: "/v1/namespaces/{namespace}"
+          };
     }
 
     // StartWorkflowExecution starts a new long running workflow instance.  It will create the instance with
@@ -76,11 +93,18 @@ service WorkflowService {
     // first command for this instance.  It will return 'WorkflowExecutionAlreadyStartedFailure', if an instance already
     // exists with same workflowId.
     rpc StartWorkflowExecution (StartWorkflowExecutionRequest) returns (StartWorkflowExecutionResponse) {
+        option (google.api.http) = {
+            post: "/v1/namespaces/{namespace}:start"
+            body: "*"
+          };
     }
 
     // GetWorkflowExecutionHistory returns the history of specified workflow execution.  It fails with 'NotFoundFailure' if specified workflow
     // execution in unknown to the service.
     rpc GetWorkflowExecutionHistory (GetWorkflowExecutionHistoryRequest) returns (GetWorkflowExecutionHistoryResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/executions/{execution.run_id}/events"
+          };
     }
 
     // PollWorkflowTaskQueue is called by application worker to process WorkflowTask from a specific task queue.  A
@@ -194,6 +218,10 @@ service WorkflowService {
     // created for the workflow instance so new commands could be made. It fails with 'NotFoundFailure' if the workflow is not valid
     // anymore due to completion or doesn't exist.
     rpc RequestCancelWorkflowExecution (RequestCancelWorkflowExecutionRequest) returns (RequestCancelWorkflowExecutionResponse) {
+        option (google.api.http) = {
+            post: "/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/executions/{workflow_execution.run_id}:cancel"
+            body: "*"
+        };
     }
 
     // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
@@ -214,27 +242,47 @@ service WorkflowService {
     // ResetWorkflowExecution reset an existing workflow execution to WorkflowTaskCompleted event(exclusive).
     // And it will immediately terminating the current execution instance.
     rpc ResetWorkflowExecution (ResetWorkflowExecutionRequest) returns (ResetWorkflowExecutionResponse) {
+        option (google.api.http) = {
+            post: "/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/executions/{workflow_execution.run_id}:reset"
+            body: "*"
+        };
     }
 
     // TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
     // in the history and immediately terminating the execution instance.
     rpc TerminateWorkflowExecution (TerminateWorkflowExecutionRequest) returns (TerminateWorkflowExecutionResponse) {
+        option (google.api.http) = {
+            post: "/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/executions/{workflow_execution.run_id}:terminate"
+            body: "*"
+        };
     }
 
     // ListOpenWorkflowExecutions is a visibility API to list the open executions in a specific namespace.
     rpc ListOpenWorkflowExecutions (ListOpenWorkflowExecutionsRequest) returns (ListOpenWorkflowExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces/{namespace}/workflow-executions?type=open"
+        };
     }
 
     // ListClosedWorkflowExecutions is a visibility API to list the closed executions in a specific namespace.
     rpc ListClosedWorkflowExecutions (ListClosedWorkflowExecutionsRequest) returns (ListClosedWorkflowExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces/{namespace}/workflow-executions?type=closed"
+        };
     }
 
     // ListWorkflowExecutions is a visibility API to list workflow executions in a specific namespace.
     rpc ListWorkflowExecutions (ListWorkflowExecutionsRequest) returns (ListWorkflowExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces/{namespace}/workflow-executions"
+        };
     }
 
     // ListArchivedWorkflowExecutions is a visibility API to list archived workflow executions in a specific namespace.
     rpc ListArchivedWorkflowExecutions (ListArchivedWorkflowExecutionsRequest) returns (ListArchivedWorkflowExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces/{namespace}/workflow-executions?type=archived"
+        };
     }
 
     // ScanWorkflowExecutions is a visibility API to list large amount of workflow executions in a specific namespace without order.
@@ -243,10 +291,16 @@ service WorkflowService {
 
     // CountWorkflowExecutions is a visibility API to count of workflow executions in a specific namespace.
     rpc CountWorkflowExecutions (CountWorkflowExecutionsRequest) returns (CountWorkflowExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces/{namespace}/workflow-executions:count"
+        };
     }
 
     // GetSearchAttributes is a visibility API to get all legal keys that could be used in list APIs
     rpc GetSearchAttributes (GetSearchAttributesRequest) returns (GetSearchAttributesResponse) {
+        option (google.api.http) = {
+            get: "/v1/search-attributes"
+        };
     }
 
     // RespondQueryTaskCompleted is called by application worker to complete a QueryTask (which is a WorkflowTask for query)
@@ -264,19 +318,32 @@ service WorkflowService {
 
     // QueryWorkflow returns query result for a specified workflow execution
     rpc QueryWorkflow (QueryWorkflowRequest) returns (QueryWorkflowResponse) {
+        option (google.api.http) = {
+            post: "/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/executions/{execution.run_id}:query"
+            body: "*"
+        };
     }
 
     // DescribeWorkflowExecution returns information about the specified workflow execution.
     rpc DescribeWorkflowExecution (DescribeWorkflowExecutionRequest) returns (DescribeWorkflowExecutionResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/executions/{execution.run_id}"
+        };
     }
 
     // DescribeTaskQueue returns information about the target task queue, right now this API returns the
     // pollers which polled this task queue in last few minutes.
     rpc DescribeTaskQueue (DescribeTaskQueueRequest) returns (DescribeTaskQueueResponse) {
+        option (google.api.http) = {
+            get: "/v1/namespaces/{namespace}/task-queues/{task_queue.name}"
+        };
     }
 
     // GetClusterInfo returns information about temporal cluster
     rpc GetClusterInfo(GetClusterInfoRequest) returns (GetClusterInfoResponse){
+        option (google.api.http) = {
+            get: "/v1/cluster"
+        };
     }
 
     rpc ListTaskQueuePartitions(ListTaskQueuePartitionsRequest) returns (ListTaskQueuePartitionsResponse) {

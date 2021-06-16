@@ -43,21 +43,21 @@ fix-path:
 ##### Plugins & tools #####
 grpc-install: gogo-protobuf-install
 	printf $(COLOR) "Install/update gRPC plugins..."
-	GO111MODULE=on go get google.golang.org/grpc@v1.34.0
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
 
 gogo-protobuf-install: go-protobuf-install
-	go get github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
+	go install github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick@master
 
 go-protobuf-install:
-	GO111MODULE=on go get github.com/golang/protobuf/protoc-gen-go@v1.4.3
+	go install github.com/golang/protobuf/protoc-gen-go@v1.4.3
 
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."
-	GO111MODULE=on go get github.com/googleapis/api-linter/cmd/api-linter@v1.10.0
+	go install github.com/googleapis/api-linter/cmd/api-linter@v1.10.0
 
 buf-install:
 	printf $(COLOR) "Install/update buf..."
-	GO111MODULE=on go get github.com/bufbuild/buf/cmd/buf@v0.43.2
+	go install github.com/bufbuild/buf/cmd/buf@v0.43.2
 
 ##### Linters #####
 api-linter:
@@ -69,8 +69,9 @@ buf-lint:
 	(cd $(PROTO_ROOT) && buf lint)
 
 buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
-	@(cd $(PROTO_ROOT) && buf breaking --against '.git#ref=56b2fcb8b123924fa8c6a8d12638675f3f2898ce')
+	@printf $(COLOR) "Run buf breaking changes check against master branch..."
+	git fetch origin
+	@(cd $(PROTO_ROOT) && buf breaking --against '.git#branch=master')
 
 ##### Clean #####
 clean:

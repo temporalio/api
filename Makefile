@@ -57,7 +57,7 @@ api-linter-install:
 
 buf-install:
 	printf $(COLOR) "Install/update buf..."
-	GO111MODULE=on go get github.com/bufbuild/buf/cmd/buf@v0.33.0
+	GO111MODULE=on go get github.com/bufbuild/buf/cmd/buf@v0.43.2
 
 ##### Linters #####
 api-linter:

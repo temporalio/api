@@ -46,6 +46,7 @@ grpc-install: gogo-protobuf-install
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
 
 gogo-protobuf-install: go-protobuf-install
+	go get github.com/temporalio/gogo-protobuf/protobuf
 	go get github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
 
 go-protobuf-install:

@@ -71,7 +71,6 @@ buf-lint:
 buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check against master branch..."
 	git fetch origin
-	git pull origin master:master
 	@(cd $(PROTO_ROOT) && buf breaking --against '.git#branch=master')
 
 ##### Clean #####

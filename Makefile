@@ -70,7 +70,7 @@ buf-lint:
 
 buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check against master branch..."
-	@(cd $(PROTO_ROOT) && buf check breaking --against '.git#branch=master')
+	@(cd $(PROTO_ROOT) && buf breaking --against '.git#branch=master')
 
 ##### Clean #####
 clean:

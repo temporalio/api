@@ -47,7 +47,7 @@ grpc-install: gogo-protobuf-install
 
 gogo-protobuf-install: go-protobuf-install
 	git clone https://github.com/temporalio/gogo-protobuf.git $(GOPATH)/src/github.com/temporalio/gogo-protobuf
-	go install github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
+	go install github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick@latest
 
 go-protobuf-install:
 	go install github.com/golang/protobuf/protoc-gen-go@v1.4.3

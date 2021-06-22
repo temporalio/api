@@ -1,7 +1,9 @@
 $(VERBOSE).SILENT:
 ############################# Main targets #############################
-# Install everything, run all linters, and compile proto files.
-install: grpc-install api-linter-install buf-install proto
+ci-build: install proto
+
+# Install dependencies.
+install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
 proto: grpc
@@ -43,18 +45,17 @@ fix-path:
 ##### Plugins & tools #####
 grpc-install: gogo-protobuf-install
 	printf $(COLOR) "Install/update gRPC plugins..."
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
 
 gogo-protobuf-install: go-protobuf-install
-	git clone https://github.com/temporalio/gogo-protobuf.git $(GOPATH)/src/github.com/temporalio/gogo-protobuf
-	go install github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick@latest
+	GO111MODULE=off go get github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
 
 go-protobuf-install:
 	go install github.com/golang/protobuf/protoc-gen-go@v1.4.3
 
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."
-	go install github.com/googleapis/api-linter/cmd/api-linter@v1.10.0
+	go install github.com/googleapis/api-linter/cmd/api-linter@v1.22.0
 
 buf-install:
 	printf $(COLOR) "Install/update buf..."

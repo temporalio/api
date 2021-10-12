@@ -79,52 +79,62 @@ service WorkflowService {
     rpc StartWorkflowExecution (StartWorkflowExecutionRequest) returns (StartWorkflowExecutionResponse) {
     }
 
-    // GetWorkflowExecutionHistory returns the history of specified workflow execution.  It fails with 'NotFoundFailure' if specified workflow
-    // execution is unknown to the service.
+    // GetWorkflowExecutionHistory returns the history of specified workflow execution. Fails with
+    // `NotFound` if the specified workflow execution is unknown to the service.
     rpc GetWorkflowExecutionHistory (GetWorkflowExecutionHistoryRequest) returns (GetWorkflowExecutionHistoryResponse) {
     }
 
-    // PollWorkflowTaskQueue is called by application worker to process WorkflowTask from a specific task queue.  A
-    // WorkflowTask is dispatched to callers for active workflow executions, with pending workflow tasks.
-    // Application is then expected to call 'RespondWorkflowTaskCompleted' API when it is done processing the WorkflowTask.
-    // It will also create a 'WorkflowTaskStarted' event in the history for that session before handing off WorkflowTask to
-    // application worker.
+    // PollWorkflowTaskQueue is called by workers to make progress on workflows.
+    //
+    // A WorkflowTask is dispatched to callers for active workflow executions with pending workflow
+    // tasks. The worker is expected to call `RespondWorkflowTaskCompleted` when it is done
+    // processing the task. The service will create a `WorkflowTaskStarted` event in the history for
+    // this task before handing it to the worker.
     rpc PollWorkflowTaskQueue (PollWorkflowTaskQueueRequest) returns (PollWorkflowTaskQueueResponse) {
     }
 
-    // RespondWorkflowTaskCompleted is called by application worker to complete a WorkflowTask handed as a result of
-    // 'PollWorkflowTaskQueue' API call.  Completing a WorkflowTask will result in new events for the workflow execution and
-    // potentially new ActivityTask being created for corresponding commands.  It will also create a WorkflowTaskCompleted
-    // event in the history for that session.  Use the 'taskToken' provided as response of PollWorkflowTaskQueue API call
-    // for completing the WorkflowTask.
-    // The response could contain a new workflow task if there is one or if the request asking for one.
+    // RespondWorkflowTaskCompleted is called by workers to successfully complete workflow tasks
+    // they received from `PollWorkflowTaskQueue`.
+    //
+    // Completing a WorkflowTask will write a `WORKFLOW_TASK_COMPLETED` event to the workflow's
+    // history, along with events corresponding to whatever commands the SDK generated while
+    // executing the task (ex timer started, activity task scheduled, etc).
     rpc RespondWorkflowTaskCompleted (RespondWorkflowTaskCompletedRequest) returns (RespondWorkflowTaskCompletedResponse) {
     }
 
-    // RespondWorkflowTaskFailed is called by application worker to indicate failure.  This results in
-    // WorkflowTaskFailedEvent written to the history and a new WorkflowTask created.  This API can be used by client to
-    // either clear sticky task queue or report any panics during WorkflowTask processing.  Temporal will only append first
-    // WorkflowTaskFailed event to the history of workflow execution for consecutive failures.
+    // RespondWorkflowTaskFailed is called by workers to indicate the processing of a workflow task
+    // failed.
+    //
+    // This results in a `WORKFLOW_TASK_FAILED` event written to the history, and a new workflow
+    // task will be scheduled. This API can be used by client to either clear sticky task queue, or
+    // report unhandled failures resulting from applying the workflow task.
+    //
+    // Temporal will only append first WorkflowTaskFailed event to the history of workflow execution
+    // for consecutive failures.
     rpc RespondWorkflowTaskFailed (RespondWorkflowTaskFailedRequest) returns (RespondWorkflowTaskFailedResponse) {
     }
 
-    // PollActivityTaskQueue is called by application worker to process ActivityTask from a specific task queue.  ActivityTask
-    // is dispatched to callers whenever a ScheduleTask command is made for a workflow execution.
-    // Application is expected to call 'RespondActivityTaskCompleted' or 'RespondActivityTaskFailed' once it is done
+    // PollActivityTaskQueue is called by workers to process activity tasks from a specific task
+    // queue.
+    //
+    // The worker is expected to call one of the `RespondActivityTaskXXX` methods when it is done
     // processing the task.
-    // Application also needs to call 'RecordActivityTaskHeartbeat' API within 'heartbeatTimeoutSeconds' interval to
-    // prevent the Task from getting timed out.  An in memory event 'ActivityTaskStarted' is also written to mutable state
-    // before the ActivityTask is dispatched to application Worker. 'ActivityTaskStarted' and Activity finish event:
-    // 'ActivityTaskCompleted' / 'ActivityTaskFailed' / 'ActivityTaskTimedout' will both be written to Workflow execution 
-    // history when Activity is finished.
+    //
+    // An activity task is dispatched whenever a `SCHEDULE_ACTIVITY_TASK` command is produced during
+    // workflow execution. An in memory `ACTIVITY_TASK_STARTED` event is written to mutable state
+    // before the task is dispatched to the worker. The started event, and the final event
+    // (`ACTIVITY_TASK_COMPLETED` / `ACTIVITY_TASK_FAILED` / `ACTIVITY_TASK_TIMED_OUT`) will both be
+    // written permanently to Workflow execution history when Activity is finished.
     rpc PollActivityTaskQueue (PollActivityTaskQueueRequest) returns (PollActivityTaskQueueResponse) {
     }
 
-    // RecordActivityTaskHeartbeat is called by application worker while it is processing an ActivityTask.  If worker fails
-    // to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask, then it will be marked as timedout and
-    // 'ActivityTaskTimedOut' event will be written to the workflow history.  Calling 'RecordActivityTaskHeartbeat' will
-    // fail with 'NotFoundFailure' in such situations.  Use the 'taskToken' provided as response of
-    // PollActivityTaskQueue API call for heart beating.
+    // RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.
+    //
+    // If worker fails to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask,
+    // then it will be marked as timed out and 'ActivityTaskTimedOut' event will be written to the
+    // workflow history.  Calling 'RecordActivityTaskHeartbeat' will fail with 'NotFoundFailure' in
+    // such situations.  Use the 'taskToken' provided as response of PollActivityTaskQueue API call
+    // for heart beating.
     rpc RecordActivityTaskHeartbeat (RecordActivityTaskHeartbeatRequest) returns (RecordActivityTaskHeartbeatResponse) {
     }
 

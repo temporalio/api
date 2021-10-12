@@ -145,12 +145,15 @@ message StartWorkflowExecutionRequest {
     google.protobuf.Duration workflow_run_timeout = 7 [(gogoproto.stdduration) = true];
     // Timeout of a single workflow task.
     google.protobuf.Duration workflow_task_timeout = 8 [(gogoproto.stdduration) = true];
+    // The identity of the client who initiated this request
     string identity = 9;
+    // A unique identifier for this start request. Typically UUIDv4.
     string request_id = 10;
     // Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
     temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 11;
-    // Retries up to workflow_execution_timeout_seconds.
+    // The retry policy for the workflow. Will never exceed `workflow_execution_timeout_seconds`.
     temporal.api.common.v1.RetryPolicy retry_policy = 12;
+    // See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/
     string cron_schedule = 13;
     temporal.api.common.v1.Memo memo = 14;
     temporal.api.common.v1.SearchAttributes search_attributes = 15;
@@ -166,7 +169,10 @@ message GetWorkflowExecutionHistoryRequest {
     temporal.api.common.v1.WorkflowExecution execution = 2;
     int32 maximum_page_size = 3;
     bytes next_page_token = 4;
+    // If set to true, the RPC call will not resolve until there is a new event which matches
+    // the `history_event_filter_type`.
     bool wait_new_event = 5;
+    // Filter returned events such that they match the specified filter type.
     // Default: HISTORY_EVENT_FILTER_TYPE_ALL_EVENT.
     temporal.api.enums.v1.HistoryEventFilterType history_event_filter_type = 6;
     bool skip_archival = 7;
@@ -174,7 +180,9 @@ message GetWorkflowExecutionHistoryRequest {
 
 message GetWorkflowExecutionHistoryResponse {
     temporal.api.history.v1.History history = 1;
+    // TODO: Under what condition is raw_history returned?
     repeated temporal.api.common.v1.DataBlob raw_history = 2;
+    // Will be set if there are more history events than were included in this response
     bytes next_page_token = 3;
     bool archived = 4;
 }
@@ -182,48 +190,90 @@ message GetWorkflowExecutionHistoryResponse {
 message PollWorkflowTaskQueueRequest {
     string namespace = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
+    // The identity of the worker/client who is polling this task queue
     string identity = 3;
+    // Each worker process should provide an ID unique to the specific set of code it is running
     string binary_checksum = 4;
 }
 
 message PollWorkflowTaskQueueResponse {
+    // A unique identifier for this task
     bytes task_token = 1;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
     temporal.api.common.v1.WorkflowType workflow_type = 3;
+    // The last workflow task started event which was processed by some worker for this execution.
+    // Will be zero if no task has ever started.
     int64 previous_started_event_id = 4;
+    // The id of the most recent workflow task started event, which will have been generated as a
+    // result of this poll request being served.
     int64 started_event_id = 5;
+    // Starting at 1, the number of attempts to complete this task by any worker.
     int32 attempt = 6;
+    // TODO: ??
     int64 backlog_count_hint = 7;
+    // The history for this workflow, which will either be complete or partial. Partial histories
+    // are sent to workers who have signaled that they are using a sticky queue when completing
+    // a workflow task.
     temporal.api.history.v1.History history = 8;
+    // Will be set if there are more history events than were included in this response. Such events
+    // should be fetched via `GetWorkflowExecutionHistory`.
     bytes next_page_token = 9;
+    // "Legacy" queries appear in this field. If set, history will be empty. The query must be
+    // responded to via `RespondQueryTaskCompleted`.
+    // TODO: Is history actually always empty? Is it sometimes the whole history? Is this dependent
+    //   on sticky-or-not?
     temporal.api.query.v1.WorkflowQuery query = 10;
+    // The task queue this task originated from. TODO: Is this ever *not* what the request specified?
     temporal.api.taskqueue.v1.TaskQueue workflow_execution_task_queue = 11;
+    // When this task was scheduled by the server
     google.protobuf.Timestamp scheduled_time = 12 [(gogoproto.stdtime) = true];
+    // When the current workflow task started event was generated (IE: The first time a worker
+    // polled for this task)
     google.protobuf.Timestamp started_time = 13 [(gogoproto.stdtime) = true];
+    // Queries that should be executed after applying the history in this task. Responses should be
+    // attached to `RespondWorkflowTaskCompletedRequest::query_results`
     map<string, temporal.api.query.v1.WorkflowQuery> queries = 14;
 }
 
 message RespondWorkflowTaskCompletedRequest {
+    // The task token as received in `PollWorkflowTaskQueueResponse`
     bytes task_token = 1;
+    // A list of commands generated when driving the workflow code in response to the new task
     repeated temporal.api.command.v1.Command commands = 2;
+    // The identity of the worker/client
     string identity = 3;
+    // May be set by workers to indicate that the worker desires future tasks to be provided with
+    // incremental history on a sticky queue.
     temporal.api.taskqueue.v1.StickyExecutionAttributes sticky_attributes = 4;
+    // If set, the worker wishes to immediately receive the next workflow task as a response to
+    // this completion. TODO: Why
     bool return_new_workflow_task = 5;
+    // Can be used to *force* creation of a new workflow task, even if no commands have resolved
+    // or one would not otherwise have been generated. TODO: Why
     bool force_create_new_workflow_task = 6;
+    // Worker process' unique binary id
     string binary_checksum = 7;
+    // Responses to the `queries` field in the task being responded to
     map<string, temporal.api.query.v1.WorkflowQueryResult> query_results = 8;
     string namespace = 9;
 }
 
 message RespondWorkflowTaskCompletedResponse {
+    // See `RespondWorkflowTaskCompletedResponse::return_new_workflow_task`
     PollWorkflowTaskQueueResponse workflow_task = 1;
 }
 
 message RespondWorkflowTaskFailedRequest {
+    // The task token as received in `PollWorkflowTaskQueueResponse`
     bytes task_token = 1;
+    // Why did the task fail? It's important to note that many of the variants in this enum cannot
+    // apply to worker responses. See the type's doc for more.
     temporal.api.enums.v1.WorkflowTaskFailedCause cause = 2;
+    // Failure details
     temporal.api.failure.v1.Failure failure = 3;
+    // The identity of the worker/client
     string identity = 4;
+    // Worker process' unique binary id
     string binary_checksum = 5;
     string namespace = 6;
 }
@@ -234,46 +284,68 @@ message RespondWorkflowTaskFailedResponse {
 message PollActivityTaskQueueRequest {
     string namespace = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
+    // The identity of the worker/client
     string identity = 3;
     temporal.api.taskqueue.v1.TaskQueueMetadata task_queue_metadata = 4;
 }
 
 message PollActivityTaskQueueResponse {
+    // A unique identifier for this task
     bytes task_token = 1;
+    // The namespace the workflow which requested this activity lives in
     string workflow_namespace = 2;
+    // Type of the requesting workflow
     temporal.api.common.v1.WorkflowType workflow_type = 3;
+    // Execution info of the requesting workflow
     temporal.api.common.v1.WorkflowExecution workflow_execution = 4;
     temporal.api.common.v1.ActivityType activity_type = 5;
+    // The autogenerated or user specified identifier of this activity. Must be unique to the
+    // workflow run. Can be used to complete the activity via `RespondActivityTaskCompletedById`
     string activity_id = 6;
+    // Headers specified by the scheduling workflow. Commonly used to propagate contextual info
+    // from the workflow to it's activities.
     temporal.api.common.v1.Header header = 7;
+    // Arguments to the activity invocation
     temporal.api.common.v1.Payloads input = 8;
+    // Details of the last heartbeat that was recorded for this activity as of the time this task
+    // was delivered.
     temporal.api.common.v1.Payloads heartbeat_details = 9;
+    // When was this task first scheduled
     google.protobuf.Timestamp scheduled_time = 10 [(gogoproto.stdtime) = true];
+    // When was this task attempt scheduled
     google.protobuf.Timestamp current_attempt_scheduled_time = 11 [(gogoproto.stdtime) = true];
+    // When was this task started (this attempt)
     google.protobuf.Timestamp started_time = 12 [(gogoproto.stdtime) = true];
+    // Starting at 1, the number of attempts to perform this activity
     int32 attempt = 13;
+    // First scheduled -> final result reported timeout
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration schedule_to_close_timeout = 14 [(gogoproto.stdduration) = true];
+    // Current attempt start -> final result reported timeout
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration start_to_close_timeout = 15 [(gogoproto.stdduration) = true];
+    // Window within which the activity must report a heartbeat, or be timed out.
     google.protobuf.Duration heartbeat_timeout = 16 [(gogoproto.stdduration) = true];
-    // This is an actual retry policy the service uses.
-    // It can be different from the one provided (or not) during activity scheduling
-    // as the service can override the provided one in case its values are not specified
-    // or exceed configured system limits.
+    // This is the retry policy the service uses which may be different from the one provided
+    // (or not) during activity scheduling. The service can override the provided one if some
+    // values are not specified or exceed configured system limits.
     temporal.api.common.v1.RetryPolicy retry_policy = 17;
 }
 
 message RecordActivityTaskHeartbeatRequest {
+    // The task token as received in `PollActivityTaskQueueResponse`
     bytes task_token = 1;
+    // Arbitrary data, of which the most recent call is kept, to store for this activity
     temporal.api.common.v1.Payloads details = 2;
+    // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
 }
 
 message RecordActivityTaskHeartbeatResponse {
+    // Will be set to true if the activity has been asked to cancel itself
     bool cancel_requested = 1;
 }
 
@@ -291,6 +363,7 @@ message RecordActivityTaskHeartbeatByIdResponse {
 }
 
 message RespondActivityTaskCompletedRequest {
+    // The task token as received in `PollActivityTaskQueueResponse`
     bytes task_token = 1;
     temporal.api.common.v1.Payloads result = 2;
     string identity = 3;

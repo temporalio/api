@@ -106,8 +106,8 @@ service WorkflowService {
     // failed.
     //
     // This results in a `WORKFLOW_TASK_FAILED` event written to the history, and a new workflow
-    // task will be scheduled. This API can be used by client to either clear sticky task queue, or
-    // report unhandled failures resulting from applying the workflow task.
+    // task will be scheduled. This API can be used to report unhandled failures resulting from
+    // applying the workflow task.
     //
     // Temporal will only append first WorkflowTaskFailed event to the history of workflow execution
     // for consecutive failures.
@@ -124,7 +124,8 @@ service WorkflowService {
     // workflow execution. An in memory `ACTIVITY_TASK_STARTED` event is written to mutable state
     // before the task is dispatched to the worker. The started event, and the final event
     // (`ACTIVITY_TASK_COMPLETED` / `ACTIVITY_TASK_FAILED` / `ACTIVITY_TASK_TIMED_OUT`) will both be
-    // written permanently to Workflow execution history when Activity is finished.
+    // written permanently to Workflow execution history when Activity is finished. This is done to
+    // avoid writing many events in the case of a failure/retry loop.
     rpc PollActivityTaskQueue (PollActivityTaskQueueRequest) returns (PollActivityTaskQueueResponse) {
     }
 
@@ -132,7 +133,7 @@ service WorkflowService {
     //
     // If worker fails to heartbeat within 'heartbeatTimeoutSeconds' interval for the ActivityTask,
     // then it will be marked as timed out and 'ActivityTaskTimedOut' event will be written to the
-    // workflow history.  Calling 'RecordActivityTaskHeartbeat' will fail with 'NotFoundFailure' in
+    // workflow history.  Calling 'RecordActivityTaskHeartbeat' will fail with 'NotFound' in
     // such situations.  Use the 'taskToken' provided as response of PollActivityTaskQueue API call
     // for heart beating.
     rpc RecordActivityTaskHeartbeat (RecordActivityTaskHeartbeatRequest) returns (RecordActivityTaskHeartbeatResponse) {

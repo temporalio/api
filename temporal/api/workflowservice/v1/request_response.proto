@@ -138,6 +138,7 @@ message StartWorkflowExecutionRequest {
     string workflow_id = 2;
     temporal.api.common.v1.WorkflowType workflow_type = 3;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 4;
+    // Serialized arguments to the workflow. These are passed as arguments to the workflow function.
     temporal.api.common.v1.Payloads input = 5;
     // Total workflow execution timeout including retries and continue as new.
     google.protobuf.Duration workflow_execution_timeout = 6 [(gogoproto.stdduration) = true];
@@ -394,11 +395,17 @@ message RespondActivityTaskCompletedResponse {
 }
 
 message RespondActivityTaskCompletedByIdRequest {
+    // Namespace of the workflow which scheduled this activity
     string namespace = 1;
+    // Id of the workflow which scheduled this activity
     string workflow_id = 2;
+    // Run Id of the workflow which scheduled this activity
     string run_id = 3;
+    // Id of the activity to complete
     string activity_id = 4;
+    // The serialized result of activity execution
     temporal.api.common.v1.Payloads result = 5;
+    // The identity of the worker/client
     string identity = 6;
 }
 
@@ -406,8 +413,11 @@ message RespondActivityTaskCompletedByIdResponse {
 }
 
 message RespondActivityTaskFailedRequest {
+    // The task token as received in `PollActivityTaskQueueResponse`
     bytes task_token = 1;
+    // Detailed failure information
     temporal.api.failure.v1.Failure failure = 2;
+    // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
 }
@@ -416,11 +426,17 @@ message RespondActivityTaskFailedResponse {
 }
 
 message RespondActivityTaskFailedByIdRequest {
+    // Namespace of the workflow which scheduled this activity
     string namespace = 1;
+    // Id of the workflow which scheduled this activity
     string workflow_id = 2;
+    // Run Id of the workflow which scheduled this activity
     string run_id = 3;
+    // Id of the activity to fail
     string activity_id = 4;
+    // Detailed failure information
     temporal.api.failure.v1.Failure failure = 5;
+    // The identity of the worker/client
     string identity = 6;
 }
 
@@ -428,8 +444,11 @@ message RespondActivityTaskFailedByIdResponse {
 }
 
 message RespondActivityTaskCanceledRequest {
+    // The task token as received in `PollActivityTaskQueueResponse`
     bytes task_token = 1;
+    // Serialized additional information to attach to the cancellation
     temporal.api.common.v1.Payloads details = 2;
+    // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
 }
@@ -438,11 +457,17 @@ message RespondActivityTaskCanceledResponse {
 }
 
 message RespondActivityTaskCanceledByIdRequest {
+    // Namespace of the workflow which scheduled this activity
     string namespace = 1;
+    // Id of the workflow which scheduled this activity
     string workflow_id = 2;
+    // Run Id of the workflow which scheduled this activity
     string run_id = 3;
+    // Id of the activity to confirm is cancelled
     string activity_id = 4;
+    // Serialized additional information to attach to the cancellation
     temporal.api.common.v1.Payloads details = 5;
+    // The identity of the worker/client
     string identity = 6;
 }
 
@@ -452,8 +477,11 @@ message RespondActivityTaskCanceledByIdResponse {
 message RequestCancelWorkflowExecutionRequest {
     string namespace = 1;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+    // The identity of the worker/client
     string identity = 3;
+    // Used to de-dupe cancellation requests
     string request_id = 4;
+    // TODO: What is this for?
     string first_execution_run_id = 5;
 }
 
@@ -463,10 +491,15 @@ message RequestCancelWorkflowExecutionResponse {
 message SignalWorkflowExecutionRequest {
     string namespace = 1;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+    // The workflow author-defined name of the signal to send to the workflow
     string signal_name = 3;
+    // Serialized value(s) to provide with the signal
     temporal.api.common.v1.Payloads input = 4;
+    // The identity of the worker/client
     string identity = 5;
+    // Used to de-dupe sent signals
     string request_id = 6;
+    // Deprecated
     string control = 7;
     // Headers that are passed with the signal to the processing workflow.
     // These can include things like auth or tracing tokens.
@@ -480,7 +513,9 @@ message SignalWithStartWorkflowExecutionRequest {
     string namespace = 1;
     string workflow_id = 2;
     temporal.api.common.v1.WorkflowType workflow_type = 3;
+    // The task queue to start this workflow on, if it will be started
     temporal.api.taskqueue.v1.TaskQueue task_queue = 4;
+    // Serialized arguments to the workflow. These are passed as arguments to the workflow function.
     temporal.api.common.v1.Payloads input = 5;
     // Total workflow execution timeout including retries and continue as new
     google.protobuf.Duration workflow_execution_timeout = 6 [(gogoproto.stdduration) = true];
@@ -488,14 +523,20 @@ message SignalWithStartWorkflowExecutionRequest {
     google.protobuf.Duration workflow_run_timeout = 7 [(gogoproto.stdduration) = true];
     // Timeout of a single workflow task
     google.protobuf.Duration workflow_task_timeout = 8 [(gogoproto.stdduration) = true];
+    // The identity of the worker/client
     string identity = 9;
+    // Used to de-dupe signal w/ start requests
     string request_id = 10;
     temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 11;
+    // The workflow author-defined name of the signal to send to the workflow
     string signal_name = 12;
+    // Serialized value(s) to provide with the signal
     temporal.api.common.v1.Payloads signal_input = 13;
+    // Deprecated
     string control = 14;
-    // Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    // Retry policy for the workflow Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
     temporal.api.common.v1.RetryPolicy retry_policy = 15;
+    // See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/
     string cron_schedule = 16;
     temporal.api.common.v1.Memo memo = 17;
     temporal.api.common.v1.SearchAttributes search_attributes = 18;
@@ -527,8 +568,11 @@ message TerminateWorkflowExecutionRequest {
     string namespace = 1;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
     string reason = 3;
+    // Serialized additional information to attach to the termination event
     temporal.api.common.v1.Payloads details = 4;
+    // The identity of the worker/client
     string identity = 5;
+    // TODO: What is this for?
     string first_execution_run_id = 6;
 }
 
@@ -620,7 +664,6 @@ message GetSearchAttributesResponse {
     map<string, temporal.api.enums.v1.IndexedValueType> keys = 1;
 }
 
-// TODO:  deprecated APIs
 message RespondQueryTaskCompletedRequest {
     bytes task_token = 1;
     temporal.api.enums.v1.QueryResultType completed_type = 2;

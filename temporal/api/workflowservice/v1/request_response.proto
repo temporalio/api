@@ -326,10 +326,12 @@ message PollActivityTaskQueueResponse {
     // Starting at 1, the number of attempts to perform this activity
     int32 attempt = 13;
     // First scheduled -> final result reported timeout
+    //
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration schedule_to_close_timeout = 14 [(gogoproto.stdduration) = true];
     // Current attempt start -> final result reported timeout
+    //
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration start_to_close_timeout = 15 [(gogoproto.stdduration) = true];
@@ -358,22 +360,32 @@ message RecordActivityTaskHeartbeatResponse {
 }
 
 message RecordActivityTaskHeartbeatByIdRequest {
+    // Namespace of the workflow which scheduled this activity
     string namespace = 1;
+    // Id of the workflow which scheduled this activity
     string workflow_id = 2;
+    // Run Id of the workflow which scheduled this activity
     string run_id = 3;
+    // Id of the activity we're heartbeating
     string activity_id = 4;
+    // Arbitrary data, of which the most recent call is kept, to store for this activity
     temporal.api.common.v1.Payloads details = 5;
+    // The identity of the worker/client
     string identity = 6;
 }
 
 message RecordActivityTaskHeartbeatByIdResponse {
+    // Will be set to true if the activity has been asked to cancel itself. The SDK should then
+    // notify the activity of cancellation if it is still running.
     bool cancel_requested = 1;
 }
 
 message RespondActivityTaskCompletedRequest {
     // The task token as received in `PollActivityTaskQueueResponse`
     bytes task_token = 1;
+    // The result of successfully executing the activity
     temporal.api.common.v1.Payloads result = 2;
+    // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
 }
@@ -498,8 +510,12 @@ message ResetWorkflowExecutionRequest {
     string namespace = 1;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
     string reason = 3;
+    // The id of a `WORKFLOW_TASK_COMPLETED` even to reset to.
+    // TODO: Can it only be completed events?
     int64 workflow_task_finish_event_id = 4;
+    // Used to de-dupe reset requests
     string request_id = 5;
+    // TODO: What is this?
     temporal.api.enums.v1.ResetReapplyType reset_reapply_type = 6;
 }
 

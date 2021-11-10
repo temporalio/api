@@ -70,12 +70,9 @@ buf-lint:
 	printf $(COLOR) "Run buf linter..."
 	(cd $(PROTO_ROOT) && buf lint)
 
-# TODO(cretz): buf-breaking intentionally disabled as part of
-# https://github.com/temporalio/api/pull/127 to allow for removing an unused
-# field. Will reinstate upon merge.
 buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
-#	@(cd $(PROTO_ROOT) && buf breaking --against '.git#branch=master')
+	@(cd $(PROTO_ROOT) && buf breaking --against '.git#branch=master')
 
 ##### Clean #####
 clean:

@@ -1,0 +1,206 @@
+// The MIT License
+//
+// Copyright (c) 2020 Temporal Technologies Inc.  All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package temporal.api.schedule.v1;
+
+option go_package = "go.temporal.io/api/schedule/v1;schedule";
+option java_package = "io.temporal.api.schedule.v1";
+option java_multiple_files = true;
+option java_outer_classname = "MessageProto";
+option ruby_package = "Temporal::Api::Schedule::V1";
+option csharp_namespace = "Temporal.Api.Schedule.V1";
+
+
+// CalendarSpec describes an event specification relative to the calendar,
+// similar to a traditional cron specification. Each field can be one of:
+//   *: matches always
+//   x: matches when the field equals x
+//   x/y : matches when the field equals x+n*y where n is an integer
+//   x-z: matches when the field is between x and z inclusive
+//   w,x,y,...: matches when the field is one of the listed values
+// Each x, y, z, ... is either a decimal integer, or a month or day of week name
+// or abbreviation (in the appropriate fields).
+// A second in time matches if all fields match.
+// day_of_month uses 0 or 7 as Sunday
+// TODO: add relative-to-end-of-month
+// TODO: add nth day-of-week in month
+message CalendarSpec {
+    string second = x;           // default: 0
+    string minute = x;           // default: 0
+    string hour = x;             // default: 0
+    string day_of_month = x;     // default: *
+    string month = x;            // default: *
+    string year = x;             // default: *
+    string day_of_week = x;      // default: *
+}
+
+// IntervalSpec matches times that can be expressed as:
+// epoch + n * interval + phase
+// where n is an integer.
+// phase defaults to zero if missing. interval is required.
+// Both interval and phase are rounded to the nearest second before
+// any calculations.
+message IntervalSpec {
+    google.protobuf.Duration interval = x [(gogoproto.stdduration) = true];
+    google.protobuf.Duration phase = x [(gogoproto.stdduration) = true];
+}
+
+// ScheduleDescription is a complete description of a set of absolute timestamps
+// (possibly infinite) that an action should occur at. The meaning of a
+// ScheduleDescription depends only on its contents and never changes, except
+// that the definition of a time zone can change over time (most commonly, when
+// daylight saving time policy changes for an area). To create a totally
+// self-contained ScheduleDescription, use UTC or include timezone_data.
+message ScheduleDescription {
+    // Calendar-based specifications of times.
+    repeated CalendarSpec calendar = x;
+    // Interval-based specifications of times.
+    repeated IntervalSpec interval = x;
+    // Any timestamps matching any of the exclude_calendar specs will be skipped.
+    repeated CalendarSpec exclude_calendar = x;
+    // Any timestamps before not_before will be skipped. Together, not_before
+    // and not_after make an inclusive interval.
+    google.protobuf.Timestamp not_before = x [(gogoproto.stdtime) = true];
+    // Any timestamps after not_after will be skipped.
+    google.protobuf.Timestamp not_after = y [(gogoproto.stdtime) = true];
+    // All timestamps will be incremented by a random value from 0 to this
+    // amount of jitter. Default: 60 seconds
+    google.protobuf.Duration jitter = x [(gogoproto.stdduration) = true];
+
+    // Time zone to interpret all CalendarSpecs in.
+    //
+    // If unset, defaults to UTC. We recommend using UTC for your application if
+    // at all possible, to avoid various unexpected properties of time zones.
+    //
+    // Time zones may be provided by name, corresponding to names in the IANA
+    // time zone database. The definition will be loaded by the Temporal server
+    // from the environment it runs in.
+    //
+    // If your application requires more control over the time zone definition
+    // used, it may pass in a complete definition in the form of a TZif file
+    // from the time zone database. If present, this will be used instead of
+    // loading anything from the environment. You are then responsible for
+    // updating timezome_data when the definition changes.
+    //
+    // There is _no special handling_ of DST: if you write a calendar spec that
+    // fires at 2:30am and specify a time zone that follows DST, that action may
+    // be triggered zero, one, or two times in a day.
+    string timezone_name = x;
+    bytes timezone_data = x;
+}
+
+message SchedulePolicies {
+    // Policy for overlaps:
+    temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = x;
+
+    // Policy for catchups:
+    // If the system misses an action due to being down, and comes back up,
+    // the action will be run if the scheduled time is within this window from
+    // the current time.
+    // This value defaults to 60 seconds, and can't be less than 10 seconds.
+    google.protobuf.Duration catchup_window = x [(gogoproto.stdduration) = true];
+
+    // If true, and a workflow run fails or times out, turn on "paused".
+    // This applies after retry policies: the full chain of retries must fail to
+    // trigger a pause here.
+    bool pause_after_failure = x;
+}
+
+message ScheduleAction {
+    // If present, start a workflow. Most fields of
+    // StartWorkflowExecutionRequest apply here. The exceptions are:
+    // - namespace must be omitted or match the namespace of the schedule.
+    // - identity and request_id must be omitted (they will be set by the schedule).
+    // - workflow_id_reuse_policy must be omitted or set to
+    //   WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    // - cron_schedule must be omitted.
+    temporal.api.workflowservice.v1.StartWorkflowExecutionRequest start_workflow = x;
+
+    // If present, signal a workflow. Most fields of
+    // SignalWorkflowExecutionRequest apply here. The exceptions are:
+    // - namespace must be omitted or match the namespace of the schedule.
+    // - identity and request_id must be omitted (they will be set by the schedule).
+    // - control must be omitted.
+    temporal.api.workflowservice.v1.SignalWorkflowExecutionRequest signal_workflow = x;
+
+    // TODO: should we add signal with start also?
+
+    // If append_time_argument is true, append the nominal trigger time of each
+    // schedule as an extra input argument to start_workflow and signal_workflow.
+    // The time will be a string in ISO-8601 format with second resolution and
+    // encoded as JSON, e.g. "2022-03-02T22:15:00Z"
+    // It will always be in UTC regardless of the time zone of the schedule.
+    bool append_time_argument = x;
+}
+
+message BackfillRequest {
+    google.protobuf.Timestamp from_time = x [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp to_time = x [(gogoproto.stdtime) = true];
+    temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = x;
+}
+
+message ScheduleState {
+    // If present and true, do not take any actions based on the schedule description.
+    // Actions may be taken based on explicit requests from the fields below.
+    bool paused = x;
+
+    // If present and equal to zero, don't schedule again.
+    // Automatically decrements on each action.
+    int64 remaining_actions = x;
+
+    // If set, trigger one action immediately, overriding the schedule description.
+    // Overrides paused.
+    // Automatically unset after being used once.
+    bool trigger_immediately = x;
+
+    // If set, runs though the specified time period(s) and takes actions as if that time
+    // passed by right now, all at once.
+    // Overrides paused.
+    // Automatically unset after being used once.
+    repeated BackfillRequest backfill_request = x;
+
+    // Information-only fields (read-only, ignored on create/update):
+
+    // Number of actions taken so far.
+    int64 action_count = x;
+
+    // Most recent ten actual action times (including manual triggers).
+    google.protobuf.Timestamp recent_actions = x [(gogoproto.stdtime) = true];
+
+    // Next ten scheduled action times.
+    google.protobuf.Timestamp future_actions = x [(gogoproto.stdtime) = true];
+}
+
+message Schedule {
+    ScheduleDescription description = x;
+    ScheduleAction action = x;
+    SchedulePolicies policies = x;
+    ScheduleState state = x;
+}
+
+// ScheduleListEntry is returned by ListSchedules.
+message ScheduleListEntry {
+    string schedule_id = x;
+    // TODO: how much can we get from visibility?
+}

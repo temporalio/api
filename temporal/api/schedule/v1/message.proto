@@ -42,7 +42,7 @@ option csharp_namespace = "Temporal.Api.Schedule.V1";
 // Each x, y, z, ... is either a decimal integer, or a month or day of week name
 // or abbreviation (in the appropriate fields).
 // A second in time matches if all fields match.
-// day_of_month uses 0 or 7 as Sunday
+// day_of_week uses 0 or 7 as Sunday
 // TODO: add relative-to-end-of-month
 // TODO: add nth day-of-week in month
 message CalendarSpec {
@@ -59,25 +59,31 @@ message CalendarSpec {
 // epoch + n * interval + phase
 // where n is an integer.
 // phase defaults to zero if missing. interval is required.
-// Both interval and phase are rounded to the nearest second before
-// any calculations.
+// Both interval and phase must be non-negative and are rounded to the nearest
+// second before any calculations.
+// For example, an interval of 1 hour with phase of zero would match every hour,
+// on the hour. The same interval but a phase of 19 minutes would match every
+// xx:19:00. An interval of 28 days with phase zero would match
+// 2022-02-17T00:00:00Z (among other times). The same interval with a phase of 3
+// days, 5 hours, and 23 minutes would match 2022-02-20T05:23:00Z instead.
 message IntervalSpec {
     google.protobuf.Duration interval = x [(gogoproto.stdduration) = true];
     google.protobuf.Duration phase = x [(gogoproto.stdduration) = true];
 }
 
-// ScheduleDescription is a complete description of a set of absolute timestamps
+// ScheduleSpec is a complete description of a set of absolute timestamps
 // (possibly infinite) that an action should occur at. The meaning of a
-// ScheduleDescription depends only on its contents and never changes, except
-// that the definition of a time zone can change over time (most commonly, when
-// daylight saving time policy changes for an area). To create a totally
-// self-contained ScheduleDescription, use UTC or include timezone_data.
-message ScheduleDescription {
+// ScheduleSpec depends only on its contents and never changes, except that the
+// definition of a time zone can change over time (most commonly, when daylight
+// saving time policy changes for an area). To create a totally self-contained
+// ScheduleDescription, use UTC or include timezone_data.
+message ScheduleSpec {
     // Calendar-based specifications of times.
     repeated CalendarSpec calendar = x;
     // Interval-based specifications of times.
     repeated IntervalSpec interval = x;
-    // Any timestamps matching any of the exclude_calendar specs will be skipped.
+    // Any timestamps matching any of the exclude_calendar specs will be
+    // skipped.
     repeated CalendarSpec exclude_calendar = x;
     // Any timestamps before not_before will be skipped. Together, not_before
     // and not_after make an inclusive interval.
@@ -115,9 +121,9 @@ message SchedulePolicies {
     temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = x;
 
     // Policy for catchups:
-    // If the system misses an action due to being down, and comes back up,
-    // the action will be run if the scheduled time is within this window from
-    // the current time.
+    // If the Temporal server misses an action due to one or more components
+    // being down, and comes back up, the action will be run if the scheduled
+    // time is within this window from the current time.
     // This value defaults to 60 seconds, and can't be less than 10 seconds.
     google.protobuf.Duration catchup_window = x [(gogoproto.stdduration) = true];
 
@@ -193,7 +199,7 @@ message ScheduleState {
 }
 
 message Schedule {
-    ScheduleDescription description = x;
+    ScheduleSpec spec = x;
     ScheduleAction action = x;
     SchedulePolicies policies = x;
     ScheduleState state = x;

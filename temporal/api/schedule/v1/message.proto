@@ -142,22 +142,17 @@ message ScheduleAction {
     //   WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
     // - cron_schedule must be omitted.
     temporal.api.workflowservice.v1.StartWorkflowExecutionRequest start_workflow = x;
+}
 
-    // If present, signal a workflow. Most fields of
-    // SignalWorkflowExecutionRequest apply here. The exceptions are:
-    // - namespace must be omitted or match the namespace of the schedule.
-    // - identity and request_id must be omitted (they will be set by the schedule).
-    // - control must be omitted.
-    temporal.api.workflowservice.v1.SignalWorkflowExecutionRequest signal_workflow = x;
+message ScheduleState {
+    // If true, do not take any actions based on the schedule description.
+    bool paused = x;
 
-    // TODO: should we add signal with start also?
-
-    // If append_time_argument is true, append the nominal trigger time of each
-    // schedule as an extra input argument to start_workflow and signal_workflow.
-    // The time will be a string in ISO-8601 format with second resolution and
-    // encoded as JSON, e.g. "2022-03-02T22:15:00Z"
-    // It will always be in UTC regardless of the time zone of the schedule.
-    bool append_time_argument = x;
+    // If true, decrement remaining_actions after each action, and do not take
+    // any more scheduled actions if remaining_actions is zero. (Actions may
+    // still be taken by explicit request.)
+    bool limited_actions = x;
+    int64 remaining_actions = x;
 }
 
 message BackfillRequest {
@@ -166,28 +161,17 @@ message BackfillRequest {
     temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = x;
 }
 
-message ScheduleState {
-    // If present and true, do not take any actions based on the schedule description.
-    // Actions may be taken based on explicit requests from the fields below.
-    bool paused = x;
-
-    // If present and equal to zero, don't schedule again.
-    // Automatically decrements on each action.
-    int64 remaining_actions = x;
-
-    // If set, trigger one action immediately, overriding the schedule description.
-    // Overrides paused.
-    // Automatically unset after being used once.
+message ScheduleRequest {
+    // If set, trigger one action immediately.
     bool trigger_immediately = x;
 
     // If set, runs though the specified time period(s) and takes actions as if that time
-    // passed by right now, all at once.
-    // Overrides paused.
-    // Automatically unset after being used once.
+    // passed by right now, all at once. The overlap policy can be overridden for the
+    // scope of the backfill.
     repeated BackfillRequest backfill_request = x;
+}
 
-    // Information-only fields (read-only, ignored on create/update):
-
+message ScheduleInfo {
     // Number of actions taken so far.
     int64 action_count = x;
 
@@ -199,14 +183,24 @@ message ScheduleState {
 }
 
 message Schedule {
+    // These fields are used by CreateSchedule and can be modified by UpdateSchedule.
+    // They are returned by DescribeSchedule.
     ScheduleSpec spec = x;
     ScheduleAction action = x;
     SchedulePolicies policies = x;
     ScheduleState state = x;
+
+    // Write-only, only used by CreateSchedule/UpdateSchedule, not returned by DescribeSchedule:
+    ScheduleRequest request = x;
+
+    // Read-only, only returned by DescribeSchedule, not used by CreateSchedule/UpdateSchedule:
+    ScheduleInfo info = x;
 }
 
 // ScheduleListEntry is returned by ListSchedules.
 message ScheduleListEntry {
     string schedule_id = x;
+    temporal.api.common.v1.Memo memo = x;
+    temporal.api.common.v1.SearchAttributes search_attributes = x;
     // TODO: how much can we get from visibility?
 }

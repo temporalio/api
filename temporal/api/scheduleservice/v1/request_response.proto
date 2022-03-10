@@ -44,7 +44,8 @@ message CreateScheduleRequest {
     // A unique identifier for this create request. Typically UUIDv4.
     string request_id = x;
 
-    // TODO: add memo?
+    temporal.api.common.v1.Memo memo = x;
+    temporal.api.common.v1.SearchAttributes search_attributes = x;
 }
 
 message CreateScheduleResponse {
@@ -63,6 +64,10 @@ message DescribeScheduleResponse {
     // - some fields in the state are modified automatically
     // - the schedule may have been modified by UpdateSchedule
     temporal.api.schedule.v1.Schedule schedule = x;
+    // This value can be passed back to UpdateSchedule to ensure that the
+    // schedule was not modified between a Describe and an Update, which could
+    // lead to lost updates and other confusion.
+    bytes conflict_token = x;
 }
 
 message UpdateScheduleRequest {
@@ -70,12 +75,16 @@ message UpdateScheduleRequest {
     string namespace = x;
     // The id of the schedule to update.
     string schedule_id = x;
-    // The new schedule. A Schedule has four fields (description, action, policies,
-    // state), each of which can be present or absent from this message. If a field is
-    // absent here, it is not modified. If it's present, it's replaced entirely.
-    // This makes it easier to change state fields like "paused" or "trigger_immediately"
-    // without modifying the rest of the schedule.
+    // The new schedule. The four main fields of the schedule (spec, action,
+    // policies, state) are replaced completely by the values in this message.
+    // Additionally, the request field can contain explicit requests to take
+    // effect immediately.
     temporal.api.schedule.v1.Schedule schedule = x;
+    // This can be the value of conflict_token from a DescribeScheduleResponse,
+    // which will cause this request to fail if the schedule has been modified
+    // between the Describe and this Update.
+    // If missing, the schedule will be updated unconditionally.
+    bytes conflict_token = x;
     // The identity of the client who initiated this request.
     string identity = x;
     // A unique identifier for this update request. Typically UUIDv4.
@@ -92,8 +101,6 @@ message DeleteScheduleRequest {
     string schedule_id = x;
     // The identity of the client who initiated this request.
     string identity = x;
-    // A unique identifier for this update request. Typically UUIDv4.
-    string request_id = x;
 }
 
 message DeleteScheduleResponse {

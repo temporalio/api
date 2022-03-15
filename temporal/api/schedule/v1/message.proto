@@ -46,13 +46,13 @@ option csharp_namespace = "Temporal.Api.Schedule.V1";
 // TODO: add relative-to-end-of-month
 // TODO: add nth day-of-week in month
 message CalendarSpec {
-    string second = x;           // default: 0
-    string minute = x;           // default: 0
-    string hour = x;             // default: 0
-    string day_of_month = x;     // default: *
-    string month = x;            // default: *
-    string year = x;             // default: *
-    string day_of_week = x;      // default: *
+    string second = 1;           // default: 0
+    string minute = 2;           // default: 0
+    string hour = 3;             // default: 0
+    string day_of_month = 4;     // default: *
+    string month = 5;            // default: *
+    string year = 6;             // default: *
+    string day_of_week = 7;      // default: *
 }
 
 // IntervalSpec matches times that can be expressed as:
@@ -67,8 +67,8 @@ message CalendarSpec {
 // 2022-02-17T00:00:00Z (among other times). The same interval with a phase of 3
 // days, 5 hours, and 23 minutes would match 2022-02-20T05:23:00Z instead.
 message IntervalSpec {
-    google.protobuf.Duration interval = x [(gogoproto.stdduration) = true];
-    google.protobuf.Duration phase = x [(gogoproto.stdduration) = true];
+    google.protobuf.Duration interval = 1 [(gogoproto.stdduration) = true];
+    google.protobuf.Duration phase = 2 [(gogoproto.stdduration) = true];
 }
 
 // ScheduleSpec is a complete description of a set of absolute timestamps
@@ -79,20 +79,20 @@ message IntervalSpec {
 // ScheduleDescription, use UTC or include timezone_data.
 message ScheduleSpec {
     // Calendar-based specifications of times.
-    repeated CalendarSpec calendar = x;
+    repeated CalendarSpec calendar = 1;
     // Interval-based specifications of times.
-    repeated IntervalSpec interval = x;
+    repeated IntervalSpec interval = 2;
     // Any timestamps matching any of the exclude_calendar specs will be
     // skipped.
-    repeated CalendarSpec exclude_calendar = x;
+    repeated CalendarSpec exclude_calendar = 3;
     // Any timestamps before not_before will be skipped. Together, not_before
     // and not_after make an inclusive interval.
-    google.protobuf.Timestamp not_before = x [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp not_before = 4 [(gogoproto.stdtime) = true];
     // Any timestamps after not_after will be skipped.
-    google.protobuf.Timestamp not_after = y [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp not_after = 5 [(gogoproto.stdtime) = true];
     // All timestamps will be incremented by a random value from 0 to this
     // amount of jitter. Default: 1 second
-    google.protobuf.Duration jitter = x [(gogoproto.stdduration) = true];
+    google.protobuf.Duration jitter = 6 [(gogoproto.stdduration) = true];
 
     // Time zone to interpret all CalendarSpecs in.
     //
@@ -112,8 +112,8 @@ message ScheduleSpec {
     // There is _no special handling_ of DST: if you write a calendar spec that
     // fires at 2:30am and specify a time zone that follows DST, that action may
     // be triggered zero, one, or two times in a day.
-    string timezone_name = x;
-    bytes timezone_data = x;
+    string timezone_name = 10;
+    bytes timezone_data = 11;
 }
 
 message SchedulePolicies {
@@ -128,19 +128,19 @@ message SchedulePolicies {
     // there are workflows running, those workflows will not be cancelled. If
     // changing from OVERLAP_ALLOW_ALL to OVERLAP_SKIP with workflows running, the
     // running workflows will not cause the next action to be skipped.
-    temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = x;
+    temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = 1;
 
     // Policy for catchups:
     // If the Temporal server misses an action due to one or more components
     // being down, and comes back up, the action will be run if the scheduled
     // time is within this window from the current time.
     // This value defaults to 60 seconds, and can't be less than 10 seconds.
-    google.protobuf.Duration catchup_window = x [(gogoproto.stdduration) = true];
+    google.protobuf.Duration catchup_window = 2 [(gogoproto.stdduration) = true];
 
     // If true, and a workflow run fails or times out, turn on "paused".
     // This applies after retry policies: the full chain of retries must fail to
     // trigger a pause here.
-    bool pause_after_failure = x;
+    bool pause_after_failure = 3;
 }
 
 message ScheduleAction {
@@ -151,70 +151,70 @@ message ScheduleAction {
     // - workflow_id_reuse_policy must be omitted or set to
     //   WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
     // - cron_schedule must be omitted.
-    temporal.api.workflowservice.v1.StartWorkflowExecutionRequest start_workflow = x;
+    temporal.api.workflowservice.v1.StartWorkflowExecutionRequest start_workflow = 1;
 }
 
 message ScheduleState {
     // If true, do not take any actions based on the schedule description.
-    bool paused = x;
+    bool paused = 1;
 
     // If true, decrement remaining_actions after each action, and do not take
     // any more scheduled actions if remaining_actions is zero. (Actions may
     // still be taken by explicit request.)
-    bool limited_actions = x;
-    int64 remaining_actions = x;
+    bool limited_actions = 2;
+    int64 remaining_actions = 3;
 }
 
 message BackfillRequest {
-    google.protobuf.Timestamp from_time = x [(gogoproto.stdtime) = true];
-    google.protobuf.Timestamp to_time = x [(gogoproto.stdtime) = true];
-    temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = x;
+    google.protobuf.Timestamp from_time = 1 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp to_time = 2 [(gogoproto.stdtime) = true];
+    temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = 3;
 }
 
 message ScheduleRequest {
     // If set, trigger one action immediately.
-    bool trigger_immediately = x;
+    bool trigger_immediately = 1;
 
     // If set, runs though the specified time period(s) and takes actions as if that time
     // passed by right now, all at once. The overlap policy can be overridden for the
     // scope of the backfill.
-    repeated BackfillRequest backfill_request = x;
+    repeated BackfillRequest backfill_request = 2;
 }
 
 message ScheduleInfo {
     // Number of actions taken so far.
-    int64 action_count = x;
+    int64 action_count = 1;
 
     // Most recent ten actual action times (including manual triggers).
-    google.protobuf.Timestamp recent_actions = x [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp recent_actions = 2 [(gogoproto.stdtime) = true];
 
     // Next ten scheduled action times.
-    google.protobuf.Timestamp future_actions = x [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp future_actions = 3 [(gogoproto.stdtime) = true];
 
     // Timestamps of schedule creation and last update.
-    google.protobuf.Timestamp created_at = x [(gogoproto.stdtime) = true];
-    google.protobuf.Timestamp updated_at = x [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp created_at = 4 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp updated_at = 5 [(gogoproto.stdtime) = true];
 }
 
 message Schedule {
     // These fields are used by CreateSchedule and can be modified by UpdateSchedule.
     // They are returned by DescribeSchedule.
-    ScheduleSpec spec = x;
-    ScheduleAction action = x;
-    SchedulePolicies policies = x;
-    ScheduleState state = x;
+    ScheduleSpec spec = 1;
+    ScheduleAction action = 2;
+    SchedulePolicies policies = 3;
+    ScheduleState state = 4;
 
     // Write-only, only used by CreateSchedule/UpdateSchedule, not returned by DescribeSchedule:
-    ScheduleRequest request = x;
+    ScheduleRequest request = 5;
 
     // Read-only, only returned by DescribeSchedule, not used by CreateSchedule/UpdateSchedule:
-    ScheduleInfo info = x;
+    ScheduleInfo info = 6;
 }
 
 // ScheduleListEntry is returned by ListSchedules.
 message ScheduleListEntry {
-    string schedule_id = x;
-    temporal.api.common.v1.Memo memo = x;
-    temporal.api.common.v1.SearchAttributes search_attributes = x;
+    string schedule_id = 1;
+    temporal.api.common.v1.Memo memo = 2;
+    temporal.api.common.v1.SearchAttributes search_attributes = 3;
     // TODO: how much can we get from visibility?
 }

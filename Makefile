@@ -59,7 +59,7 @@ api-linter-install:
 
 buf-install:
 	printf $(COLOR) "Install/update buf..."
-	go install github.com/bufbuild/buf/cmd/buf@v0.43.2
+	go install github.com/bufbuild/buf/cmd/buf@v1.1.1
 
 ##### Linters #####
 api-linter:

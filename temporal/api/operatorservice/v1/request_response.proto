@@ -68,15 +68,29 @@ message ListSearchAttributesResponse {
 // (-- api-linter: core::0135::request-name-required=disabled
 //     aip.dev/not-precedent: DeleteNamespace RPC doesn't follow Google API format. --)
 message DeleteNamespaceRequest {
+    // One of namespace or namespace_id must be specified to identify namespace.
     string namespace = 1;
     string namespace_id = 2;
+
+    // 4 parameters to fine configuration of delete executions workflow. Use with caution.
+    // RPS per every parallel delete executions activity. Default 100.
+    // Total RPS is equal to delete_activity_rps * concurrent_delete_executions_activities.
     int32 delete_activity_rps = 3;
+    // Page size to read executions from visibility database. Default 1000.
     int32 page_size = 4;
+    // Number of pages before calling ContinueAsNew for delete executions workflow. Default 256.
     int32 pages_per_execution_count = 5;
+    // Number of concurrent delete executions activities. Must be not greater than:
+    //   - pages_per_execution_count,
+    //   - number of worker cores in the cluster,
+    //   - 256.
+    // Default 4.
     int32 concurrent_delete_executions_activities = 6;
 }
 
 message DeleteNamespaceResponse {
-    string deleted_id = 1;
-    string deleted_name = 2;
+    // Id of deleted namespace.
+    string deleted_namespace_id = 1;
+    // Temporary namespace name that is used during reclaim resources step.
+    string deleted_namespace = 2;
 }

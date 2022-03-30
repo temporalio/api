@@ -153,8 +153,8 @@ message SchedulePolicies {
 }
 
 message ScheduleAction {
-    // If present, start a workflow. Most fields of
-    // StartWorkflowExecutionRequest apply here. The exceptions are:
+    // If present, start a workflow. Most fields of StartWorkflowExecutionRequest
+    // apply here. The exceptions are:
     // - namespace must be omitted or match the namespace of the schedule.
     // - identity and request_id must be omitted (they will be set by the schedule).
     // - workflow_id_reuse_policy must be omitted or set to
@@ -222,39 +222,31 @@ message ScheduleInfo {
     // Number of actions taken so far.
     int64 action_count = 1;
 
-    // Most recent ten actual action times (including manual triggers).
-    repeated ScheduleActionResult recent_actions = 2;
-
-    // Next ten scheduled action times.
-    repeated google.protobuf.Timestamp future_actions = 3 [(gogoproto.stdtime) = true];
-
-    // Timestamps of schedule creation and last update.
-    google.protobuf.Timestamp create_time = 4 [(gogoproto.stdtime) = true];
-    google.protobuf.Timestamp update_time = 5 [(gogoproto.stdtime) = true];
-
     // Number of times a scheduled action was skipped due to missing the catchup window.
-    int64 missed_catchup_window = 6;
+    int64 missed_catchup_window = 2;
 
     // Number of skipped actions due to overlap.
-    int64 overlap_skipped = 7;
+    int64 overlap_skipped = 3;
+
+    // Most recent ten actual action times (including manual triggers).
+    repeated ScheduleActionResult recent_actions = 4;
+
+    // Next ten scheduled action times.
+    repeated google.protobuf.Timestamp future_actions = 5 [(gogoproto.stdtime) = true];
+
+    // Timestamps of schedule creation and last update.
+    google.protobuf.Timestamp create_time = 6 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp update_time = 7 [(gogoproto.stdtime) = true];
 
     // Error for invalid schedule. If this is set, no actions will be taken.
     string invalid_schedule_error = 8;
 }
 
 message Schedule {
-    // These fields are used by CreateSchedule and can be modified by UpdateSchedule.
-    // They are returned by DescribeSchedule.
     ScheduleSpec spec = 1;
     ScheduleAction action = 2;
     SchedulePolicies policies = 3;
     ScheduleState state = 4;
-
-    // Write-only, only used by CreateSchedule/UpdateSchedule, not returned by DescribeSchedule:
-    ScheduleRequest request = 5;
-
-    // Read-only, only returned by DescribeSchedule, not used by CreateSchedule/UpdateSchedule:
-    ScheduleInfo info = 6;
 }
 
 // ScheduleListEntry is returned by ListSchedules.

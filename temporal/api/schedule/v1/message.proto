@@ -130,13 +130,13 @@ message SchedulePolicies {
     // Policy for overlaps.
     // Note that this can be changed after a schedule has taken some actions, and we can't
     // provide 100% sensible semantics for all changes. The most confusing case would be
-    // changes to/from ALLOW_ALL: when using that policy, workflow ids have a timestamp
-    // appended to provide uniqueness. For all other policies, workflows started by a
-    // schedule all use the same id. Changing between these two types of policies will
-    // leave all workflows with the previous id style alone. E.g., if changing from
-    // ALLOW_ALL to CANCEL_OTHER, and there are workflows running, those workflows will
-    // not be cancelled. If changing from ALLOW_ALL to SKIP with workflows running, the
-    // running workflows will not cause the next action to be skipped.
+    // changes to/from ALLOW_ALL: with that policy multiple scheduled workflows can run
+    // concurrently, but for all other policies only one can run at a time. Changing
+    // between these two classes will leave all workflows with the other class alone.
+    // E.g., if changing from ALLOW_ALL to CANCEL_OTHER, and there are workflows running,
+    // those workflows will not be cancelled. If changing from ALLOW_ALL to SKIP with
+    // workflows running, the running workflows will not cause the next action to be
+    // skipped.
     temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = 1;
 
     // Policy for catchups:
@@ -157,9 +157,8 @@ message ScheduleAction {
         // Start a workflow. Most fields of StartWorkflowExecutionRequest
         // apply here. The exceptions are:
         // - namespace must be omitted or match the namespace of the schedule.
-        // - identity and request_id must be omitted (they will be set by the schedule).
-        // - workflow_id_reuse_policy must be omitted or set to
-        //   WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+        // - identity and request_id must be omitted (they will be set by the scheduler).
+        // - workflow_id_reuse_policy must be omitted.
         // - cron_schedule must be omitted.
         temporal.api.workflowservice.v1.StartWorkflowExecutionRequest start_workflow = 1;
     }

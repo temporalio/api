@@ -38,7 +38,7 @@ import "dependencies/gogoproto/gogo.proto";
 
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/enums/v1/schedule.proto";
-import "temporal/api/taskqueue/v1/message.proto";
+import "temporal/api/workflow/v1/message.proto";
 
 // CalendarSpec describes an event specification relative to the calendar,
 // similar to a traditional cron specification. Each field can be one of:
@@ -166,29 +166,13 @@ message SchedulePolicies {
 
 message ScheduleAction {
     oneof action {
-        ScheduleActionStartWorkflow start_workflow = 1;
+        // All fields of NewWorkflowExecutionInfo are valid except for:
+        // - workflow_id_reuse_policy
+        // - cron_schedule
+        // The workflow id of the started workflow may not match this exactly,
+        // it may have a timestamp appended for uniqueness.
+        temporal.api.workflow.v1.NewWorkflowExecutionInfo start_workflow = 1;
     }
-}
-
-message ScheduleActionStartWorkflow {
-    // The workflow id of the started workflow may not match this exactly,
-    // it may have a timestamp appended for uniqueness.
-    string workflow_id = 1;
-    temporal.api.common.v1.WorkflowType workflow_type = 2;
-    temporal.api.taskqueue.v1.TaskQueue task_queue = 3;
-    // Serialized arguments to the workflow.
-    temporal.api.common.v1.Payloads input = 4;
-    // Total workflow execution timeout including retries and continue as new.
-    google.protobuf.Duration workflow_execution_timeout = 5 [(gogoproto.stdduration) = true];
-    // Timeout of a single workflow run.
-    google.protobuf.Duration workflow_run_timeout = 6 [(gogoproto.stdduration) = true];
-    // Timeout of a single workflow task.
-    google.protobuf.Duration workflow_task_timeout = 7 [(gogoproto.stdduration) = true];
-    // The retry policy for the workflow. Will never exceed `workflow_execution_timeout`.
-    temporal.api.common.v1.RetryPolicy retry_policy = 8;
-    temporal.api.common.v1.Memo memo = 9;
-    temporal.api.common.v1.SearchAttributes search_attributes = 10;
-    temporal.api.common.v1.Header header = 11;
 }
 
 message ScheduleActionResult {

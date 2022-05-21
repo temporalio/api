@@ -49,8 +49,10 @@ message WorkflowExecutionStartedEventAttributes {
     temporal.api.common.v1.WorkflowType workflow_type = 1;
     // If this workflow is a child, the namespace our parent lives in
     string parent_workflow_namespace = 2;
+    // Contains information about parent workflow execution that initiated the child workflow these attributes belong to.
+    // If the workflow these attributes belong to is not a child workflow of any other execution, this field will not be populated.
     temporal.api.common.v1.WorkflowExecution parent_workflow_execution = 3;
-    // TODO: What is this? ID of the event that requested this workflow execution if we are a child?
+    // EventID of the child execution initiated event in parent workflow 
     int64 parent_initiated_event_id = 4;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 5;
     // SDK will deserialize this and provide it as arguments to the workflow function
@@ -67,11 +69,13 @@ message WorkflowExecutionStartedEventAttributes {
     temporal.api.enums.v1.ContinueAsNewInitiator initiator = 11;
     temporal.api.failure.v1.Failure continued_failure = 12;
     temporal.api.common.v1.Payloads last_completion_result = 13;
-    // This is the run id when the WorkflowExecutionStarted event was written
+    // This is the run id when the WorkflowExecutionStarted event was written.
+    // A workflow reset changes the execution run_id, but preserves this field.
     string original_execution_run_id = 14;
     // Identity of the client who requested this execution
     string identity = 15;
-    // This is the very first runId along the chain of ContinueAsNew and Reset.
+    // This is the very first runId along the chain of ContinueAsNew, Retry, Cron and Reset.
+    // Used to identify a chain.
     string first_execution_run_id = 16;
     temporal.api.common.v1.RetryPolicy retry_policy = 17;
     // Starting at 1, the number of times we have tried to execute this workflow
@@ -88,6 +92,10 @@ message WorkflowExecutionStartedEventAttributes {
     temporal.api.common.v1.SearchAttributes search_attributes = 23;
     temporal.api.workflow.v1.ResetPoints prev_auto_reset_points = 24;
     temporal.api.common.v1.Header header = 25;
+    // Version of the child execution initiated event in parent workflow
+    // It should be used together with parent_initiated_event_id to identify
+    // a child initiated event for global namespace
+    int64 parent_initiated_event_version = 26;
 }
 
 message WorkflowExecutionCompletedEventAttributes {

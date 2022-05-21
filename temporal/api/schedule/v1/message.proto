@@ -36,9 +36,9 @@ import "google/protobuf/timestamp.proto";
 
 import "dependencies/gogoproto/gogo.proto";
 
-import "temporal/api/enums/v1/schedule.proto";
 import "temporal/api/common/v1/message.proto";
-import "temporal/api/workflowservice/v1/request_response.proto";
+import "temporal/api/enums/v1/schedule.proto";
+import "temporal/api/workflow/v1/message.proto";
 
 // CalendarSpec describes an event specification relative to the calendar,
 // similar to a traditional cron specification. Each field can be one of:
@@ -166,15 +166,12 @@ message SchedulePolicies {
 
 message ScheduleAction {
     oneof action {
-        // Start a workflow. Most fields of StartWorkflowExecutionRequest
-        // apply here. The exceptions are:
-        // - namespace must be omitted or match the namespace of the schedule.
-        // - identity and request_id must be omitted (they will be set by the scheduler).
-        // - workflow_id_reuse_policy must be omitted.
-        // - cron_schedule must be omitted.
-        // The workflow id of the started workflow may not match the id in start_workflow
-        // exactly, it may have a timestamp appended for uniqueness.
-        temporal.api.workflowservice.v1.StartWorkflowExecutionRequest start_workflow = 1;
+        // All fields of NewWorkflowExecutionInfo are valid except for:
+        // - workflow_id_reuse_policy
+        // - cron_schedule
+        // The workflow id of the started workflow may not match this exactly,
+        // it may have a timestamp appended for uniqueness.
+        temporal.api.workflow.v1.NewWorkflowExecutionInfo start_workflow = 1;
     }
 }
 
@@ -219,7 +216,7 @@ message BackfillRequest {
     temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = 3;
 }
 
-message ScheduleRequest {
+message SchedulePatch {
     // If set, trigger one action immediately.
     TriggerImmediatelyRequest trigger_immediately = 1;
 
@@ -243,6 +240,13 @@ message ScheduleInfo {
 
     // Number of skipped actions due to overlap.
     int64 overlap_skipped = 3;
+
+    // Currently-running workflows started by this schedule. (There might be
+    // more than one if the overlap policy allows overlaps.)
+    // Note that the run_ids in here are the original execution run ids as
+    // started by the schedule. If the workflows retried, did continue-as-new,
+    // or were reset, they might still be running but with a different run_id.
+    repeated temporal.api.common.v1.WorkflowExecution running_workflows = 9;
 
     // Most recent ten actual action times (including manual triggers).
     repeated ScheduleActionResult recent_actions = 4;

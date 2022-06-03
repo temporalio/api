@@ -269,9 +269,32 @@ message Schedule {
     ScheduleState state = 4;
 }
 
+// ScheduleListInfo is an abbreviated set of values from Schedule and ScheduleInfo
+// that's returned in ListSchedules.
+message ScheduleListInfo {
+    // From spec:
+    // Some fields are too large/unimportant for the purpose of listing, so we'll clear them
+    // from this copy of spec: exclude_calendar, jitter, timezone_data.
+    ScheduleSpec spec = 1;
+
+    // From action:
+    // Action is a oneof field, but we need to encode this in JSON and oneof fields don't work
+    // well with JSON. If action is start_workflow, this is set:
+    temporal.api.common.v1.WorkflowType workflow_type = 2;
+
+    // From state:
+    string notes = 3;
+    bool paused = 4;
+
+    // From info (maybe fewer entries):
+    repeated ScheduleActionResult recent_actions = 5;
+    repeated google.protobuf.Timestamp future_action_times = 6 [(gogoproto.stdtime) = true];
+}
+
 // ScheduleListEntry is returned by ListSchedules.
 message ScheduleListEntry {
     string schedule_id = 1;
     temporal.api.common.v1.Memo memo = 2;
     temporal.api.common.v1.SearchAttributes search_attributes = 3;
+    ScheduleListInfo info = 4;
 }

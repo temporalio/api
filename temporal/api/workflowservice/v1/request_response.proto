@@ -957,7 +957,9 @@ message ListSchedulesResponse {
 //     aip.dev/not-precedent: UpdateWorkerBuildIdOrderingRequest RPC doesn't follow Google API format. --)
 message UpdateWorkerBuildIdOrderingRequest {
     string namespace = 1;
-    // Must be set, the task queue to apply changes to.
+    // Must be set, the task queue to apply changes to. Because all workers on
+    // a given task queue must have the same set of workflow & activity
+    // implementations, there is no reason to specify a task queue type here.
     string task_queue = 2;
     // The version id we are targeting.
     temporal.api.workflow.v1.VersionId version_id = 3;
@@ -981,13 +983,12 @@ message GetWorkerBuildIdOrderingRequest {
     // Must be set, the task queue to interrogate about worker id ordering
     string task_queue = 2;
     // Limits how deep the returned DAG will go. 1 will return only the
-    // default build id.
+    // default build id. A default/0 value will return the entire graph.
     int32 max_depth = 3;
 }
 message GetWorkerBuildIdOrderingResponse {
-    // The currently established default ids. There will be one per version type as defined in
-    // the `VersionId` message.
-    repeated temporal.api.workflow.v1.VersionIdNode current_defaults = 1;
+    // The currently established default version
+    temporal.api.workflow.v1.VersionIdNode current_default = 1;
     // Other current latest-compatible versions who are not the overall default. These are the
     // versions that will be used when generating new tasks by following the graph from the
     // version of the last task out to a leaf.

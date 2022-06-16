@@ -950,3 +950,48 @@ message ListSchedulesResponse {
     repeated temporal.api.schedule.v1.ScheduleListEntry schedules = 1;
     bytes next_page_token = 2;
 }
+
+// (-- api-linter: core::0134::request-mask-required=disabled
+//     aip.dev/not-precedent: UpdateWorkerBuildIdOrderingRequest doesn't follow Google API format --)
+// (-- api-linter: core::0134::request-resource-required=disabled
+//     aip.dev/not-precedent: UpdateWorkerBuildIdOrderingRequest RPC doesn't follow Google API format. --)
+message UpdateWorkerBuildIdOrderingRequest {
+    string namespace = 1;
+    // Must be set, the task queue to apply changes to. Because all workers on
+    // a given task queue must have the same set of workflow & activity
+    // implementations, there is no reason to specify a task queue type here.
+    string task_queue = 2;
+    // The version id we are targeting.
+    temporal.api.taskqueue.v1.VersionId version_id = 3;
+    // When set, indicates that the `version_id` in this message is compatible
+    // with the one specified in this field. Because compatability should form
+    // a DAG, any build id can only be the "next compatible" version for one
+    // other ID of a certain type at a time, and any setting which would create a cycle is invalid.
+    temporal.api.taskqueue.v1.VersionId previous_compatible = 4;
+    // When set, establishes the specified `version_id` as the default of it's type
+    // for the queue. Workers matching it will begin processing new workflow executions.
+    // The existing default will be marked as a previous incompatible version
+    // to this one, assuming it is not also in `is_compatible_with`.
+    bool become_default = 5;
+}
+message UpdateWorkerBuildIdOrderingResponse {}
+
+// (-- api-linter: core::0134::request-resource-required=disabled
+//     aip.dev/not-precedent: GetWorkerBuildIdOrderingRequest RPC doesn't follow Google API format. --)
+message GetWorkerBuildIdOrderingRequest {
+    string namespace = 1;
+    // Must be set, the task queue to interrogate about worker id ordering
+    string task_queue = 2;
+    // Limits how deep the returned DAG will go. 1 will return only the
+    // default build id. A default/0 value will return the entire graph.
+    int32 max_depth = 3;
+}
+message GetWorkerBuildIdOrderingResponse {
+    // The currently established default version
+    temporal.api.taskqueue.v1.VersionIdNode current_default = 1;
+    // Other current latest-compatible versions who are not the overall default. These are the
+    // versions that will be used when generating new tasks by following the graph from the
+    // version of the last task out to a leaf.
+    repeated temporal.api.taskqueue.v1.VersionIdNode compatible_leaves = 2;
+}
+

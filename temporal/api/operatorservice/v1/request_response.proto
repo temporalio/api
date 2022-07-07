@@ -35,8 +35,10 @@ import "dependencies/gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 
+import "temporal/api/batch/v1/message.proto";
 import "temporal/api/cluster/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
+import "temporal/api/enums/v1/batch_operation.proto";
 import "temporal/api/enums/v1/cluster.proto";
 import "temporal/api/enums/v1/common.proto";
 import "temporal/api/version/v1/message.proto";
@@ -158,4 +160,49 @@ message ListClusterMembersRequest {
 message ListClusterMembersResponse {
     repeated temporal.api.cluster.v1.ClusterMember active_members = 1;
     bytes next_page_token = 2;
+}
+
+message StartBatchOperationRequest {
+    string namespace = 1;
+    temporal.api.enums.v1.BatchOperationType operation_type = 2;
+    string workflow_query = 3;
+    int32 rps = 4;
+    int32 concurrency = 5;
+    oneof parameter {
+        temporal.api.batch.v1.BatchOperationTermination termination_parameter = 6;
+        temporal.api.batch.v1.BatchOperationSignal signal_parameter = 7;
+    }
+}
+
+message StartBatchOperationResponse {
+    string job_id = 1;
+}
+
+message StopBatchOperationRequest {
+    string namespace = 1;
+    string job_id = 2;
+}
+
+message StopBatchOperationResponse {
+}
+
+message DescribeBatchOperationRequest {
+    string namespace = 1;
+    string job_id = 2;
+}
+
+message DescribeBatchOperationResponse {
+    string operation_type = 1;
+    string total_workflow_count = 2;
+    string processed_workflow_count = 3;
+}
+
+message ListBatchOperationsRequest {
+    string namespace = 1;
+    int32 page_size = 2;
+    bytes next_page_token = 3;
+}
+
+message ListBatchOperationsResponse {
+    repeated string job_id = 1;
 }

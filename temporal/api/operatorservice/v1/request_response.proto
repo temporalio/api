@@ -35,7 +35,6 @@ import "dependencies/gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 
-import "temporal/api/batch/v1/message.proto";
 import "temporal/api/cluster/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/enums/v1/batch_operation.proto";
@@ -168,9 +167,9 @@ message StartBatchOperationRequest {
     string workflow_query = 3;
     int32 rps = 4;
     int32 concurrency = 5;
-    oneof parameter {
-        temporal.api.batch.v1.BatchOperationTermination termination_parameter = 6;
-        temporal.api.batch.v1.BatchOperationSignal signal_parameter = 7;
+    oneof operation {
+        BatchOperationTermination termination_operation = 6;
+        BatchOperationSignal signal_operation = 7;
     }
 }
 
@@ -192,9 +191,9 @@ message DescribeBatchOperationRequest {
 }
 
 message DescribeBatchOperationResponse {
-    string operation_type = 1;
-    string total_workflow_count = 2;
-    string processed_workflow_count = 3;
+    temporal.api.enums.v1.BatchOperationType operation_type = 1;
+    string total_operation_count = 2;
+    string processed_operation_count = 3;
 }
 
 message ListBatchOperationsRequest {
@@ -206,4 +205,15 @@ message ListBatchOperationsRequest {
 message ListBatchOperationsResponse {
     repeated string job_id = 1;
     bytes next_page_token = 2;
+}
+
+message BatchOperationTermination {
+    string reason = 1;
+}
+
+message BatchOperationSignal {
+    // The workflow author-defined name of the signal to send to the workflow
+    string signal_name = 1;
+    // Serialized value(s) to provide with the signal
+    temporal.api.common.v1.Payloads input = 2;
 }

@@ -41,8 +41,9 @@ import "temporal/api/enums/v1/failed_cause.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
-import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
+import "temporal/api/update/v1/message.proto";
+import "temporal/api/workflow/v1/message.proto";
 
 // Always the first event in workflow history
 message WorkflowExecutionStartedEventAttributes {
@@ -634,6 +635,27 @@ message ChildWorkflowExecutionTerminatedEventAttributes {
     int64 started_event_id = 5;
 }
 
+message UpdateWorkflowRequestedEventAttributes {
+    temporal.api.common.v1.Header header = 1;
+    string request_id = 2;
+    string update_id = 3;
+    temporal.api.update.v1.WorkflowUpdate update = 4;
+}
+
+message UpdateWorkflowAcceptedEventAttributes {
+    temporal.api.common.v1.Header header = 1;
+    string update_id = 2;
+}
+
+message UpdateWorkflowCompletedEventAttributes {
+    temporal.api.common.v1.Header header = 1;
+    string update_id = 3;
+    oneof result {
+        temporal.api.common.v1.Payloads success = 4;
+        temporal.api.failure.v1.Failure failure = 5;
+    }
+}
+
 // History events are the method by which Temporal SDKs advance (or recreate) workflow state.
 // See the `EventType` enum for more info about what each event is for.
 message HistoryEvent {
@@ -687,6 +709,9 @@ message HistoryEvent {
         SignalExternalWorkflowExecutionFailedEventAttributes signal_external_workflow_execution_failed_event_attributes = 43;
         ExternalWorkflowExecutionSignaledEventAttributes external_workflow_execution_signaled_event_attributes = 44;
         UpsertWorkflowSearchAttributesEventAttributes upsert_workflow_search_attributes_event_attributes = 45;
+        UpdateWorkflowRequestedEventAttributes update_workflow_requested_event_attributes = 46;
+        UpdateWorkflowAcceptedEventAttributes update_workflow_accepted_event_attributes = 47;
+        UpdateWorkflowCompletedEventAttributes update_workflow_completed_event_attributes = 48;
     }
 }
 

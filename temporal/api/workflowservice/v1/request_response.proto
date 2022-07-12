@@ -38,6 +38,7 @@ import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/query.proto";
 import "temporal/api/enums/v1/reset.proto";
 import "temporal/api/enums/v1/task_queue.proto";
+import "temporal/api/enums/v1/update.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
@@ -49,6 +50,7 @@ import "temporal/api/query/v1/message.proto";
 import "temporal/api/replication/v1/message.proto";
 import "temporal/api/schedule/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
+import "temporal/api/update/v1/message.proto";
 import "temporal/api/version/v1/message.proto";
 
 import "google/protobuf/duration.proto";
@@ -995,3 +997,40 @@ message GetWorkerBuildIdOrderingResponse {
     repeated temporal.api.taskqueue.v1.VersionIdNode compatible_leaves = 2;
 }
 
+// (-- api-linter: core::0134=disabled
+//     aip.dev/not-precedent: Update RPCs don't follow Google API format. --)
+message UpdateWorkflowRequest {
+    // A unique ID for this logical request
+    string request_id = 1;
+
+    // The manner in which the update result will be accessed.
+    // This field requires a non-default value; the default value of the enum
+    // will result in an error.
+    temporal.api.enums.v1.UpdateWorkflowResultAccessStyle result_access_style = 2;
+
+    // The namespace name of the target workflow
+    string namespace = 3;
+    // The target workflow id and (optionally) a specific run thereof
+    // (-- api-linter: core::0203::optional=disabled
+    //     aip.dev/not-precedent: false positive triggered by the word "optional" --)
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 4;
+    // If set, this call will error if the most recent (if no run id is set on
+    // `workflow_execution`), or specified (if it is) workflow execution is not
+    // part of the same execution chain as this id.
+    string first_execution_run_id = 5;
+
+    // The name under which the workflow update function is registered and the
+    // arguments to pass to said function.
+    temporal.api.update.v1.WorkflowUpdate update = 6;
+}
+
+message UpdateWorkflowResponse {
+    // An opaque token that can be used to retrieve the update result via
+    // polling if it is not returned as part of the gRPC response
+    bytes update_token = 1;
+    // The success or failure status of the update
+    oneof result {
+        temporal.api.common.v1.Payloads success = 2;
+        temporal.api.failure.v1.Failure failure = 3;
+    }
+}

@@ -41,6 +41,7 @@ import "temporal/api/enums/v1/batch_operation.proto";
 import "temporal/api/enums/v1/cluster.proto";
 import "temporal/api/enums/v1/common.proto";
 import "temporal/api/version/v1/message.proto";
+import "temporal/api/workflow/v1/message.proto";
 
 // (-- Search Attribute --)
 
@@ -164,12 +165,11 @@ message ListClusterMembersResponse {
 message StartBatchOperationRequest {
     string namespace = 1;
     temporal.api.enums.v1.BatchOperationType operation_type = 2;
-    string workflow_query = 3;
-    int32 rps = 4;
-    int32 concurrency = 5;
+    string visibility_query = 3;
     oneof operation {
-        BatchOperationTermination termination_operation = 6;
-        BatchOperationSignal signal_operation = 7;
+        BatchOperationTermination termination_operation = 4;
+        BatchOperationSignal signal_operation = 5;
+        BatchOperationCancellation cancellation_operation = 6;
     }
 }
 
@@ -203,7 +203,7 @@ message ListBatchOperationsRequest {
 }
 
 message ListBatchOperationsResponse {
-    repeated string job_id = 1;
+    repeated temporal.api.workflow.v1.WorkflowExecutionInfo operations = 1;
     bytes next_page_token = 2;
 }
 
@@ -216,4 +216,10 @@ message BatchOperationSignal {
     string signal_name = 1;
     // Serialized value(s) to provide with the signal
     temporal.api.common.v1.Payloads input = 2;
+    // Headers that are passed with the signal to the processing workflow.
+    // These can include things like auth or tracing tokens.
+    temporal.api.common.v1.Header header = 3;
+}
+
+message BatchOperationCancellation {
 }

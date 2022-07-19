@@ -80,8 +80,18 @@ message ChildWorkflowExecutionFailureInfo {
 
 message Failure {
     string message = 1;
+    // The source this Failure originated in, e.g. TypeScriptSDK / JavaSDK
+    // In some SDKs this is used to rehydrate the stack trace into an exception object.
     string source = 2;
     string stack_trace = 3;
+    // Alternative way to supply `message` and `stack_trace`, used for encryption of errors originating in user code
+    // which might contain sensitive information. Mutually exclusive with `message` and `stack_trace`.
+    // SDK authors: 
+    // * Use one Payload for `message` and one for `stack_trace`
+    // * If only the one Payload is provided, it is assumed to be the message
+    // * Both Payloads are optional and if omitted the rehydrated error will assume an empty string for both
+    // * These strings MUST be created with the default PayloadConverter and MAY be processed by a PayloadCodec
+    temporal.api.common.v1.Payloads attributes = 20;
     Failure cause = 4;
     oneof failure_info {
         ApplicationFailureInfo application_failure_info = 5;

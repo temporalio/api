@@ -40,6 +40,7 @@ import "temporal/api/common/v1/message.proto";
 import "temporal/api/enums/v1/batch_operation.proto";
 import "temporal/api/enums/v1/cluster.proto";
 import "temporal/api/enums/v1/common.proto";
+import "temporal/api/operatorservice/v1/batch_operation.proto";
 import "temporal/api/version/v1/message.proto";
 
 // (-- Search Attribute --)
@@ -201,12 +202,20 @@ message DescribeBatchOperationRequest {
 message DescribeBatchOperationResponse {
     // Batch operation type
     temporal.api.enums.v1.BatchOperationType operation_type = 1;
+    // Batch job ID
+    string job_id = 2;
+    // Batch operation type
+    temporal.api.enums.v1.BatchOperationState state = 3;
+    // Batch operation start time
+    google.protobuf.Timestamp start_time = 4 [(gogoproto.stdtime) = true];
+    // Batch operation close time
+    google.protobuf.Timestamp close_time = 5 [(gogoproto.stdtime) = true];
     // Total operation count
-    int64 total_operation_count = 2;
+    int64 total_operation_count = 6;
     // Complete operation count
-    int64 complete_operation_count = 3;
+    int64 complete_operation_count = 7;
     // Failure operation count
-    int64 failure_operation_count = 4;
+    int64 failure_operation_count = 8;
 }
 
 message ListBatchOperationsRequest {
@@ -222,35 +231,4 @@ message ListBatchOperationsResponse {
     // BatchOperationInfo contains the basic info about batch operation
     repeated BatchOperationInfo operation_info = 1;
     bytes next_page_token = 2;
-}
-
-message BatchOperationInfo {
-    // Batch job ID
-    string job_id = 1;
-    // Batch operation type
-    temporal.api.enums.v1.BatchOperationState state = 2;
-    // Batch operation start time
-    google.protobuf.Timestamp start_time = 3 [(gogoproto.stdtime) = true];
-    // Batch operation close time
-    google.protobuf.Timestamp close_time = 4 [(gogoproto.stdtime) = true];
-}
-
-message BatchOperationTermination {
-    // Reason of terminate workflows
-    string reason = 1;
-}
-
-message BatchOperationSignal {
-    // The workflow author-defined name of the signal to send to the workflow
-    string signal_name = 1;
-    // Serialized value(s) to provide with the signal
-    temporal.api.common.v1.Payloads input = 2;
-    // Headers that are passed with the signal to the processing workflow.
-    // These can include things like auth or tracing tokens.
-    temporal.api.common.v1.Header header = 3;
-}
-
-message BatchOperationCancellation {
-    // Reason of cancel workflows
-    string reason = 1;
 }

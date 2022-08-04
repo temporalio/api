@@ -31,6 +31,7 @@ option java_outer_classname = "RequestResponseProto";
 option ruby_package = "Temporal::Api::WorkflowService::V1";
 option csharp_namespace = "Temporal.Api.WorkflowService.V1";
 
+import "temporal/api/enums/v1/batch_operation.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/enums/v1/namespace.proto";
 import "temporal/api/enums/v1/failed_cause.proto";
@@ -52,6 +53,7 @@ import "temporal/api/schedule/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
 import "temporal/api/version/v1/message.proto";
+import "temporal/api/batch/v1/message.proto";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
@@ -1039,4 +1041,73 @@ message UpdateWorkflowResponse {
         temporal.api.common.v1.Payloads success = 2;
         temporal.api.failure.v1.Failure failure = 3;
     }
+}
+
+message StartBatchOperationRequest {
+    // Namespace that contains the batch operation
+    string namespace = 1;
+    // Visibility query defines the the group of workflow to do batch operation
+    string visibility_query = 2;
+    // Operation input
+    oneof operation {
+        temporal.api.batch.v1.BatchOperationTermination termination_operation = 10;
+        temporal.api.batch.v1.BatchOperationSignal signal_operation = 11;
+        temporal.api.batch.v1.BatchOperationCancellation cancellation_operation = 12;
+    }
+}
+
+message StartBatchOperationResponse {
+    // Batch job id
+    string job_id = 1;
+}
+
+message StopBatchOperationRequest {
+    // Namespace that contains the batch operation
+    string namespace = 1;
+    // Batch job id
+    string job_id = 2;
+}
+
+message StopBatchOperationResponse {
+}
+
+message DescribeBatchOperationRequest {
+    // Namespace that contains the batch operation
+    string namespace = 1;
+    // Batch job id
+    string job_id = 2;
+}
+
+message DescribeBatchOperationResponse {
+    // Batch operation type
+    temporal.api.enums.v1.BatchOperationType operation_type = 1;
+    // Batch job ID
+    string job_id = 2;
+    // Batch operation state
+    temporal.api.enums.v1.BatchOperationState state = 3;
+    // Batch operation start time
+    google.protobuf.Timestamp start_time = 4 [(gogoproto.stdtime) = true];
+    // Batch operation close time
+    google.protobuf.Timestamp close_time = 5 [(gogoproto.stdtime) = true];
+    // Total operation count
+    int64 total_operation_count = 6;
+    // Complete operation count
+    int64 complete_operation_count = 7;
+    // Failure operation count
+    int64 failure_operation_count = 8;
+}
+
+message ListBatchOperationsRequest {
+    // Namespace that contains the batch operation
+    string namespace = 1;
+    // List page size
+    int32 page_size = 2;
+    // Next page token
+    bytes next_page_token = 3;
+}
+
+message ListBatchOperationsResponse {
+    // BatchOperationInfo contains the basic info about batch operation
+    repeated temporal.api.batch.v1.BatchOperationInfo operation_info = 1;
+    bytes next_page_token = 2;
 }

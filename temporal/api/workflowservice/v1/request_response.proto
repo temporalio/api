@@ -222,11 +222,11 @@ message PollWorkflowTaskQueueRequest {
     // "checksum" in this field name isn't very accurate, it should be though of as an id.
     string binary_checksum = 4;
     // If set, the worker is opting in to build-id based versioning and wishes to only
-    // receive tasks that are considered compatible with the version provided in the string.
+    // receive tasks that are considered compatible with the version provided.
     // Doing so only makes sense in conjunction with the `UpdateWorkerBuildIdOrdering` API.
-    // When set, and `binary_checksum` is not, this value should also be considered as the
-    // `binary_checksum`.
-    string worker_versioning_build_id = 5;
+    // When `worker_versioning_id` has a `worker_build_id`, and `binary_checksum` is not
+    // set, that value should also be considered as the `binary_checksum`.
+    temporal.api.taskqueue.v1.VersionId worker_versioning_id = 5;
 }
 
 message PollWorkflowTaskQueueResponse {
@@ -292,6 +292,11 @@ message RespondWorkflowTaskCompletedRequest {
     // Responses to the `queries` field in the task being responded to
     map<string, temporal.api.query.v1.WorkflowQueryResult> query_results = 8;
     string namespace = 9;
+    // If using versioning, worker should send the same id here that it used to
+    // poll for the workflow task.
+    // When `worker_versioning_id` has a `worker_build_id`, and `binary_checksum` is not
+    // set, that value should also be considered as the `binary_checksum`.
+    temporal.api.taskqueue.v1.VersionId worker_versioning_id = 10;
 }
 
 message RespondWorkflowTaskCompletedResponse {
@@ -326,9 +331,9 @@ message PollActivityTaskQueueRequest {
     string identity = 3;
     temporal.api.taskqueue.v1.TaskQueueMetadata task_queue_metadata = 4;
     // If set, the worker is opting in to build-id based versioning and wishes to only
-    // receive tasks that are considered compatible with the version provided in the string.
+    // receive tasks that are considered compatible with the version provided.
     // Doing so only makes sense in conjunction with the `UpdateWorkerBuildIdOrdering` API.
-    string worker_versioning_build_id = 5;
+    temporal.api.taskqueue.v1.VersionId worker_versioning_id = 5;
 }
 
 message PollActivityTaskQueueResponse {

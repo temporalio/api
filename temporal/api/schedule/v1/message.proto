@@ -84,32 +84,6 @@ message CalendarSpec {
     string comment = 8;
 }
 
-// CronString holds a traditional cron specification as a string. It accepts 5,
-// 6, or 7 fields, separated by spaces, and interprets them the same way as
-// CalendarSpec.
-// 5 fields:         minute, hour, day_of_month, month, day_of_week
-// 6 fields:         minute, hour, day_of_month, month, day_of_week, year
-// 7 fields: second, minute, hour, day_of_month, month, day_of_week, year
-// If year is not given, it defaults to *. If second is not given, it defaults
-// to 0.
-// Shorthands @yearly, @monthly, @weekly, @daily, and @hourly are also accepted
-// in place of the 5-7 time fields.
-// Optionally, the string can be preceded by TZ=<timezone name> or
-// CRON_TZ=<timezone name> to set the timezone_name field in ScheduleSpec.
-// Note that the special case that some cron implementations have for treating
-// day_of_month and day_of_week as "or" instead of "and" when both are set is
-// not implemented.
-// A CronString in the format above gets compiled into a StructuredCalendarSpec,
-// which is what will be returned if you describe the schedule.
-// @every <interval>[/<phase>] is accepted and gets compiled into an
-// IntervalSpec instead. <interval> and <phase> should have a unit suffix s, m,
-// h, or d.
-message CronString {
-    string cron_spec = 1;
-    // Free-form comment describing the intention of this spec.
-    string comment = 2;
-}
-
 // Range represents a set of integer values, used to match fields of a calendar
 // time in StructuredCalendarSpec. If end < start, then end is interpreted as
 // equal to start. This means you can use a Range with start set to a value, and
@@ -174,13 +148,36 @@ message IntervalSpec {
 // definition of a time zone can change over time (most commonly, when daylight
 // saving time policy changes for an area). To create a totally self-contained
 // ScheduleSpec, use UTC or include timezone_data.
+//
+// cron_string holds a traditional cron specification as a string. It accepts 5,
+// 6, or 7 fields, separated by spaces, and interprets them the same way as
+// CalendarSpec.
+// 5 fields:         minute, hour, day_of_month, month, day_of_week
+// 6 fields:         minute, hour, day_of_month, month, day_of_week, year
+// 7 fields: second, minute, hour, day_of_month, month, day_of_week, year
+// If year is not given, it defaults to *. If second is not given, it defaults
+// to 0.
+// Shorthands @yearly, @monthly, @weekly, @daily, and @hourly are also accepted
+// in place of the 5-7 time fields.
+// Optionally, the string can be preceded by TZ=<timezone name> or
+// CRON_TZ=<timezone name> to set the timezone_name field in ScheduleSpec.
+// Optionally, a comment can appear after a "#".
+// Note that the special case that some cron implementations have for treating
+// day_of_month and day_of_week as "or" instead of "and" when both are set is
+// not implemented.
+// A cron_string in the format above gets compiled into a StructuredCalendarSpec,
+// which is what will be returned if you describe the schedule.
+// @every <interval>[/<phase>] is accepted and gets compiled into an
+// IntervalSpec instead. <interval> and <phase> should have a unit suffix s, m,
+// h, or d.
 message ScheduleSpec {
     // Calendar-based specifications of times. Note that calendar and
     // cron_string are input-only! They will be compiled into
     // describe a schedule, you won't see calendar or cron_string, you'll see
     // only structured_calendar and interval.
     repeated StructuredCalendarSpec structured_calendar = 7;
-    repeated CronString cron_string = 8;
+    // See comment above for cron_string format.
+    repeated string cron_string = 8;
     repeated CalendarSpec calendar = 1;
     // Interval-based specifications of times.
     repeated IntervalSpec interval = 2;

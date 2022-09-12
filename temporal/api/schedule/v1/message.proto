@@ -148,11 +148,17 @@ message IntervalSpec {
 // definition of a time zone can change over time (most commonly, when daylight
 // saving time policy changes for an area). To create a totally self-contained
 // ScheduleSpec, use UTC or include timezone_data.
+//
+// For input, you can provide zero or more of: structured_calendar, calendar,
+// cron_string, interval, and exclude_structured_calendar, and all of them will
+// be used (the schedule will take action at the union of all of their times,
+// minus the ones that match exclude_structured_calendar).
+//
+// On input, calendar and cron_string fields will be compiled into
+// structured_calendar (and maybe interval and timezone_name), so if you
+// Describe a schedule, you'll see only structured_calendar, interval, etc.
 message ScheduleSpec {
-    // Calendar-based specifications of times. Note that calendar and
-    // cron_string are input-only! They will be compiled into
-    // describe a schedule, you won't see calendar or cron_string, you'll see
-    // only structured_calendar and interval.
+    // Calendar-based specifications of times.
     repeated StructuredCalendarSpec structured_calendar = 7;
     // cron_string holds a traditional cron specification as a string. It
     // accepts 5, 6, or 7 fields, separated by spaces, and interprets them the
@@ -175,6 +181,7 @@ message ScheduleSpec {
     // IntervalSpec instead. <interval> and <phase> should be a decimal integer
     // with a unit suffix s, m, h, or d.
     repeated string cron_string = 8;
+    // Calendar-based specifications of times.
     repeated CalendarSpec calendar = 1;
     // Interval-based specifications of times.
     repeated IntervalSpec interval = 2;

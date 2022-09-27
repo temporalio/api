@@ -1042,22 +1042,37 @@ message ListSchedulesResponse {
 // (-- api-linter: core::0134::request-resource-required=disabled
 //     aip.dev/not-precedent: UpdateWorkerBuildIdOrderingRequest RPC doesn't follow Google API format. --)
 message UpdateWorkerBuildIdOrderingRequest {
+    message NewCompatibleVersion {
+        // A new id to be added to an existing compatible set.
+        string new_version_id = 1;
+        // A version which must already exist in the version sets known by the task queue. The new
+        // version will be stored in the set containing this version, marking it as compatible with
+        // the versions within.
+        string existing_compatible_version = 2;
+        // When set, establishes the compatible set being targeted as the overall default for the
+        // queue. If a different set was the current default, the targeted set will replace it as
+        // the new default.
+        bool become_default = 3;
+    }
+
     string namespace = 1;
     // Must be set, the task queue to apply changes to. Because all workers on
     // a given task queue must have the same set of workflow & activity
     // implementations, there is no reason to specify a task queue type here.
     string task_queue = 2;
-    // The version id being added or updated.
-    string version_id = 3;
-    // When set, indicates that the `version_id` in this message is compatible with the version
-    // specified in this field. This version must already exist, and if found, the ID we are
-    // targeting will be added to the compatible set containing this version.
-    string compatible_version = 4;
-    // When set, establishes the specified `version_id` as the default for the queue. Workers
-    // matching it will begin processing new workflow executions. The existing default set will be
-    // marked as a previous incompatible version to this one, assuming it is not also in
-    // `compatible_version`.
-    bool become_default = 5;
+    oneof operation {
+        // An id for a new version. This operation will create a new set which will be the new
+        // overall default version for the queue, with this version as its only member.
+        string new_default_major_version_id = 3;
+        // Adds a new id to an existing compatible set, see sub-message definition for more.
+        NewCompatibleVersion new_compatible_version = 4;
+        // Promote an existing set to be the current default (if it isn't already) by targeting
+        // an existing version id within it. This field's value is the extant version id.
+        //
+        // (-- api-linter: core::0140::prepositions=disabled
+        //     aip.dev/not-precedent: Names are hard. --)
+        string existing_version_id_in_set_to_promote = 5;
+    }
 }
 message UpdateWorkerBuildIdOrderingResponse {
     // The id of the compatible set that the updated version was added to, or exists in.

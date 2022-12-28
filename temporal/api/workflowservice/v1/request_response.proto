@@ -39,19 +39,19 @@ import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/query.proto";
 import "temporal/api/enums/v1/reset.proto";
 import "temporal/api/enums/v1/task_queue.proto";
-import "temporal/api/enums/v1/update.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
-import "temporal/api/interaction/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/command/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/filter/v1/message.proto";
+import "temporal/api/protocol/v1/message.proto";
 import "temporal/api/namespace/v1/message.proto";
 import "temporal/api/query/v1/message.proto";
 import "temporal/api/replication/v1/message.proto";
 import "temporal/api/schedule/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
+import "temporal/api/update/v1/message.proto";
 import "temporal/api/version/v1/message.proto";
 import "temporal/api/batch/v1/message.proto";
 
@@ -276,8 +276,8 @@ message PollWorkflowTaskQueueResponse {
     // Queries that should be executed after applying the history in this task. Responses should be
     // attached to `RespondWorkflowTaskCompletedRequest::query_results`
     map<string, temporal.api.query.v1.WorkflowQuery> queries = 14;
-
-    repeated temporal.api.interaction.v1.Invocation interactions = 15;
+    // Protocol messages piggybacking on a WFT as a transport
+    repeated temporal.api.protocol.v1.Message messages = 15;
 }
 
 message RespondWorkflowTaskCompletedRequest {
@@ -308,6 +308,8 @@ message RespondWorkflowTaskCompletedRequest {
     // When `worker_versioning_id` has a `worker_build_id`, and `binary_checksum` is not
     // set, that value should also be considered as the `binary_checksum`.
     temporal.api.taskqueue.v1.VersionId worker_versioning_id = 10;
+    // Protocol messages piggybacking on a WFT as a transport
+    repeated temporal.api.protocol.v1.Message messages = 11;
 }
 
 message RespondWorkflowTaskCompletedResponse {
@@ -332,6 +334,8 @@ message RespondWorkflowTaskFailedRequest {
     // Worker process' unique binary id
     string binary_checksum = 5;
     string namespace = 6;
+    // Protocol messages piggybacking on a WFT as a transport
+    repeated temporal.api.protocol.v1.Message messages = 7;
 }
 
 message RespondWorkflowTaskFailedResponse {
@@ -1063,40 +1067,33 @@ message GetWorkerBuildIdOrderingResponse {
 
 // (-- api-linter: core::0134=disabled
 //     aip.dev/not-precedent: Update RPCs don't follow Google API format. --)
-message UpdateWorkflowRequest {
-    // A unique ID for this logical request
-    string request_id = 1;
-
-    // The manner in which the update result will be accessed.
-    // This field requires a non-default value; the default value of the enum
-    // will result in an error.
-    temporal.api.enums.v1.WorkflowUpdateResultAccessStyle result_access_style = 2;
+message UpdateWorkflowExecutionRequest {
+    // A unique ID for this update
+    string update_id = 1;
 
     // The namespace name of the target workflow
-    string namespace = 3;
+    string namespace = 2;
     // The target workflow id and (optionally) a specific run thereof
     // (-- api-linter: core::0203::optional=disabled
     //     aip.dev/not-precedent: false positive triggered by the word "optional" --)
-    temporal.api.common.v1.WorkflowExecution workflow_execution = 4;
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 3;
     // If set, this call will error if the most recent (if no run id is set on
     // `workflow_execution`), or specified (if it is) workflow execution is not
     // part of the same execution chain as this id.
-    string first_execution_run_id = 5;
+    string first_execution_run_id = 4;
 
-    // A string identifying the agent that requested this interaction.
-    string identity = 6;
+    // Describes when this request should return - basically whether the
+    // update is synchronous, asynchronous, or somewhere in between.
+    temporal.api.update.v1.BlockingPolicy blocking = 5;
 
     // The name under which the workflow update function is registered and the
     // arguments to pass to said function.
-    temporal.api.interaction.v1.Input input = 7;
+    temporal.api.update.v1.Request request = 6;
 }
 
-message UpdateWorkflowResponse {
-    // An opaque token that can be used to retrieve the update result via
-    // polling if it is not returned as part of the gRPC response
-    bytes update_token = 1;
-    // The success or failure status of the update
-    temporal.api.interaction.v1.Output output = 2;
+message UpdateWorkflowExecutionResponse {
+    temporal.api.update.v1.UpdateRef update_ref = 1;
+    temporal.api.update.v1.Outcome outcome = 2;
 }
 
 message StartBatchOperationRequest {

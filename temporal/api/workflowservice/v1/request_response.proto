@@ -1043,8 +1043,8 @@ message ListSchedulesResponse {
 //     aip.dev/not-precedent: UpdateWorkerBuildIdOrderingRequest doesn't follow Google API format --)
 // (-- api-linter: core::0134::request-resource-required=disabled
 //     aip.dev/not-precedent: UpdateWorkerBuildIdOrderingRequest RPC doesn't follow Google API format. --)
-message UpdateWorkerBuildIdOrderingRequest {
-    message NewCompatibleVersion {
+message UpdateWorkerBuildIdCompatabilityRequest {
+    message AddNewCompatibleVersion {
         // A new id to be added to an existing compatible set.
         string new_version_id = 1;
         // A version which must already exist in the version sets known by the task queue. The new
@@ -1054,7 +1054,7 @@ message UpdateWorkerBuildIdOrderingRequest {
         // When set, establishes the compatible set being targeted as the overall default for the
         // queue. If a different set was the current default, the targeted set will replace it as
         // the new default.
-        bool become_default = 3;
+        bool make_set_default = 3;
     }
 
     string namespace = 1;
@@ -1066,15 +1066,18 @@ message UpdateWorkerBuildIdOrderingRequest {
         // An id for a new version. This operation will create a new set which will be the new
         // overall default version for the queue, with this version as its only member. This new
         // set is incompatible with all previous sets/versions.
-        string new_default_version_id = 3;
+        //
+        // (-- api-linter: core::0140::prepositions=disabled
+        //     aip.dev/not-precedent: In makes perfect sense here. --)
+        string add_new_version_id_in_new_default_set = 3;
         // Adds a new id to an existing compatible set, see sub-message definition for more.
-        NewCompatibleVersion new_compatible_version = 4;
+        AddNewCompatibleVersion add_new_compatible_version = 4;
         // Promote an existing set to be the current default (if it isn't already) by targeting
         // an existing version id within it. This field's value is the extant version id.
         //
         // (-- api-linter: core::0140::prepositions=disabled
         //     aip.dev/not-precedent: Names are hard. --)
-        string existing_version_id_in_set_to_promote = 5;
+        string promote_set_by_version_id = 5;
         // Promote an existing version id within some set to be the current default for that set.
         //
         // (-- api-linter: core::0140::prepositions=disabled
@@ -1082,7 +1085,7 @@ message UpdateWorkerBuildIdOrderingRequest {
         string promote_version_id_within_set = 6;
     }
 }
-message UpdateWorkerBuildIdOrderingResponse {
+message UpdateWorkerBuildIdCompatabilityResponse {
     // The id of the compatible set that the updated version was added to, or exists in. Users don't
     // need to understand or care about this value, but it has value for debugging purposes.
     string version_set_id = 1;
@@ -1090,7 +1093,7 @@ message UpdateWorkerBuildIdOrderingResponse {
 
 // (-- api-linter: core::0134::request-resource-required=disabled
 //     aip.dev/not-precedent: GetWorkerBuildIdOrderingRequest RPC doesn't follow Google API format. --)
-message GetWorkerBuildIdOrderingRequest {
+message GetWorkerBuildIdCompatabilityRequest {
     string namespace = 1;
     // Must be set, the task queue to interrogate about worker id ordering
     string task_queue = 2;
@@ -1104,7 +1107,7 @@ message GetWorkerBuildIdOrderingRequest {
     // whether or not there are currently polling workers who are compatible with those versions.
     bool include_poller_compatability = 5;
 }
-message GetWorkerBuildIdOrderingResponse {
+message GetWorkerBuildIdCompatabilityResponse {
     // Major version sets, in order from oldest to newest. The last element of the list will always
     // be the current default major version. IE: New workflows will target the most recent version
     // in that version set.
@@ -1118,7 +1121,7 @@ message GetWorkerBuildIdOrderingResponse {
         // If true, there are no open *or* closed workflows, meaning there is no reason at all
         // to keep the worker alive, not even to service queries on closed workflows. If not true,
         // then there are no open workflows, but some closed ones.
-        bool no_closed_workflows = 2;
+        bool all_workflows_are_archived = 2;
         // Currently polling workers who match the build id ready for retirement
         repeated temporal.api.taskqueue.v1.PollerInfo pollers = 3;
     }

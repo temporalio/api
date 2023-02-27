@@ -312,7 +312,9 @@ message RespondWorkflowTaskCompletedRequest {
     string namespace = 9;
     // If using versioning, the worker uses this field to indicate what version(s) it used to
     // process the task. When this field has a `worker_build_id`, and `binary_checksum` is not set,
-    // that value should also be considered as the `binary_checksum`.
+    // that value should also be considered as the `binary_checksum`. Leaving this field empty when
+    // replying to a task has had this field previously populated in history in an error, and such
+    // a completion will be rejected.
     temporal.api.common.v1.WorkerVersionStamp worker_version_stamp = 10;
     // Protocol messages piggybacking on a WFT as a transport
     repeated temporal.api.protocol.v1.Message messages = 11;
@@ -1046,11 +1048,11 @@ message ListSchedulesResponse {
 message UpdateWorkerBuildIdCompatabilityRequest {
     message AddNewCompatibleVersion {
         // A new id to be added to an existing compatible set.
-        string new_version_id = 1;
-        // A version which must already exist in the version sets known by the task queue. The new
-        // version will be stored in the set containing this version, marking it as compatible with
+        string new_build_id = 1;
+        // A build id which must already exist in the version sets known by the task queue. The new
+        // id will be stored in the set containing this id, marking it as compatible with
         // the versions within.
-        string existing_compatible_version = 2;
+        string existing_compatible_build_id = 2;
         // When set, establishes the compatible set being targeted as the overall default for the
         // queue. If a different set was the current default, the targeted set will replace it as
         // the new default.
@@ -1058,31 +1060,31 @@ message UpdateWorkerBuildIdCompatabilityRequest {
     }
 
     string namespace = 1;
-    // Must be set, the task queue to apply changes to. Because all workers on
-    // a given task queue must have the same set of workflow & activity
-    // implementations, there is no reason to specify a task queue type here.
+    // Must be set, the task queue to apply changes to. Because all workers on a given task queue
+    // must have the same set of workflow & activity implementations, there is no reason to specify
+    // a task queue type here.
     string task_queue = 2;
     oneof operation {
-        // An id for a new version. This operation will create a new set which will be the new
-        // overall default version for the queue, with this version as its only member. This new
-        // set is incompatible with all previous sets/versions.
+        // A new build id. This operation will create a new set which will be the new overall
+        // default version for the queue, with this id as its only member. This new set is
+        // incompatible with all previous sets/versions.
         //
         // (-- api-linter: core::0140::prepositions=disabled
         //     aip.dev/not-precedent: In makes perfect sense here. --)
-        string add_new_version_id_in_new_default_set = 3;
+        string add_new_build_id_in_new_default_set = 3;
         // Adds a new id to an existing compatible set, see sub-message definition for more.
-        AddNewCompatibleVersion add_new_compatible_version = 4;
+        AddNewCompatibleVersion add_new_compatible_build_id = 4;
         // Promote an existing set to be the current default (if it isn't already) by targeting
-        // an existing version id within it. This field's value is the extant version id.
+        // an existing build id within it. This field's value is the extant build id.
         //
         // (-- api-linter: core::0140::prepositions=disabled
         //     aip.dev/not-precedent: Names are hard. --)
-        string promote_set_by_version_id = 5;
-        // Promote an existing version id within some set to be the current default for that set.
+        string promote_set_by_build_id = 5;
+        // Promote an existing build id within some set to be the current default for that set.
         //
         // (-- api-linter: core::0140::prepositions=disabled
         //     aip.dev/not-precedent: Within makes perfect sense here. --)
-        string promote_version_id_within_set = 6;
+        string promote_build_id_within_set = 6;
     }
 }
 message UpdateWorkerBuildIdCompatabilityResponse {

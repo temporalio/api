@@ -180,6 +180,10 @@ message StartWorkflowExecutionRequest {
     // StartWorkflowExecution.
     temporal.api.failure.v1.Failure continued_failure = 18;
     temporal.api.common.v1.Payloads last_completion_result = 19;
+    // Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
+    // If the workflow gets a signal before the delay, a workflow task will be dispatched and the rest
+    // of the delay will be ignored.
+    google.protobuf.Duration workflow_start_delay = 20 [(gogoproto.stdduration) = true];
 }
 
 message StartWorkflowExecutionResponse {
@@ -625,6 +629,12 @@ message SignalWithStartWorkflowExecutionRequest {
     temporal.api.common.v1.Memo memo = 17;
     temporal.api.common.v1.SearchAttributes search_attributes = 18;
     temporal.api.common.v1.Header header = 19;
+    // Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
+    // Note that the signal will be delivered with the first workflow task. If the workflow gets
+    // another SignalWithStartWorkflow before the delay, a workflow task will be dispatched immediately
+    // and the rest of the delay period will be ignored, even if that request also had a delay. Signal
+    // via SignalWorkflowExecution will not unblock the workflow.
+    google.protobuf.Duration workflow_start_delay = 20 [(gogoproto.stdduration) = true];
 }
 
 message SignalWithStartWorkflowExecutionResponse {

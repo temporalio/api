@@ -5,7 +5,6 @@ Proto files describing our gRPC API. Implemented by [Temporal Server](https://gi
 - [Use the API](#use-the-api)
   - [With code](#with-code)
     - [Generate client stubs](#generate-client-stubs)
-  - [Via REST](#via-rest)
   - [Via GraphQL](#via-graphql)
   - [Manually](#manually)
     - [With command line](#with-command-line)
@@ -28,10 +27,6 @@ If you're not using an SDK Client (rare), you can generate gRPC client stubs by:
 
 - Adding this repo as a git submodule or subtree inside your repo
 - Generating code in [your language](https://grpc.io/docs/languages/)
-
-### Via REST
-
-See [`temporalio/ui-server`](https://github.com/temporalio/ui-server)
 
 ### Via GraphQL
 

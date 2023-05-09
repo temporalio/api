@@ -38,7 +38,6 @@ import "google/protobuf/wrappers.proto";
 import "dependencies/gogoproto/gogo.proto";
 
 import "temporal/api/enums/v1/task_queue.proto";
-import "temporal/api/enums/v1/task_reachability.proto";
 import "temporal/api/common/v1/message.proto";
 
 // See https://docs.temporal.io/docs/concepts/task-queues/
@@ -95,10 +94,38 @@ message CompatibleVersionSet {
     repeated string build_ids = 1;
 }
 
+// Reachability of tasks for a worker on a single task queue.
 message TaskQueueReachability {
     string task_queue = 1;
-    // Task reachability for workers identified with the requested build id this task queue.
-    // See TaskReachability doc string for information about each enum variant.
+    // Task reachability for a worker in a single task queue.
+    // See the TaskReachability docstring for information about each enum variant.
     // If reachability is empty, this worker is considered unreachable in this task queue.
     repeated temporal.api.enums.v1.TaskReachability reachability = 2;
 }
+
+// Reachability of tasks for a worker by build id, in one or more task queues. 
+message BuildIdReachability {
+    // A build id or unversioned.
+    MaybeVersioned build_id = 1;
+    // Reachability per task queue.
+    repeated TaskQueueReachability task_queue_reachability = 2;
+}
+
+// Either an unversioned marker or a specific version.
+message MaybeVersioned {
+    oneof variant {
+        bool unversioned = 1;
+        string versioned = 2;
+    }
+}
+
+// Scope of task reachability for a reachability query.
+message TaskReachabilityScope {
+    oneof variant {
+        // Query task reachability globally in a namespace.
+        bool namespace = 1;
+        // Query task reachability for a specific task queue.
+        string task_queue = 2;
+    }
+}
+

@@ -38,7 +38,6 @@ import "temporal/api/enums/v1/failed_cause.proto";
 import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/query.proto";
 import "temporal/api/enums/v1/reset.proto";
-import "temporal/api/enums/v1/task_reachability.proto";
 import "temporal/api/enums/v1/task_queue.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
@@ -831,19 +830,11 @@ message DescribeTaskQueueRequest {
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
     temporal.api.enums.v1.TaskQueueType task_queue_type = 3;
     bool include_task_queue_status = 4;
-    temporal.api.enums.v1.TaskReachabilityScope task_reachability_query_scope = 5;
 }
 
 message DescribeTaskQueueResponse {
     repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1;
     temporal.api.taskqueue.v1.TaskQueueStatus task_queue_status = 2;
-    message BuildIdReachability {
-        // If empty, reachability correlates to "unverisoned" workers on this task queue.
-        string build_id = 1;
-        // Reachability per task queue.
-        repeated temporal.api.taskqueue.v1.TaskQueueReachability task_queue_reachability = 2;
-    }
-    BuildIdReachability build_id_reachability = 3;
 }
 
 message GetClusterInfoRequest {
@@ -1135,16 +1126,14 @@ message GetWorkerBuildIdCompatibilityResponse {
 
 message GetWorkerTaskReachabilityRequest {
     string namespace = 1;
-    // Build id that identifies a worker process, may be associated with multiple task queues. Leave this empty to query
-    // reachability of unversioned workers. Must not be empty if query_scope is namespace wide. 
-    string build_id = 2;
-    temporal.api.enums.v1.TaskReachabilityScope query_scope = 3;
-    // Used and required if query scope is for a task queue.
-    string task_queue = 4;
+    // A build id identifies a worker process, and may be associated with multiple task queues.
+    // Must not be unversioned if query scope is namespace wide. 
+    repeated temporal.api.taskqueue.v1.MaybeVersioned build_ids = 2;
+    temporal.api.taskqueue.v1.TaskReachabilityScope scope = 3;
 }
 
 message GetWorkerTaskReachabilityResponse {
-    repeated temporal.api.taskqueue.v1.TaskQueueReachability task_queue_reachability = 1;
+    repeated temporal.api.taskqueue.v1.BuildIdReachability build_id_reachability = 1;
 }
 
 // (-- api-linter: core::0134=disabled

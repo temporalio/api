@@ -1126,15 +1126,17 @@ message GetWorkerBuildIdCompatibilityResponse {
 
 message GetWorkerTaskReachabilityRequest {
     string namespace = 1;
-    // Build id that identifies a worker process and may be associated with multiple task queues.
-    // Leave empty to query for "unversioned" worker reachability. Must not be empty if query scope is namespace wide. 
-    string build_id = 2;
-    temporal.api.taskqueue.v1.TaskReachabilityScope scope = 3;
+    // Either a specific worker version or all workers polling on a specific task queue.
+    oneof subject {
+        string task_queue = 2;
+        string build_id = 3;
+    }
+    temporal.api.taskqueue.v1.TaskReachabilityScope scope = 4;
 }
 
 message GetWorkerTaskReachabilityResponse {
-    // Task reachability, broken down by task queue.
-    repeated temporal.api.taskqueue.v1.TaskQueueReachability task_queue_reachability = 1;
+    // Task reachability, broken down by build id.
+    repeated temporal.api.taskqueue.v1.BuildIdReachability build_id_reachability = 1;
 }
 
 // (-- api-linter: core::0134=disabled

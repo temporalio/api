@@ -1114,12 +1114,6 @@ message GetWorkerBuildIdCompatibilityRequest {
     // Limits how many compatible sets will be returned. Specify 1 to only return the current
     // default major version set. 0 returns all sets.
     int32 max_sets = 3;
-    // If set, the response will include information about worker versions which are ready to be
-    // retired.
-    bool include_retirement_candidates = 4;
-    // If set, the response will include information about which versions have open workflows, and
-    // whether or not there are currently polling workers who are compatible with those versions.
-    bool include_poller_compatibility = 5;
 }
 message GetWorkerBuildIdCompatibilityResponse {
     // Major version sets, in order from oldest to newest. The last element of the list will always
@@ -1128,32 +1122,21 @@ message GetWorkerBuildIdCompatibilityResponse {
     //
     // There may be fewer sets returned than exist, if the request chose to limit this response.
     repeated temporal.api.taskqueue.v1.CompatibleVersionSet major_version_sets = 1;
+}
 
-    message RetirementCandidate {
-        // The worker build id which is ready for retirement
-        string build_id = 1;
-        // If true, there are no open *or* closed workflows, meaning there is no reason at all
-        // to keep the worker alive, not even to service queries on closed workflows. If not true,
-        // then there are no open workflows, but some closed ones.
-        bool all_workflows_are_archived = 2;
-        // Currently polling workers who match the build id ready for retirement
-        repeated temporal.api.taskqueue.v1.PollerInfo pollers = 3;
+message GetWorkerTaskReachabilityRequest {
+    string namespace = 1;
+    // Specify whether reachability should be returned for a specific worker version or all workers polling on a specific task queue.
+    oneof subject {
+        string task_queue = 2;
+        string build_id = 3;
     }
+    temporal.api.taskqueue.v1.TaskReachabilityScope scope = 4;
+}
 
-    // A list of workers who are still live and polling the task queue, but may no longer be needed
-    // to make progress on open workflows.
-    repeated RetirementCandidate retirement_candidates = 2;
-
-    message VersionsWithCompatiblePollers {
-        // The latest build id which completed a workflow task on some open workflow
-        string most_recent_build_id = 1;
-        // Currently polling workers who are compatible with `most_recent_build_id`.
-        repeated temporal.api.taskqueue.v1.PollerInfo pollers = 2;
-    }
-
-    // A list of versions and pollers who are capable of processing tasks at that version (if any)
-    // for which there are currently open workflows.
-    repeated VersionsWithCompatiblePollers active_versions_and_pollers = 3;
+message GetWorkerTaskReachabilityResponse {
+    // Task reachability, broken down by build id.
+    repeated temporal.api.taskqueue.v1.BuildIdReachability build_id_reachability = 1;
 }
 
 // (-- api-linter: core::0134=disabled

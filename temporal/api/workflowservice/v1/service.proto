@@ -393,8 +393,14 @@ service WorkflowService {
     // Fetches the worker build id versioning sets for a task queue.
     rpc GetWorkerBuildIdCompatibility (GetWorkerBuildIdCompatibilityRequest) returns (GetWorkerBuildIdCompatibilityResponse) {}
 
-    // Fetches task reachability to determine whether a single worker or all workers polling on a specific task queue may
-    // be retired.
+    // Fetches task reachability to determine whether a worker may be retired.
+    // The response lists all task queues mapped to the requested build id when the requested query scope is for an
+    // entire namespace but the number of task queues that include reachability information is limited.
+    // When reaching the limit, task queues that reachability information could not be retrieved for will be marked with a single
+    // TASK_REACHABILITY_UNSPECIFIED entry. The caller may issue separate calls to get the reachability for those task
+    // queues.
+    // Open source users can adjust this limit by setting the server's dynamic config value for
+    // `limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store.
     rpc GetWorkerTaskReachability (GetWorkerTaskReachabilityRequest) returns (GetWorkerTaskReachabilityResponse) {}
 
     // Invokes the specified update function on user workflow code.

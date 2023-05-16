@@ -1126,17 +1126,23 @@ message GetWorkerBuildIdCompatibilityResponse {
 
 message GetWorkerTaskReachabilityRequest {
     string namespace = 1;
-    // Specify whether reachability should be returned for a specific worker version or all workers polling on a specific task queue.
-    oneof subject {
-        string task_queue = 2;
-        string build_id = 3;
-    }
-    temporal.api.taskqueue.v1.TaskReachabilityScope scope = 4;
+    // Build id to retrieve reachability for. Leave empty to query reachability of an unversioned worker.
+    string build_id = 2;
+    // Scope of the reachability query (namespace or task queue).
+    // Must specify a task queue if querying for an unversioned worker.
+    temporal.api.taskqueue.v1.TaskReachabilityScope scope = 3;
 }
 
 message GetWorkerTaskReachabilityResponse {
-    // Task reachability, broken down by build id.
-    repeated temporal.api.taskqueue.v1.BuildIdReachability build_id_reachability = 1;
+    // Task reachability, broken down by task queue.
+    // This response lists all task queues mapped to the requested build id when the requested query scope is for an
+    // entire namespace but the number of task queues that include reachability information is limited.
+    // When reaching the limit, task queues that reachability information could not be retrieved for will be marked with a single
+    // TASK_REACHABILITY_UNSPECIFIED entry. The caller may issue separate calls to get the reachability for those task
+    // queues.
+    // Open source users can adjust this limit by setting the server's dynamic config value for
+    // `limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store.
+    repeated temporal.api.taskqueue.v1.TaskQueueReachability task_queue_reachability = 1;
 }
 
 // (-- api-linter: core::0134=disabled

@@ -1131,9 +1131,11 @@ message GetWorkerTaskReachabilityRequest {
     // Open source users can adjust this limit by setting the server's dynamic config value for
     // `limit.reachabilityQueryBuildIds` with the caveat that this call can strain the visibility store.
     repeated string build_ids = 2;
-    // Scope of the reachability query (namespace or task queue).
-    // Must specify a task queue if querying for an unversioned worker.
-    temporal.api.taskqueue.v1.TaskReachabilityScope scope = 3;
+
+    // Task queues to retrieve reachability for. Leave this empty to query for all task queues associated with given
+    // build ids in the namespace.
+    // Must specify at least one task queue if querying for an unversioned worker.
+    repeated string task_queues = 3;
 
     // Type of reachability to query for.
     // TASK_REACHABILITY_NEW_WORKFLOWS is always returned in the response and is considered the default if reachability
@@ -1146,11 +1148,11 @@ message GetWorkerTaskReachabilityRequest {
 
 message GetWorkerTaskReachabilityResponse {
     // Task reachability, broken down by build id and then task queue.
-    // This response lists all task queues mapped to the requested build ids when the requested query scope is for an
-    // entire namespace but the number of task queues that include reachability information is limited.
-    // When reaching the limit, task queues that reachability information could not be retrieved for will be marked with a single
-    // TASK_REACHABILITY_UNSPECIFIED entry. The caller may issue separate calls to get the reachability for those task
-    // queues.
+    // When requesting all task queues associated with the given build ids in a namespace, all task queues will be
+    // listed in the response but some of them may not contain reachability information due to a server enforced limit.
+    // When reaching the limit, task queues that reachability information could not be retrieved for will be marked with
+    // a single TASK_REACHABILITY_UNSPECIFIED entry. The caller may issue another call to get the reachability for those
+    // task queues.
     // Open source users can adjust this limit by setting the server's dynamic config value for
     // `limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store.
     repeated temporal.api.taskqueue.v1.BuildIdReachability build_id_reachability = 1;

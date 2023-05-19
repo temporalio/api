@@ -1135,6 +1135,8 @@ message GetWorkerTaskReachabilityRequest {
     // Task queues to retrieve reachability for. Leave this empty to query for all task queues associated with given
     // build ids in the namespace.
     // Must specify at least one task queue if querying for an unversioned worker.
+    // The number of task queues that the server will fetch reachability information for is limited.
+    // See the `GetWorkerTaskReachabilityResponse` documentation for more information.
     repeated string task_queues = 3;
 
     // Type of reachability to query for.
@@ -1148,11 +1150,12 @@ message GetWorkerTaskReachabilityRequest {
 
 message GetWorkerTaskReachabilityResponse {
     // Task reachability, broken down by build id and then task queue.
-    // When requesting all task queues associated with the given build ids in a namespace, all task queues will be
-    // listed in the response but some of them may not contain reachability information due to a server enforced limit.
-    // When reaching the limit, task queues that reachability information could not be retrieved for will be marked with
-    // a single TASK_REACHABILITY_UNSPECIFIED entry. The caller may issue another call to get the reachability for those
-    // task queues.
+    // When requesting a large number of task queues or all task queues associated with the given build ids in a
+    // namespace, all task queues will be listed in the response but some of them may not contain reachability
+    // information due to a server enforced limit. When reaching the limit, task queues that reachability information
+    // could not be retrieved for will be marked with a single TASK_REACHABILITY_UNSPECIFIED entry. The caller may issue
+    // another call to get the reachability for those task queues.
+    //
     // Open source users can adjust this limit by setting the server's dynamic config value for
     // `limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store.
     repeated temporal.api.taskqueue.v1.BuildIdReachability build_id_reachability = 1;

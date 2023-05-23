@@ -238,14 +238,12 @@ message PollWorkflowTaskQueueRequest {
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
     // The identity of the worker/client who is polling this task queue
     string identity = 3;
+    // DEPRECATED since 1.21 - use `worker_version_capabilities` instead.
     // Each worker process should provide an ID unique to the specific set of code it is running
     // "checksum" in this field name isn't very accurate, it should be though of as an id.
     string binary_checksum = 4;
-    // If set, the worker is opting in to versioning and wishes to only
-    // receive tasks that are considered compatible with the version capabilities provided.
-    // Doing so only makes sense in conjunction with the `UpdateWorkerBuildIdCompatibility` API.
-    // When this field has a `worker_build_id`, and `binary_checksum` is not
-    // set, that value should also be considered as the `binary_checksum`.
+    // Information about this worker's build identifier and if it is choosing to use the versioning
+    // feature. See the `WorkerVersionCapabilities` docstring for more.
     temporal.api.common.v1.WorkerVersionCapabilities worker_version_capabilities = 5;
 }
 
@@ -309,16 +307,15 @@ message RespondWorkflowTaskCompletedRequest {
     // something useful, but cannot complete it within the workflow task timeout. Local activities
     // which run for longer than the task timeout being the prime example.
     bool force_create_new_workflow_task = 6;
+    // DEPRECATED since 1.21 - use `worker_version_stamp` instead.
     // Worker process' unique binary id
     string binary_checksum = 7;
     // Responses to the `queries` field in the task being responded to
     map<string, temporal.api.query.v1.WorkflowQueryResult> query_results = 8;
     string namespace = 9;
-    // If using versioning, the worker uses this field to indicate what version(s) it used to
-    // process the task. When this field has a `worker_build_id`, and `binary_checksum` is not set,
-    // that value should also be considered as the `binary_checksum`. Leaving this field empty when
-    // replying to a task has had this field previously populated in history in an error, and such
-    // a completion will be rejected.
+    // Version info of the worker who processed this task. This message's `build_id` field should
+    // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
+    // field to true. See message docstrings for more.
     temporal.api.common.v1.WorkerVersionStamp worker_version_stamp = 10;
     // Protocol messages piggybacking on a WFT as a transport
     repeated temporal.api.protocol.v1.Message messages = 11;
@@ -348,11 +345,16 @@ message RespondWorkflowTaskFailedRequest {
     temporal.api.failure.v1.Failure failure = 3;
     // The identity of the worker/client
     string identity = 4;
+    // DEPRECATED since 1.21 - use `worker_version_stamp` instead.
     // Worker process' unique binary id
     string binary_checksum = 5;
     string namespace = 6;
     // Protocol messages piggybacking on a WFT as a transport
     repeated temporal.api.protocol.v1.Message messages = 7;
+    // Version info of the worker who processed this task. This message's `build_id` field should
+    // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
+    // field to true. See message docstrings for more.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 8;
 }
 
 message RespondWorkflowTaskFailedResponse {
@@ -364,9 +366,8 @@ message PollActivityTaskQueueRequest {
     // The identity of the worker/client
     string identity = 3;
     temporal.api.taskqueue.v1.TaskQueueMetadata task_queue_metadata = 4;
-    // If set, the worker is opting in to versioning and wishes to only
-    // receive tasks that are considered compatible with the capabilities provided.
-    // Doing so only makes sense in conjunction with the `UpdateWorkerBuildIdCompatibility` API.
+    // Information about this worker's build identifier and if it is choosing to use the versioning
+    // feature. See the `WorkerVersionCapabilities` docstring for more.
     temporal.api.common.v1.WorkerVersionCapabilities worker_version_capabilities = 5;
 }
 
@@ -463,6 +464,10 @@ message RespondActivityTaskCompletedRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Version info of the worker who processed this task. This message's `build_id` field should
+    // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
+    // field to true. See message docstrings for more.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 5;
 }
 
 message RespondActivityTaskCompletedResponse {
@@ -496,6 +501,10 @@ message RespondActivityTaskFailedRequest {
     string namespace = 4;
     // Additional details to be stored as last activity heartbeat
     temporal.api.common.v1.Payloads last_heartbeat_details = 5;
+    // Version info of the worker who processed this task. This message's `build_id` field should
+    // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
+    // field to true. See message docstrings for more.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 6;
 }
 
 message RespondActivityTaskFailedResponse {
@@ -535,6 +544,10 @@ message RespondActivityTaskCanceledRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Version info of the worker who processed this task. This message's `build_id` field should
+    // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
+    // field to true. See message docstrings for more.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 5;
 }
 
 message RespondActivityTaskCanceledResponse {

@@ -160,12 +160,9 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     temporal.api.common.v1.Header header = 12;
     temporal.api.common.v1.Memo memo = 13;
     temporal.api.common.v1.SearchAttributes search_attributes = 14;
-    // If this is set and the workflow executing this command is on a task queue using build-id
-    // versioning, then the scheduled activity will not use the same compatible version set (which
-    // is the default behavior) and instead will use the current overall default for the queue.
-    // If this command's `task_queue` field differs from the executing workflow's task queue, then
-    // this flag has no effect.
-    bool use_latest_build_id = 15;
+    // If this is set, the workflow executing this command wishes to continue as new using a version
+    // compatible with the version that this workflow most recently ran on.
+    bool use_compatible_version = 15;
 
     // workflow_execution_timeout is omitted as it shouldn't be overridden from within a workflow.
 }
@@ -243,8 +240,13 @@ message WorkflowTaskFailedEventAttributes {
     string new_run_id = 7;
     // TODO: ?
     int64 fork_event_version = 8;
-    // If a worker explicitly failed this task, it's binary id
+    // DEPRECATED since 1.21 - use `worker_version` instead.
+    // If a worker explicitly failed this task, its binary id
     string binary_checksum = 9;
+    // Version info of the worker who processed this workflow task, or missing if worker is not
+    // using versioning. If present, the `build_id` field within is also used as `binary_checksum`,
+    // which may be omitted in that case (it may also be populated to preserve compatibility).
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 10;
 }
 
 message ActivityTaskScheduledEventAttributes {
@@ -285,12 +287,10 @@ message ActivityTaskScheduledEventAttributes {
     // configuration. Retries will happen up to `schedule_to_close_timeout`. To disable retries set
     // retry_policy.maximum_attempts to 1.
     temporal.api.common.v1.RetryPolicy retry_policy = 12;
-    // If this is set and the workflow executing this command is on a task queue using build-id
-    // versioning, then the scheduled activity will not use the same compatible version set (which
-    // is the default behavior) and instead will use the current overall default for the queue.
-    // If this command's `task_queue` field differs from the executing workflow's task queue, then
-    // this flag has no effect.
-    bool use_latest_build_id = 13;
+    // If this is set, the workflow executing this command wishes to start the activity using
+    // a version compatible with the version that this workflow most recently ran on, if such
+    // behavior is possible.
+    bool use_compatible_version = 13;
 }
 
 message ActivityTaskStartedEventAttributes {
@@ -316,6 +316,9 @@ message ActivityTaskCompletedEventAttributes {
     int64 started_event_id = 3;
     // id of the worker that completed this task
     string identity = 4;
+    // Version info of the worker who processed this activity task, or missing if worker is not
+    // using versioning.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 5;
 }
 
 message ActivityTaskFailedEventAttributes {
@@ -328,6 +331,9 @@ message ActivityTaskFailedEventAttributes {
     // id of the worker that failed this task
     string identity = 4;
     temporal.api.enums.v1.RetryState retry_state = 5;
+    // Version info of the worker who processed this activity task, or missing if worker is not
+    // using versioning.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 6;
 }
 
 message ActivityTaskTimedOutEventAttributes {
@@ -360,6 +366,9 @@ message ActivityTaskCanceledEventAttributes {
     int64 started_event_id = 4;
     // id of the worker who canceled this activity
     string identity = 5;
+    // Version info of the worker who processed this activity task, or missing if worker is not
+    // using versioning.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 6;
 }
 
 message TimerStartedEventAttributes {
@@ -577,12 +586,10 @@ message StartChildWorkflowExecutionInitiatedEventAttributes {
     temporal.api.common.v1.Header header = 15;
     temporal.api.common.v1.Memo memo = 16;
     temporal.api.common.v1.SearchAttributes search_attributes = 17;
-    // If this is set and the workflow executing this command is on a task queue using build-id
-    // versioning, then the child workflow will not use the same compatible version set (which
-    // is the default behavior) and instead will use the current overall default for the queue.
-    // If this command's `task_queue` field differs from the executing workflow's task queue, then
-    // this flag has no effect.
-    bool use_latest_build_id = 19;
+    // If this is set, the workflow executing this command wishes to start the child workflow using
+    // a version compatible with the version that this workflow most recently ran on, if such
+    // behavior is possible.
+    bool use_compatible_version = 19;
 }
 
 message StartChildWorkflowExecutionFailedEventAttributes {

@@ -22,29 +22,36 @@
 
 syntax = "proto3";
 
-package temporal.api.enums.v1;
+package temporal.api.protocol.v1;
 
-option go_package = "go.temporal.io/api/enums/v1;enums";
-option java_package = "io.temporal.api.enums.v1";
+option go_package = "go.temporal.io/api/protocol/v1;protocol";
+option java_package = "io.temporal.api.protocol.v1";
 option java_multiple_files = true;
-option java_outer_classname = "ResetProto";
-option ruby_package = "Temporalio::Api::Enums::V1";
-option csharp_namespace = "Temporalio.Api.Enums.V1";
+option java_outer_classname = "MessageProto";
+option ruby_package = "Temporalio::Api::Protocol::V1";
+option csharp_namespace = "Temporalio.Api.Protocol.V1";
 
-// Reset reapplay(replay) options
-// * RESET_REAPPLY_TYPE_SIGNAL (default) - Signals are reapplied when workflow is reset
-// * RESET_REAPPLY_TYPE_NONE - nothing is reapplied
-enum ResetReapplyType {
-    RESET_REAPPLY_TYPE_UNSPECIFIED = 0;
-    RESET_REAPPLY_TYPE_SIGNAL = 1;
-    RESET_REAPPLY_TYPE_NONE = 2;
-}
+import "google/protobuf/any.proto";
 
-// Reset type options
-enum ResetType { 
-    RESET_TYPE_UNSPECIFIED = 0;
-    // Resets to event of the first workflow task completed, or if it does not exist, the event after task scheduled.
-    RESET_TYPE_FIRST_WORKFLOW_TASK = 1;
-    // Resets to event of the last workflow task completed, or if it does not exist, the event after task scheduled.
-    RESET_TYPE_LAST_WORKFLOW_TASK = 2;
+// (-- api-linter: core::0146::any=disabled
+//     aip.dev/not-precedent: We want runtime extensibility for the body field --)
+message Message {
+    // An ID for this specific message.
+    string id = 1;
+
+    // Identifies the specific instance of a protocol to which this message
+    // belongs.
+    string protocol_instance_id = 2;
+
+    // The event ID or command ID after which this message can be delivered. The
+    // effects of history up to and including this event ID should be visible to
+    // the code that handles this message. Omit to opt out of sequencing.
+    oneof sequencing_id {
+        int64 event_id = 3;
+        int64 command_index = 4;
+    };
+    
+    // The opaque data carried by this message. The protocol type can be
+    // extracted from the package name of the message carried inside the Any.
+    google.protobuf.Any body = 5;
 }

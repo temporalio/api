@@ -28,8 +28,8 @@ option go_package = "go.temporal.io/api/taskqueue/v1;taskqueue";
 option java_package = "io.temporal.api.taskqueue.v1";
 option java_multiple_files = true;
 option java_outer_classname = "MessageProto";
-option ruby_package = "Temporal::Api::TaskQueue::V1";
-option csharp_namespace = "Temporal.Api.TaskQueue.V1";
+option ruby_package = "Temporalio::Api::TaskQueue::V1";
+option csharp_namespace = "Temporalio.Api.TaskQueue.V1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
@@ -38,12 +38,16 @@ import "google/protobuf/wrappers.proto";
 import "dependencies/gogoproto/gogo.proto";
 
 import "temporal/api/enums/v1/task_queue.proto";
+import "temporal/api/common/v1/message.proto";
 
 // See https://docs.temporal.io/docs/concepts/task-queues/
 message TaskQueue {
     string name = 1;
     // Default: TASK_QUEUE_KIND_NORMAL.
     temporal.api.enums.v1.TaskQueueKind kind = 2;
+    // Iff kind == TASK_QUEUE_KIND_STICKY, then this field contains the name of
+    // the normal task queue that the sticky worker is running on.
+    string normal_name = 3;
 }
 
 // Only applies to activity task queues
@@ -71,10 +75,12 @@ message TaskQueuePartitionMetadata {
 }
 
 message PollerInfo {
-    // Unix Nano
     google.protobuf.Timestamp last_access_time = 1 [(gogoproto.stdtime) = true];
     string identity = 2;
     double rate_per_second = 3;
+    // If a worker has opted into the worker versioning feature while polling, its capabilities will
+    // appear here.
+    temporal.api.common.v1.WorkerVersionCapabilities worker_version_capabilities = 4;
 }
 
 message StickyExecutionAttributes {
@@ -82,4 +88,28 @@ message StickyExecutionAttributes {
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration schedule_to_start_timeout = 2 [(gogoproto.stdduration) = true];
+}
+
+// Used by the worker versioning APIs, represents an unordered set of one or more versions which are
+// considered to be compatible with each other. Currently the versions are always worker build IDs.
+message CompatibleVersionSet {
+    // All the compatible versions, unordered, except for the last element, which is considered the set "default".
+    repeated string build_ids = 1;
+}
+
+// Reachability of tasks for a worker on a single task queue.
+message TaskQueueReachability {
+    string task_queue = 1;
+    // Task reachability for a worker in a single task queue.
+    // See the TaskReachability docstring for information about each enum variant.
+    // If reachability is empty, this worker is considered unreachable in this task queue.
+    repeated temporal.api.enums.v1.TaskReachability reachability = 2;
+}
+
+// Reachability of tasks for a worker by build id, in one or more task queues.
+message BuildIdReachability {
+    // A build id or empty if unversioned.
+    string build_id = 1;
+    // Reachability per task queue.
+    repeated TaskQueueReachability task_queue_reachability = 2;
 }

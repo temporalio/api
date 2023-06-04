@@ -28,8 +28,8 @@ option go_package = "go.temporal.io/api/workflow/v1;workflow";
 option java_package = "io.temporal.api.workflow.v1";
 option java_multiple_files = true;
 option java_outer_classname = "MessageProto";
-option ruby_package = "Temporal::Api::Workflow::V1";
-option csharp_namespace = "Temporal.Api.Workflow.V1";
+option ruby_package = "Temporalio::Api::Workflow::V1";
+option csharp_namespace = "Temporalio.Api.Workflow.V1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
@@ -56,6 +56,9 @@ message WorkflowExecutionInfo {
     ResetPoints auto_reset_points = 12;
     string task_queue = 13;
     int64 state_transition_count = 14;
+    int64 history_size_bytes = 15;
+    // If set, the most recent worker version stamp that appeared in a workflow task completion
+    temporal.api.common.v1.WorkerVersionStamp most_recent_worker_version_stamp = 16;
 }
 
 message WorkflowExecutionConfig {
@@ -106,8 +109,12 @@ message ResetPoints {
 }
 
 message ResetPointInfo {
+    // A worker binary version identifier, will be deprecated and superseded by a newer concept of
+    // build_id.
     string binary_checksum = 1;
+    // The first run ID in the execution chain that was touched by this worker build.
     string run_id = 2;
+    // Event ID of the first WorkflowTaskCompleted event processed by this worker build.
     int64 first_workflow_task_completed_id = 3;
     google.protobuf.Timestamp create_time = 4 [(gogoproto.stdtime) = true];
     // (-- api-linter: core::0214::resource-expiry=disabled
@@ -117,3 +124,29 @@ message ResetPointInfo {
     // false if the reset point has pending childWFs/reqCancels/signalExternals.
     bool resettable = 6;
 }
+
+// NewWorkflowExecutionInfo is a shared message that encapsulates all the
+// required arguments to starting a workflow in different contexts.
+message NewWorkflowExecutionInfo {
+    string workflow_id = 1;
+    temporal.api.common.v1.WorkflowType workflow_type = 2;
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 3;
+    // Serialized arguments to the workflow.
+    temporal.api.common.v1.Payloads input = 4;
+    // Total workflow execution timeout including retries and continue as new.
+    google.protobuf.Duration workflow_execution_timeout = 5 [(gogoproto.stdduration) = true];
+    // Timeout of a single workflow run.
+    google.protobuf.Duration workflow_run_timeout = 6 [(gogoproto.stdduration) = true];
+    // Timeout of a single workflow task.
+    google.protobuf.Duration workflow_task_timeout = 7 [(gogoproto.stdduration) = true];
+    // Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 8;
+    // The retry policy for the workflow. Will never exceed `workflow_execution_timeout`.
+    temporal.api.common.v1.RetryPolicy retry_policy = 9;
+    // See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/
+    string cron_schedule = 10;
+    temporal.api.common.v1.Memo memo = 11;
+    temporal.api.common.v1.SearchAttributes search_attributes = 12;
+    temporal.api.common.v1.Header header = 13;
+}
+

@@ -28,8 +28,8 @@ option go_package = "go.temporal.io/api/command/v1;command";
 option java_package = "io.temporal.api.command.v1";
 option java_multiple_files = true;
 option java_outer_classname = "MessageProto";
-option ruby_package = "Temporal::Api::Command::V1";
-option csharp_namespace = "Temporal.Api.Command.V1";
+option ruby_package = "Temporalio::Api::Command::V1";
+option csharp_namespace = "Temporalio.Api.Command.V1";
 
 import "google/protobuf/duration.proto";
 
@@ -44,7 +44,8 @@ import "temporal/api/taskqueue/v1/message.proto";
 message ScheduleActivityTaskCommandAttributes {
     string activity_id = 1;
     temporal.api.common.v1.ActivityType activity_type = 2;
-    string namespace = 3;
+    // This used to be a `namespace` field which allowed to schedule activity in another namespace.
+    reserved 3;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 4;
     temporal.api.common.v1.Header header = 5;
     temporal.api.common.v1.Payloads input = 6;
@@ -79,6 +80,13 @@ message ScheduleActivityTaskCommandAttributes {
     // dynamic configuration. Retries will be attempted until `schedule_to_close_timeout` has
     // elapsed. To disable retries set retry_policy.maximum_attempts to 1.
     temporal.api.common.v1.RetryPolicy retry_policy = 11;
+    // Request to start the activity directly bypassing matching service and worker polling
+    // The slot for executing the activity should be reserved when setting this field to true.
+    bool request_eager_execution = 12;
+    // If this is set, the workflow executing this command wishes to start the activity using
+    // a version compatible with the version that this workflow most recently ran on, if such
+    // behavior is possible.
+    bool use_compatible_version = 13;
 }
 
 message RequestCancelActivityTaskCommandAttributes {
@@ -124,6 +132,8 @@ message RequestCancelExternalWorkflowExecutionCommandAttributes {
     // command. The request will be rejected if it is set to true and the target workflow is *not*
     // a child of the requesting workflow.
     bool child_workflow_only = 5;
+    // Reason for requesting the cancellation
+    string reason = 6;
 }
 
 message SignalExternalWorkflowExecutionCommandAttributes {
@@ -146,6 +156,13 @@ message SignalExternalWorkflowExecutionCommandAttributes {
 
 message UpsertWorkflowSearchAttributesCommandAttributes {
     temporal.api.common.v1.SearchAttributes search_attributes = 1;
+}
+
+message ModifyWorkflowPropertiesCommandAttributes {
+    // If set, update the workflow memo with the provided values. The values will be merged with
+    // the existing memo. If the user wants to delete values, a default/empty Payload should be
+    // used as the value for the key being deleted.
+    temporal.api.common.v1.Memo upserted_memo = 1;
 }
 
 message RecordMarkerCommandAttributes {
@@ -178,6 +195,9 @@ message ContinueAsNewWorkflowExecutionCommandAttributes {
     temporal.api.common.v1.Header header = 12;
     temporal.api.common.v1.Memo memo = 13;
     temporal.api.common.v1.SearchAttributes search_attributes = 14;
+    // If this is set, the workflow executing this command wishes to continue as new using a version
+    // compatible with the version that this workflow most recently ran on.
+    bool use_compatible_version = 15;
 
     // `workflow_execution_timeout` is omitted as it shouldn't be overridden from within a workflow.
 }
@@ -205,6 +225,15 @@ message StartChildWorkflowExecutionCommandAttributes {
     temporal.api.common.v1.Header header = 14;
     temporal.api.common.v1.Memo memo = 15;
     temporal.api.common.v1.SearchAttributes search_attributes = 16;
+    // If this is set, the workflow executing this command wishes to start the child workflow using
+    // a version compatible with the version that this workflow most recently ran on, if such
+    // behavior is possible.
+    bool use_compatible_version = 17;
+}
+
+message ProtocolMessageCommandAttributes {
+    // The message ID of the message to which this command is a pointer.
+    string message_id = 1;
 }
 
 message Command {
@@ -223,5 +252,8 @@ message Command {
         StartChildWorkflowExecutionCommandAttributes start_child_workflow_execution_command_attributes = 12;
         SignalExternalWorkflowExecutionCommandAttributes signal_external_workflow_execution_command_attributes = 13;
         UpsertWorkflowSearchAttributesCommandAttributes upsert_workflow_search_attributes_command_attributes = 14;
+        ProtocolMessageCommandAttributes protocol_message_command_attributes = 15;
+        // 16 is available for use - it was used as part of a prototype that never made it into a release
+        ModifyWorkflowPropertiesCommandAttributes modify_workflow_properties_command_attributes = 17;
     }
 }

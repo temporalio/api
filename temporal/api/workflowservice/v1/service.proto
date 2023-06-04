@@ -28,8 +28,8 @@ option go_package = "go.temporal.io/api/workflowservice/v1;workflowservice";
 option java_package = "io.temporal.api.workflowservice.v1";
 option java_multiple_files = true;
 option java_outer_classname = "ServiceProto";
-option ruby_package = "Temporal::Api::WorkflowService::V1";
-option csharp_namespace = "Temporal.Api.WorkflowService.V1";
+option ruby_package = "Temporalio::Api::WorkflowService::V1";
+option csharp_namespace = "Temporalio.Api.WorkflowService.V1";
 
 
 import "temporal/api/workflowservice/v1/request_response.proto";
@@ -215,9 +215,9 @@ service WorkflowService {
     // RequestCancelWorkflowExecution is called by workers when they want to request cancellation of
     // a workflow execution.
     //
-    // This result in a new `WORKFLOW_EXECUTION_CANCEL_REQUESTED` event being written to the
-    // workflow history and a new workflow task created for the workflow. Fails with `NotFound` if
-    // the workflow is already completed or doesn't exist.
+    // This results in a new `WORKFLOW_EXECUTION_CANCEL_REQUESTED` event being written to the
+    // workflow history and a new workflow task created for the workflow. It returns success if the requested
+    // workflow is already closed. It fails with 'NotFound' if the requested workflow doesn't exist.
     rpc RequestCancelWorkflowExecution (RequestCancelWorkflowExecutionRequest) returns (RequestCancelWorkflowExecutionResponse) {
     }
 
@@ -254,6 +254,17 @@ service WorkflowService {
     // `WORKFLOW_EXECUTION_TERMINATED` event in the history and immediately terminating the
     // execution instance.
     rpc TerminateWorkflowExecution (TerminateWorkflowExecutionRequest) returns (TerminateWorkflowExecutionResponse) {
+    }
+
+    // DeleteWorkflowExecution asynchronously deletes a specific Workflow Execution (when
+    // WorkflowExecution.run_id is provided) or the latest Workflow Execution (when
+    // WorkflowExecution.run_id is not provided). If the Workflow Execution is Running, it will be
+    // terminated before deletion.
+    // (-- api-linter: core::0135::method-signature=disabled
+    //     aip.dev/not-precedent: DeleteNamespace RPC doesn't follow Google API format. --)
+    // (-- api-linter: core::0135::response-message-name=disabled
+    //     aip.dev/not-precedent: DeleteNamespace RPC doesn't follow Google API format. --)
+    rpc DeleteWorkflowExecution (DeleteWorkflowExecutionRequest) returns (DeleteWorkflowExecutionResponse) {
     }
 
     // ListOpenWorkflowExecutions is a visibility API to list the open executions in a specific namespace.
@@ -323,5 +334,115 @@ service WorkflowService {
     }
 
     rpc ListTaskQueuePartitions(ListTaskQueuePartitionsRequest) returns (ListTaskQueuePartitionsResponse) {
+    }
+
+    // Creates a new schedule.
+    // (-- api-linter: core::0133::method-signature=disabled
+    //     aip.dev/not-precedent: CreateSchedule doesn't follow Google API format --)
+    // (-- api-linter: core::0133::response-message-name=disabled
+    //     aip.dev/not-precedent: CreateSchedule doesn't follow Google API format --)
+    // (-- api-linter: core::0133::http-uri-parent=disabled
+    //     aip.dev/not-precedent: CreateSchedule doesn't follow Google API format --)
+    rpc CreateSchedule (CreateScheduleRequest) returns (CreateScheduleResponse) {
+    }
+
+    // Returns the schedule description and current state of an existing schedule.
+    rpc DescribeSchedule (DescribeScheduleRequest) returns (DescribeScheduleResponse) {
+    }
+
+    // Changes the configuration or state of an existing schedule.
+    // (-- api-linter: core::0134::response-message-name=disabled
+    //     aip.dev/not-precedent: UpdateSchedule RPC doesn't follow Google API format. --)
+    // (-- api-linter: core::0134::method-signature=disabled
+    //     aip.dev/not-precedent: UpdateSchedule RPC doesn't follow Google API format. --)
+    rpc UpdateSchedule (UpdateScheduleRequest) returns (UpdateScheduleResponse) {
+    }
+
+    // Makes a specific change to a schedule or triggers an immediate action.
+    // (-- api-linter: core::0134::synonyms=disabled
+    //     aip.dev/not-precedent: we have both patch and update. --)
+    rpc PatchSchedule (PatchScheduleRequest) returns (PatchScheduleResponse) {
+    }
+
+    // Lists matching times within a range.
+    rpc ListScheduleMatchingTimes (ListScheduleMatchingTimesRequest) returns (ListScheduleMatchingTimesResponse) {
+    }
+
+    // Deletes a schedule, removing it from the system.
+    // (-- api-linter: core::0135::method-signature=disabled
+    //     aip.dev/not-precedent: DeleteSchedule doesn't follow Google API format --)
+    // (-- api-linter: core::0135::response-message-name=disabled
+    //     aip.dev/not-precedent: DeleteSchedule doesn't follow Google API format --)
+    rpc DeleteSchedule (DeleteScheduleRequest) returns (DeleteScheduleResponse) {
+    }
+
+    // List all schedules in a namespace.
+    rpc ListSchedules (ListSchedulesRequest) returns (ListSchedulesResponse) {
+    }
+
+    // Allows users to specify sets of worker build id versions on a per task queue basis. Versions
+    // are ordered, and may be either compatible with some extant version, or a new incompatible
+    // version, forming sets of ids which are incompatible with each other, but whose contained
+    // members are compatible with one another.
+    //
+    // A single build id may be mapped to multiple task queues using this API for cases where a single process hosts
+    // multiple workers. 
+    // 
+    // To query which workers can be retired, use the `GetWorkerTaskReachability` API.
+    //
+    // NOTE: The number of task queues mapped to a single build id is limited by the `limit.taskQueuesPerBuildId`
+    // (default is 20), if this limit is exceeded this API will error with a FailedPrecondition.
+    //
+    // (-- api-linter: core::0134::response-message-name=disabled
+    //     aip.dev/not-precedent: UpdateWorkerBuildIdCompatibility RPC doesn't follow Google API format. --)
+    // (-- api-linter: core::0134::method-signature=disabled
+    //     aip.dev/not-precedent: UpdateWorkerBuildIdCompatibility RPC doesn't follow Google API format. --)
+    rpc UpdateWorkerBuildIdCompatibility (UpdateWorkerBuildIdCompatibilityRequest) returns (UpdateWorkerBuildIdCompatibilityResponse) {}
+    // Fetches the worker build id versioning sets for a task queue.
+    rpc GetWorkerBuildIdCompatibility (GetWorkerBuildIdCompatibilityRequest) returns (GetWorkerBuildIdCompatibilityResponse) {}
+
+    // Fetches task reachability to determine whether a worker may be retired.
+    // The request may specify task queues to query for or let the server fetch all task queues mapped to the given
+    // build IDs.
+    //
+    // When requesting a large number of task queues or all task queues associated with the given build ids in a
+    // namespace, all task queues will be listed in the response but some of them may not contain reachability
+    // information due to a server enforced limit. When reaching the limit, task queues that reachability information
+    // could not be retrieved for will be marked with a single TASK_REACHABILITY_UNSPECIFIED entry. The caller may issue
+    // another call to get the reachability for those task queues.
+    //
+    // Open source users can adjust this limit by setting the server's dynamic config value for
+    // `limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store.
+    rpc GetWorkerTaskReachability (GetWorkerTaskReachabilityRequest) returns (GetWorkerTaskReachabilityResponse) {}
+
+    // Invokes the specified update function on user workflow code.
+    // (-- api-linter: core::0134=disabled
+    //     aip.dev/not-precedent: UpdateWorkflowExecution doesn't follow Google API format --)
+    rpc UpdateWorkflowExecution(UpdateWorkflowExecutionRequest) returns (UpdateWorkflowExecutionResponse) {
+    }
+
+    // Polls a workflow execution for the outcome of a workflow execution update
+    // previously issued through the UpdateWorkflowExecution RPC. The effective
+    // timeout on this call will be shorter of the the caller-supplied gRPC
+    // timeout and the server's configured long-poll timeout.
+    // (-- api-linter: core::0134=disabled
+    //     aip.dev/not-precedent: UpdateWorkflowExecution doesn't follow Google API format --)
+    rpc PollWorkflowExecutionUpdate(PollWorkflowExecutionUpdateRequest) returns (PollWorkflowExecutionUpdateResponse){
+    }
+
+    // StartBatchOperation starts a new batch operation
+    rpc StartBatchOperation(StartBatchOperationRequest) returns (StartBatchOperationResponse) {
+    }
+
+    // StopBatchOperation stops a batch operation
+    rpc StopBatchOperation(StopBatchOperationRequest) returns (StopBatchOperationResponse) {
+    }
+
+    // DescribeBatchOperation returns the information about a batch operation
+    rpc DescribeBatchOperation(DescribeBatchOperationRequest) returns (DescribeBatchOperationResponse) {
+    }
+
+    // ListBatchOperations returns a list of batch operations
+    rpc ListBatchOperations(ListBatchOperationsRequest) returns (ListBatchOperationsResponse) {
     }
 }

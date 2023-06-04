@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2020 Temporal Technologies Inc.  All rights reserved.
 //
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -20,31 +22,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-syntax = "proto3";
+package build
 
-package temporal.api.enums.v1;
-
-option go_package = "go.temporal.io/api/enums/v1;enums";
-option java_package = "io.temporal.api.enums.v1";
-option java_multiple_files = true;
-option java_outer_classname = "ResetProto";
-option ruby_package = "Temporalio::Api::Enums::V1";
-option csharp_namespace = "Temporalio.Api.Enums.V1";
-
-// Reset reapplay(replay) options
-// * RESET_REAPPLY_TYPE_SIGNAL (default) - Signals are reapplied when workflow is reset
-// * RESET_REAPPLY_TYPE_NONE - nothing is reapplied
-enum ResetReapplyType {
-    RESET_REAPPLY_TYPE_UNSPECIFIED = 0;
-    RESET_REAPPLY_TYPE_SIGNAL = 1;
-    RESET_REAPPLY_TYPE_NONE = 2;
-}
-
-// Reset type options
-enum ResetType { 
-    RESET_TYPE_UNSPECIFIED = 0;
-    // Resets to event of the first workflow task completed, or if it does not exist, the event after task scheduled.
-    RESET_TYPE_FIRST_WORKFLOW_TASK = 1;
-    // Resets to event of the last workflow task completed, or if it does not exist, the event after task scheduled.
-    RESET_TYPE_LAST_WORKFLOW_TASK = 2;
-}
+import (
+	_ "github.com/temporalio/gogo-protobuf/gogoproto" // gogoproto is just a random package name for module.
+)

@@ -28,8 +28,8 @@ option go_package = "go.temporal.io/api/namespace/v1;namespace";
 option java_package = "io.temporal.api.namespace.v1";
 option java_multiple_files = true;
 option java_outer_classname = "MessageProto";
-option ruby_package = "Temporal::Api::Namespace::V1";
-option csharp_namespace = "Temporal.Api.Namespace.V1";
+option ruby_package = "Temporalio::Api::Namespace::V1";
+option csharp_namespace = "Temporalio.Api.Namespace.V1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
@@ -47,6 +47,10 @@ message NamespaceInfo {
     // A key-value map for any customized purpose.
     map<string, string> data = 5;
     string id = 6;
+
+    // Whether scheduled workflows are supported on this namespace. This is only needed
+    // temporarily while the feature is experimental, so we can give it a high tag.
+    bool supports_schedules = 100;
 }
 
 message NamespaceConfig {
@@ -58,6 +62,8 @@ message NamespaceConfig {
     // If unspecified (ARCHIVAL_STATE_UNSPECIFIED) then default server configuration is used.
     temporal.api.enums.v1.ArchivalState visibility_archival_state = 5;
     string visibility_archival_uri = 6;
+    // Map from field name to alias.
+    map<string, string> custom_search_attribute_aliases = 7;
 }
 
 message BadBinaries {
@@ -74,6 +80,8 @@ message UpdateNamespaceInfo {
     string description = 1;
     string owner_email = 2;
     // A key-value map for any customized purpose.
+    // If data already exists on the namespace, 
+    // this will merge with the existing key values. 
     map<string, string> data = 3;
     // New namespace state, server will reject if transition is not allowed.
     // Allowed transitions are:
@@ -81,4 +89,11 @@ message UpdateNamespaceInfo {
     //  Handover -> [ Registered ]
     // Default is NAMESPACE_STATE_UNSPECIFIED which is do not change state.
     temporal.api.enums.v1.NamespaceState state = 4;
+}
+
+message NamespaceFilter {
+    // By default namespaces in NAMESPACE_STATE_DELETED state are not included.
+    // Setting include_deleted to true will include deleted namespaces.
+    // Note: Namespace is in NAMESPACE_STATE_DELETED state when it was deleted from the system but associated data is not deleted yet.
+    bool include_deleted = 1;
 }

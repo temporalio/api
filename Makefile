@@ -23,7 +23,7 @@ PROTO_ROOT := .
 PROTO_FILES = $(shell find $(PROTO_ROOT) -name "*.proto")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 PROTO_OUT := .gen
-PROTO_IMPORTS := -I=$(PROTO_ROOT) -I=$(GOPATH)/src/github.com/temporalio/gogo-protobuf/protobuf
+PROTO_IMPORTS = -I=$(PROTO_ROOT) -I=$(shell go list -modfile build/go.mod -m -f '{{.Dir}}' github.com/temporalio/gogo-protobuf)/protobuf
 
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
@@ -33,11 +33,11 @@ grpc: buf-lint api-linter buf-breaking gogo-grpc fix-path
 
 go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc $(PROTO_IMPORTS) --go_out=plugins=grpc,paths=source_relative:$(PROTO_OUT) $(PROTO_DIR)*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --fatal_warnings $(PROTO_IMPORTS) --go_out=plugins=grpc,paths=source_relative:$(PROTO_OUT) $(PROTO_DIR)*.proto;)
 
 gogo-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for gogo-gRPC..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc $(PROTO_IMPORTS) --gogoslick_out=Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) $(PROTO_DIR)*.proto;)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),protoc --fatal_warnings $(PROTO_IMPORTS) --gogoslick_out=Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) $(PROTO_DIR)*.proto;)
 
 fix-path:
 	mv -f $(PROTO_OUT)/temporal/api/* $(PROTO_OUT) && rm -rf $(PROTO_OUT)/temporal
@@ -45,21 +45,21 @@ fix-path:
 ##### Plugins & tools #####
 grpc-install: gogo-protobuf-install
 	printf $(COLOR) "Install/update gRPC plugins..."
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 gogo-protobuf-install: go-protobuf-install
-	GO111MODULE=off go get github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
+	go install -modfile build/go.mod github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
 
 go-protobuf-install:
-	go install github.com/golang/protobuf/protoc-gen-go@v1.4.3
+	go install github.com/golang/protobuf/protoc-gen-go@v1.5.2
 
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."
-	go install github.com/googleapis/api-linter/cmd/api-linter@v1.22.0
+	go install github.com/googleapis/api-linter/cmd/api-linter@v1.32.3
 
 buf-install:
 	printf $(COLOR) "Install/update buf..."
-	go install github.com/bufbuild/buf/cmd/buf@v0.43.2
+	go install github.com/bufbuild/buf/cmd/buf@v1.6.0
 
 ##### Linters #####
 api-linter:

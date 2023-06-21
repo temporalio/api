@@ -231,6 +231,48 @@ message StartChildWorkflowExecutionCommandAttributes {
     bool use_compatible_version = 17;
 }
 
+message SignalWithStartChildWorkflowExecutionCommandAttributes {
+    string namespace = 1;
+    string workflow_id = 2;
+    temporal.api.common.v1.WorkflowType workflow_type = 3;
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 4;
+    temporal.api.common.v1.Payloads input = 5;
+    // Total workflow execution timeout including retries and continue as new.
+    google.protobuf.Duration workflow_execution_timeout = 6 [(gogoproto.stdduration) = true];
+    // Timeout of a single workflow run.
+    google.protobuf.Duration workflow_run_timeout = 7 [(gogoproto.stdduration) = true];
+    // Timeout of a single workflow task.
+    google.protobuf.Duration workflow_task_timeout = 8 [(gogoproto.stdduration) = true];
+    // Default: PARENT_CLOSE_POLICY_TERMINATE.
+    temporal.api.enums.v1.ParentClosePolicy parent_close_policy = 9;
+    string control = 10;
+
+    // The workflow author-defined name of the signal to send to the workflow
+    string signal_name = 11;
+    // Serialized value(s) to provide with the signal
+    temporal.api.common.v1.Payloads signal_input = 12;
+    // Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 13;
+    temporal.api.common.v1.RetryPolicy retry_policy = 14;
+    // Establish a cron schedule for the child workflow.
+    string cron_schedule = 15;
+    temporal.api.common.v1.Header header = 16;
+    temporal.api.common.v1.Memo memo = 17;
+    temporal.api.common.v1.SearchAttributes search_attributes = 18;
+    // If this is set, the workflow executing this command wishes to start the child workflow using
+    // a version compatible with the version that this workflow most recently ran on, if such
+    // behavior is possible.
+    bool use_compatible_version = 19;
+    // Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
+    // Note that the signal will be delivered with the first workflow task. If the workflow gets
+    // another SignalWithStartWorkflow before the delay and `skip_generate_workflow_task` is false
+    // or not set, a workflow task will be dispatched immediately and the rest of the delay period
+    // will be ignored, even if that request also had a delay. Signal via SignalWorkflowExecution
+    // will not unblock the workflow.
+    google.protobuf.Duration workflow_start_delay = 20 [(gogoproto.stdduration) = true];
+}
+
+
 message ProtocolMessageCommandAttributes {
     // The message ID of the message to which this command is a pointer.
     string message_id = 1;
@@ -255,5 +297,6 @@ message Command {
         ProtocolMessageCommandAttributes protocol_message_command_attributes = 15;
         // 16 is available for use - it was used as part of a prototype that never made it into a release
         ModifyWorkflowPropertiesCommandAttributes modify_workflow_properties_command_attributes = 17;
+        SignalWithStartChildWorkflowExecutionCommandAttributes signal_with_start_child_workflow_execution_command_attributes = 18;
     }
 }

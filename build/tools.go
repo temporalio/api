@@ -25,6 +25,7 @@
 package build
 
 import (
+	_ "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway/descriptor"
 	_ "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	_ "github.com/temporalio/gogo-protobuf/gogoproto" // gogoproto is just a random package name for module.
 )

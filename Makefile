@@ -52,7 +52,7 @@ grpc-install: gogo-protobuf-install
 
 gogo-protobuf-install: go-protobuf-install
 	go install -modfile build/go.mod github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
-	go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@latest
+	go install -modfile build/go.mod github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 
 go-protobuf-install:
 	go install github.com/golang/protobuf/protoc-gen-go@v1.5.2

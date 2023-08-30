@@ -1110,6 +1110,16 @@ message UpdateWorkerBuildIdCompatibilityRequest {
         string secondary_set_build_id = 2;
     }
 
+    message MarkBadBuild {
+        // The build id to mark as bad.
+        string bad_build_id = 1;
+        // If promote_build_id is set, then also promote it to be the default of the set.
+        // If it's not set, then no tasks will be dispatched on the task queue set until another
+        // build id is made the default by another call to UpdateWorkerBuildIdCompatibility that
+        // sets/adds a new default for the set.
+        string promote_build_id = 2;
+    }
+
     string namespace = 1;
     // Must be set, the task queue to apply changes to. Because all workers on a given task queue
     // must have the same set of workflow & activity implementations, there is no reason to specify
@@ -1142,6 +1152,17 @@ message UpdateWorkerBuildIdCompatibilityRequest {
         // declare as compatible. The unusual case of incomplete replication during failover could
         // also result in a split set, which this operation can repair.
         MergeSets merge_sets = 7;
+        // Mark a build as "bad" for a particular task queue. This means that:
+        // 1. the build will not receive any more tasks (workflow or activity)
+        // 2. it may not be promoted to the set default anymore
+        // See the MarkBadBuild for more information.
+        // Note that this only applies to a particular task queue. To mark a build as bad on
+        // multiple task queues, use GetWorkerTaskReachability to find the task queues that a build
+        // id has been registered with and make a separate call for each one.
+        // Also note that this only affects new task dispatch. To also reset workflows with tasks
+        // that were processed by this build, use StartBatchOperation with a query that includes
+        // BuildIds and reset_type RESET_TYPE_BUILD_ID.
+        MarkBadBuild mark_bad_build = 8;
     }
 }
 message UpdateWorkerBuildIdCompatibilityResponse {

@@ -32,10 +32,12 @@ option ruby_package = "Temporalio::Api::Common::V1";
 option csharp_namespace = "Temporalio.Api.Common.V1";
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 
 import "dependencies/gogoproto/gogo.proto";
 
 import "temporal/api/enums/v1/common.proto";
+import "temporal/api/enums/v1/reset.proto";
 
 message DataBlob {
     temporal.api.enums.v1.EncodingType encoding_type = 1;
@@ -150,11 +152,28 @@ message WorkerVersionCapabilities {
     // Later, may include info like "I can process WASM and/or JS bundles"
 }
 
-// Common options for performing a workflow reset based on build id.
-message BuildIdResetOptions {
-    // Resets to before the first workflow task processed by this build id. Note that by default,
-    // this reset is allowed to be to a prior run in a chain of continue-as-new.
-    string build_id = 1;
-    // If true, limit the reset to only within the current run.
-    bool current_run_only = 2;
+message ResetOptions {
+    // Which workflow task to reset to.
+    oneof target {
+        // Resets to event of the first workflow task completed, or if it does not exist, the event after task scheduled.
+        google.protobuf.Empty first_workflow_task = 1;
+        // Resets to event of the last workflow task completed, or if it does not exist, the event after task scheduled.
+        google.protobuf.Empty last_workflow_task = 2;
+        // The id of a specific `WORKFLOW_TASK_COMPLETED`,`WORKFLOW_TASK_TIMED_OUT`, `WORKFLOW_TASK_FAILED`, or
+        // `WORKFLOW_TASK_STARTED` event to reset to.
+        int64 workflow_task_id = 3;
+        // Resets to before the first workflow task processed by this build id.
+        // If the workflow was not processed by the build id, or the workflow task can't be
+        // determined, no reset will be performed.
+        // Note that by default, this reset is allowed to be to a prior run in a chain of
+        // continue-as-new.
+        string build_id = 4;
+    }
+
+    // History event reapply options.
+    temporal.api.enums.v1.ResetReapplyType reset_reapply_type = 10;
+
+    // If true, limit the reset to only within the current run. (Applies to build_id targets and
+    // possibly others in the future.)
+    bool current_run_only = 11;
 }

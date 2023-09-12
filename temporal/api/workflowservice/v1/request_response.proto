@@ -1126,9 +1126,15 @@ message UpdateWorkerBuildIdCompatibilityRequest {
     }
 
     string namespace = 1;
-    // Must be set, the task queue to apply changes to. Because all workers on a given task queue
-    // must have the same set of workflow & activity implementations, there is no reason to specify
-    // a task queue type here.
+    // The task queue to apply changes to. Must be set for most operations.
+    //
+    // Because all workers on a given task queue must have the same set of workflow & activity
+    // implementations, there is no reason to specify a task queue type here.
+    //
+    // When operation is mark_bad_build, task_queue may be left empty and the operation will be
+    // applied to all task queues that have that build id registered. Note that in this case, and if
+    // an error is returned, the operation may have been partially applied to some task queues and
+    // not others.
     string task_queue = 2;
     oneof operation {
         // A new build id. This operation will create a new set which will be the new overall
@@ -1161,12 +1167,9 @@ message UpdateWorkerBuildIdCompatibilityRequest {
         // 1. the build will not receive any more tasks (workflow or activity)
         // 2. it may not be promoted to the set default anymore
         // See the MarkBadBuild for more information.
-        // Note that this only applies to a particular task queue. To mark a build as bad on
-        // multiple task queues, use GetWorkerTaskReachability to find the task queues that a build
-        // id has been registered with and make a separate call for each one.
-        // Also note that this only affects new task dispatch. To also reset workflows with tasks
+        // Note that this only affects new task dispatch. To also reset workflows with tasks
         // that were processed by this build, use StartBatchOperation with a query that includes
-        // BuildIds and reset_type RESET_TYPE_BUILD_ID.
+        // BuildIds and use a build_id target in ResetOptions.
         MarkBadBuild mark_bad_build = 8;
     }
 }

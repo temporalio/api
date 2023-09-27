@@ -51,8 +51,8 @@ grpc-install: go-protobuf-install
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 go-protobuf-install:
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-	go install -modfile build/go.mod github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+	go install  google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install  github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@latest
 
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."

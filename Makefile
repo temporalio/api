@@ -23,6 +23,7 @@ PROTO_ROOT := .
 PROTO_FILES = $(shell find $(PROTO_ROOT) -name "*.proto")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 PROTO_OUT ?= .gen
+PROTO_PATH = paths=source_relative:$(PROTO_OUT)
 PROTO_IMPORTS = \
 	-I=$(PROTO_ROOT) \
 	-I=$(shell go list -modfile build/go.mod -m -f '{{.Dir}}' github.com/grpc-ecosystem/grpc-gateway)/third_party/googleapis
@@ -37,9 +38,10 @@ go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
 	$(foreach PROTO_DIR,$(PROTO_DIRS),\
 		protoc --fatal_warnings $(PROTO_IMPORTS) \
-			--go_out=paths=source_relative:$(PROTO_OUT) \
-			--go-grpc_out=paths=source_relative:$(PROTO_OUT)\
-			--grpc-gateway_out=allow_patch_feature=false,paths=source_relative:$(PROTO_OUT) \
+			--go_out=$(PROTO_PATH) \
+			--go-helpers_out=$(PROTO_PATH) \
+			--go-grpc_out=$(PROTO_PATH) \
+			--grpc-gateway_out=allow_patch_feature=false,$(PROTO_PATH) \
 		$(PROTO_DIR)*.proto;)
 
 fix-path:
@@ -53,6 +55,7 @@ grpc-install: go-protobuf-install
 go-protobuf-install:
 	go install  google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install  github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@latest
+	go install ./protoc-gen-go-helpers
 
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."

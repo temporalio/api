@@ -34,7 +34,7 @@ $(PROTO_OUT):
 ##### Compile proto files for go #####
 grpc: buf-lint api-linter buf-breaking go-grpc fix-path
 
-go-grpc: clean $(PROTO_OUT)
+go-grpc: $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
 	$(foreach PROTO_DIR,$(PROTO_DIRS),\
 		protoc --fatal_warnings $(PROTO_IMPORTS) \

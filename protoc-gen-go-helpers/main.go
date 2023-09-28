@@ -36,7 +36,7 @@ func (val *{{.Type}}) Unmarshal(buf []byte) error {
 // comparing the message's fields.
 // For more information see the documentation for
 // https://pkg.go.dev/google.golang.org/protobuf/proto#Equal
-func (val *{{.Type}}) Equal(other *{{.Type}}) bool {
+func (val *{{.Type}}) Equal(other interface{}) bool {
     if other == nil {
 		return val == nil
 	}

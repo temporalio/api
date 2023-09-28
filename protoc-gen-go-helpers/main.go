@@ -36,24 +36,26 @@ func (val *{{.Type}}) Unmarshal(buf []byte) error {
 // comparing the message's fields.
 // For more information see the documentation for
 // https://pkg.go.dev/google.golang.org/protobuf/proto#Equal
-func (val *{{.Type}}) Equal(other interface{}) bool {
-    if other == nil {
-		return val == nil
+func (this *{{.Type}}) Equal(that interface{}) bool {
+    if that == nil {
+		return this == nil
 	}
 
-	other1, ok := other.(*{{.Type}})
-	if !ok {
-		other2, ok := that.({{.Type}})
-		if ok {
-			other1 = &other2
-		} else {
-			return false
-		}
-	}
+    var that1 *{{.Type}}
+    switch t := that.(type) {
+    case *{{.Type}}:
+        that1 = t
+    case {{.Type}}:
+        that1 = &t
+    default:
+        return false
+    }
 
-    return proto.Equal(val, other)
+    return proto.Equal(this, that1)
 }`
 
+// NOTE: If our implementation of Equal is too slow (its reflection-based) it doesn't look too
+// hard to generate unrolled versions...
 func main() {
 	t := template.Must(template.New("helpers").Parse(helperTmpl))
 

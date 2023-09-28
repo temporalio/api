@@ -74,7 +74,7 @@ func main() {
 
 	for _, file := range plugin.Files {
 		// Skip protos that aren't ours
-		if !strings.Contains(string(file.GoImportPath), "go.temporal.io") {
+		if !file.Generate || !strings.Contains(string(file.GoImportPath), "go.temporal.io") {
 			continue
 		}
 
@@ -87,8 +87,8 @@ func main() {
 			}
 		}
 
-		file := plugin.NewGeneratedFile(fmt.Sprintf("%s.go-helpers.go", file.GeneratedFilenamePrefix), ".")
-		file.Write(buf.Bytes())
+		gf := plugin.NewGeneratedFile(fmt.Sprintf("%s.go-helpers.go", file.GeneratedFilenamePrefix), ".")
+		gf.Write(buf.Bytes())
 	}
 
 	stdout := plugin.Response()

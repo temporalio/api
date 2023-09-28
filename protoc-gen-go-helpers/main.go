@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"text/template"
 
 	"google.golang.org/protobuf/compiler/protogen"
@@ -69,15 +70,13 @@ func main() {
 		panic(err)
 	}
 
-	// Protoc passes a slice of File structs for us to process
 	for _, file := range plugin.Files {
+		// Skip protos that aren't ours
+		if !strings.Contains(string(file.GoImportPath), "go.temporal.io") {
+			continue
+		}
 
-		// Time to generate code...!
-
-		// 1. Initialise a buffer to hold the generated code
 		var buf bytes.Buffer
-
-		// 2. Write the package name
 		buf.Write([]byte(fmt.Sprintf(header, file.GoPackageName)))
 
 		for _, msg := range file.Proto.MessageType {
@@ -96,6 +95,5 @@ func main() {
 		panic(err)
 	}
 
-	// Write the response to stdout, to be picked up by protoc
 	fmt.Fprintf(os.Stdout, string(out))
 }

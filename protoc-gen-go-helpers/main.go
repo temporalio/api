@@ -96,7 +96,7 @@ func main() {
 
 	for _, file := range plugin.Files {
 		// Skip protos that aren't ours
-		if !file.Generate || !strings.Contains(string(file.GoImportPath), "go.temporal.io") {
+		if !file.Generate || !strings.Contains(string(file.GoImportPath), "go.temporal.io") || len(file.Proto.MessageType) == 0 {
 			continue
 		}
 

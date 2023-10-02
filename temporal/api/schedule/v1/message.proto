@@ -158,6 +158,9 @@ message IntervalSpec {
 // On input, calendar and cron_string fields will be compiled into
 // structured_calendar (and maybe interval and timezone_name), so if you
 // Describe a schedule, you'll see only structured_calendar, interval, etc.
+//
+// If a spec has no matching times after the current time, then the schedule
+// will be subject to automatic deletion (after several days).
 message ScheduleSpec {
     // Calendar-based specifications of times.
     repeated StructuredCalendarSpec structured_calendar = 7;
@@ -235,7 +238,7 @@ message SchedulePolicies {
     // If the Temporal server misses an action due to one or more components
     // being down, and comes back up, the action will be run if the scheduled
     // time is within this window from the current time.
-    // This value defaults to 60 seconds, and can't be less than 10 seconds.
+    // This value defaults to one year, and can't be less than 10 seconds.
     google.protobuf.Duration catchup_window = 2 [(gogoproto.stdduration) = true];
 
     // If true, and a workflow run fails or times out, turn on "paused".
@@ -280,20 +283,27 @@ message ScheduleState {
     // is zero. Actions may still be taken by explicit request (i.e. trigger
     // immediately or backfill). Skipped actions (due to overlap policy) do not
     // count against remaining actions.
+    // If a schedule has no more remaining actions, then the schedule will be
+    // subject to automatic deletion (after several days).
     bool limited_actions = 3;
     int64 remaining_actions = 4;
 }
 
 message TriggerImmediatelyRequest {
-    // Override overlap policy for this one request.
+    // If set, override overlap policy for this one request.
     temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = 1;
 }
 
 message BackfillRequest {
-    // Time range to evaluate schedule in.
+    // Time range to evaluate schedule in. Currently, this time range is
+    // exclusive on start_time and inclusive on end_time. (This is admittedly
+    // counterintuitive and it may change in the future, so to be safe, use a
+    // start time strictly before a scheduled time.) Also note that an action
+    // nominally scheduled in the interval but with jitter that pushes it after
+    // end_time will not be included.
     google.protobuf.Timestamp start_time = 1 [(gogoproto.stdtime) = true];
     google.protobuf.Timestamp end_time = 2 [(gogoproto.stdtime) = true];
-    // Override overlap policy for this request.
+    // If set, override overlap policy for this request.
     temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = 3;
 }
 

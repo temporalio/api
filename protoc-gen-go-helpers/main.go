@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"text/template"
@@ -89,13 +90,15 @@ func main() {
 	// marshalled with Protobuf
 	input, _ := io.ReadAll(os.Stdin)
 	var req pluginpb.CodeGeneratorRequest
-	proto.Unmarshal(input, &req)
+	if err := proto.Unmarshal(input, &req); err != nil {
+		log.Fatalf("failed to unmarshal input: %s", err)
+	}
 
 	// Initialise our plugin with default options
 	opts := protogen.Options{}
 	plugin, err := opts.New(&req)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to initialize plugin: %s", err)
 	}
 
 	for _, file := range plugin.Files {
@@ -109,7 +112,7 @@ func main() {
 
 		for _, msg := range file.Proto.MessageType {
 			if err := t.Execute(&buf, tmplInput{Type: *msg.Name}); err != nil {
-				panic(err)
+				log.Fatalf("failed to execute template on type %s: %s", *msg.Name, err)
 			}
 		}
 
@@ -120,7 +123,7 @@ func main() {
 	stdout := plugin.Response()
 	out, err := proto.Marshal(stdout)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to marshal response: %s", err)
 	}
 
 	fmt.Fprintf(os.Stdout, string(out))

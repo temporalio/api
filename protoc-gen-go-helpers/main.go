@@ -54,6 +54,10 @@ func (val *{{.Type}}) Unmarshal(buf []byte) error {
     return proto.Unmarshal(buf, val)
 }
 
+func (val *{{.Type}}) Size() int {
+    return proto.Size(val)
+}
+
 // Equal returns whether two {{.Type}} values are equivalent by recursively
 // comparing the message's fields.
 // For more information see the documentation for

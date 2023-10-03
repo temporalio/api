@@ -30,7 +30,7 @@ $(PROTO_OUT):
 ##### Compile proto files for go #####
 grpc: buf-lint api-linter buf-breaking go-grpc fix-path
 
-go-grpc: $(PROTO_OUT)
+go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
 	buf generate -o $(PROTO_OUT)
 

@@ -25,15 +25,10 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io"
-	"log"
-	"os"
 	"strings"
 	"text/template"
 
 	"google.golang.org/protobuf/compiler/protogen"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 type tmplInput struct {
@@ -81,63 +76,35 @@ func (this *{{.Type}}) Equal(that interface{}) bool {
     return proto.Equal(this, that1)
 }`
 
-var t = template.Must(template.New("helpers").Parse(helperTmpl))
-
-func generate(file *protogen.File) ([]byte, error) {
-	var buf bytes.Buffer
-	buf.Write([]byte(fmt.Sprintf(header, file.GoPackageName)))
-
-	for _, msg := range file.Proto.MessageType {
-		if err := t.Execute(&buf, tmplInput{Type: *msg.Name}); err != nil {
-			return nil, fmt.Errorf("failed to execute template on type %s: %s", *msg.Name, err)
-		}
-	}
-
-	return buf.Bytes(), nil
-}
-
 // NOTE: If our implementation of Equal is too slow (its reflection-based) it doesn't look too
 // hard to generate unrolled versions...
 func main() {
-	// Protoc passes pluginpb.CodeGeneratorRequest in via stdin
-	// marshalled with Protobuf
-	input, err := io.ReadAll(os.Stdin)
-	if err != nil {
-		log.Fatalf("Failed to read input: %s", err)
-	}
-	var req pluginpb.CodeGeneratorRequest
-	if err := proto.Unmarshal(input, &req); err != nil {
-		log.Fatalf("failed to unmarshal input: %s", err)
-	}
-
-	// Initialise our plugin with default options
 	opts := protogen.Options{}
-	plugin, err := opts.New(&req)
-	if err != nil {
-		log.Fatalf("failed to initialize plugin: %s", err)
-	}
-
-	for _, file := range plugin.Files {
-		// Skip protos that aren't ours
-		if !file.Generate || !strings.Contains(string(file.GoImportPath), "go.temporal.io") || len(file.Proto.MessageType) == 0 {
-			continue
-		}
-
-		bs, err := generate(file)
+	opts.Run(func(plugin *protogen.Plugin) error {
+		t, err := template.New("helpers").Parse(helperTmpl)
 		if err != nil {
-			plugin.Error(err)
-			break
+			return err
 		}
 
-		gf := plugin.NewGeneratedFile(fmt.Sprintf("%s.go-helpers.go", file.GeneratedFilenamePrefix), ".")
-		gf.Write(bs)
-	}
+		for _, file := range plugin.Files {
+			// Skip protos that aren't ours
+			if !file.Generate || !strings.Contains(string(file.GoImportPath), "go.temporal.io") || len(file.Proto.MessageType) == 0 {
+				continue
+			}
 
-	stdout := plugin.Response()
-	out, err := proto.Marshal(stdout)
-	if err != nil {
-		log.Fatalf("failed to marshal response: %s", err)
-	}
+			var buf bytes.Buffer
+			buf.Write([]byte(fmt.Sprintf(header, file.GoPackageName)))
 
-	fmt.Fprintf(os.Stdout, string(out))
+			for _, msg := range file.Proto.MessageType {
+				if err := t.Execute(&buf, tmplInput{Type: *msg.Name}); err != nil {
+					return fmt.Errorf("failed to execute template on type %s: %s", *msg.Name, err)
+				}
+			}
+
+			gf := plugin.NewGeneratedFile(fmt.Sprintf("%s.go-helpers.go", file.GeneratedFilenamePrefix), ".")
+			gf.Write(buf.Bytes())
+		}
+
+		return nil
+	})
 }

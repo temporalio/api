@@ -81,14 +81,30 @@ func (this *{{.Type}}) Equal(that interface{}) bool {
     return proto.Equal(this, that1)
 }`
 
+var t = template.Must(template.New("helpers").Parse(helperTmpl))
+
+func generate(file *protogen.File) ([]byte, error) {
+	var buf bytes.Buffer
+	buf.Write([]byte(fmt.Sprintf(header, file.GoPackageName)))
+
+	for _, msg := range file.Proto.MessageType {
+		if err := t.Execute(&buf, tmplInput{Type: *msg.Name}); err != nil {
+			return nil, fmt.Errorf("failed to execute template on type %s: %s", *msg.Name, err)
+		}
+	}
+
+	return buf.Bytes(), nil
+}
+
 // NOTE: If our implementation of Equal is too slow (its reflection-based) it doesn't look too
 // hard to generate unrolled versions...
 func main() {
-	t := template.Must(template.New("helpers").Parse(helperTmpl))
-
 	// Protoc passes pluginpb.CodeGeneratorRequest in via stdin
 	// marshalled with Protobuf
-	input, _ := io.ReadAll(os.Stdin)
+	input, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		log.Fatalf("Failed to read input: %s", err)
+	}
 	var req pluginpb.CodeGeneratorRequest
 	if err := proto.Unmarshal(input, &req); err != nil {
 		log.Fatalf("failed to unmarshal input: %s", err)
@@ -107,17 +123,14 @@ func main() {
 			continue
 		}
 
-		var buf bytes.Buffer
-		buf.Write([]byte(fmt.Sprintf(header, file.GoPackageName)))
-
-		for _, msg := range file.Proto.MessageType {
-			if err := t.Execute(&buf, tmplInput{Type: *msg.Name}); err != nil {
-				log.Fatalf("failed to execute template on type %s: %s", *msg.Name, err)
-			}
+		bs, err := generate(file)
+		if err != nil {
+			plugin.Error(err)
+			break
 		}
 
 		gf := plugin.NewGeneratedFile(fmt.Sprintf("%s.go-helpers.go", file.GeneratedFilenamePrefix), ".")
-		gf.Write(buf.Bytes())
+		gf.Write(bs)
 	}
 
 	stdout := plugin.Response()

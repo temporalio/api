@@ -128,7 +128,7 @@ message ClusterMetadata {
 
 // A binding from a base URL to namespace, task queue, and metadata for dispatching incoming Nexus requests.
 message NexusIncomingService {
-    // Data version for this service. Must be "1 + previous version" on update or be 0 on first update.
+    // Data version for this service. Must match current version on update or be 0 on first update.
     int64 version = 1;
     // Base URL to match requests by.
     // This may be just a path if to match any host or a full URL to match an exact host.
@@ -139,6 +139,18 @@ message NexusIncomingService {
     // /prod/my-service/v1
     // prod.my-service.com
     // dev.my-service.com/v1
+    // https://prod.my-service.com
+    //
+    // In case of amigious URL resolution the more specific URL is selected, e.g:
+    // For incoming URL:
+    // https://prod.my-service.com/api/v1/some-operation
+    //
+    // If the following URLs are registered:
+    // - https://prod.my-service.com/api/v1
+    // - https://prod.my-service.com/api
+    // - /api/v1
+    //
+    // The matched URL is: https://prod.my-service.com/api/v1
     string base_url = 2;
     // Namespace to route requests to.
     string namespace = 3;
@@ -162,6 +174,8 @@ message CreateOrUpdateNexusIncomingServiceRequest {
 }
 
 message CreateOrUpdateNexusIncomingServiceResponse {
+    // Data version post acceptance. Can be used to issue additional updates to this record.
+    int64 version = 1;
 }
 
 // (-- api-linter: core::0135::request-unknown-fields=disabled

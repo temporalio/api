@@ -3,7 +3,7 @@ $(VERBOSE).SILENT:
 ci-build: install proto
 
 # Install dependencies.
-install: api-linter-install buf-install
+install: proto-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
 proto: grpc
@@ -20,9 +20,13 @@ PATH := $(GOBIN):$(PATH)
 COLOR := "\e[1;36m%s\e[0m\n"
 
 PROTO_ROOT := .
-PROTO_OUT ?= .gen
 PROTO_FILES = $(shell find temporal -name "*.proto")
-BUF_DEPS := .deps
+PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
+PROTO_OUT := .gen
+PROTO_IMPORTS = \
+	-I=$(PROTO_ROOT) \
+	-I=google
+PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
@@ -30,14 +34,23 @@ $(PROTO_OUT):
 ##### Compile proto files for go #####
 grpc: buf-lint api-linter buf-breaking clean go-grpc fix-path
 
-go-grpc: $(PROTO_OUT)
+go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
-	buf generate -o $(PROTO_OUT)
+	$(foreach PROTO_DIR,$(PROTO_DIRS),\
+		protoc --fatal_warnings $(PROTO_IMPORTS) \
+		 	--go_out=$(PROTO_PATHS) \
+            --grpc-gateway_out=allow_patch_feature=false,$(PROTO_PATHS)\
+		$(PROTO_DIR)*.proto;)
 
 fix-path:
 	mv -f $(PROTO_OUT)/temporal/api/* $(PROTO_OUT) && rm -rf $(PROTO_OUT)/temporal
 
 ##### Plugins & tools #####
+proto-install:
+	@printf $(COLOR) "Install/update protoc and plugins..."
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."
 	go install github.com/googleapis/api-linter/cmd/api-linter@v1.32.3

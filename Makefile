@@ -24,8 +24,7 @@ PROTO_FILES = $(shell find temporal -name "*.proto")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 PROTO_OUT := .gen
 PROTO_IMPORTS = \
-	-I=$(PROTO_ROOT) \
-	-I=google
+	-I=$(PROTO_ROOT)
 PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 
 $(PROTO_OUT):

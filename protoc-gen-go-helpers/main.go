@@ -25,6 +25,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/format"
 	"strings"
 	"text/template"
 
@@ -101,8 +102,13 @@ func main() {
 				}
 			}
 
+			fmtd, err := format.Source(buf.Bytes())
+			if err != nil {
+				return fmt.Errorf("failed to format generated source: %w", err)
+			}
+
 			gf := plugin.NewGeneratedFile(fmt.Sprintf("%s.go-helpers.go", file.GeneratedFilenamePrefix), ".")
-			gf.Write(buf.Bytes())
+			gf.Write(fmtd)
 		}
 
 		return nil

@@ -29,8 +29,33 @@ option java_outer_classname = "MessageProto";
 option ruby_package = "Temporalio::Api::Nexus::V1";
 option csharp_namespace = "Temporalio.Api.Nexus.V1";
 
+import "google/protobuf/struct.proto";
+
 message HeaderValues {
     repeated string elements = 1;
+}
+
+message Payload {
+    map<string, HeaderValues> headers = 1;
+    bytes body = 2;
+}
+
+message Failure {
+    string message = 1;
+    map<string, string> metadata = 2;
+    google.protobuf.Struct details = 3;
+}
+
+message HandlerError {
+    // TODO: valid status codes
+    int32 status_code = 1;
+    Failure failure = 2;
+}
+
+message UnsuccessfulOperationError {
+    // TODO: enum??
+    string operation_state = 1;
+    Failure failure = 2;
 }
 
 // A request to start an operation.
@@ -62,11 +87,32 @@ message Request {
     }
 }
 
+message StartOperationResponseSync {
+    Payload payload = 1;
+}
+
+message StartOperationResponseAsync {
+    string operation_id = 1;
+}
+
+message StartOperationResponseFailure {
+    oneof variant {
+        HandlerError handler_error = 1;
+        UnsuccessfulOperationError operation_error = 2;
+    }
+}
+
+message StartOperationResponse {
+    oneof variant {
+        StartOperationResponseSync sync_success = 1;
+        StartOperationResponseAsync async_success = 2;
+        StartOperationResponseFailure failure = 3;
+    }
+}
+
 message Response {
-    // HTTP status code.
-    int32 status_code = 1;
-    // HTTP response headers.
-    map<string, HeaderValues> headers = 2;
-    // HTTP response body.
-    bytes body = 3;
+    oneof variant {
+        // CancelOperationResponse cancel_operation = 2;
+        StartOperationResponse start_operation = 1;
+    }
 }

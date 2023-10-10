@@ -40,6 +40,7 @@ import "temporal/api/enums/v1/event_type.proto";
 import "temporal/api/enums/v1/failed_cause.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/common/v1/message.proto";
+import "temporal/api/nexus/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
@@ -751,6 +752,82 @@ message WorkflowExecutionUpdateRejectedEventAttributes {
     temporal.api.failure.v1.Failure failure = 5;
 }
 
+message NexusOperationScheduledEventAttributes {
+    string service = 1;
+    string operation = 2;
+    // TODO: nexus payload?
+    temporal.api.common.v1.Payload input = 3;
+    // schedule_to_close
+    // Indicates how long the caller is willing to wait for a operation completion.
+    // Calls may be retired by the server.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration timeout = 4 [(gogoproto.stdduration) = true];
+    map<string, temporal.api.nexus.v1.HeaderValues> headers = 5;
+    // The `WORKFLOW_TASK_COMPLETED` event which this command was reported with
+    // TODO: do we care about this?
+    int64 workflow_task_completed_event_id = 6;
+}
+
+message NexusOperationStartedEventAttributes {
+    // The id of the `NEXUS_OPERATION_SCHEDULED` event this task corresponds to
+    int64 scheduled_event_id = 1;
+    // TODO ??
+    string request_id = 2;
+}
+
+message NexusOperationCompletedEventAttributes {
+    // Serialized results of the nexus. IE: The return value of the nexus function
+    temporal.api.common.v1.Payloads result = 1;
+    // The id of the `NEXUS_OPERATION_SCHEDULED` event this completion corresponds to
+    int64 scheduled_event_id = 2;
+    // The id of the `NEXUS_OPERATION_STARTED` event this completion corresponds to
+    int64 started_event_id = 3;
+    // id of the worker that completed this task
+    string identity = 4;
+}
+
+message NexusOperationFailedEventAttributes {
+    // Failure details
+    temporal.api.failure.v1.Failure failure = 1;
+    // The id of the `NEXUS_OPERATION_SCHEDULED` event this failure corresponds to
+    int64 scheduled_event_id = 2;
+    // The id of the `NEXUS_OPERATION_STARTED` event this failure corresponds to
+    int64 started_event_id = 3;
+}
+
+message NexusOperationTimedOutEventAttributes {
+    // Failure details
+    temporal.api.failure.v1.Failure failure = 1;
+    // The id of the `NEXUS_OPERATION_SCHEDULED` event this failure corresponds to
+    int64 scheduled_event_id = 2;
+    // The id of the `NEXUS_OPERATION_STARTED` event this failure corresponds to
+    int64 started_event_id = 3;
+}
+
+message NexusOperationCancelRequestedEventAttributes {
+    // The id of the `NEXUS_OPERATION_SCHEDULED` event this cancel request corresponds to
+    int64 scheduled_event_id = 1;
+    // The `WORKFLOW_TASK_COMPLETED` event which this command was reported with
+    int64 workflow_task_completed_event_id = 2;
+}
+
+message NexusTaskCanceledEventAttributes {
+    // Additional information that the nexus reported upon confirming cancellation
+    temporal.api.common.v1.Payloads details = 1;
+    // id of the most recent `ACTIVITY_TASK_CANCEL_REQUESTED` event which refers to the same
+    // nexus
+    int64 latest_cancel_requested_event_id = 2;
+    // The id of the `ACTIVITY_TASK_SCHEDULED` event this cancel confirmation corresponds to
+    int64 scheduled_event_id = 3;
+    // The id of the `ACTIVITY_TASK_STARTED` event this cancel confirmation corresponds to
+    int64 started_event_id = 4;
+    // id of the worker who canceled this nexus
+    string identity = 5;
+    // Version info of the worker who processed this workflow task.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 6;
+}
 
 // History events are the method by which Temporal SDKs advance (or recreate) workflow state.
 // See the `EventType` enum for more info about what each event is for.
@@ -816,6 +893,12 @@ message HistoryEvent {
         WorkflowPropertiesModifiedExternallyEventAttributes workflow_properties_modified_externally_event_attributes = 49;
         ActivityPropertiesModifiedExternallyEventAttributes activity_properties_modified_externally_event_attributes = 50;
         WorkflowPropertiesModifiedEventAttributes workflow_properties_modified_event_attributes = 51;
+        NexusOperationScheduledEventAttributes nexus_operation_scheduled_event_attributes = 52;
+        NexusOperationStartedEventAttributes nexus_operation_started_event_attributes = 53;
+        NexusOperationCompletedEventAttributes nexus_operation_completed_event_attributes = 54;
+        NexusOperationFailedEventAttributes nexus_operation_failed_event_attributes = 55;
+        NexusOperationTimedOutEventAttributes nexus_operation_timedout_event_attributes = 56;
+        NexusOperationCancelRequestedEventAttributes nexus_operation_cancel_requested_event_attributes = 57;
     }
 }
 

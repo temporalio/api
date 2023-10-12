@@ -31,6 +31,7 @@ option java_outer_classname = "RequestResponseProto";
 option ruby_package = "Temporalio::Api::OperatorService::V1";
 option csharp_namespace = "Temporalio.Api.OperatorService.V1";
 
+import "google/protobuf/any.proto";
 import "temporal/api/enums/v1/common.proto";
 
 // (-- Search Attribute --)
@@ -71,9 +72,7 @@ message ListSearchAttributesResponse {
 // (-- api-linter: core::0135::request-name-required=disabled
 //     aip.dev/not-precedent: DeleteNamespace RPC doesn't follow Google API format. --)
 message DeleteNamespaceRequest {
-    // Only one of namespace or namespace_id must be specified to identify namespace.
     string namespace = 1;
-    string namespace_id = 2;
 }
 
 message DeleteNamespaceResponse {
@@ -123,4 +122,63 @@ message ClusterMetadata {
     int32 history_shard_count = 5;
     // A flag to indicate if a connection is active.
     bool is_connection_enabled = 6;
+}
+
+// A binding from service name to namespace, task queue, and metadata for dispatching incoming Nexus requests.
+message NexusIncomingService {
+    // Data version for this service. Must match current version on update or be 0 on first update.
+    int64 version = 1;
+    // Name of the service, unique for the cluster.
+    // The name is used to determine the exposed URL.
+    string name = 2;
+    // Namespace to route requests to.
+    string namespace = 3;
+    // Task queue to route requests to.
+    string task_queue = 4;
+    // Generic service metadata that is available to the server's authorizer and rate limiter.
+    map<string, google.protobuf.Any> metadata = 5;
+}
+
+message GetNexusIncomingServiceRequest {
+    // Name of service to retrieve.
+    string name = 1;
+}
+
+message GetNexusIncomingServiceResponse {
+    NexusIncomingService nexus_incoming_service = 1;
+}
+
+message CreateOrUpdateNexusIncomingServiceRequest {
+    NexusIncomingService nexus_incoming_service = 1;
+}
+
+message CreateOrUpdateNexusIncomingServiceResponse {
+    // Data version post acceptance. Can be used to issue additional updates to this record.
+    int64 version = 1;
+}
+
+// (-- api-linter: core::0135::request-unknown-fields=disabled
+//     aip.dev/not-precedent: DeleteNexusIncomingServiceRequest RPC doesn't follow Google API format. --)
+// (-- api-linter: core::0135::request-name-required=disabled
+//     aip.dev/not-precedent: DeleteNexusIncomingServiceRequest RPC doesn't follow Google API format. --)
+message DeleteNexusIncomingServiceRequest {
+    // Name of service to delete.
+    string name = 1;
+}
+
+message DeleteNexusIncomingServiceResponse {
+}
+
+message ListNexusIncomingServicesRequest {
+    int32 page_size = 1;
+    // To get the next page, pass in `ListNexusIncomingServicesResponse.next_page_token` from the previous page's
+    // response, the token will be empty if there's no other page.
+    // Note: the last page may be empty if the total number of services registered is a multiple of the page size.
+    bytes next_page_token = 2;
+}
+
+message ListNexusIncomingServicesResponse {
+    repeated NexusIncomingService services = 1;
+    // Token for getting the next page.
+    bytes next_page_token = 2;
 }

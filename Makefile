@@ -19,6 +19,16 @@ PATH := $(GOBIN):$(PATH)
 
 COLOR := "\e[1;36m%s\e[0m\n"
 
+# Only prints output if the exit code is non-zero
+define silent_exec
+    @output=$$($(1) 2>&1); \
+    status=$$?; \
+    if [ $$status -ne 0 ]; then \
+        echo "$$output"; \
+    fi; \
+    exit $$status
+endef
+
 PROTO_ROOT := .
 PROTO_FILES = $(shell find $(PROTO_ROOT) -name "*.proto")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
@@ -68,7 +78,7 @@ buf-install:
 ##### Linters #####
 api-linter:
 	printf $(COLOR) "Run api-linter..."
-	api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml $(PROTO_FILES)
+	$(call silent_exec, api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml $(PROTO_FILES))
 
 buf-lint:
 	printf $(COLOR) "Run buf linter..."

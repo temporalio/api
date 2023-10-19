@@ -1,4 +1,4 @@
-#$(VERBOSE).SILENT:
+$(VERBOSE).SILENT:
 ############################# Main targets #############################
 ci-build: install proto
 
@@ -50,6 +50,7 @@ gogo-grpc: clean $(PROTO_OUT)
 		protoc --fatal_warnings $(PROTO_IMPORTS) \
 			--gogoslick_out=Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/descriptor.proto=github.com/golang/protobuf/protoc-gen-go/descriptor,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) \
 			--grpc-gateway_out=allow_patch_feature=false,paths=source_relative:$(PROTO_OUT) \
+			--doc_out=html,index.html,source_relative:$(PROTO_OUT) \
 		$(PROTO_DIR)*.proto;)
 
 fix-path:
@@ -93,9 +94,3 @@ buf-breaking:
 clean:
 	printf $(COLOR) "Delete generated go files..."
 	rm -rf $(PROTO_OUT)
-
-##### Documentation #####
-docs: $(PROTO_FILES)
-	protoc --fatal_warnings $(PROTO_IMPORTS) \
-		--doc_out=html,index.html,source_relative:$(PROTO_OUT) \
-		$(PROTO_FILES)

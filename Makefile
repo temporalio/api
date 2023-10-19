@@ -1,4 +1,4 @@
-$(VERBOSE).SILENT:
+#$(VERBOSE).SILENT:
 ############################# Main targets #############################
 ci-build: install proto
 
@@ -30,7 +30,7 @@ define silent_exec
 endef
 
 PROTO_ROOT := .
-PROTO_FILES = $(shell find $(PROTO_ROOT) -name "*.proto")
+PROTO_FILES = $(shell find temporal -name "*.proto")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 PROTO_OUT := .gen
 PROTO_IMPORTS = \
@@ -59,6 +59,7 @@ fix-path:
 grpc-install: gogo-protobuf-install
 	printf $(COLOR) "Install/update gRPC plugins..."
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
 
 gogo-protobuf-install: go-protobuf-install
 	go install -modfile build/go.mod github.com/temporalio/gogo-protobuf/protoc-gen-gogoslick
@@ -92,3 +93,9 @@ buf-breaking:
 clean:
 	printf $(COLOR) "Delete generated go files..."
 	rm -rf $(PROTO_OUT)
+
+##### Documentation #####
+docs: $(PROTO_FILES)
+	protoc --fatal_warnings $(PROTO_IMPORTS) \
+		--doc_out=html,index.html,source_relative:$(PROTO_OUT) \
+		$(PROTO_FILES)

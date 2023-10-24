@@ -19,6 +19,16 @@ PATH := $(GOBIN):$(PATH)
 
 COLOR := "\e[1;36m%s\e[0m\n"
 
+# Only prints output if the exit code is non-zero
+define silent_exec
+    @output=$$($(1) 2>&1); \
+    status=$$?; \
+    if [ $$status -ne 0 ]; then \
+        echo "$$output"; \
+    fi; \
+    exit $$status
+endef
+
 PROTO_ROOT := .
 PROTO_FILES = $(shell find temporal -name "*.proto")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
@@ -39,6 +49,7 @@ go-grpc: clean $(PROTO_OUT)
 		protoc --fatal_warnings $(PROTO_IMPORTS) \
 		 	--go_out=$(PROTO_PATHS) \
             --grpc-gateway_out=allow_patch_feature=false,$(PROTO_PATHS)\
+			--doc_out=html,index.html,source_relative:$(PROTO_OUT) \
 		$(PROTO_DIR)*.proto;)
 
 fix-path:
@@ -50,6 +61,7 @@ grpc-install:
 	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	@go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
+	@go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
 
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."
@@ -62,7 +74,7 @@ buf-install:
 ##### Linters #####
 api-linter:
 	printf $(COLOR) "Run api-linter..."
-	api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml $(PROTO_FILES)
+	$(call silent_exec, api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml $(PROTO_FILES))
 
 buf-lint:
 	printf $(COLOR) "Run buf linter..."

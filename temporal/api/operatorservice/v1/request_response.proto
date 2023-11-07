@@ -31,6 +31,8 @@ option java_outer_classname = "RequestResponseProto";
 option ruby_package = "Temporalio::Api::OperatorService::V1";
 option csharp_namespace = "Temporalio.Api.OperatorService.V1";
 
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "google/protobuf/any.proto";
 import "temporal/api/enums/v1/common.proto";
 
@@ -128,49 +130,44 @@ message ClusterMetadata {
 
 // A binding from a base URL to namespace, task queue, and metadata for dispatching incoming Nexus requests.
 message NexusIncomingService {
+    option (google.api.resource) = {
+        type: "temporal.api.operatorservice.v1/NexusIncomingService"
+        pattern: "nexus/incoming-services/{name}"
+    };
     // Data version for this service. Must match current version on update or be 0 on first update.
     int64 version = 1;
-    // Base URL to match requests by.
-    // This may be just a path if to match any host or a full URL to match an exact host.
-    // The base_url is used as a unique key and can be used to get information about the service.
-    //
-    // Examples:
-    // /dev/my-service
-    // /prod/my-service/v1
-    // prod.my-service.com
-    // dev.my-service.com/v1
-    // https://prod.my-service.com
-    //
-    // In case of amigious URL resolution the more specific URL is selected, e.g:
-    // For incoming URL:
-    // https://prod.my-service.com/api/v1/some-operation
-    //
-    // If the following URLs are registered:
-    // - https://prod.my-service.com/api/v1
-    // - https://prod.my-service.com/api
-    // - /api/v1
-    //
-    // The matched URL is: https://prod.my-service.com/api/v1
-    string base_url = 2;
+    // Service name, unique for this cluster.
+    // The service name is used to address this service.
+    // By default, when using Nexus over HTTP, the service name is matched against the base URL path.
+    // E.g. the URL /my-service would match a service named "my-service".
+    // The name can contain any characters and is escaped when matched against a URL.
+    string name = 2;
     // Namespace to route requests to.
     string namespace = 3;
     // Task queue to route requests to.
     string task_queue = 4;
-    // Generic service metadata that is available to the server's authorizer and rate limiter.
+    // Generic service metadata that is available to the server's authorizer.
     map<string, google.protobuf.Any> metadata = 5;
 }
 
 message GetNexusIncomingServiceRequest {
-    // Base URL of service to retrieve.
-    string base_url = 1;
+    // Name of service to retrieve.
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference).type = "temporal.api.operatorservice.v1/NexusIncomingService"
+    ];
 }
 
 message GetNexusIncomingServiceResponse {
     NexusIncomingService service = 1;
 }
 
+// (-- api-linter: core::0133::request-parent-required=disabled
+//     aip.dev/not-precedent: This resource has no parent. --)
 message CreateOrUpdateNexusIncomingServiceRequest {
-    NexusIncomingService service = 1;
+    NexusIncomingService nexus_incoming_service = 1 [
+        (google.api.field_behavior) = REQUIRED
+    ];
 }
 
 message CreateOrUpdateNexusIncomingServiceResponse {
@@ -183,8 +180,11 @@ message CreateOrUpdateNexusIncomingServiceResponse {
 // (-- api-linter: core::0135::request-name-required=disabled
 //     aip.dev/not-precedent: DeleteNexusIncomingServiceRequest RPC doesn't follow Google API format. --)
 message DeleteNexusIncomingServiceRequest {
-    // Base URL of service to delete.
-    string base_url = 1;
+    // Name of service to delete.
+    string name = 1 [
+        (google.api.field_behavior) = REQUIRED,
+        (google.api.resource_reference).type = "temporal.api.operatorservice.v1/NexusIncomingService"
+    ];
 }
 
 message DeleteNexusIncomingServiceResponse {
@@ -199,7 +199,7 @@ message ListNexusIncomingServicesRequest {
 }
 
 message ListNexusIncomingServicesResponse {
-    repeated NexusIncomingService services = 1;
     // Token for getting the next page.
-    bytes next_page_token = 2;
+    bytes next_page_token = 1;
+    repeated string service_names = 2;
 }

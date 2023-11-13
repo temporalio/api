@@ -29,6 +29,7 @@ option java_outer_classname = "MessageProto";
 option ruby_package = "Temporalio::Api::Nexus::V1";
 option csharp_namespace = "Temporalio.Api.Nexus.V1";
 
+import "google/protobuf/any.proto";
 import "google/protobuf/struct.proto";
 import "temporal/api/common/v1/message.proto";
 
@@ -117,3 +118,22 @@ message Response {
         CancelOperationResponse cancel_operation = 2;
     }
 }
+
+// A binding from a service name to namespace, task queue, and metadata for dispatching incoming Nexus requests.
+message IncomingService {
+    // Data version for this service. Must match current version on update or be 0 on first update.
+    int64 version = 1;
+    // Service name, unique for this cluster.
+    // The service name is used to address this service.
+    // By default, when using Nexus over HTTP, the service name is matched against the base URL path.
+    // E.g. the URL /my-service would match a service named "my-service".
+    // The name can contain any characters and is escaped when matched against a URL.
+    string name = 2;
+    // Namespace to route requests to.
+    string namespace = 3;
+    // Task queue to route requests to.
+    string task_queue = 4;
+    // Generic service metadata that is available to the server's authorizer.
+    map<string, google.protobuf.Any> metadata = 5;
+}
+

@@ -31,10 +31,8 @@ option java_outer_classname = "RequestResponseProto";
 option ruby_package = "Temporalio::Api::OperatorService::V1";
 option csharp_namespace = "Temporalio.Api.OperatorService.V1";
 
-import "google/api/field_behavior.proto";
-import "google/api/resource.proto";
-import "google/protobuf/any.proto";
 import "temporal/api/enums/v1/common.proto";
+import "temporal/api/nexus/v1/message.proto";
 
 // (-- Search Attribute --)
 
@@ -128,63 +126,27 @@ message ClusterMetadata {
     bool is_connection_enabled = 6;
 }
 
-// A binding from a base URL to namespace, task queue, and metadata for dispatching incoming Nexus requests.
-message NexusIncomingService {
-    option (google.api.resource) = {
-        type: "temporal.api.operatorservice.v1/NexusIncomingService"
-        pattern: "nexus/incoming-services/{name}"
-    };
-    // Data version for this service. Must match current version on update or be 0 on first update.
-    int64 version = 1;
-    // Service name, unique for this cluster.
-    // The service name is used to address this service.
-    // By default, when using Nexus over HTTP, the service name is matched against the base URL path.
-    // E.g. the URL /my-service would match a service named "my-service".
-    // The name can contain any characters and is escaped when matched against a URL.
-    string name = 2;
-    // Namespace to route requests to.
-    string namespace = 3;
-    // Task queue to route requests to.
-    string task_queue = 4;
-    // Generic service metadata that is available to the server's authorizer.
-    map<string, google.protobuf.Any> metadata = 5;
-}
-
 message GetNexusIncomingServiceRequest {
     // Name of service to retrieve.
-    string name = 1 [
-        (google.api.field_behavior) = REQUIRED,
-        (google.api.resource_reference).type = "temporal.api.operatorservice.v1/NexusIncomingService"
-    ];
+    string name = 1;
 }
 
 message GetNexusIncomingServiceResponse {
-    NexusIncomingService service = 1;
+    temporal.api.nexus.v1.IncomingService service = 1;
 }
 
-// (-- api-linter: core::0133::request-parent-required=disabled
-//     aip.dev/not-precedent: This resource has no parent. --)
 message CreateOrUpdateNexusIncomingServiceRequest {
-    NexusIncomingService nexus_incoming_service = 1 [
-        (google.api.field_behavior) = REQUIRED
-    ];
+    temporal.api.nexus.v1.IncomingService nexus_incoming_service = 1;
 }
 
 message CreateOrUpdateNexusIncomingServiceResponse {
-    // Data version post acceptance. Can be used to issue additional updates to this record.
-    int64 version = 1;
+    // Data post acceptance. Can be used to issue additional updates to this record.
+    temporal.api.nexus.v1.IncomingService nexus_incoming_service = 1;
 }
 
-// (-- api-linter: core::0135::request-unknown-fields=disabled
-//     aip.dev/not-precedent: DeleteNexusIncomingServiceRequest RPC doesn't follow Google API format. --)
-// (-- api-linter: core::0135::request-name-required=disabled
-//     aip.dev/not-precedent: DeleteNexusIncomingServiceRequest RPC doesn't follow Google API format. --)
 message DeleteNexusIncomingServiceRequest {
     // Name of service to delete.
-    string name = 1 [
-        (google.api.field_behavior) = REQUIRED,
-        (google.api.resource_reference).type = "temporal.api.operatorservice.v1/NexusIncomingService"
-    ];
+    string name = 1;
 }
 
 message DeleteNexusIncomingServiceResponse {
@@ -201,5 +163,5 @@ message ListNexusIncomingServicesRequest {
 message ListNexusIncomingServicesResponse {
     // Token for getting the next page.
     bytes next_page_token = 1;
-    repeated string service_names = 2;
+    repeated temporal.api.nexus.v1.IncomingService services = 2;
 }

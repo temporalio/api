@@ -39,6 +39,7 @@ import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/query.proto";
 import "temporal/api/enums/v1/reset.proto";
 import "temporal/api/enums/v1/task_queue.proto";
+import "temporal/api/enums/v1/update.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
@@ -668,7 +669,7 @@ message ResetWorkflowExecutionRequest {
     int64 workflow_task_finish_event_id = 4;
     // Used to de-dupe reset requests
     string request_id = 5;
-    // Reset reapplay(replay) options.
+    // Reset reapply (replay) options.
     temporal.api.enums.v1.ResetReapplyType reset_reapply_type = 6;
 }
 
@@ -1236,6 +1237,18 @@ message UpdateWorkflowExecutionResponse {
     // has completed. If this response is being returned before the update has
     // completed then this field will not be set.
     temporal.api.update.v1.Outcome outcome = 2;
+
+    // The most advanced lifecycle stage that the Update is known to have
+    // reached, where lifecycle stages are ordered
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_UNSPECIFIED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ADMITTED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED.
+    // UNSPECIFIED will be returned if and only if the server's maximum wait
+    // time was reached before the Update reached the stage specified in the
+    // request WaitPolicy, and before the context deadline expired; clients may
+    // may then retry the call as needed.
+    temporal.api.enums.v1.UpdateWorkflowExecutionLifecycleStage stage = 3;
 }
 
 message StartBatchOperationRequest {
@@ -1339,7 +1352,8 @@ message PollWorkflowExecutionUpdateRequest {
     temporal.api.update.v1.UpdateRef update_ref = 2;
     // The identity of the worker/client who is polling this update outcome
     string identity = 3;
-    // Describes when this poll request should return a response
+    // Describes when this poll request should return a response.
+    // Omit to request a non-blocking poll.
     temporal.api.update.v1.WaitPolicy wait_policy = 4;
 }
 
@@ -1350,4 +1364,15 @@ message PollWorkflowExecutionUpdateResponse {
     // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED) then this field will
     // not be set.
     temporal.api.update.v1.Outcome outcome = 1;
+    // The most advanced lifecycle stage that the Update is known to have
+    // reached, where lifecycle stages are ordered
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_UNSPECIFIED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ADMITTED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED <
+    // UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED.
+    // UNSPECIFIED will be returned if and only if the server's maximum wait
+    // time was reached before the Update reached the stage specified in the
+    // request WaitPolicy, and before the context deadline expired; clients may
+    // may then retry the call as needed.
+    temporal.api.enums.v1.UpdateWorkflowExecutionLifecycleStage stage = 2;
 }

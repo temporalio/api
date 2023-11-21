@@ -16,6 +16,7 @@ endif
 
 GOBIN := $(if $(shell go env GOBIN),$(shell go env GOBIN),$(GOPATH)/bin)
 PATH := $(GOBIN):$(PATH)
+STAMPDIR := .stamp
 
 COLOR := "\e[1;36m%s\e[0m\n"
 
@@ -76,7 +77,15 @@ api-linter:
 	printf $(COLOR) "Run api-linter..."
 	$(call silent_exec, api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml $(PROTO_FILES))
 
-buf-lint:
+$(STAMPDIR):
+	mkdir $@
+
+$(STAMPDIR)/buf-mod-prune: $(STAMPDIR) buf.yaml
+	printf $(COLOR) "Pruning buf module"
+	buf mod prune
+	touch $@
+
+buf-lint: $(STAMPDIR)/buf-mod-prune
 	printf $(COLOR) "Run buf linter..."
 	(cd $(PROTO_ROOT) && buf lint)
 

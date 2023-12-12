@@ -1169,6 +1169,114 @@ message GetWorkerBuildIdCompatibilityResponse {
     repeated temporal.api.taskqueue.v1.CompatibleVersionSet major_version_sets = 1;
 }
 
+message UpdateWorkerVersioningRulesRequest {
+
+    // Inserts the rule to the list of assignment rules for this Task Queue.
+    // The rules are evaluated in order, starting from index 0. The first
+    // applicable rule will be applied and the rest will be ignored.
+    message InsertBuildIdAssignmentRule {
+        // Use this option to insert the rule in a particular index. By
+        // default, the new rule is inserted at the beginning of the list
+        // (index 0). If the given index is too larger the rule will be
+        // inserted at the end of the list.
+        int32 insert_at = 1;
+        temporal.api.taskqueue.v1.BuildIdAssignmentRule rule = 2;
+    }
+
+    // Replaces the assignment rule at a given index.
+    message ReplaceBuildIdAssignmentRule {
+        int32 rule_index = 1;
+        temporal.api.taskqueue.v1.BuildIdAssignmentRule rule = 2;
+
+        // By default presence of one unconditional rule is enforced, otherwise
+        // the replace operation will be rejected. Set `force` to true to
+        // bypass this validation. An unconditional assignment rule:
+        //   - Has no hint filter
+        //   - Has 100% ramp
+        //   - Is not contingent on worker availability
+        bool force = 3;
+    }
+
+    message DeleteBuildIdAssignmentRule {
+        int32 rule_index = 1;
+
+        // By default presence of one unconditional rule is enforced, otherwise
+        // the delete operation will be rejected. Set `force` to true to
+        // bypass this validation. An unconditional assignment rule:
+        //   - Has no hint filter
+        //   - Has 100% ramp
+        //   - Is not contingent on worker availability
+        bool force = 2;
+    }
+
+    // Adds the rule to the list of redirect rules for this Task Queue. There
+    // can be at most one redirect rule from each Build ID.
+    message AddCompatibleBuildIdRedirectRule {
+        temporal.api.taskqueue.v1.CompatibleBuildIdRedirectRule rule = 1;
+    }
+
+    // Replaces the routing rule with the given source Build ID.
+    message ReplaceCompatibleBuildIdRedirectRule {
+        temporal.api.taskqueue.v1.CompatibleBuildIdRedirectRule rule = 1;
+    }
+
+    message DeleteCompatibleBuildIdRedirectRule {
+        string source_build_id = 1;
+    }
+
+    // This command is intended to be used to complete the rollout of a Build
+    // ID and cleanup unnecessary rules possibly created during a gradual
+    // rollout. Specifically, this command will make the following changes
+    // atomically:
+    //  1. Adds an unconditional assignment rule for the target Build ID at the
+    //     end of the list. An unconditional assignment rule:
+    //      - Has no hint filter
+    //      - Has 100% ramp
+    //      - Is not contingent on worker availability
+    //  2. Removes all previously added assignment rules to the given target
+    //     Build ID (if any).
+    //  3. Removes any *unconditional* assignment rule for other Build IDs.
+    //  4. Removes the `contingent_on_worker_availability` flag of any incoming
+    //     redirect rules to this Build ID.
+    message CommitBuildId {
+        string target_build_id = 1;
+
+        // To prevent committing invalid Build IDs, we reject the request if no
+        // pollers has been seen recently for this Build ID. Use the `force`
+        // option to disable this validation.
+        string force = 2;
+    }
+
+    string namespace = 1;
+    string task_queue = 2;
+
+    oneof operation {
+        InsertBuildIdAssignmentRule insert_assignment_rule = 3;
+        ReplaceBuildIdAssignmentRule replace_assignment_rule = 4;
+        DeleteBuildIdAssignmentRule delete_assignment_rule = 5;
+        AddCompatibleBuildIdRedirectRule insert_compatible_redirect_rule = 6;
+        ReplaceCompatibleBuildIdRedirectRule replace_compatible_redirect_rule = 7;
+        DeleteCompatibleBuildIdRedirectRule delete_compatible_redirect_rule = 8;
+        CommitBuildId commit_build_id = 9;
+    }
+}
+message UpdateWorkerVersioningRulesResponse {
+    reserved 1;
+    reserved "rule_index";
+}
+
+message ListWorkerVersioningRulesRequest {
+    string namespace = 1;
+    string task_queue = 2;
+    // Optional. list rules only concerning particular Build IDs.
+    repeated string build_ids = 3;
+}
+message ListWorkerVersioningRulesResponse {
+    repeated temporal.api.taskqueue.v1.BuildIdAssignmentRule assignment_rules = 1;
+    repeated temporal.api.taskqueue.v1.CompatibleBuildIdRedirectRule compatible_redirect_rules = 2;
+}
+
+
 message GetWorkerTaskReachabilityRequest {
     string namespace = 1;
     // Build ids to retrieve reachability for. An empty string will be interpreted as an unversioned worker.
@@ -1378,3 +1486,4 @@ message PollWorkflowExecutionUpdateResponse {
     // Sufficient information to address this update.
     temporal.api.update.v1.UpdateRef update_ref = 3;
 }
+

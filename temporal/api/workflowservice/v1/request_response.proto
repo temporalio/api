@@ -1169,13 +1169,11 @@ message GetWorkerBuildIdCompatibilityResponse {
     repeated temporal.api.taskqueue.v1.CompatibleVersionSet major_version_sets = 1;
 }
 
-
 // (-- api-linter: core::0134::request-mask-required=disabled
 //     aip.dev/not-precedent: UpdateNamespace RPC doesn't follow Google API format. --)
 // (-- api-linter: core::0134::request-resource-required=disabled
 //     aip.dev/not-precedent: GetWorkerBuildIdCompatibilityRequest RPC doesn't follow Google API format. --)
 message UpdateWorkerVersioningRulesRequest {
-
     // Inserts the rule to the list of assignment rules for this Task Queue.
     // The rules are evaluated in order, starting from index 0. The first
     // applicable rule will be applied and the rest will be ignored.
@@ -1215,7 +1213,7 @@ message UpdateWorkerVersioningRulesRequest {
     }
 
     // Adds the rule to the list of redirect rules for this Task Queue. There
-    // can be at most one redirect rule from each Build ID.
+    // can be at most one redirect rule for each distinct Source Build ID.
     message AddCompatibleBuildIdRedirectRule {
         temporal.api.taskqueue.v1.CompatibleBuildIdRedirectRule rule = 1;
     }
@@ -1249,39 +1247,51 @@ message UpdateWorkerVersioningRulesRequest {
         // To prevent committing invalid Build IDs, we reject the request if no
         // pollers has been seen recently for this Build ID. Use the `force`
         // option to disable this validation.
-        string force = 2;
+        bool force = 2;
     }
 
     string namespace = 1;
     string task_queue = 2;
 
+    // This can be the value of conflict_token from the previous
+    // ListWorkerVersioningRulesResponse or UpdateWorkerVersioningRulesResponse
+    // which will cause this request to fail if the rules have been modified
+    // for this Task Queue between the previous and current operation.
+    // If missing, the rules will be updated unconditionally.
+    bytes conflict_token = 3;
+
     oneof operation {
-        InsertBuildIdAssignmentRule insert_assignment_rule = 3;
-        ReplaceBuildIdAssignmentRule replace_assignment_rule = 4;
-        DeleteBuildIdAssignmentRule delete_assignment_rule = 5;
-        AddCompatibleBuildIdRedirectRule insert_compatible_redirect_rule = 6;
-        ReplaceCompatibleBuildIdRedirectRule replace_compatible_redirect_rule = 7;
-        DeleteCompatibleBuildIdRedirectRule delete_compatible_redirect_rule = 8;
-        CommitBuildId commit_build_id = 9;
+        InsertBuildIdAssignmentRule insert_assignment_rule = 4;
+        ReplaceBuildIdAssignmentRule replace_assignment_rule = 5;
+        DeleteBuildIdAssignmentRule delete_assignment_rule = 6;
+        AddCompatibleBuildIdRedirectRule insert_compatible_redirect_rule = 7;
+        ReplaceCompatibleBuildIdRedirectRule replace_compatible_redirect_rule = 8;
+        DeleteCompatibleBuildIdRedirectRule delete_compatible_redirect_rule = 9;
+        CommitBuildId commit_build_id = 10;
     }
 }
+
 message UpdateWorkerVersioningRulesResponse {
-    reserved 1;
-    reserved "rule_index";
+    // This value can be passed back to UpdateWorkerVersioningRulesRequest to
+    // ensure that the rules were not modified between the two updates, which
+    // could lead to lost updates and other confusion.
+    bytes conflict_token = 1;
 }
 
 message ListWorkerVersioningRulesRequest {
     string namespace = 1;
     string task_queue = 2;
-
-    // Use this option to list rules only related to particular Build IDs.
-    repeated string build_ids = 3;
 }
+
 message ListWorkerVersioningRulesResponse {
     repeated temporal.api.taskqueue.v1.BuildIdAssignmentRule assignment_rules = 1;
     repeated temporal.api.taskqueue.v1.CompatibleBuildIdRedirectRule compatible_redirect_rules = 2;
-}
 
+    // This value can be passed back to UpdateWorkerVersioningRulesRequest to
+    // ensure that the rules were not modified between this List and the Update,
+    // which could lead to lost updates and other confusion.
+    bytes conflict_token = 3;
+}
 
 message GetWorkerTaskReachabilityRequest {
     string namespace = 1;

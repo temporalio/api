@@ -112,6 +112,14 @@ message BuildIdReachability {
     repeated TaskQueueReachability task_queue_reachability = 2;
 }
 
+message RampByPercentage {
+    // Acceptable range is [0,100].
+    float ramp_percentage = 1;
+}
+
+message RampByWorkerRatio {
+}
+
 // These rules assign a Build ID to Unassigned Workflow Executions and
 // Activities.
 //
@@ -145,14 +153,15 @@ message BuildIdReachability {
 //      Attribute. This is useful for Canary deployments, for example, when
 //      only the executions with `VersioningHint="canary"` should be sent to
 //      the new Build ID.
-//    - And/or setting a `ramp_percentage` value. This is useful for gradual
-//      shift of the traffic To the new Build ID in Blue/Green deployments and
-//      alike.
-//
-// Additionally, the rule can be contingent upon the availability of target
-// Workers. This is useful for rolling deployments, when the gradual shift of
-// traffic to the new Build ID is driven by the gradual upgrade of the Workers,
-// rather than a `ramp_percentage` value.
+//    - And/or setting a "ramp". This is useful for gradual shift of the
+//      traffic To the new Build ID. An assignment rule can have one of the
+//      following ramps:
+//      - Ramp by percentage: suitable for Blue/Green and similar deployments,
+//        when you want to send a certain percentage of traffic to the new
+//        Build ID.
+//      - Ramp by worker ratio: suitable for rolling deployments, when you want
+//        to shift more traffic to the new Build ID as the workers being
+//        gradually upgraded.
 //
 // When there are multiple assignment rules for a Task Queue, the rules are
 // evaluated in order, starting from index 0. The first applicable rule will be
@@ -170,17 +179,21 @@ message BuildIdAssignmentRule {
     // the Starter or parent Workflow.
     string hint_filter = 2;
 
-    // Among the tasks that match the hint filter, only this percentage of them
-    // to be sent to the target Build ID.
-    // The default ramp value is 100. The valid range is [0-100].
-    float ramp_percentage = 3;
-
-    // This option is intended for rolling deployments. When enabled, we try
-    // immediate dispatch to the target Build ID. If no poller is available, we
-    // skip this rule for the task at hand.
+    // If a ramp is provided, the tasks that match the hint filter will be
+    // subject to the given ramp.
     // This option can be used only on "terminal" Build IDs (the ones not used
     // as source in any redirect rules).
-    bool contingent_on_worker_availability = 4;
+    oneof ramp {
+        // This ramp is useful for gradual Blue/Green deployments (and similar)
+        // where you want to send a certain portion of the traffic to the target
+        // Build ID.
+        RampByPercentage percentage_ramp = 3;
+        // This option is intended for rolling deployments. The ramp percentage
+        // is automatically set as the ratio of the target Build ID's active
+        // workers over all active workers for any Build ID used in the
+        // assignment rules.
+        RampByWorkerRatio worker_ratio_ramp = 4;
+    }
 }
 
 // These rules apply to tasks assigned to a particular Build ID
@@ -196,8 +209,8 @@ message BuildIdAssignmentRule {
 //    newer one.
 //  - Need to hotfix some broken or stuck Workflow Executions.
 //
-// Similar to the assignment rules, redirect rules can be contingent upon the
-// availability of target Workers, which is useful for rolling deployments.
+// Similar to assignment rule, redirect rules support ramp by worker ratio.
+// They do not currently support ramp by percentage.
 //
 // In steady state, redirect rules are beneficial when dealing with old
 // Executions ran on now-decommissioned Build IDs:
@@ -206,15 +219,16 @@ message BuildIdAssignmentRule {
 //    (compatible) Build ID.
 //
 // Redirect rules can be chained, but only the last rule in the chain can have
-// the `contingent_on_worker_availability` options enabled.
+// a ramp.
 message CompatibleBuildIdRedirectRule {
     string source_build_id = 1;
     string target_build_id = 2;
 
-    // This option is intended for rolling deployments. When enabled, we try
-    // immediate dispatch to the target Build ID. If it has no available
-    // pollers, we fallback to the source Build ID.
-    // This option can be used only on "terminal" Build IDs (the ones not used
-    // as source in any redirect rules).
-    bool contingent_on_worker_availability = 3;
+    // Only the last redirect rule in a chain can have a ramp.
+    oneof ramp {
+        // This option is intended for rolling deployments. When this field is
+        // provided, we redirect a fraction of tasks proportional to the ratio
+        // of the target Build ID's active workers over the .
+        RampByWorkerRatio worker_ratio_ramp = 3;
+    }
 }

@@ -59,6 +59,9 @@ enum Severity {
 // stateDiagram-v2
 //    Standby --> Ready
 //    Ready --> Scheduled
+//    Standby --> Blocked
+//    Ready --> Blocked
+//    Blocked --> Scheduled
 //    Scheduled --> Failed
 //    Scheduled --> Succeeded
 //    Failed --> BackingOff
@@ -68,18 +71,19 @@ enum CallbackState {
     CALLBACK_STATE_UNSPECIFIED = 0;
     // Callback is standing by, waiting to be triggered.
     CALLBACK_STATE_STANDBY = 1;
-    // Callback was triggered and is ready to be dispatched.
-    // Callbacks transition directly from STANDBY to SCHEDULED unless:
-    // 1. The callback is waiting for a previous callback to be dispatched.
-    // 2. The callback queue for this (source namespace, destination) is full in a given history shard.
-    // When the queue is full, callbacks can be rescheduled by an operator (TODO: mention which API when implemented).
+    // Callback was triggered and is ready and is waiting for a previous callback to be dispatched.
+    // This may happen if i.e. an Update callback completes before a Run callback for the same destination to ensure
+    // delivery order.
     CALLBACK_STATE_READY = 2;
-    // Callback is in the queue pending execution.
-    CALLBACK_STATE_SCHEDULED = 3;
+    // Callback cannot be scheduled because the queue for this source namespace and destination is full in a given history shard.
+    // Callbacks can be unblocked by an operator (TODO: mention which API when implemented).
+    CALLBACK_STATE_BLOCKED = 3;
+    // Callback is in the queue waiting to be executed or is currently executing.
+    CALLBACK_STATE_SCHEDULED = 4;
     // Callback has failed with a retryable error and is backing off before the next attempt.
-    CALLBACK_STATE_BACKING_OFF = 4;
+    CALLBACK_STATE_BACKING_OFF = 5;
     // Callback has failed.
-    CALLBACK_STATE_FAILED = 5;
+    CALLBACK_STATE_FAILED = 6;
     // Callback has succeeded.
-    CALLBACK_STATE_SUCCEEDED = 6;
+    CALLBACK_STATE_SUCCEEDED = 7;
 }

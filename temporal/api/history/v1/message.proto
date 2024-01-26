@@ -103,7 +103,10 @@ message WorkflowExecutionStartedEventAttributes {
     string workflow_id = 28;
     // If this workflow intends to use anything other than the current overall default version for
     // the queue, then we include it here.
+    // Deprecated. use `inherited_assigned_build_id` instead
     temporal.api.common.v1.WorkerVersionStamp source_version_stamp = 29;
+    // When present, it means this execution is assigned to the build ID if its parent/previous execution.
+    string inherited_assigned_build_id = 30;
 }
 
 message WorkflowExecutionCompletedEventAttributes {
@@ -189,6 +192,8 @@ message WorkflowTaskStartedEventAttributes {
     // continue-as-new regardless of the suggestion. Note that history event count is
     // just the event id of this event, so we don't include it explicitly here.
     int64 history_size_bytes = 5;
+    // Version info of the worker to whom task is dispatched.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 6;
 }
 
 message WorkflowTaskCompletedEventAttributes {
@@ -203,6 +208,7 @@ message WorkflowTaskCompletedEventAttributes {
     // Version info of the worker who processed this workflow task. If present, the `build_id` field
     // within is also used as `binary_checksum`, which may be omitted in that case (it may also be
     // populated to preserve compatibility).
+    // Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     temporal.api.common.v1.WorkerVersionStamp worker_version = 5;
     // Data the SDK wishes to record for itself, but server need not interpret, and does not
     // directly impact workflow state.
@@ -242,6 +248,7 @@ message WorkflowTaskFailedEventAttributes {
     // Version info of the worker who processed this workflow task. If present, the `build_id` field
     // within is also used as `binary_checksum`, which may be omitted in that case (it may also be
     // populated to preserve compatibility).
+    // Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     temporal.api.common.v1.WorkerVersionStamp worker_version = 10;
 }
 
@@ -301,6 +308,8 @@ message ActivityTaskStartedEventAttributes {
     // Will be set to the most recent failure details, if this task has previously failed and then
     // been retried.
     temporal.api.failure.v1.Failure last_failure = 5;
+    // Version info of the worker to whom task is dispatched.
+    temporal.api.common.v1.WorkerVersionStamp worker_version = 6;
 }
 
 message ActivityTaskCompletedEventAttributes {
@@ -313,6 +322,7 @@ message ActivityTaskCompletedEventAttributes {
     // id of the worker that completed this task
     string identity = 4;
     // Version info of the worker who processed this workflow task.
+    // Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     temporal.api.common.v1.WorkerVersionStamp worker_version = 5;
 }
 
@@ -327,6 +337,7 @@ message ActivityTaskFailedEventAttributes {
     string identity = 4;
     temporal.api.enums.v1.RetryState retry_state = 5;
     // Version info of the worker who processed this workflow task.
+    // Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     temporal.api.common.v1.WorkerVersionStamp worker_version = 6;
 }
 
@@ -361,6 +372,7 @@ message ActivityTaskCanceledEventAttributes {
     // id of the worker who canceled this activity
     string identity = 5;
     // Version info of the worker who processed this workflow task.
+    // Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     temporal.api.common.v1.WorkerVersionStamp worker_version = 6;
 }
 

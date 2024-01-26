@@ -32,6 +32,7 @@ option ruby_package = "Temporalio::Api::Workflow::V1";
 option csharp_namespace = "Temporalio.Api.Workflow.V1";
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 import "temporal/api/enums/v1/workflow.proto";
@@ -57,6 +58,13 @@ message WorkflowExecutionInfo {
     int64 history_size_bytes = 15;
     // If set, the most recent worker version stamp that appeared in a workflow task completion
     temporal.api.common.v1.WorkerVersionStamp most_recent_worker_version_stamp = 16;
+    // The currently assigned build ID for this execution. Presence of this value means worker versioning is used
+    // for this execution. Assigned build ID is selected based on Worker Versioning Assignment Rules
+    // when the first workflow task of the execution is scheduled. If the first workflow task fails and is scheduled
+    // again, the assigned build ID may change according to the latest versioning rules.
+    // Assigned build ID can also change in the middle of a execution if Compatible Redirect Rules are applied to
+    // this execution.
+    string assigned_build_id = 17;
 }
 
 message WorkflowExecutionConfig {
@@ -79,6 +87,16 @@ message PendingActivityInfo {
     google.protobuf.Timestamp expiration_time = 10;
     temporal.api.failure.v1.Failure last_failure = 11;
     string last_worker_identity = 12;
+    oneof assigned_build_id {
+        // When true, it means this activity is assigned to the build ID of its workflow.
+        google.protobuf.Empty use_workflow_build_id = 13;
+        // This means the activity is independently versioned and not bound to the build ID of its workflow.
+        // If the task fails and is scheduled again, the assigned build ID may change according to the latest versioning
+        // rules.
+        string last_independently_assigned_build_id = 14;
+    }
+    // The version stamp of the worker to whom this activity was most-recently dispatched
+    temporal.api.common.v1.WorkerVersionStamp last_worker_version_stamp = 15;
 }
 
 message PendingChildExecutionInfo {

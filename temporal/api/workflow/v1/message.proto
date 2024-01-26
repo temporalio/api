@@ -87,8 +87,11 @@ message PendingActivityInfo {
     google.protobuf.Timestamp expiration_time = 10;
     temporal.api.failure.v1.Failure last_failure = 11;
     string last_worker_identity = 12;
+    // Absence of `assigned_build_id` generally means this task is on an "unversioned" task queue.
+    // In rare cases, it can also mean that the task queue is versioned but we failed to write activity's
+    // independently-assigned build ID to the database. This case heals automatically once the task is dispatched.
     oneof assigned_build_id {
-        // When true, it means this activity is assigned to the build ID of its workflow.
+        // When present, it means this activity is assigned to the build ID of its workflow.
         google.protobuf.Empty use_workflow_build_id = 13;
         // This means the activity is independently versioned and not bound to the build ID of its workflow.
         // If the task fails and is scheduled again, the assigned build ID may change according to the latest versioning

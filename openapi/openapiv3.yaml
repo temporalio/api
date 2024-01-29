@@ -2912,6 +2912,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CallbackInfo'
+        pendingNexusOperations:
+          type: array
+          items:
+            $ref: '#/components/schemas/NexusOperationInfo'
     ExecuteMultiOperationRequest:
       type: object
       properties:
@@ -3275,6 +3279,13 @@ components:
             - EVENT_TYPE_ACTIVITY_PROPERTIES_MODIFIED_EXTERNALLY
             - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED
             - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ADMITTED
+            - EVENT_TYPE_NEXUS_OPERATION_SCHEDULED
+            - EVENT_TYPE_NEXUS_OPERATION_STARTED
+            - EVENT_TYPE_NEXUS_OPERATION_COMPLETED
+            - EVENT_TYPE_NEXUS_OPERATION_FAILED
+            - EVENT_TYPE_NEXUS_OPERATION_CANCELED
+            - EVENT_TYPE_NEXUS_OPERATION_TIMEDOUT
+            - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
           type: string
           format: enum
         version:
@@ -3384,6 +3395,20 @@ components:
           $ref: '#/components/schemas/WorkflowPropertiesModifiedEventAttributes'
         workflowExecutionUpdateAdmittedEventAttributes:
           $ref: '#/components/schemas/WorkflowExecutionUpdateAdmittedEventAttributes'
+        nexusOperationScheduledEventAttributes:
+          $ref: '#/components/schemas/NexusOperationScheduledEventAttributes'
+        nexusOperationStartedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationStartedEventAttributes'
+        nexusOperationCompletedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCompletedEventAttributes'
+        nexusOperationFailedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationFailedEventAttributes'
+        nexusOperationCanceldEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCanceledEventAttributes'
+        nexusOperationTimedoutEventAttributes:
+          $ref: '#/components/schemas/NexusOperationTimedOutEventAttributes'
+        nexusOperationCancelRequestedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCancelRequestedEventAttributes'
       description: |-
         History events are the method by which Temporal SDKs advance (or recreate) workflow state.
          See the `EventType` enum for more info about what each event is for.
@@ -3743,6 +3768,168 @@ components:
       description: |-
         NewWorkflowExecutionInfo is a shared message that encapsulates all the
          required arguments to starting a workflow in different contexts.
+    NexusOperationCancelRequestedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The id of the `NEXUS_OPERATION_SCHEDULED` event this cancel request corresponds to.
+        workflowTaskCompletedEventId:
+          type: string
+          description: |-
+            The `WORKFLOW_TASK_COMPLETED` event that the corresponding RequestCancelNexusOperation command was reported
+             with.
+    NexusOperationCanceledEventAttributes:
+      type: object
+      properties:
+        details:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: Additional information that the nexus reported upon confirming cancelation.
+        cancelRequestedEventId:
+          type: string
+          description: ID of the `NEXUS_OPERATION_CANCEL_REQUESTED` event, if any.
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        startedEventId:
+          type: string
+          description: |-
+            The ID of the `NEXUS_OPERATION_STARTED` event this completion corresponds to (if completed asynchronously).
+             TODO: this may end up not being needed.
+      description: Nexus operation completed as canceled. May or may not have been due to a cancelation request by the workflow.
+    NexusOperationCompletedEventAttributes:
+      type: object
+      properties:
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Serialized result of the Nexus operation. The response of the Nexus handler.
+             Delivered either via a completion callback or as a response to a synchronous operation.
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        startedEventId:
+          type: string
+          description: |-
+            The ID of the `NEXUS_OPERATION_STARTED` event this completion corresponds to (if completed asynchronously).
+             TODO: this may end up not being needed.
+      description: Nexus operation completed successfully.
+    NexusOperationFailedEventAttributes:
+      type: object
+      properties:
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Failure details.
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        startedEventId:
+          type: string
+          description: |-
+            The id of the `NEXUS_OPERATION_STARTED` event this failure corresponds to (if completed asynchronously).
+             TODO: this may end up not being needed.
+      description: Nexus operation failed.
+    NexusOperationInfo:
+      type: object
+      properties:
+        service:
+          type: string
+        operation:
+          type: string
+        scheduledTime:
+          type: string
+          description: The time when the operation was scheduled.
+          format: date-time
+        state:
+          enum:
+            - NEXUS_OPERATION_STATE_UNSPECIFIED
+            - NEXUS_OPERATION_STATE_SCHEDULED
+            - NEXUS_OPERATION_STATE_BACKING_OFF
+            - NEXUS_OPERATION_STATE_SUCCEEDED
+            - NEXUS_OPERATION_STATE_FAILED
+            - NEXUS_OPERATION_STATE_CANCELED
+            - NEXUS_OPERATION_STATE_TIMEDOUT
+            - NEXUS_OPERATION_STATE_CANCEL_REQUESTED
+          type: string
+          format: enum
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to deliver the start operation request.
+             This number represents a minimum bound since the attempt is incremented after the request completes.
+          format: int32
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled.
+          format: date-time
+    NexusOperationScheduledEventAttributes:
+      type: object
+      properties:
+        service:
+          type: string
+          description: Service name, resolved to a URL and a call config via the namespace's outgoing service registry.
+        operation:
+          type: string
+          description: Operation name.
+        input:
+          $ref: '#/components/schemas/Payload'
+        timeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this operation.
+             Indicates how long the caller is willing to wait for operation completion.
+             Calls are retried internally by the server.
+        workflowTaskCompletedEventId:
+          type: string
+          description: The `WORKFLOW_TASK_COMPLETED` event that the corresponding ScheduleNexusOperation command was reported with.
+        requestId:
+          type: string
+          description: |-
+            A unique ID generated by the history service upon creation of this event.
+             The ID will be transmitted with all nexus StartOperation requests and is used as an idempotentency key.
+      description: Event marking that an operation was scheduled by a workflow via the ScheduleNexusOperation command.
+    NexusOperationStartedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event this task corresponds to.
+        operationId:
+          type: string
+          description: |-
+            The operation ID returned by the Nexus handler in the response to the StartOperation request.
+             This ID is used when canceling the operation.
+      description: |-
+        Event marking an asynchronous operation was started by the responding Nexus handler.
+         If the operation completes synchronously, this event is not generated.
+    NexusOperationTimedOutEventAttributes:
+      type: object
+      properties:
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Failure details.
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        startedEventId:
+          type: string
+          description: |-
+            The ID of the `NEXUS_OPERATION_STARTED` event this completion corresponds to (if completed asynchronously).
+             TODO: this may end up not being needed.
+      description: Nexus operation timed out.
     Outcome:
       type: object
       properties:

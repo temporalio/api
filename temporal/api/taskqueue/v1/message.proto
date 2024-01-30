@@ -111,3 +111,124 @@ message BuildIdReachability {
     // Reachability per task queue.
     repeated TaskQueueReachability task_queue_reachability = 2;
 }
+
+message RampByPercentage {
+    // Acceptable range is [0,100].
+    float ramp_percentage = 1;
+}
+
+message RampByWorkerRatio {
+}
+
+// These rules assign a Build ID to Unassigned Workflow Executions and
+// Activities.
+//
+// Specifically, assignment rules are applied to the following Executions or
+// Activities when they are scheduled in a Task Queue:
+//    - Generally, any new Workflow Execution, except:
+//      - Child Workflows started without overriding their Task Queue or
+//        assignment status.
+//      - Continue-As-New Executions started without overriding assignment
+//        status.
+//      - Workflow Executions started Eagerly.
+//    - An Activity that is scheduled on a Task Queue different from the one
+//      their Workflow runs on, without overriding assignment status.
+//
+// In absence of (applicable) redirect rules (`CompatibleBuildIdRedirectRule`s)
+// the task will be dispatched to Workers of the Build ID determined by the
+// assignment rules. Otherwise, the final Build ID will be determined by the
+// redirect rules.
+//
+// When using Worker Versioning, in the steady state, for a given Task Queue,
+// there should typically be exactly one assignment rule to send all Unassigned
+// tasks to the latest Build ID. Existence of at least one such "unconditional"
+// rule at all times is enforce by the system, unless the `force` flag is used
+// by the user when replacing/deleting these rules (for exceptional cases).
+//
+// During a deployment, one or more additional rules can be added to assign a
+// subset of the tasks to a new Build ID.
+//
+// The subset is defined by:
+//    - Filtering based on a particular value of the `VersioningHint` Search
+//      Attribute. This is useful for Canary deployments, for example, when
+//      only the executions with `VersioningHint="canary"` should be sent to
+//      the new Build ID.
+//    - And/or setting a "ramp". This is useful for gradual shift of the
+//      traffic To the new Build ID. An assignment rule can have one of the
+//      following ramps:
+//      - Ramp by percentage: suitable for Blue/Green and similar deployments,
+//        when you want to send a certain percentage of traffic to the new
+//        Build ID.
+//      - Ramp by worker ratio: suitable for rolling deployments, when you want
+//        to shift more traffic to the new Build ID as the workers being
+//        gradually upgraded.
+//
+// When there are multiple assignment rules for a Task Queue, the rules are
+// evaluated in order, starting from index 0. The first applicable rule will be
+// applied and the rest will be ignored.
+//
+// In the event that no assignment rule is applicable on a task (or the Task
+// Queue is simply not versioned), the tasks will be sent to unversioned
+// workers, if available. Otherwise, they remain Unassigned, and will be
+// retried for assignment, or dispatch to unversioned workers, at a later time
+// depending on the availability of workers.
+message BuildIdAssignmentRule {
+    string target_build_id = 1;
+
+    // Filter executions based on the "VersioningHint" Search Attribute set by
+    // the Starter or parent Workflow.
+    string hint_filter = 2;
+
+    // If a ramp is provided, the tasks that match the hint filter will be
+    // subject to the given ramp.
+    // This option can be used only on "terminal" Build IDs (the ones not used
+    // as source in any redirect rules).
+    oneof ramp {
+        // This ramp is useful for gradual Blue/Green deployments (and similar)
+        // where you want to send a certain portion of the traffic to the target
+        // Build ID.
+        RampByPercentage percentage_ramp = 3;
+        // This option is intended for rolling deployments. The ramp percentage
+        // is automatically set as the ratio of the target Build ID's active
+        // workers over all active workers for any Build ID used in the
+        // assignment rules.
+        RampByWorkerRatio worker_ratio_ramp = 4;
+    }
+}
+
+// These rules apply to tasks assigned to a particular Build ID
+// (`source_build_id`) to redirect them to another *compatible* Build ID
+// (`target_build_id`).
+//
+// It is user's responsibility to ensure that the target Build ID is compatible
+// with the source Build ID (e.g. by using the Patching API).
+//
+// Most deployments are not expected to need these rules, however following
+// situations can greatly benefit from redirects:
+//  - Need to move long-running Workflow Executions from an old Build ID to a
+//    newer one.
+//  - Need to hotfix some broken or stuck Workflow Executions.
+//
+// Similar to assignment rule, redirect rules support ramp by worker ratio.
+// They do not currently support ramp by percentage.
+//
+// In steady state, redirect rules are beneficial when dealing with old
+// Executions ran on now-decommissioned Build IDs:
+//  - To redirecting the Workflow Queries to the current (compatible) Build ID.
+//  - To be able to Reset an old Execution so it can run on the current
+//    (compatible) Build ID.
+//
+// Redirect rules can be chained, but only the last rule in the chain can have
+// a ramp.
+message CompatibleBuildIdRedirectRule {
+    string source_build_id = 1;
+    string target_build_id = 2;
+
+    // Only the last redirect rule in a chain can have a ramp.
+    oneof ramp {
+        // This option is intended for rolling deployments. When this field is
+        // provided, we redirect a fraction of tasks proportional to the ratio
+        // of the target Build ID's active workers over the .
+        RampByWorkerRatio worker_ratio_ramp = 3;
+    }
+}

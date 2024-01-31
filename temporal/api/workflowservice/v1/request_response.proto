@@ -56,6 +56,7 @@ import "temporal/api/update/v1/message.proto";
 import "temporal/api/version/v1/message.proto";
 import "temporal/api/batch/v1/message.proto";
 import "temporal/api/sdk/v1/task_complete_metadata.proto";
+import "temporal/api/nexus/v1/message.proto";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
@@ -183,6 +184,11 @@ message StartWorkflowExecutionRequest {
     // If the workflow gets a signal before the delay, a workflow task will be dispatched and the rest
     // of the delay will be ignored.
     google.protobuf.Duration workflow_start_delay = 20;
+
+    // Callbacks to be called by the server when this workflow reaches a terminal state.
+    // If the workflow continues-as-new, these callbacks will be carried over to the new execution.
+    // Callback addresses must be whitelisted in the server's dynamic configuration.
+    repeated temporal.api.common.v1.Callback completion_callbacks = 21;
 }
 
 message StartWorkflowExecutionResponse {
@@ -854,6 +860,7 @@ message DescribeWorkflowExecutionResponse {
     repeated temporal.api.workflow.v1.PendingActivityInfo pending_activities = 3;
     repeated temporal.api.workflow.v1.PendingChildExecutionInfo pending_children = 4;
     temporal.api.workflow.v1.PendingWorkflowTaskInfo pending_workflow_task = 5;
+    repeated temporal.api.workflow.v1.CallbackInfo callbacks = 6;
 }
 
 message DescribeTaskQueueRequest {
@@ -1380,4 +1387,47 @@ message PollWorkflowExecutionUpdateResponse {
     temporal.api.enums.v1.UpdateWorkflowExecutionLifecycleStage stage = 2;
     // Sufficient information to address this update.
     temporal.api.update.v1.UpdateRef update_ref = 3;
+}
+
+message PollNexusTaskQueueRequest {
+    string namespace = 1;
+    // The identity of the client who initiated this request.
+    string identity = 2;
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 3;
+    // Information about this worker's build identifier and if it is choosing to use the versioning
+    // feature. See the `WorkerVersionCapabilities` docstring for more.
+    temporal.api.common.v1.WorkerVersionCapabilities worker_version_capabilities = 4;
+}
+
+message PollNexusTaskQueueResponse {
+    // An opaque unique identifier for this task for correlating a completion request the embedded request.
+    bytes task_token = 1;
+    // Embedded request as translated from the incoming frontend request.
+    temporal.api.nexus.v1.Request request = 2;
+}
+
+message RespondNexusTaskCompletedRequest {
+    string namespace = 1;
+    // The identity of the client who initiated this request.
+    string identity = 2;
+    // A unique identifier for this task as received via a poll response.
+    bytes task_token = 3;
+    // Embedded response to be translated into a frontend response.
+    temporal.api.nexus.v1.Response response = 4;
+}
+
+message RespondNexusTaskCompletedResponse {
+}
+
+message RespondNexusTaskFailedRequest {
+    string namespace = 1;
+    // The identity of the client who initiated this request.
+    string identity = 2;
+    // A unique identifier for this task.
+    bytes task_token = 3;
+    // The error the handler failed with.
+    temporal.api.nexus.v1.HandlerError error = 4;
+}
+
+message RespondNexusTaskFailedResponse {
 }

@@ -46,23 +46,49 @@ grpc: buf-lint api-linter buf-breaking clean go-grpc fix-path
 
 go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
-	$(foreach PROTO_DIR,$(PROTO_DIRS),\
-		protoc --fatal_warnings $(PROTO_IMPORTS) \
-		 	--go_out=$(PROTO_PATHS) \
-            --grpc-gateway_out=allow_patch_feature=false,$(PROTO_PATHS)\
-			--doc_out=html,index.html,source_relative:$(PROTO_OUT) \
-		$(PROTO_DIR)*.proto;)
+	protogen \
+		--root=$(PROTO_ROOT) \
+		--output=$(PROTO_OUT) \
+		--exclude=internal \
+		--exclude=proto/api/google \
+		-I $(PROTO_ROOT) \
+		-p go-grpc_out=$(PROTO_PATHS) \
+		-p grpc-gateway_out=allow_patch_feature=false,$(PROTO_PATHS) \
+		-p doc_out=html,index.html,source_relative:$(PROTO_OUT) \
+		-p openapi_out=openapi \
+		-p openapi_opt=enum_type=string \
+		-p openapiv2_out=openapi \
+        -p openapiv2_opt=allow_merge=true,merge_file_name=openapiv2
 
 fix-path:
 	mv -f $(PROTO_OUT)/temporal/api/* $(PROTO_OUT) && rm -rf $(PROTO_OUT)/temporal
 
+OAPI3_PATH := .components.schemas.Payload
+# We need to rewrite bits of this to support our shorthand payload format
+# We use both yq and jq here as they preserve comments and the ordering of the original
+# document
+http-api-docs: go-grpc
+	jq --rawfile desc openapi/payload_description.txt < openapi/openapiv2.swagger.json '.definitions.v1Payload={description: $$desc}' > openapi/v2.tmp
+	mv -f openapi/v2.tmp openapi/openapiv2.swagger.json
+	DESC=$$(cat openapi/payload_description.txt) yq e -i '$(OAPIV3_PATH).description = strenv(DESC) | del($(OAPI3_PATH).type) | del($(OAPI3_PATH).properties)' openapi/openapi.yaml
+	go run cmd/encode-openapi-spec/main.go \
+		-v2=openapi/openapiv2.swagger.json \
+		-v2-out=openapi/swagger.go \
+		-v3=openapi/openapi.yaml \
+		-v3-out=openapi/openapiv3.go
+	rm -f openapi/openapiv2.swagger.json openapi/openapi.yaml
+
 ##### Plugins & tools #####
 grpc-install:
 	@printf $(COLOR) "Install/update protoc and plugins..."
+	@go install go.temporal.io/api/cmd/protogen@latest
 	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	@go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
 	@go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
+	@go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+	@go install github.com/google/gnostic/cmd/protoc-gen-openapi@latest
+	@go install github.com/mikefarah/yq/v4@latest
 
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."

@@ -7,6 +7,9 @@
   "tags": [
     {
       "name": "WorkflowService"
+    },
+    {
+      "name": "OperatorService"
     }
   ],
   "consumes": [
@@ -1025,6 +1028,37 @@
         ],
         "tags": [
           "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/search-attributes": {
+      "get": {
+        "summary": "ListSearchAttributes returns comprehensive information about search attributes.",
+        "operationId": "ListSearchAttributes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSearchAttributesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OperatorService"
         ]
       }
     },
@@ -3126,6 +3160,12 @@
       },
       "title": "Represents the identifier used by a activity author to define the activity. Typically, the\nname of a function. This is sometimes referred to as the activity's \"name\""
     },
+    "v1AddOrUpdateRemoteClusterResponse": {
+      "type": "object"
+    },
+    "v1AddSearchAttributesResponse": {
+      "type": "object"
+    },
     "v1Alert": {
       "type": "object",
       "properties": {
@@ -3709,6 +3749,37 @@
         }
       }
     },
+    "v1ClusterMetadata": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string",
+          "description": "Name of the cluster name."
+        },
+        "clusterId": {
+          "type": "string",
+          "description": "Id of the cluster."
+        },
+        "address": {
+          "type": "string",
+          "description": "Cluster accessible address."
+        },
+        "initialFailoverVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "A unique failover version across all connected clusters."
+        },
+        "historyShardCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "History service shard number."
+        },
+        "isConnectionEnabled": {
+          "type": "boolean",
+          "description": "A flag to indicate if a connection is active."
+        }
+      }
+    },
     "v1ClusterReplicationConfig": {
       "type": "object",
       "properties": {
@@ -3902,6 +3973,15 @@
         }
       }
     },
+    "v1CreateOrUpdateNexusIncomingServiceResponse": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "$ref": "#/definitions/v1IncomingService",
+          "description": "Data post acceptance. Can be used to issue additional updates to this record."
+        }
+      }
+    },
     "v1CreateScheduleResponse": {
       "type": "object",
       "properties": {
@@ -3922,6 +4002,18 @@
           "format": "byte"
         }
       }
+    },
+    "v1DeleteNamespaceResponse": {
+      "type": "object",
+      "properties": {
+        "deletedNamespace": {
+          "type": "string",
+          "description": "Temporary namespace name that is used during reclaim resources step."
+        }
+      }
+    },
+    "v1DeleteNexusIncomingServiceResponse": {
+      "type": "object"
     },
     "v1DeleteScheduleResponse": {
       "type": "object"
@@ -4253,6 +4345,14 @@
         }
       },
       "description": "GetClusterInfoResponse contains information about Temporal cluster."
+    },
+    "v1GetNexusIncomingServiceResponse": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "$ref": "#/definitions/v1IncomingService"
+        }
+      }
     },
     "v1GetSearchAttributesResponse": {
       "type": "object",
@@ -4605,6 +4705,36 @@
       ],
       "default": "HISTORY_EVENT_FILTER_TYPE_UNSPECIFIED"
     },
+    "v1IncomingService": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Data version for this service. Must match current version on update or set to 0 to create a new service."
+        },
+        "name": {
+          "type": "string",
+          "description": "Service name, unique for this cluster.\nThe service name is used to address this service.\nBy default, when using Nexus over HTTP, the service name is matched against the base URL path.\nE.g. the URL /my-service would match a service named \"my-service\".\nThe name can contain any characters and is escaped when matched against a URL."
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Namespace to route requests to."
+        },
+        "taskQueue": {
+          "type": "string",
+          "description": "Task queue to route requests to."
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/protobufAny"
+          },
+          "description": "Generic service metadata that is available to the server's authorizer."
+        }
+      },
+      "description": "A binding from a service name to namespace, task queue, and metadata for dispatching incoming Nexus requests."
+    },
     "v1IndexedValueType": {
       "type": "string",
       "enum": [
@@ -4697,6 +4827,23 @@
         }
       }
     },
+    "v1ListClustersResponse": {
+      "type": "object",
+      "properties": {
+        "clusters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ClusterMetadata"
+          },
+          "title": "List of all cluster information"
+        },
+        "nextPageToken": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
     "v1ListNamespacesResponse": {
       "type": "object",
       "properties": {
@@ -4710,6 +4857,23 @@
         "nextPageToken": {
           "type": "string",
           "format": "byte"
+        }
+      }
+    },
+    "v1ListNexusIncomingServicesResponse": {
+      "type": "object",
+      "properties": {
+        "nextPageToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Token for getting the next page."
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IncomingService"
+          }
         }
       }
     },
@@ -4754,6 +4918,32 @@
         "nextPageToken": {
           "type": "string",
           "format": "byte"
+        }
+      }
+    },
+    "v1ListSearchAttributesResponse": {
+      "type": "object",
+      "properties": {
+        "customAttributes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1IndexedValueType"
+          },
+          "description": "Mapping between custom (user-registered) search attribute name to its IndexedValueType."
+        },
+        "systemAttributes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1IndexedValueType"
+          },
+          "description": "Mapping between system (predefined) search attribute name to its IndexedValueType."
+        },
+        "storageSchema": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Mapping from the attribute name to the visibility storage native type."
         }
       }
     },
@@ -5606,6 +5796,12 @@
         }
       },
       "description": "ReleaseInfo contains information about specific version of temporal."
+    },
+    "v1RemoveRemoteClusterResponse": {
+      "type": "object"
+    },
+    "v1RemoveSearchAttributesResponse": {
+      "type": "object"
     },
     "v1ReplicationState": {
       "type": "string",

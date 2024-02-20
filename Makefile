@@ -65,7 +65,6 @@ fix-path:
 # We need to rewrite bits of this to support our shorthand payload format
 # We use both yq and jq here as they preserve comments and the ordering of the original
 # document
-
 http-api-docs:
 	protoc -I $(PROTO_ROOT) \
 		--openapi_out=$(OAPI_OUT) \
@@ -79,8 +78,8 @@ http-api-docs:
 	mv -f $(OAPI_OUT)/v2.tmp $(OAPI_OUT)/openapiv2.json
 	rm -f $(OAPI_OUT)/openapiv2.swagger.json
 	DESC=$$(cat $(OAPI_OUT)/payload_description.txt) yq e -i '$(OAPIV3_PATH).description = strenv(DESC) | del($(OAPI3_PATH).type) | del($(OAPI3_PATH).properties)' $(OAPI_OUT)/openapi.yaml
-# TODO: remove operationId prefixes from yaml
-	mv $(OAPI_OUT)/openapi.yaml $(OAPI_OUT)/openapiv3.yaml
+	yq e -i '(.paths[] | .[] | .operationId) |= sub("\w+_(.*)", "$$1")' $(OAPI_OUT)/openapi.yaml
+	mv -f $(OAPI_OUT)/openapi.yaml $(OAPI_OUT)/openapiv3.yaml
 
 ##### Plugins & tools #####
 grpc-install:

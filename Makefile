@@ -61,7 +61,7 @@ go-grpc: clean $(PROTO_OUT)
 		-p openapi_out=$(OAPI_OUT) \
 		-p openapi_opt=enum_type=string \
 		-p openapiv2_out=openapi \
-        -p openapiv2_opt=allow_merge=true,merge_file_name=openapiv2
+        -p openapiv2_opt=allow_merge=true,merge_file_name=openapiv2,simple_operation_ids=true
 
 fix-path:
 	mv -f $(PROTO_OUT)/temporal/api/* $(PROTO_OUT) && rm -rf $(PROTO_OUT)/temporal

@@ -825,9 +825,61 @@ message HistoryEvent {
         ActivityPropertiesModifiedExternallyEventAttributes activity_properties_modified_externally_event_attributes = 50;
         WorkflowPropertiesModifiedEventAttributes workflow_properties_modified_event_attributes = 51;
         WorkflowExecutionUpdateRequestedEventAttributes workflow_execution_update_requested_event_attributes = 52;
+
+        temporal.api.common.v1.DataBlob body = 100;
     }
 }
 
 message History {
     repeated HistoryEvent events = 1;
+}
+
+message TopActivityEvent {
+    int64 event_id = 1;
+    google.protobuf.Timestamp event_time = 2;
+    oneof attributes {
+        TopActivityCreatedEventAttributes top_activity_created_event_attributes = 3;
+        TopActivityScheduledEventAttributes top_activity_scheduled_event_attributes = 4;
+        TopActivityStartedEventAttributes top_activity_started_event_attributes = 5;
+        TopActivityCompletedEventAttributes top_activity_completed_event_attributes = 6;
+        TopActivityFailedEventAttributes top_activity_failed_event_attributes = 7;
+        TopActivityTimedOutEventAttributes top_activity_timedout_event_attributes = 8;
+    }
+}
+
+message TopActivityCreatedEventAttributes {
+    temporal.api.common.v1.ActivityType activity_type = 1;
+    string task_queue = 2;
+    temporal.api.common.v1.Payloads input = 3;
+    string request_id = 4;
+    string asm_id = 5;
+    string run_id = 6;
+
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 7;
+
+    string identity = 8;
+}
+
+message TopActivityScheduledEventAttributes {
+    int64 attempt = 1;
+}
+
+message TopActivityStartedEventAttributes {
+    string identity = 1;
+}
+
+message TopActivityCompletedEventAttributes {
+    temporal.api.common.v1.Payloads result = 1;
+    string identity = 2;
+}
+
+message TopActivityFailedEventAttributes {
+    temporal.api.failure.v1.Failure failure = 1;
+    string identity = 2;
+}
+
+message TopActivityTimedOutEventAttributes {
+    temporal.api.enums.v1.TimeoutType timeout_type = 1;
 }

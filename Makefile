@@ -57,11 +57,7 @@ go-grpc: clean $(PROTO_OUT)
 		-I $(PROTO_ROOT) \
 		-p go-grpc_out=$(PROTO_PATHS) \
 		-p grpc-gateway_out=allow_patch_feature=false,$(PROTO_PATHS) \
-		-p doc_out=html,index.html,source_relative:$(PROTO_OUT) \
-		-p openapi_out=$(OAPI_OUT) \
-		-p openapi_opt=enum_type=string \
-		-p openapiv2_out=openapi \
-        -p openapiv2_opt=allow_merge=true,merge_file_name=openapiv2
+		-p doc_out=html,index.html,source_relative:$(PROTO_OUT)
 
 fix-path:
 	mv -f $(PROTO_OUT)/temporal/api/* $(PROTO_OUT) && rm -rf $(PROTO_OUT)/temporal
@@ -69,12 +65,21 @@ fix-path:
 # We need to rewrite bits of this to support our shorthand payload format
 # We use both yq and jq here as they preserve comments and the ordering of the original
 # document
-http-api-docs: go-grpc
+http-api-docs:
+	protoc -I $(PROTO_ROOT) \
+		--openapi_out=$(OAPI_OUT) \
+		--openapi_opt=enum_type=string \
+		--openapiv2_out=openapi \
+        --openapiv2_opt=allow_merge=true,merge_file_name=openapiv2,simple_operation_ids=true \
+		temporal/api/workflowservice/v1/* \
+		temporal/api/operatorservice/v1/*
+
 	jq --rawfile desc $(OAPI_OUT)/payload_description.txt < $(OAPI_OUT)/openapiv2.swagger.json '.definitions.v1Payload={description: $$desc}' > $(OAPI_OUT)/v2.tmp
 	mv -f $(OAPI_OUT)/v2.tmp $(OAPI_OUT)/openapiv2.json
 	rm -f $(OAPI_OUT)/openapiv2.swagger.json
 	DESC=$$(cat $(OAPI_OUT)/payload_description.txt) yq e -i '$(OAPIV3_PATH).description = strenv(DESC) | del($(OAPI3_PATH).type) | del($(OAPI3_PATH).properties)' $(OAPI_OUT)/openapi.yaml
-	mv $(OAPI_OUT)/openapi.yaml $(OAPI_OUT)/openapiv3.yaml
+	yq e -i '(.paths[] | .[] | .operationId) |= sub("\w+_(.*)", "$$1")' $(OAPI_OUT)/openapi.yaml
+	mv -f $(OAPI_OUT)/openapi.yaml $(OAPI_OUT)/openapiv3.yaml
 
 ##### Plugins & tools #####
 grpc-install:

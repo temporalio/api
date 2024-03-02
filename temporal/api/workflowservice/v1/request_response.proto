@@ -856,7 +856,7 @@ message DescribeWorkflowExecutionResponse {
     temporal.api.workflow.v1.PendingWorkflowTaskInfo pending_workflow_task = 5;
 }
 
-message DescribeTaskQueueRequest {
+message DescribeInternalTaskQueueRequest {
     string namespace = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
     // If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
@@ -864,9 +864,50 @@ message DescribeTaskQueueRequest {
     bool include_task_queue_status = 4;
 }
 
-message DescribeTaskQueueResponse {
+message DescribeInternalTaskQueueResponse {
+    // Deprecated. Use `DescribeTaskQueueRequest.queues_status.pollers`.
     repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1;
-    temporal.api.taskqueue.v1.TaskQueueStatus task_queue_status = 2;
+    temporal.api.taskqueue.v1.InternalQueueStatus task_queue_status = 2;
+}
+
+// (-- api-linter: core::0203::optional=disabled
+//     aip.dev/not-precedent: field_behavior annotation not available in our gogo fork --)
+message DescribeTaskQueueRequest {
+    string namespace = 1;
+    string task_queue = 5;
+    // Optional. If not provided, the result for the default Build ID will be returned. Default Build ID is the one
+    // mentioned in the first unconditional Assignment Rule. If there is no default Build ID, the result for the
+    // unversioned queue will be returned.
+    // Special values:
+    //  - Use "_unversioned_" to explicitly ask for the unversioned queue
+    //  - Use "_with_worker_" to ask for Build IDs (including unversioned) with active workers. This is particularly
+    //    useful for poller info to list all active pollers regardless of Build ID.
+    repeated string build_ids = 7;
+    repeated temporal.api.enums.v1.TaskQueueReport requested_reports = 8;
+
+    // The following fields are related to `DescribeInternalTaskQueue`, kept here for compatibility until
+    // the old clients reach EOF. Presence of `internal_task_queue` triggers the old behavior.
+    //
+    // Deprecated. use `DescribeInternalTaskQueue`.
+    temporal.api.taskqueue.v1.TaskQueue internal_task_queue = 2;
+    // If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
+    // Deprecated. use `DescribeInternalTaskQueue`.
+    temporal.api.enums.v1.TaskQueueType task_queue_type = 3;
+    // Deprecated. use `DescribeInternalTaskQueue`.
+    bool include_internal_task_queue_status = 4;
+}
+
+message DescribeTaskQueueResponse {
+    repeated temporal.api.taskqueue.v1.QueueStatus queues_status = 3;
+
+    // The following fields are related to `DescribeInternalTaskQueue`, kept here for compatibility until
+    // the old clients reach EOF. These fields will have value only if the request passed value for
+    // `internal_task_queue` (old clients).
+    //
+    // Deprecated. use `queues_status.pollers`.
+    repeated temporal.api.taskqueue.v1.PollerInfo all_pollers = 1;
+    // Deprecated. use `DescribeInternalTaskQueue`.
+    temporal.api.taskqueue.v1.InternalQueueStatus internal_queue_status = 2;
 }
 
 message GetClusterInfoRequest {
@@ -1289,6 +1330,7 @@ message ListWorkerVersioningRulesResponse {
     bytes conflict_token = 3;
 }
 
+// Deprecated. Use `DescribeTaskQueue`.
 message GetWorkerTaskReachabilityRequest {
     string namespace = 1;
     // Build ids to retrieve reachability for. An empty string will be interpreted as an unversioned worker.
@@ -1313,6 +1355,7 @@ message GetWorkerTaskReachabilityRequest {
     temporal.api.enums.v1.TaskReachability reachability = 4;
 }
 
+// Deprecated. Use `DescribeTaskQueue`.
 message GetWorkerTaskReachabilityResponse {
     // Task reachability, broken down by build id and then task queue.
     // When requesting a large number of task queues or all task queues associated with the given build ids in a

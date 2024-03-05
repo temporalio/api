@@ -54,24 +54,34 @@ message TaskQueueMetadata {
     google.protobuf.DoubleValue max_tasks_per_second = 1;
 }
 
-message QueueStatus {
-    // "_unversioned_" represents the unversioned queue
+message TaskQueueVersionInfo {
+    // Empty means unversioned
     string build_id = 1;
-    repeated PollerInfo pollers = 2;
-    temporal.api.enums.v1.WorkflowReachability workflow_reachability = 3;
-    BacklogInfo workflow_backlog_info = 4;
-    BacklogInfo activity_backlog_info = 5;
+    repeated TaskQueueTypeInfo task_queue_types_info = 3;
+    temporal.api.enums.v1.WorkflowReachability workflow_reachability = 4;
 }
 
+message TaskQueueTypeInfo {
+    temporal.api.enums.v1.TaskQueueType task_queue_type = 1;
+    repeated PollerInfo pollers = 2;
+    BacklogInfo backlog_info = 3;
+}
+
+// For workflow task queues, we only report the normal queue metrics, not sticky queues. This means the stats
+// reported here do not count all workflow tasks. However, because the tasks queued in sticky queues only remain
+// valid for a few seconds, the inaccuracy becomes less significant as the backlog age grows.
 message BacklogInfo {
+    // The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually converges
+    // to the right value.
     int64 approximate_backlog_count = 1;
+    // Based on the timestamp of the task at the head of the queue.
     google.protobuf.Duration approximate_backlog_age = 2;
-    // approximate tasks per second added and dispatched based on recent activity
+    // Approximate tasks per second added and dispatched based on recent activity
     float tasks_add_rate = 3;
     float tasks_dispatch_rate = 4;
 }
 
-message InternalQueueStatus {
+message InternalTaskQueueStatus {
     int64 backlog_count_hint = 1;
     int64 read_level = 2;
     int64 ack_level = 3;

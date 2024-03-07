@@ -856,6 +856,19 @@ message DescribeWorkflowExecutionResponse {
     temporal.api.workflow.v1.PendingWorkflowTaskInfo pending_workflow_task = 5;
 }
 
+message DescribeTaskQueuePartitionRequest {
+    string namespace = 1;
+    temporal.api.taskqueue.v1.TaskQueuePartition task_queue_partition = 2;
+    // Absent means unversioned queue.
+    string build_id = 3;
+}
+
+message DescribeTaskQueuePartitionResponse {
+    temporal.api.taskqueue.v1.InternalTaskQueueStatus status = 1;
+    repeated temporal.api.taskqueue.v1.PollerInfo pollers = 2;
+    temporal.api.taskqueue.v1.BacklogInfo backlog_info = 3;
+}
+
 // (-- api-linter: core::0203::optional=disabled
 //     aip.dev/not-precedent: field_behavior annotation not available in our gogo fork --)
 message DescribeTaskQueueRequest {
@@ -865,34 +878,35 @@ message DescribeTaskQueueRequest {
     // If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
     temporal.api.enums.v1.TaskQueueType task_queue_type = 3;
     // Ignored when `enhanced_mode` is set.
-    bool include_internal_task_queue_status = 4;
+    // Deprecated. Use `DescribeTaskQueuePartition`.
+    bool include_task_queue_status = 4;
 
-    // This enables enhanced behavior. All options except `task_queue_type` and `include_internal_task_queue_status`
+    // This enables enhanced behavior. All options except `task_queue_type` and `include_task_queue_status`
     // are only available when `enhanced_mode` is set.
-    bool enhanced_mode = 6;
+    bool enhanced_mode = 5;
 
     // Optional. If not provided, the result for the default Build ID will be returned. The default Build ID is the one
     // mentioned in the first unconditional Assignment Rule. If there is no default Build ID, the result for the
     // unversioned queue will be returned.
     // (-- api-linter: core::0140::prepositions --)
     oneof versions {
-        BuildIdList build_ids = 7;
+        BuildIdList build_ids = 6;
         // Explicitly ask for the unversioned queue.
-        bool unversioned = 8;
+        bool unversioned = 7;
         // Ask for Build IDs (including unversioned) with active workers. This is particularly useful to list
         // all active pollers regardless of Build ID.
         // (-- api-linter: core::0140::prepositions=disabled --)
-        bool with_workers = 9;
+        bool with_workers = 8;
     }
 
     // Task queue types to report info about. If not specified, all types are considered.
-    repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 10;
+    repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 9;
     // Report backlog info for the requested task queue types and versions
-    bool report_backlog_info = 11;
+    bool report_backlog_info = 10;
     // Report list of pollers for requested task queue types and versions
-    bool report_pollers = 12;
+    bool report_pollers = 11;
     // Report workflow reachability for the requested versions
-    bool report_workflow_reachability = 13;
+    bool report_workflow_reachability = 12;
 
     message BuildIdList {
         repeated string build_ids = 1;
@@ -900,11 +914,12 @@ message DescribeTaskQueueRequest {
 }
 
 message DescribeTaskQueueResponse {
-    // Deprecated. Use `versions_info.task_queue_types_info.pollers` with `enhanced_mode` instead.
+    // Deprecated. Use `versions_info.types_info.pollers` with `enhanced_mode` instead.
     // Not set in `enhanced_mode`.
     repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1;
+    // Deprecated. Use `DescribeTaskQueuePartition`.
     // Not set in `enhanced_mode`.
-    temporal.api.taskqueue.v1.InternalTaskQueueStatus internal_queue_status = 2;
+    temporal.api.taskqueue.v1.TaskQueueStatus queue_status = 2;
 
     // Only set in `enhanced_mode`.
     repeated temporal.api.taskqueue.v1.TaskQueueVersionInfo versions_info = 3;

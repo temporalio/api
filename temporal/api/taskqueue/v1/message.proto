@@ -48,6 +48,18 @@ message TaskQueue {
     string normal_name = 3;
 }
 
+// Represents a normal or sticky partition of a task queue.
+message TaskQueuePartition {
+    // Normal task queue name.
+    string task_queue_name = 1;
+    temporal.api.enums.v1.TaskQueueType task_queue_type = 2;
+    // Absent means normal root partition (normal_partition_id=0)
+    oneof partition_id {
+        int32 normal_partition_id = 3;
+        int32 sticky_name = 4;
+    }
+}
+
 // Only applies to activity task queues
 message TaskQueueMetadata {
     // Allows throttling dispatch of tasks from this queue
@@ -57,12 +69,12 @@ message TaskQueueMetadata {
 message TaskQueueVersionInfo {
     // Empty means unversioned
     string build_id = 1;
-    repeated TaskQueueTypeInfo task_queue_types_info = 3;
+    repeated TaskQueueTypeInfo types_info = 3;
     temporal.api.enums.v1.WorkflowReachability workflow_reachability = 4;
 }
 
 message TaskQueueTypeInfo {
-    temporal.api.enums.v1.TaskQueueType task_queue_type = 1;
+    temporal.api.enums.v1.TaskQueueType type = 1;
     repeated PollerInfo pollers = 2;
     BacklogInfo backlog_info = 3;
 }
@@ -83,6 +95,15 @@ message BacklogInfo {
 }
 
 message InternalTaskQueueStatus {
+    int64 backlog_count_hint = 1;
+    int64 read_level = 2;
+    int64 ack_level = 3;
+    double rate_per_second = 4;
+    TaskIdBlock task_id_block = 5;
+}
+
+// Deprecated. Use `InternalTaskQueueStatus`. This is kept until `DescribeTaskQueue` supports legacy behavior.
+message TaskQueueStatus {
     int64 backlog_count_hint = 1;
     int64 read_level = 2;
     int64 ack_level = 3;

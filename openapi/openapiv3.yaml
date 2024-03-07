@@ -2115,6 +2115,81 @@ components:
       description: |-
         BatchOperationSignal sends signals to batch workflows.
          Keep the parameter in sync with temporal.api.workflowservice.v1.SignalWorkflowExecutionRequest.
+    BatchOperationSignalStartWorkflow:
+      type: object
+      properties:
+        workflowId:
+          type: string
+        workflowType:
+          $ref: '#/components/schemas/WorkflowType'
+        taskQueue:
+          allOf:
+            - $ref: '#/components/schemas/TaskQueue'
+          description: The task queue to start this workflow on, if it will be started.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: Serialized arguments to the workflow. These are passed as arguments to the workflow function.
+        workflowExecutionTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Total workflow execution timeout including retries and continue as new.
+        workflowRunTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Timeout of a single workflow run.
+        workflowTaskTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Timeout of a single workflow task.
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        requestId:
+          type: string
+          description: Used to de-dupe signal w/ start requests.
+        workflowIdReusePolicy:
+          enum:
+            - WORKFLOW_ID_REUSE_POLICY_UNSPECIFIED
+            - WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE
+            - WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY
+            - WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
+            - WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING
+          type: string
+          format: enum
+        signalName:
+          type: string
+          description: The workflow author-defined name of the signal to send to the workflow.
+        signalInput:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: Serialized value(s) to provide with the signal.
+        retryPolicy:
+          allOf:
+            - $ref: '#/components/schemas/RetryPolicy'
+          description: 'Retry policy for the workflow Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.'
+        cronSchedule:
+          type: string
+          description: See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/.
+        memo:
+          $ref: '#/components/schemas/Memo'
+        searchAttributes:
+          $ref: '#/components/schemas/SearchAttributes'
+        header:
+          $ref: '#/components/schemas/Header'
+        workflowStartDelay:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
+             Note that the signal will be delivered with the first workflow task. If the workflow gets
+             another SignalWithStartWorkflow before the delay and `skip_generate_workflow_task` is false
+             or not set, a workflow task will be dispatched immediately and the rest of the delay period
+             will be ignored, even if that request also had a delay. Signal via SignalWorkflowExecution
+             will not unblock the workflow.
+        skipGenerateWorkflowTask:
+          type: boolean
+          description: Indicates that a new workflow task should not be generated when this signal is received.
     BatchOperationTermination:
       type: object
       properties:
@@ -4825,6 +4900,8 @@ components:
           $ref: '#/components/schemas/BatchOperationTermination'
         signalOperation:
           $ref: '#/components/schemas/BatchOperationSignal'
+        signalStartWorkflowOperation:
+          $ref: '#/components/schemas/BatchOperationSignalStartWorkflow'
         cancellationOperation:
           $ref: '#/components/schemas/BatchOperationCancellation'
         deletionOperation:

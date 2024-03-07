@@ -36,6 +36,10 @@ import "google/protobuf/timestamp.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/enums/v1/batch_operation.proto";
 import "temporal/api/enums/v1/reset.proto";
+import "temporal/api/enums/v1/workflow.proto";
+import "temporal/api/taskqueue/v1/message.proto";
+
+import "google/protobuf/duration.proto";
 
 message BatchOperationInfo {
   // Batch job ID
@@ -70,6 +74,48 @@ message BatchOperationSignal {
   temporal.api.common.v1.Header header = 3;
   // The identity of the worker/client
   string identity = 4;
+}
+
+// BatchOperationSignalStartWorkflow sends signals to workflows even if they aren't yet started.
+// Keep the parameter in sync with temporal.api.workflowservice.v1.SignalWithStartWorkflowExecutionRequest.
+message BatchOperationSignalStartWorkflow {
+    string workflow_id = 1;
+    temporal.api.common.v1.WorkflowType workflow_type = 2;
+    // The task queue to start this workflow on, if it will be started
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 3;
+    // Serialized arguments to the workflow. These are passed as arguments to the workflow function.
+    temporal.api.common.v1.Payloads input = 4;
+    // Total workflow execution timeout including retries and continue as new
+    google.protobuf.Duration workflow_execution_timeout = 5;
+    // Timeout of a single workflow run
+    google.protobuf.Duration workflow_run_timeout = 6;
+    // Timeout of a single workflow task
+    google.protobuf.Duration workflow_task_timeout = 7;
+    // The identity of the worker/client
+    string identity = 8;
+    // Used to de-dupe signal w/ start requests
+    string request_id = 9;
+    temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 10;
+    // The workflow author-defined name of the signal to send to the workflow
+    string signal_name = 11;
+    // Serialized value(s) to provide with the signal
+    temporal.api.common.v1.Payloads signal_input = 12;
+    // Retry policy for the workflow Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    temporal.api.common.v1.RetryPolicy retry_policy = 13;
+    // See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/
+    string cron_schedule = 14;
+    temporal.api.common.v1.Memo memo = 15;
+    temporal.api.common.v1.SearchAttributes search_attributes = 16;
+    temporal.api.common.v1.Header header = 17;
+    // Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
+    // Note that the signal will be delivered with the first workflow task. If the workflow gets
+    // another SignalWithStartWorkflow before the delay and `skip_generate_workflow_task` is false
+    // or not set, a workflow task will be dispatched immediately and the rest of the delay period
+    // will be ignored, even if that request also had a delay. Signal via SignalWorkflowExecution
+    // will not unblock the workflow.
+    google.protobuf.Duration workflow_start_delay = 18;
+    // Indicates that a new workflow task should not be generated when this signal is received.
+    bool skip_generate_workflow_task = 19;
 }
 
 // BatchOperationCancellation sends cancel requests to batch workflows.

@@ -859,50 +859,55 @@ message DescribeWorkflowExecutionResponse {
 // (-- api-linter: core::0203::optional=disabled
 //     aip.dev/not-precedent: field_behavior annotation not available in our gogo fork --)
 message DescribeTaskQueueRequest {
-    message BuildIdList {
-        repeated string build_ids = 1;
-    }
-
     string namespace = 1;
-    string task_queue = 5;
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
+    // Deprecated. Use `enhanced_mode` with `task_queue_types`. Ignored when `enhanced_mode` is set.
+    // If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
+    temporal.api.enums.v1.TaskQueueType task_queue_type = 3;
+    // Ignored when `enhanced_mode` is set.
+    bool include_internal_task_queue_status = 4;
+
+    // This enables enhanced behavior. All options except `task_queue_type` and `include_internal_task_queue_status`
+    // are only available when `enhanced_mode` is set.
+    bool enhanced_mode = 6;
+
     // Optional. If not provided, the result for the default Build ID will be returned. The default Build ID is the one
     // mentioned in the first unconditional Assignment Rule. If there is no default Build ID, the result for the
     // unversioned queue will be returned.
+    // (-- api-linter: core::0140::prepositions --)
     oneof versions {
-        BuildIdList build_ids = 6;
-        // Explicitly ask for the unversioned queue
-        bool unversioned = 7;
+        BuildIdList build_ids = 7;
+        // Explicitly ask for the unversioned queue.
+        bool unversioned = 8;
         // Ask for Build IDs (including unversioned) with active workers. This is particularly useful to list
         // all active pollers regardless of Build ID.
-        // (-- api-linter: core::0140::prepositions --)
-        bool with_workers = 8;
+        // (-- api-linter: core::0140::prepositions=disabled --)
+        bool with_workers = 9;
     }
 
     // Task queue types to report info about. If not specified, all types are considered.
-    repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 9;
+    repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 10;
     // Report backlog info for the requested task queue types and versions
-    bool report_backlog_info = 10;
+    bool report_backlog_info = 11;
     // Report list of pollers for requested task queue types and versions
-    bool report_pollers = 11;
+    bool report_pollers = 12;
     // Report workflow reachability for the requested versions
-    bool report_workflow_reachability = 12;
+    bool report_workflow_reachability = 13;
 
-    // Legacy internal info. These fields cannot be used in combination with above fields (other than `namespace`).
-    // Setting `internal_task_queue_type` triggers the old behavior.
-    temporal.api.taskqueue.v1.TaskQueue internal_task_queue = 2;
-    temporal.api.enums.v1.TaskQueueType internal_task_queue_type = 3;
-    bool include_internal_task_queue_status = 4;
+    message BuildIdList {
+        repeated string build_ids = 1;
+    }
 }
 
 message DescribeTaskQueueResponse {
-    // The number of items in this list depends on the requested Build IDs. The `with_workers` option may result in
-    // zero or more Build IDs.
-    repeated temporal.api.taskqueue.v1.TaskQueueVersionInfo versions_info = 3;
-
-    // Legacy internal info. These fields are only populated when `internal_task_queue_type` is set, in which case,
-    // `task_queues_info` would not be populated.
-    repeated temporal.api.taskqueue.v1.PollerInfo internal_pollers = 1;
+    // Deprecated. Use `versions_info.task_queue_types_info.pollers` with `enhanced_mode` instead.
+    // Not set in `enhanced_mode`.
+    repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1;
+    // Not set in `enhanced_mode`.
     temporal.api.taskqueue.v1.InternalTaskQueueStatus internal_queue_status = 2;
+
+    // Only set in `enhanced_mode`.
+    repeated temporal.api.taskqueue.v1.TaskQueueVersionInfo versions_info = 3;
 }
 
 message GetClusterInfoRequest {

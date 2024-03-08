@@ -856,17 +856,57 @@ message DescribeWorkflowExecutionResponse {
     temporal.api.workflow.v1.PendingWorkflowTaskInfo pending_workflow_task = 5;
 }
 
+// (-- api-linter: core::0203::optional=disabled
+//     aip.dev/not-precedent: field_behavior annotation not available in our gogo fork --)
 message DescribeTaskQueueRequest {
     string namespace = 1;
+    // Sticky queues are not supported in `ENHANCED` mode.
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
+    // Deprecated. Use `ENHANCED` mode with `task_queue_types`. Ignored in `ENHANCED` mode.
     // If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
     temporal.api.enums.v1.TaskQueueType task_queue_type = 3;
+    // Deprecated. Ignored in `ENHANCED` mode.
     bool include_task_queue_status = 4;
+
+    // All options except `task_queue_type` and `include_task_queue_status` are only available in the `ENHANCED` mode.
+    temporal.api.enums.v1.DescribeTaskQueueMode api_mode = 5;
+
+    // Optional. If not provided, the result for the default Build ID will be returned. The default Build ID is the one
+    // mentioned in the first unconditional Assignment Rule. If there is no default Build ID, the result for the
+    // unversioned queue will be returned.
+    // (-- api-linter: core::0140::prepositions --)
+    oneof versions {
+        BuildIdList build_ids = 6;
+        // Explicitly ask for the unversioned queue.
+        bool unversioned = 7;
+        // Ask for all active versions (including unversioned). A version is considered active if it has had new
+        // tasks or polls recently.
+        bool all_active = 8;
+    }
+
+    // Task queue types to report info about. If not specified, all types are considered.
+    repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 9;
+    // Report backlog info for the requested task queue types and versions
+    bool report_backlog_info = 10;
+    // Report list of pollers for requested task queue types and versions
+    bool report_pollers = 11;
+    // Report workflow reachability for the requested versions
+    bool report_workflow_reachability = 12;
+
+    message BuildIdList {
+        repeated string build_ids = 1;
+    }
 }
 
 message DescribeTaskQueueResponse {
+    // Deprecated. Use `versions_info.types_info.pollers` with `ENHANCED` mode instead.
+    // Not set in `ENHANCED` mode.
     repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1;
+    // Deprecated. Not set in `ENHANCED` mode.
     temporal.api.taskqueue.v1.TaskQueueStatus task_queue_status = 2;
+
+    // Only set in `ENHANCED` mode.
+    repeated temporal.api.taskqueue.v1.TaskQueueVersionInfo versions_info = 3;
 }
 
 message GetClusterInfoRequest {
@@ -1289,6 +1329,7 @@ message ListWorkerVersioningRulesResponse {
     bytes conflict_token = 3;
 }
 
+// Deprecated. Use `DescribeTaskQueue`.
 message GetWorkerTaskReachabilityRequest {
     string namespace = 1;
     // Build ids to retrieve reachability for. An empty string will be interpreted as an unversioned worker.
@@ -1313,6 +1354,7 @@ message GetWorkerTaskReachabilityRequest {
     temporal.api.enums.v1.TaskReachability reachability = 4;
 }
 
+// Deprecated. Use `DescribeTaskQueue`.
 message GetWorkerTaskReachabilityResponse {
     // Task reachability, broken down by build id and then task queue.
     // When requesting a large number of task queues or all task queues associated with the given build ids in a

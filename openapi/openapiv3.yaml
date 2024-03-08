@@ -2915,7 +2915,7 @@ components:
         pendingNexusOperations:
           type: array
           items:
-            $ref: '#/components/schemas/NexusOperationInfo'
+            $ref: '#/components/schemas/PendingNexusOperationInfo'
     ExecuteMultiOperationRequest:
       type: object
       properties:
@@ -3284,7 +3284,7 @@ components:
             - EVENT_TYPE_NEXUS_OPERATION_COMPLETED
             - EVENT_TYPE_NEXUS_OPERATION_FAILED
             - EVENT_TYPE_NEXUS_OPERATION_CANCELED
-            - EVENT_TYPE_NEXUS_OPERATION_TIMEDOUT
+            - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
           type: string
           format: enum
@@ -3403,9 +3403,9 @@ components:
           $ref: '#/components/schemas/NexusOperationCompletedEventAttributes'
         nexusOperationFailedEventAttributes:
           $ref: '#/components/schemas/NexusOperationFailedEventAttributes'
-        nexusOperationCanceldEventAttributes:
+        nexusOperationCanceledEventAttributes:
           $ref: '#/components/schemas/NexusOperationCanceledEventAttributes'
-        nexusOperationTimedoutEventAttributes:
+        nexusOperationTimedOutEventAttributes:
           $ref: '#/components/schemas/NexusOperationTimedOutEventAttributes'
         nexusOperationCancelRequestedEventAttributes:
           $ref: '#/components/schemas/NexusOperationCancelRequestedEventAttributes'
@@ -3832,55 +3832,6 @@ components:
             The id of the `NEXUS_OPERATION_STARTED` event this failure corresponds to (if completed asynchronously).
              TODO: this may end up not being needed.
       description: Nexus operation failed.
-    NexusOperationInfo:
-      type: object
-      properties:
-        service:
-          type: string
-        operation:
-          type: string
-        timeout:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: |-
-            Schedule-to-close timeout for this operation.
-             This is the only timeout settable by a workflow.
-        scheduledTime:
-          type: string
-          description: The time when the operation was scheduled.
-          format: date-time
-        state:
-          enum:
-            - NEXUS_OPERATION_STATE_UNSPECIFIED
-            - NEXUS_OPERATION_STATE_INITIALIZED
-            - NEXUS_OPERATION_STATE_SCHEDULED
-            - NEXUS_OPERATION_STATE_BACKING_OFF
-            - NEXUS_OPERATION_STATE_STARTED
-            - NEXUS_OPERATION_STATE_SUCCEEDED
-            - NEXUS_OPERATION_STATE_FAILED
-            - NEXUS_OPERATION_STATE_CANCELED
-            - NEXUS_OPERATION_STATE_TIMEDOUT
-            - NEXUS_OPERATION_STATE_CANCEL_REQUESTED
-          type: string
-          format: enum
-        attempt:
-          type: integer
-          description: |-
-            The number of attempts made to deliver the start operation request.
-             This number represents a minimum bound since the attempt is incremented after the request completes.
-          format: int32
-        lastAttemptCompleteTime:
-          type: string
-          description: The time when the last attempt completed.
-          format: date-time
-        lastAttemptFailure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: The last attempt's failure, if any.
-        nextAttemptScheduleTime:
-          type: string
-          description: The time when the next attempt is scheduled.
-          format: date-time
     NexusOperationScheduledEventAttributes:
       type: object
       properties:
@@ -4049,6 +4000,50 @@ components:
           type: string
           description: 'Default: PARENT_CLOSE_POLICY_TERMINATE.'
           format: enum
+    PendingNexusOperationInfo:
+      type: object
+      properties:
+        service:
+          type: string
+        operation:
+          type: string
+        timeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this operation.
+             This is the only timeout settable by a workflow.
+        scheduledTime:
+          type: string
+          description: The time when the operation was scheduled.
+          format: date-time
+        state:
+          enum:
+            - PENDING_NEXUS_OPERATION_STATE_UNSPECIFIED
+            - PENDING_NEXUS_OPERATION_STATE_SCHEDULED
+            - PENDING_NEXUS_OPERATION_STATE_BACKING_OFF
+            - PENDING_NEXUS_OPERATION_STATE_STARTED
+            - PENDING_NEXUS_OPERATION_STATE_CANCEL_REQUESTED
+          type: string
+          format: enum
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to deliver the start operation request.
+             This number represents a minimum bound since the attempt is incremented after the request completes.
+          format: int32
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled.
+          format: date-time
     PendingWorkflowTaskInfo:
       type: object
       properties:

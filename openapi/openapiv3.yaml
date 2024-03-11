@@ -3779,6 +3779,42 @@ components:
           description: |-
             The `WORKFLOW_TASK_COMPLETED` event that the corresponding RequestCancelNexusOperation command was reported
              with.
+    NexusOperationCancelationInfo:
+      type: object
+      properties:
+        requestedTime:
+          type: string
+          description: The time when cancelation was requested.
+          format: date-time
+        state:
+          enum:
+            - NEXUS_OPERATION_CANCELATION_STATE_UNSPECIFIED
+            - NEXUS_OPERATION_CANCELATION_STATE_SCHEDULED
+            - NEXUS_OPERATION_CANCELATION_STATE_BACKING_OFF
+            - NEXUS_OPERATION_CANCELATION_STATE_SUCCEEDED
+            - NEXUS_OPERATION_CANCELATION_STATE_FAILED
+            - NEXUS_OPERATION_CANCELATION_STATE_TIMED_OUT
+          type: string
+          format: enum
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to deliver the cancel operation request.
+             This number represents a minimum bound since the attempt is incremented after the request completes.
+          format: int32
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled.
+          format: date-time
+      description: NexusOperationCancelationInfo contains the state of a nexus operation cancelation.
     NexusOperationCanceledEventAttributes:
       type: object
       properties:
@@ -4005,8 +4041,15 @@ components:
       properties:
         service:
           type: string
+          description: |-
+            Service name.
+             Resolved to a URL via the outgoing service registry for this workflow's namespace.
         operation:
           type: string
+          description: Operation name.
+        operationId:
+          type: string
+          description: Operation ID. Only set for asynchronous operations after a successful StartOperation call.
         timeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
@@ -4023,7 +4066,6 @@ components:
             - PENDING_NEXUS_OPERATION_STATE_SCHEDULED
             - PENDING_NEXUS_OPERATION_STATE_BACKING_OFF
             - PENDING_NEXUS_OPERATION_STATE_STARTED
-            - PENDING_NEXUS_OPERATION_STATE_CANCEL_REQUESTED
           type: string
           format: enum
         attempt:
@@ -4044,6 +4086,9 @@ components:
           type: string
           description: The time when the next attempt is scheduled.
           format: date-time
+        cancelationInfo:
+          $ref: '#/components/schemas/NexusOperationCancelationInfo'
+      description: PendingNexusOperationInfo contains the state of a pending Nexus operation.
     PendingWorkflowTaskInfo:
       type: object
       properties:

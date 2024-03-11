@@ -5764,6 +5764,52 @@
         }
       }
     },
+    "v1NexusOperationCancelationInfo": {
+      "type": "object",
+      "properties": {
+        "requestedTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when cancelation was requested."
+        },
+        "state": {
+          "$ref": "#/definitions/v1NexusOperationCancelationState"
+        },
+        "attempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The number of attempts made to deliver the cancel operation request.\nThis number represents a minimum bound since the attempt is incremented after the request completes."
+        },
+        "lastAttemptCompleteTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the last attempt completed."
+        },
+        "lastAttemptFailure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "The last attempt's failure, if any."
+        },
+        "nextAttemptScheduleTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the next attempt is scheduled."
+        }
+      },
+      "description": "NexusOperationCancelationInfo contains the state of a nexus operation cancelation."
+    },
+    "v1NexusOperationCancelationState": {
+      "type": "string",
+      "enum": [
+        "NEXUS_OPERATION_CANCELATION_STATE_UNSPECIFIED",
+        "NEXUS_OPERATION_CANCELATION_STATE_SCHEDULED",
+        "NEXUS_OPERATION_CANCELATION_STATE_BACKING_OFF",
+        "NEXUS_OPERATION_CANCELATION_STATE_SUCCEEDED",
+        "NEXUS_OPERATION_CANCELATION_STATE_FAILED",
+        "NEXUS_OPERATION_CANCELATION_STATE_TIMED_OUT"
+      ],
+      "default": "NEXUS_OPERATION_CANCELATION_STATE_UNSPECIFIED",
+      "description": "State of a Nexus operation cancelation.\n\n - NEXUS_OPERATION_CANCELATION_STATE_UNSPECIFIED: Default value, unspecified state.\n - NEXUS_OPERATION_CANCELATION_STATE_SCHEDULED: Cancelation request is in the queue waiting to be executed or is currently executing.\n - NEXUS_OPERATION_CANCELATION_STATE_BACKING_OFF: Cancelation request has failed with a retryable error and is backing off before the next attempt.\n - NEXUS_OPERATION_CANCELATION_STATE_SUCCEEDED: Cancelation request succeeded.\n - NEXUS_OPERATION_CANCELATION_STATE_FAILED: Cancelation request failed with a non-retryable error.\n - NEXUS_OPERATION_CANCELATION_STATE_TIMED_OUT: The associated operation timed out - exceeded the user supplied schedule-to-close timeout."
+    },
     "v1NexusOperationCanceledEventAttributes": {
       "type": "object",
       "properties": {
@@ -6072,10 +6118,16 @@
       "type": "object",
       "properties": {
         "service": {
-          "type": "string"
+          "type": "string",
+          "description": "Service name.\nResolved to a URL via the outgoing service registry for this workflow's namespace."
         },
         "operation": {
-          "type": "string"
+          "type": "string",
+          "description": "Operation name."
+        },
+        "operationId": {
+          "type": "string",
+          "description": "Operation ID. Only set for asynchronous operations after a successful StartOperation call."
         },
         "timeout": {
           "type": "string",
@@ -6107,8 +6159,12 @@
           "type": "string",
           "format": "date-time",
           "description": "The time when the next attempt is scheduled."
+        },
+        "cancelationInfo": {
+          "$ref": "#/definitions/v1NexusOperationCancelationInfo"
         }
-      }
+      },
+      "description": "PendingNexusOperationInfo contains the state of a pending Nexus operation."
     },
     "v1PendingNexusOperationState": {
       "type": "string",
@@ -6116,11 +6172,10 @@
         "PENDING_NEXUS_OPERATION_STATE_UNSPECIFIED",
         "PENDING_NEXUS_OPERATION_STATE_SCHEDULED",
         "PENDING_NEXUS_OPERATION_STATE_BACKING_OFF",
-        "PENDING_NEXUS_OPERATION_STATE_STARTED",
-        "PENDING_NEXUS_OPERATION_STATE_CANCEL_REQUESTED"
+        "PENDING_NEXUS_OPERATION_STATE_STARTED"
       ],
       "default": "PENDING_NEXUS_OPERATION_STATE_UNSPECIFIED",
-      "description": "State of a pending Nexus operation.\n\n - PENDING_NEXUS_OPERATION_STATE_UNSPECIFIED: Default value, unspecified state.\n - PENDING_NEXUS_OPERATION_STATE_SCHEDULED: Operation is in the queue waiting to be executed or is currently executing.\n - PENDING_NEXUS_OPERATION_STATE_BACKING_OFF: Operation has failed with a retryable error and is backing off before the next attempt.\n - PENDING_NEXUS_OPERATION_STATE_STARTED: Operation was started and will complete asynchronously.\n - PENDING_NEXUS_OPERATION_STATE_CANCEL_REQUESTED: Operation cancel requested, cancelation is asynchronous and may not be respected by the operation handler."
+      "description": "State of a pending Nexus operation.\n\n - PENDING_NEXUS_OPERATION_STATE_UNSPECIFIED: Default value, unspecified state.\n - PENDING_NEXUS_OPERATION_STATE_SCHEDULED: Operation is in the queue waiting to be executed or is currently executing.\n - PENDING_NEXUS_OPERATION_STATE_BACKING_OFF: Operation has failed with a retryable error and is backing off before the next attempt.\n - PENDING_NEXUS_OPERATION_STATE_STARTED: Operation was started and will complete asynchronously."
     },
     "v1PendingWorkflowTaskInfo": {
       "type": "object",

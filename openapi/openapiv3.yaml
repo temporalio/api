@@ -4701,6 +4701,25 @@ components:
             - WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
             - WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING
           type: string
+          description: |-
+            Defines whether to allow re-using the workflow id from a previously *closed* workflow.
+             The default policy is WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+
+             See `workflow_id_reuse_policy` for handling a workflow id duplication with a *running* workflow.
+          format: enum
+        workflowIdConflictPolicy:
+          enum:
+            - WORKFLOW_ID_CONFLICT_POLICY_UNSPECIFIED
+            - WORKFLOW_ID_CONFLICT_POLICY_FAIL
+            - WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+            - WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING
+          type: string
+          description: |-
+            Defines how to resolve a workflow id conflict with a *running* workflow.
+             The default policy is WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING.
+             Note that WORKFLOW_ID_CONFLICT_POLICY_FAIL is an invalid option.
+
+             See `workflow_id_reuse_policy` for handling a workflow id duplication with a *closed* workflow.
           format: enum
         signalName:
           type: string
@@ -4715,7 +4734,7 @@ components:
         retryPolicy:
           allOf:
             - $ref: '#/components/schemas/RetryPolicy'
-          description: 'Retry policy for the workflow Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.'
+          description: Retry policy for the workflow
         cronSchedule:
           type: string
           description: See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/
@@ -4743,6 +4762,10 @@ components:
       properties:
         runId:
           type: string
+          description: The run id of the workflow that was started - or just signaled, if it was already running.
+        started:
+          type: boolean
+          description: If true, a new workflow was started.
     SignalWorkflowExecutionRequest:
       type: object
       properties:
@@ -4968,7 +4991,24 @@ components:
             - WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
             - WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING
           type: string
-          description: 'Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.'
+          description: |-
+            Defines whether to allow re-using the workflow id from a previously *closed* workflow.
+             The default policy is WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+
+             See `workflow_id_conflict_policy` for handling a workflow id duplication with a *running* workflow.
+          format: enum
+        workflowIdConflictPolicy:
+          enum:
+            - WORKFLOW_ID_CONFLICT_POLICY_UNSPECIFIED
+            - WORKFLOW_ID_CONFLICT_POLICY_FAIL
+            - WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+            - WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING
+          type: string
+          description: |-
+            Defines how to resolve a workflow id conflict with a *running* workflow.
+             The default policy is WORKFLOW_ID_CONFLICT_POLICY_FAIL.
+
+             See `workflow_id_reuse_policy` for handling a workflow id duplication with a *closed* workflow.
           format: enum
         retryPolicy:
           allOf:
@@ -5020,6 +5060,10 @@ components:
       properties:
         runId:
           type: string
+          description: The run id of the workflow that was started - or used (via WorkflowIdConflictPolicy USE_EXISTING).
+        started:
+          type: boolean
+          description: If true, a new workflow was started.
         eagerWorkflowTask:
           allOf:
             - $ref: '#/components/schemas/PollWorkflowTaskQueueResponse'

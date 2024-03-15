@@ -156,8 +156,16 @@ message StartWorkflowExecutionRequest {
     string identity = 9;
     // A unique identifier for this start request. Typically UUIDv4.
     string request_id = 10;
-    // Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    // Defines whether to allow re-using the workflow id from a previously *closed* workflow.
+    // The default policy is WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    //
+    // See `workflow_id_conflict_policy` for handling a workflow id duplication with a *running* workflow.
     temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 11;
+    // Defines how to resolve a workflow id conflict with a *running* workflow.
+    // The default policy is WORKFLOW_ID_CONFLICT_POLICY_FAIL.
+    //
+    // See `workflow_id_reuse_policy` for handling a workflow id duplication with a *closed* workflow.
+    temporal.api.enums.v1.WorkflowIdConflictPolicy workflow_id_conflict_policy = 22;
     // The retry policy for the workflow. Will never exceed `workflow_execution_timeout`.
     temporal.api.common.v1.RetryPolicy retry_policy = 12;
     // See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/
@@ -180,7 +188,6 @@ message StartWorkflowExecutionRequest {
     // If the workflow gets a signal before the delay, a workflow task will be dispatched and the rest
     // of the delay will be ignored.
     google.protobuf.Duration workflow_start_delay = 20;
-
     // Callbacks to be called by the server when this workflow reaches a terminal state.
     // If the workflow continues-as-new, these callbacks will be carried over to the new execution.
     // Callback addresses must be whitelisted in the server's dynamic configuration.
@@ -188,7 +195,10 @@ message StartWorkflowExecutionRequest {
 }
 
 message StartWorkflowExecutionResponse {
+    // The run id of the workflow that was started - or used (via WorkflowIdConflictPolicy USE_EXISTING).
     string run_id = 1;
+    // If true, a new workflow was started.
+    bool started = 3;
     // When `request_eager_execution` is set on the `StartWorkflowExecutionRequest`, the server - if supported - will
     // return the first workflow task to be eagerly executed.
     // The caller is expected to have a worker available to process the task.
@@ -633,14 +643,24 @@ message SignalWithStartWorkflowExecutionRequest {
     string identity = 9;
     // Used to de-dupe signal w/ start requests
     string request_id = 10;
+    // Defines whether to allow re-using the workflow id from a previously *closed* workflow.
+    // The default policy is WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    //
+    // See `workflow_id_reuse_policy` for handling a workflow id duplication with a *running* workflow.
     temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 11;
+    // Defines how to resolve a workflow id conflict with a *running* workflow.
+    // The default policy is WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING.
+    // Note that WORKFLOW_ID_CONFLICT_POLICY_FAIL is an invalid option.
+    //
+    // See `workflow_id_reuse_policy` for handling a workflow id duplication with a *closed* workflow.
+    temporal.api.enums.v1.WorkflowIdConflictPolicy workflow_id_conflict_policy = 22;
     // The workflow author-defined name of the signal to send to the workflow
     string signal_name = 12;
     // Serialized value(s) to provide with the signal
     temporal.api.common.v1.Payloads signal_input = 13;
     // Deprecated
     string control = 14;
-    // Retry policy for the workflow Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    // Retry policy for the workflow
     temporal.api.common.v1.RetryPolicy retry_policy = 15;
     // See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/
     string cron_schedule = 16;
@@ -659,7 +679,10 @@ message SignalWithStartWorkflowExecutionRequest {
 }
 
 message SignalWithStartWorkflowExecutionResponse {
+    // The run id of the workflow that was started - or just signaled, if it was already running.
     string run_id = 1;
+    // If true, a new workflow was started.
+    bool started = 2;
 }
 
 message ResetWorkflowExecutionRequest {

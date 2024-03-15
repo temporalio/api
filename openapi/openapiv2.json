@@ -2438,7 +2438,12 @@
           "title": "Used to de-dupe signal w/ start requests"
         },
         "workflowIdReusePolicy": {
-          "$ref": "#/definitions/v1WorkflowIdReusePolicy"
+          "$ref": "#/definitions/v1WorkflowIdReusePolicy",
+          "description": "Defines whether to allow re-using the workflow id from a previously *closed* workflow.\nThe default policy is WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.\n\nSee `workflow_id_reuse_policy` for handling a workflow id duplication with a *running* workflow."
+        },
+        "workflowIdConflictPolicy": {
+          "$ref": "#/definitions/v1WorkflowIdConflictPolicy",
+          "description": "Defines how to resolve a workflow id conflict with a *running* workflow.\nThe default policy is WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING.\nNote that WORKFLOW_ID_CONFLICT_POLICY_FAIL is an invalid option.\n\nSee `workflow_id_reuse_policy` for handling a workflow id duplication with a *closed* workflow."
         },
         "signalInput": {
           "$ref": "#/definitions/v1Payloads",
@@ -2450,7 +2455,7 @@
         },
         "retryPolicy": {
           "$ref": "#/definitions/v1RetryPolicy",
-          "description": "Retry policy for the workflow Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE."
+          "title": "Retry policy for the workflow"
         },
         "cronSchedule": {
           "type": "string",
@@ -2589,7 +2594,11 @@
         },
         "workflowIdReusePolicy": {
           "$ref": "#/definitions/v1WorkflowIdReusePolicy",
-          "description": "Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE."
+          "description": "Defines whether to allow re-using the workflow id from a previously *closed* workflow.\nThe default policy is WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.\n\nSee `workflow_id_conflict_policy` for handling a workflow id duplication with a *running* workflow."
+        },
+        "workflowIdConflictPolicy": {
+          "$ref": "#/definitions/v1WorkflowIdConflictPolicy",
+          "description": "Defines how to resolve a workflow id conflict with a *running* workflow.\nThe default policy is WORKFLOW_ID_CONFLICT_POLICY_FAIL.\n\nSee `workflow_id_reuse_policy` for handling a workflow id duplication with a *closed* workflow."
         },
         "retryPolicy": {
           "$ref": "#/definitions/v1RetryPolicy",
@@ -6691,7 +6700,12 @@
       "type": "object",
       "properties": {
         "runId": {
-          "type": "string"
+          "type": "string",
+          "description": "The run id of the workflow that was started - or just signaled, if it was already running."
+        },
+        "started": {
+          "type": "boolean",
+          "description": "If true, a new workflow was started."
         }
       }
     },
@@ -6949,7 +6963,12 @@
       "type": "object",
       "properties": {
         "runId": {
-          "type": "string"
+          "type": "string",
+          "description": "The run id of the workflow that was started - or used (via WorkflowIdConflictPolicy USE_EXISTING)."
+        },
+        "started": {
+          "type": "boolean",
+          "description": "If true, a new workflow was started."
         },
         "eagerWorkflowTask": {
           "$ref": "#/definitions/v1PollWorkflowTaskQueueResponse",
@@ -7968,6 +7987,17 @@
         }
       }
     },
+    "v1WorkflowIdConflictPolicy": {
+      "type": "string",
+      "enum": [
+        "WORKFLOW_ID_CONFLICT_POLICY_UNSPECIFIED",
+        "WORKFLOW_ID_CONFLICT_POLICY_FAIL",
+        "WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING",
+        "WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING"
+      ],
+      "default": "WORKFLOW_ID_CONFLICT_POLICY_UNSPECIFIED",
+      "description": "Defines what to do when trying to start a workflow with the same workflow id as a *running* workflow.\nNote that it is *never* valid to have two actively running instances of the same workflow id.\n\nSee `WorkflowIdReusePolicy` for handling workflow id duplication with a *closed* workflow.\n\n - WORKFLOW_ID_CONFLICT_POLICY_FAIL: Don't start a new workflow; instead return `WorkflowExecutionAlreadyStartedFailure`.\n - WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING: Don't start a new workflow; instead return a workflow handle for the running workflow.\n - WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING: Terminate the running workflow before starting a new one."
+    },
     "v1WorkflowIdReusePolicy": {
       "type": "string",
       "enum": [
@@ -7978,7 +8008,7 @@
         "WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING"
       ],
       "default": "WORKFLOW_ID_REUSE_POLICY_UNSPECIFIED",
-      "description": "Defines how new runs of a workflow with a particular ID may or may not be allowed. Note that\nit is *never* valid to have two actively running instances of the same workflow id.\n\n - WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE: Allow starting a workflow execution using the same workflow id.\n - WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY: Allow starting a workflow execution using the same workflow id, only when the last\nexecution's final state is one of [terminated, cancelled, timed out, failed].\n - WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE: Do not permit re-use of the workflow id for this workflow. Future start workflow requests\ncould potentially change the policy, allowing re-use of the workflow id.\n - WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING: If a workflow is running using the same workflow ID, terminate it and start a new one.\nIf no running workflow, then the behavior is the same as ALLOW_DUPLICATE"
+      "description": "Defines whether to allow re-using a workflow id from a previously *closed* workflow.\nIf the request is denied, a `WorkflowExecutionAlreadyStartedFailure` is returned.\n\nSee `WorkflowIdConflictPolicy` for handling workflow id duplication with a *running* workflow.\n\n - WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE: Allow starting a workflow execution using the same workflow id.\n - WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY: Allow starting a workflow execution using the same workflow id, only when the last\nexecution's final state is one of [terminated, cancelled, timed out, failed].\n - WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE: Do not permit re-use of the workflow id for this workflow. Future start workflow requests\ncould potentially change the policy, allowing re-use of the workflow id.\n - WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING: This option belongs in WorkflowIdConflictPolicy but is here for backwards compatibility.\nIf specified, it acts like ALLOW_DUPLICATE, but also the WorkflowId*Conflict*Policy on\nthe request is treated as WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING.\nIf no running workflow, then the behavior is the same as ALLOW_DUPLICATE."
     },
     "v1WorkflowPropertiesModifiedEventAttributes": {
       "type": "object",

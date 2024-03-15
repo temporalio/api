@@ -20,16 +20,6 @@ STAMPDIR := .stamp
 
 COLOR := "\e[1;36m%s\e[0m\n"
 
-# Only prints output if the exit code is non-zero
-define silent_exec
-    @output=$$($(1) 2>&1); \
-    status=$$?; \
-    if [ $$status -ne 0 ]; then \
-        echo "$$output"; \
-    fi; \
-    exit $$status
-endef
-
 PROTO_ROOT := .
 PROTO_FILES = $(shell find temporal -name "*.proto")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
@@ -96,6 +86,7 @@ grpc-install:
 api-linter-install:
 	printf $(COLOR) "Install/update api-linter..."
 	go install github.com/googleapis/api-linter/cmd/api-linter@v1.32.3
+	go install github.com/itchyny/gojq/cmd/gojq@v0.12.14
 
 buf-install:
 	printf $(COLOR) "Install/update buf..."
@@ -104,7 +95,7 @@ buf-install:
 ##### Linters #####
 api-linter:
 	printf $(COLOR) "Run api-linter..."
-	$(call silent_exec, api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml $(PROTO_FILES))
+	@api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml --output-format json $(PROTO_FILES) | gojq -r 'map(select(.problems != []) | . as $$file | .problems[] | {rule: .rule_doc_uri, location: "\($$file.file_path):\(.location.start_position.line_number)"}) | group_by(.rule) | .[] | .[0].rule + ":\n" + (map("\t" + .location) | join("\n"))'
 
 $(STAMPDIR):
 	mkdir $@

@@ -2976,6 +2976,17 @@ components:
              information in any way that the SDK need be concerned with. If an SDK encounters an event
              type which it does not understand, it must error unless this is true. If it is true, it's
              acceptable for the event type and/or attributes to be uninterpretable.
+        userMetadata:
+          allOf:
+            - $ref: '#/components/schemas/UserMetadata'
+          description: |-
+            Metadata on the event. This is often carried over from commands and client calls. Most events
+             won't have this information, and how this information is used is dependent upon the interface
+             that reads it.
+
+             Current well-known uses:
+              * timer_started_event_attributes - summary represents an identifier for the timer for use by
+                user interfaces.
         workflowExecutionStartedEventAttributes:
           $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes'
         workflowExecutionCompletedEventAttributes:
@@ -3426,6 +3437,13 @@ components:
           $ref: '#/components/schemas/SearchAttributes'
         header:
           $ref: '#/components/schemas/Header'
+        userMetadata:
+          allOf:
+            - $ref: '#/components/schemas/UserMetadata'
+          description: |-
+            Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo
+             for use by user interfaces to display the fixed as-of-start summary and description of the
+             workflow.
       description: |-
         NewWorkflowExecutionInfo is a shared message that encapsulates all the
          required arguments to starting a workflow in different contexts.
@@ -4757,6 +4775,13 @@ components:
         skipGenerateWorkflowTask:
           type: boolean
           description: Indicates that a new workflow task should not be generated when this signal is received.
+        userMetadata:
+          allOf:
+            - $ref: '#/components/schemas/UserMetadata'
+          description: |-
+            Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo
+             for use by user interfaces to display the fixed as-of-start summary and description of the
+             workflow.
     SignalWithStartWorkflowExecutionResponse:
       type: object
       properties:
@@ -5055,6 +5080,13 @@ components:
             Callbacks to be called by the server when this workflow reaches a terminal state.
              If the workflow continues-as-new, these callbacks will be carried over to the new execution.
              Callback addresses must be whitelisted in the server's dynamic configuration.
+        userMetadata:
+          allOf:
+            - $ref: '#/components/schemas/UserMetadata'
+          description: |-
+            Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo
+             for use by user interfaces to display the fixed as-of-start summary and description of the
+             workflow.
     StartWorkflowExecutionResponse:
       type: object
       properties:
@@ -5492,6 +5524,18 @@ components:
           description: The `WORKFLOW_TASK_COMPLETED` event which this command was reported with
         searchAttributes:
           $ref: '#/components/schemas/SearchAttributes'
+    UserMetadata:
+      type: object
+      properties:
+        summary:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: "Short-form text that provides a summary. This payload should be a \"json/plain\"-encoded payload\r\n that is a single JSON string. Formatting may not apply to this text when used in \"title\"\r\n situations. The payload data section is currently limited to 400 bytes."
+        details:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: "Long-form text that provides details. This payload should be a \"json/plain\"-encoded payload\r\n that is a single JSON string. Formatting may apply to this text in common use. The payload data\r\n section is currently limited to 20000 bytes."
+      description: Information a user can set, often for use by user interfaces.
     VersionInfo:
       type: object
       properties:
@@ -5755,6 +5799,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
           description: If set, the most recent worker version stamp that appeared in a workflow task completion
+        userMetadata:
+          allOf:
+            - $ref: '#/components/schemas/UserMetadata'
+          description: User metadata provided on start workflow.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:

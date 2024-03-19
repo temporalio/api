@@ -78,23 +78,32 @@ service OperatorService {
     rpc ListClusters(ListClustersRequest) returns (ListClustersResponse) {
     }
 
-    // Get a registered incoming Nexus service by name. The returned version can be used for optimistic updates.
+    // Get a registered incoming Nexus service by ID. The returned version can be used for optimistic updates.
     rpc GetNexusIncomingService(GetNexusIncomingServiceRequest) returns (GetNexusIncomingServiceResponse) {
     }
 
-    // Optimistically create or update a Nexus service based on provided version.
-    // To update an existing service, get the current service record via the `GetNexusIncomingService` API, modify it
-    // and submit to this API.
-    // Set version to 0 to create a new service.
-    // Returns the updated service with the updated version, which can be used for subsequent updates.
-    rpc CreateOrUpdateNexusIncomingService(CreateOrUpdateNexusIncomingServiceRequest) returns (CreateOrUpdateNexusIncomingServiceResponse) {
+    // Create a Nexus service. This will fail if a service with the same name already exists in the namespace with a
+    // status of ALREADY_EXISTS.
+    // Returns the created service with its initial version. You may use this version for subsequent updates.
+    rpc CreateNexusIncomingService(CreateNexusIncomingServiceRequest) returns (CreateNexusIncomingServiceResponse) {
     }
 
-    // Delete an incoming Nexus service by name.
+    // Optimistically update a Nexus service based on provided version as obtained via the
+    // `GetNexusIncomingService` or `ListNexusOutgoingServicesResponse` APIs. This will fail with a status of
+    // FAILED_PRECONDITION if the version does not match.
+    // Returns the updated service with its updated version. You may use this version for subsequent updates. You don't
+    // need to increment the version yourself. The server will increment the version for you after each update.
+    rpc UpdateNexusIncomingService(UpdateNexusIncomingServiceRequest) returns (UpdateNexusIncomingServiceResponse) {
+    }
+
+    // Delete an incoming Nexus service by ID.
     rpc DeleteNexusIncomingService(DeleteNexusIncomingServiceRequest) returns (DeleteNexusIncomingServiceResponse) {
     }
 
-    // List all Nexus incoming services in the cluster. Use next_page_token in the response for pagination.
+    // List all Nexus incoming services for the cluster, sorted by service ID in ascending order. Set page_token in the
+    // request to the next_page_token field of the previous response to get the next page of results. An empty
+    // next_page_token indicates that there are no more results. During pagination, a newly added service with an ID
+    // lexicographically earlier than the previous page's last service name may be missed.
     rpc ListNexusIncomingServices(ListNexusIncomingServicesRequest) returns (ListNexusIncomingServicesResponse) {
     }
 
@@ -105,7 +114,7 @@ service OperatorService {
 
     // Create a Nexus service. This will fail if a service with the same name already exists in the namespace with a
     // status of ALREADY_EXISTS.
-    // Returns the updated service with its initial version. You may use this version for subsequent updates. You don't
+    // Returns the created service with its initial version. You may use this version for subsequent updates. You don't
     // need to increment the version yourself. The server will increment the version for you after each update.
     rpc CreateNexusOutgoingService(CreateNexusOutgoingServiceRequest) returns (CreateNexusOutgoingServiceResponse) {
     }

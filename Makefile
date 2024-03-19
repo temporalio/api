@@ -93,7 +93,7 @@ buf-install:
 	go install github.com/bufbuild/buf/cmd/buf@v1.27.0
 
 ##### Linters #####
-api-linter:
+api-linter: api-linter-install
 	@printf $(COLOR) "Run api-linter..."
 	@./scripts/lint-api.sh $(PROTO_IMPORTS) $(PROTO_ROOT) $(PROTO_FILES)
 

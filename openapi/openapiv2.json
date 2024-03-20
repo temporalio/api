@@ -3079,6 +3079,9 @@
         },
         "childWorkflowExecutionFailureInfo": {
           "$ref": "#/definitions/v1ChildWorkflowExecutionFailureInfo"
+        },
+        "nexusOperationExecutionFailureInfo": {
+          "$ref": "#/definitions/v1NexusOperationFailureInfo"
         }
       }
     },
@@ -5830,7 +5833,7 @@
         "startedEventId": {
           "type": "string",
           "format": "int64",
-          "description": "The ID of the `NEXUS_OPERATION_STARTED` event this completion corresponds to (if completed asynchronously).\nTODO: this may end up not being needed."
+          "description": "The ID of the `NEXUS_OPERATION_STARTED` event this completion corresponds to (if completed asynchronously)."
         }
       },
       "description": "Nexus operation completed as canceled. May or may not have been due to a cancelation request by the workflow."
@@ -5850,7 +5853,7 @@
         "startedEventId": {
           "type": "string",
           "format": "int64",
-          "description": "The ID of the `NEXUS_OPERATION_STARTED` event this completion corresponds to (if completed asynchronously).\nTODO: this may end up not being needed."
+          "description": "The ID of the `NEXUS_OPERATION_STARTED` event this completion corresponds to (if completed asynchronously)."
         }
       },
       "description": "Nexus operation completed successfully."
@@ -5870,10 +5873,37 @@
         "startedEventId": {
           "type": "string",
           "format": "int64",
-          "description": "The id of the `NEXUS_OPERATION_STARTED` event this failure corresponds to (if completed asynchronously).\nTODO: this may end up not being needed."
+          "description": "The id of the `NEXUS_OPERATION_STARTED` event this failure corresponds to (if completed asynchronously)."
         }
       },
       "description": "Nexus operation failed."
+    },
+    "v1NexusOperationFailureInfo": {
+      "type": "object",
+      "properties": {
+        "scheduledEventId": {
+          "type": "string",
+          "format": "int64",
+          "description": "The NexusOperationScheduled event ID."
+        },
+        "startedEventId": {
+          "type": "string",
+          "format": "int64",
+          "description": "The NexusOperationStarted event ID - may be 0 if the operation completed synchronously."
+        },
+        "service": {
+          "type": "string",
+          "description": "Service name."
+        },
+        "operation": {
+          "type": "string",
+          "description": "Operation name."
+        },
+        "operationId": {
+          "type": "string",
+          "description": "Operation ID - may be empty if the operation completed synchronously."
+        }
+      }
     },
     "v1NexusOperationScheduledEventAttributes": {
       "type": "object",
@@ -5942,7 +5972,7 @@
         "startedEventId": {
           "type": "string",
           "format": "int64",
-          "description": "The ID of the `NEXUS_OPERATION_STARTED` event this completion corresponds to (if completed asynchronously).\nTODO: this may end up not being needed."
+          "description": "The ID of the `NEXUS_OPERATION_STARTED` event this completion corresponds to (if completed asynchronously)."
         }
       },
       "description": "Nexus operation timed out."
@@ -5994,6 +6024,46 @@
         "url": {
           "type": "string",
           "description": "URL to invoke requests."
+        },
+        "header": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Header to attach to all outgoing requests."
+        },
+        "disallowedUserHeaderPrefixes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "ScheduleNexusOperation commands containing header keys that start with these prefixes will be rejected.\nHeader key comparison is case-insensitive."
+        },
+        "insecure": {
+          "type": "boolean",
+          "description": "Whether to use plain HTTP to transmit the StartOperation request. By default HTTPS is used.\nMutually exclusive with tls_options."
+        },
+        "tlsOptions": {
+          "$ref": "#/definitions/v1TLSOptions",
+          "description": "Mutually exclusive with insecure."
+        },
+        "publicCallbackUrl": {
+          "type": "string",
+          "description": "Callback URL that is attached to every StartOperation request for this service.\nThe URL should be accessable to the handler of the StartOperation requests.\nSee https://github.com/nexus-rpc/api/blob/main/SPEC.md#query-parameters for more information."
+        },
+        "callbackTokenEncryptionKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Encryption keys for the callback token used for asynchronous completion.\nThe callback token contains information that may be considered sensitive such as such as workflow ID.\nAny of the provided keys may be used for decryption. Only the last key is used for encryption.\nCallback tokens are passed as `Nexus-Callback-Temporal-Cloud-Callback-Token` headers in StartOperation requests.\nSee https://github.com/nexus-rpc/api/blob/main/SPEC.md#request-headers for more information."
+        },
+        "callbackTokenEncryptionKeyPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Same as callback_token_encryption_keys but the keys are expected to be present in the filesystem."
         }
       },
       "description": "Contains mutable fields for an OutgoingService."
@@ -7998,6 +8068,32 @@
         }
       },
       "title": "StructuredCalendarSpec describes an event specification relative to the\ncalendar, in a form that's easy to work with programmatically. Each field can\nbe one or more ranges.\nA timestamp matches if at least one range of each field matches the\ncorresponding fields of the timestamp, except for year: if year is missing,\nthat means all years match. For all fields besides year, at least one Range\nmust be present to match anything.\nTODO: add relative-to-end-of-month\nTODO: add nth day-of-week in month"
+    },
+    "v1TLSOptions": {
+      "type": "object",
+      "properties": {
+        "tlsCertPath": {
+          "type": "string",
+          "description": "If not empty, this path is expected to contain a valid x506 certificate.\nEither both or none of tls_cert_path and tls_key_path should be set."
+        },
+        "tlsKeyPath": {
+          "type": "string",
+          "description": "If not empty, this path is expected to contain a valid private certificate key.\nEither both or none of tls_cert_path and tls_key_path should be set."
+        },
+        "tlsCaPath": {
+          "type": "string",
+          "description": "If not empty, this path is expected to contain a valid CA certificate."
+        },
+        "tlsDisableHostVerification": {
+          "type": "boolean",
+          "description": "Disable TLS host verification - generally not recommended for production use."
+        },
+        "tlsServerName": {
+          "type": "string",
+          "description": "Overrides the target name (SNI) used for TLS host name checking. If this attribute is not specified, the name\nused for TLS host name checking will be the URL host. Adding this override should be done with care."
+        }
+      },
+      "description": "Options for making TLS requests in various contexts."
     },
     "v1TaskIdBlock": {
       "type": "object",

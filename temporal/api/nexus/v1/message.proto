@@ -184,4 +184,33 @@ message OutgoingService {
 message OutgoingServiceSpec {
     // URL to invoke requests.
     string url = 1;
+
+    // Header to attach to all outgoing requests.
+    map<string, string> header = 2;
+
+    // ScheduleNexusOperation commands containing header keys that start with these prefixes will be rejected.
+    // Header key comparison is case-insensitive.
+    repeated string disallowed_user_header_prefixes = 3;
+
+    // Whether to use plain HTTP to transmit the StartOperation request. By default HTTPS is used.
+    // Mutually exclusive with tls_options.
+    bool insecure = 4;
+
+    // Mutually exclusive with insecure.
+    temporal.api.common.v1.TLSOptions tls_options = 5;
+
+    // Callback URL that is attached to every StartOperation request for this service.
+    // The URL should be accessable to the handler of the StartOperation requests.
+    // See https://github.com/nexus-rpc/api/blob/main/SPEC.md#query-parameters for more information.
+    string public_callback_url = 6;
+
+    // Encryption keys for the callback token used for asynchronous completion.
+    // The callback token contains information that may be considered sensitive such as such as workflow ID.
+    // Any of the provided keys may be used for decryption. Only the last key is used for encryption.
+    // Callback tokens are passed as `Nexus-Callback-Temporal-Cloud-Callback-Token` headers in StartOperation requests.
+    // See https://github.com/nexus-rpc/api/blob/main/SPEC.md#request-headers for more information.
+    repeated string callback_token_encryption_keys = 7;
+
+    // Same as callback_token_encryption_keys but the keys are expected to be present in the filesystem.
+    repeated string callback_token_encryption_key_paths = 8;
 }

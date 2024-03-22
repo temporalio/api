@@ -1171,6 +1171,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/operations:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ExecuteMultiOperation executes multiple operations.
+
+         NOTE: Experimental API.
+      operationId: ExecuteMultiOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteMultiOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteMultiOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}:
     get:
       tags:
@@ -2661,6 +2695,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CallbackInfo'
+    ExecuteMultiOperationRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowOperation'
+    ExecuteMultiOperationResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowOperationResult'
     ExternalWorkflowExecutionCancelRequestedEventAttributes:
       type: object
       properties:
@@ -6001,6 +6051,22 @@ components:
           type: string
           description: An explanation of why this event was written to history.
           format: enum
+    WorkflowOperation:
+      type: object
+      properties:
+        startWorkflow:
+          $ref: '#/components/schemas/StartWorkflowExecutionRequest'
+        updateWorkflow:
+          $ref: '#/components/schemas/UpdateWorkflowExecutionRequest'
+    WorkflowOperationResult:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/Status'
+        startWorkflow:
+          $ref: '#/components/schemas/StartWorkflowExecutionResponse'
+        updateWorkflow:
+          $ref: '#/components/schemas/UpdateWorkflowExecutionResponse'
     WorkflowPropertiesModifiedEventAttributes:
       type: object
       properties:

@@ -54,6 +54,26 @@ message TaskQueueMetadata {
     google.protobuf.DoubleValue max_tasks_per_second = 1;
 }
 
+// Used to describe a group of versions the caller is interested in.
+message TaskQueueVersionGroup {
+    // Optional. If not provided, the result for the default Build ID will be returned. The default Build ID is the one
+    // mentioned in the first unconditional Assignment Rule. If there is no default Build ID, the result for the
+    // unversioned queue will be returned.
+    // (-- api-linter: core::0140::prepositions --)
+    oneof versions {
+        BuildIdList build_ids = 6;
+        // Explicitly ask for the unversioned queue.
+        bool unversioned = 7;
+        // Ask for all active versions (including unversioned). A version is considered active if it has had new
+        // tasks or polls recently.
+        bool all_active = 8;
+    }
+
+    message BuildIdList {
+        repeated string build_ids = 1;
+    }
+}
+
 message TaskQueueVersionInfo {
     // Empty means unversioned.
     string build_id = 1;

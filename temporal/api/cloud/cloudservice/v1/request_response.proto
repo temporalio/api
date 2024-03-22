@@ -1,0 +1,258 @@
+// The MIT License
+//
+// Copyright (c) 2024 Temporal Technologies Inc.  All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package temporal.api.cloud.cloudservice.v1;
+
+option go_package = "go.temporal.io/api/cloud/cloudservice/v1;cloudservice";
+option java_package = "io.temporal.api.cloud.cloudservice.v1";
+option java_multiple_files = true;
+option java_outer_classname = "RequestResponseProto";
+option ruby_package = "Temporalio::Api::Cloud::CloudService::V1";
+option csharp_namespace = "Temporalio.Api.Cloud.CloudService.V1";
+
+import "temporal/api/cloud/operation/v1/message.proto";
+import "temporal/api/cloud/identity/v1/message.proto";
+import "temporal/api/cloud/namespace/v1/message.proto";
+import "temporal/api/cloud/region/v1/message.proto";
+
+message GetUsersRequest {
+    // The requested size of the page to retrieve - optional.
+    // Cannot exceed 1000. Defaults to 100. 
+    int32 page_size = 1;
+    // The page token if this is continuing from another response - optional.
+    string page_token = 2;
+    // Filter users by email address - optional.
+    string email = 3;
+    // Filter users by the namespace they have access to - optional.
+    string namespace = 4;
+}
+
+message GetUsersResponse {
+    // The list of users in ascending ids order
+    repeated temporal.api.cloud.identity.v1.User users = 1;
+    // The next page's token
+    string next_page_token = 2;
+}
+
+message GetUserRequest {
+    // The id of the user to get
+    string user_id = 1;
+}
+
+message GetUserResponse {
+    // The user
+    temporal.api.cloud.identity.v1.User user = 1;
+}
+
+message CreateUserRequest {
+    // The spec for the user to invite
+    temporal.api.cloud.identity.v1.UserSpec spec = 1;
+    // The id to use for this async operation - optional
+    string async_operation_id = 2;
+}
+
+message CreateUserResponse {
+    // The id of the user that was invited
+    string user_id = 1;
+    // The async operation
+    temporal.api.cloud.operation.v1.AsyncOperation async_operation = 2;
+}
+
+message UpdateUserRequest {
+    // The id of the user to update
+    string user_id = 1;
+    // The new user specification
+    temporal.api.cloud.identity.v1.UserSpec spec = 2;
+    // The version of the user for which this update is intended for
+    // The latest version can be found in the GetUser operation response
+    string resource_version = 3;
+    // The id to use for this async operation - optional
+    string async_operation_id = 4;
+}
+
+message UpdateUserResponse {
+    // The async operation
+    temporal.api.cloud.operation.v1.AsyncOperation async_operation = 1;
+}
+
+message DeleteUserRequest {
+    // The id of the user to delete
+    string user_id = 1;
+    // The version of the user for which this delete is intended for
+    // The latest version can be found in the GetUser operation response
+    string resource_version = 2;
+    // The id to use for this async operation - optional
+    string async_operation_id = 3;
+}
+
+message DeleteUserResponse {
+    // The async operation
+    temporal.api.cloud.operation.v1.AsyncOperation async_operation = 1;
+}
+
+message SetUserNamespaceAccessRequest {
+    // The namespace to set permissions for
+    string namespace = 1;
+    // The id of the user to set permissions for
+    string user_id = 2;
+    // The namespace access to assign the user
+    temporal.api.cloud.identity.v1.NamespaceAccess access = 3;
+    // The version of the user for which this update is intended for
+    // The latest version can be found in the GetUser operation response
+    string resource_version = 4;
+    // The id to use for this async operation - optional
+    string async_operation_id = 5;
+}
+
+message SetUserNamespaceAccessResponse {
+    // The async operation
+    temporal.api.cloud.operation.v1.AsyncOperation async_operation = 1;
+}
+
+message GetAsyncOperationRequest {
+    // The id of the async operation to get
+    string async_operation_id = 1;
+}
+
+message GetAsyncOperationResponse {
+    // The async operation
+    temporal.api.cloud.operation.v1.AsyncOperation async_operation = 1;
+}
+
+message CreateNamespaceRequest {
+    // The namespace specification.
+    temporal.api.cloud.namespace.v1.NamespaceSpec spec = 2;
+    // The id to use for this async operation.
+    // Optional, if not provided a random id will be generated.
+    string async_operation_id = 3;
+}
+
+message CreateNamespaceResponse {
+    // The namespace that was created.
+    string namespace = 1;
+    // The async operation.
+    temporal.api.cloud.operation.v1.AsyncOperation async_operation = 2;
+}
+
+message GetNamespacesRequest {
+    // The requested size of the page to retrieve.
+    // Cannot exceed 1000. 
+    // Optional, defaults to 100. 
+    int32 page_size = 1;
+    // The page token if this is continuing from another response.
+    // Optional, defaults to empty.
+    string page_token = 2;
+    // Filter namespaces by their name.
+    // Optional, defaults to empty.
+    string name = 3;
+}
+
+message GetNamespacesResponse {
+    // The list of namespaces in ascending name order.
+    repeated temporal.api.cloud.namespace.v1.Namespace namespaces = 1;
+    // The next page's token.
+    string next_page_token = 2;
+}
+
+message GetNamespaceRequest {
+    // The namespace to get.
+    string namespace = 1;
+}
+
+message GetNamespaceResponse {
+    // The namespace.
+    temporal.api.cloud.namespace.v1.Namespace namespace = 1;
+}
+
+message UpdateNamespaceRequest {
+    // The namespace to update.
+    string namespace = 1;
+    // The new namespace specification.
+    temporal.api.cloud.namespace.v1.NamespaceSpec spec = 2;
+    // The version of the namespace for which this update is intended for.
+    // The latest version can be found in the namespace status.
+    string resource_version = 3;
+    // The id to use for this async operation.
+    // Optional, if not provided a random id will be generated.
+    string async_operation_id = 4;
+}
+
+message UpdateNamespaceResponse {
+    // The async operation.
+    temporal.api.cloud.operation.v1.AsyncOperation async_operation = 1;
+}
+
+message RenameCustomSearchAttributeRequest {
+    // The namespace to rename the custom search attribute for.
+    string namespace = 1;
+    // The existing name of the custom search attribute to be renamed.
+    string existing_custom_search_attribute_name = 2;
+    // The new name of the custom search attribute.
+    string new_custom_search_attribute_name = 3;
+    // The version of the namespace for which this update is intended for.
+    // The latest version can be found in the namespace status.
+    string resource_version = 4;
+    // The id to use for this async operation.
+    // Optional, if not provided a random id will be generated.
+    string async_operation_id = 5;
+}
+
+message RenameCustomSearchAttributeResponse {
+    // The async operation.
+    temporal.api.cloud.operation.v1.AsyncOperation async_operation = 1;
+}
+
+message DeleteNamespaceRequest {
+    // The namespace to delete.
+    string namespace = 1;
+    // The version of the namespace for which this delete is intended for.
+    // The latest version can be found in the namespace status.
+    string resource_version = 2;
+    // The id to use for this async operation.
+    // Optional, if not provided a random id will be generated.
+    string async_operation_id = 3;
+}
+
+message DeleteNamespaceResponse {
+    // The async operation.
+    temporal.api.cloud.operation.v1.AsyncOperation async_operation = 1;
+}
+
+message GetRegionsRequest {
+}
+
+message GetRegionsResponse {
+    // The temporal cloud regions.
+    repeated temporal.api.cloud.region.v1.Region regions = 1;
+}
+
+message GetRegionRequest {
+    // The id of the region to get.
+    string region = 1;
+}
+
+message GetRegionResponse {
+    // The temporal cloud region.
+    temporal.api.cloud.region.v1.Region region = 1;
+}

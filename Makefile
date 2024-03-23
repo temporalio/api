@@ -95,9 +95,9 @@ buf-install:
 	go install github.com/bufbuild/buf/cmd/buf@v1.27.0
 
 ##### Linters #####
-api-linter:
-	printf $(COLOR) "Run api-linter..."
-	@api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml --output-format json $(PROTO_FILES) | gojq -r 'map(select(.problems != []) | . as $$file | .problems[] | {rule: .rule_doc_uri, location: "\($$file.file_path):\(.location.start_position.line_number)"}) | group_by(.rule) | .[] | .[0].rule + ":\n" + (map("\t" + .location) | join("\n"))'
+api-linter: api-linter-install
+	@printf $(COLOR) "Run api-linter..."
+	@./scripts/lint-api.sh $(PROTO_IMPORTS) $(PROTO_ROOT) $(PROTO_FILES)
 
 $(STAMPDIR):
 	mkdir $@

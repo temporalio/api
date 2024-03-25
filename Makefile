@@ -1,3 +1,5 @@
+SHELL=/bin/bash -o pipefail
+
 $(VERBOSE).SILENT:
 ############################# Main targets #############################
 ci-build: install proto http-api-docs

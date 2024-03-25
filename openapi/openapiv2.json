@@ -1497,7 +1497,7 @@
     "/api/v1/namespaces/{namespace}/workflows/execute-operations": {
       "post": {
         "summary": "ExecuteMultiOperation executes multiple operations within a single workflow.",
-        "description": "All operations are executed as a single atomic unit in the specified order.\nNote that no transactional guarantees are provided.\n\nNOTE: Experimental API.",
+        "description": "The operations are executed in the specified order as an atomic transaction.\n\nNOTE: Experimental API.",
         "operationId": "ExecuteMultiOperation",
         "responses": {
           "200": {
@@ -2341,7 +2341,7 @@
             "type": "object",
             "$ref": "#/definitions/v1WorkflowOperation"
           },
-          "description": "List of operations to execute within a single workflow.\nPreconditions:\n- The list of operations must not be empty.\n- The workflow ids must match across operations.\n- The only valid list of operations is [StartWorkflow, UpdateWorkflow] (in this order)."
+          "description": "List of operations to execute within a single workflow.\nPreconditions:\n- The list of operations must not be empty.\n- The workflow ids must match across operations.\n- The only valid list of operations is [StartWorkflow, UpdateWorkflow] (in this order).\n- Update operation must be durable."
         }
       }
     },
@@ -3153,23 +3153,19 @@
       "properties": {
         "code": {
           "type": "integer",
-          "format": "int32",
-          "description": "The status code, which should be an enum value of\n[google.rpc.Code][google.rpc.Code]."
+          "format": "int32"
         },
         "message": {
-          "type": "string",
-          "description": "A developer-facing error message, which should be in English. Any\nuser-facing error message should be localized and sent in the\n[google.rpc.Status.details][google.rpc.Status.details] field, or localized\nby the client."
+          "type": "string"
         },
         "details": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/protobufAny"
-          },
-          "description": "A list of messages that carry the error details.  There is a common set of\nmessage types for APIs to use."
+          }
         }
-      },
-      "description": "The `Status` type defines a logical error model that is suitable for\ndifferent programming environments, including REST APIs and RPC APIs. It is\nused by [gRPC](https://github.com/grpc). Each `Status` message contains\nthree pieces of data: error code, error message, and error details.\n\nYou can find out more about this error model and how to work with it in the\n[API Design Guide](https://cloud.google.com/apis/design/errors)."
+      }
     },
     "v1ActivityFailureInfo": {
       "type": "object",
@@ -8759,9 +8755,6 @@
     "v1WorkflowOperationResult": {
       "type": "object",
       "properties": {
-        "error": {
-          "$ref": "#/definitions/rpcStatus"
-        },
         "startWorkflow": {
           "$ref": "#/definitions/v1StartWorkflowExecutionResponse"
         },

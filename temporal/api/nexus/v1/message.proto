@@ -192,11 +192,8 @@ message OutgoingServiceSpec {
     // Header key comparison is case-insensitive.
     repeated string disallowed_user_header_prefixes = 3;
 
-    // Whether to use plain HTTP to transmit the StartOperation request. By default HTTPS is used.
-    // Mutually exclusive with tls_options.
-    bool insecure = 4;
-
-    // Mutually exclusive with insecure.
+    // If this service has an HTTPS URL these options may be provided.
+    // Trying to set these options with with an HTTP URL will result in an INVALID_ARGUMENT error.
     temporal.api.common.v1.TLSOptions tls_options = 5;
 
     // Callback URL that is attached to every StartOperation request for this service.
@@ -204,13 +201,12 @@ message OutgoingServiceSpec {
     // See https://github.com/nexus-rpc/api/blob/main/SPEC.md#query-parameters for more information.
     string public_callback_url = 6;
 
-    // Encryption keys for the callback token used for asynchronous completion.
+    // Map of key ID to encryption key spec for the callback token used for asynchronous completion.
     // The callback token contains information that may be considered sensitive such as such as workflow ID.
-    // Any of the provided keys may be used for decryption. Only the last key is used for encryption.
-    // Callback tokens are passed as `Nexus-Callback-Temporal-Cloud-Callback-Token` headers in StartOperation requests.
-    // See https://github.com/nexus-rpc/api/blob/main/SPEC.md#request-headers for more information.
-    repeated string callback_token_encryption_keys = 7;
-
-    // Same as callback_token_encryption_keys but the keys are expected to be present in the filesystem.
-    repeated string callback_token_encryption_key_paths = 8;
+    // Any of the provided keys may be used for decryption. Only callback_token_encryption_key_id is used for
+    // encryption. Callback tokens are passed as a `Nexus-Callback-Temporal-Callback-Token` header in StartOperation
+    // requests. See https://github.com/nexus-rpc/api/blob/main/SPEC.md#request-headers for more information.
+    map<string, temporal.api.common.v1.EncryptionKeySpec> callback_token_encryption_keys = 7;
+    // The key ID used for callback token encryption. Must be present in the callback_token_encryption_keys map.
+    string callback_token_encryption_key_id = 8;
 }

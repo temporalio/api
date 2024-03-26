@@ -4209,6 +4209,24 @@
       ],
       "default": "ENCODING_TYPE_UNSPECIFIED"
     },
+    "v1EncryptionKeySpec": {
+      "type": "object",
+      "properties": {
+        "algo": {
+          "type": "string",
+          "description": "Encryption algorithm. Either \"AES-GCM\" or \"XChaCha20-Poly1305\" are supported (case insensitive).\nAES-GCM can be very fast on certain platforms due to hardware accelaration but requires more frequent key\nrotations as it uses a 96 bit nonce. It is recommended to rotate AES-GCM keys for every 2^32 nonces generated.\nXChaCha20-Poly1305 uses a 192 bit nonce and requires much less frequent rotation."
+        },
+        "data": {
+          "type": "string",
+          "format": "byte",
+          "description": "Encryption key data.\nFor AES, length must be either 16, 24, or 32 bytes to select AES-128, AES-192, or AES-256.\nFor xchacha20-poly1305, key data must be exactly 32 bytes.\nMutually exclusive with path."
+        },
+        "path": {
+          "type": "string",
+          "description": "File system path to load encryption key data from.\nThe content is expected to be stable and the path is not watched by the server.\nMutually exclusive with data."
+        }
+      }
+    },
     "v1EventType": {
       "type": "string",
       "enum": [
@@ -5377,6 +5395,43 @@
         "url": {
           "type": "string",
           "description": "URL to invoke requests."
+        },
+        "header": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Header to attach to all outgoing requests."
+        },
+        "disallowedUserHeaderPrefixes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "ScheduleNexusOperation commands containing header keys that start with these prefixes will be rejected.\nHeader key comparison is case-insensitive."
+        },
+        "tlsOptions": {
+          "$ref": "#/definitions/v1TLSOptions",
+          "description": "If this service has an HTTPS URL these options may be provided.\nTrying to set these options with with an HTTP URL will result in an INVALID_ARGUMENT error."
+        },
+        "publicCallbackUrl": {
+          "type": "string",
+          "description": "Callback URL that is attached to every StartOperation request for this service.\nThe URL should be accessable to the handler of the StartOperation requests.\nSee https://github.com/nexus-rpc/api/blob/main/SPEC.md#query-parameters for more information."
+        },
+        "callbackTokenEncryptionKeys": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1EncryptionKeySpec"
+          },
+          "description": "Map of key ID to encryption key spec for the callback token used for asynchronous completion.\nThe callback token contains information that may be considered sensitive such as such as workflow ID.\nAny of the provided keys may be used for decryption. Only callback_token_encryption_key_id is used for\nencryption. Callback tokens are passed as a `Nexus-Callback-Temporal-Callback-Token` header in StartOperation\nrequests. See https://github.com/nexus-rpc/api/blob/main/SPEC.md#request-headers for more information.\nMutually exclusive with disable_callback_token_encryption."
+        },
+        "callbackTokenEncryptionKeyId": {
+          "type": "string",
+          "description": "The key ID used for callback token encryption. Must be set and present in the callback_token_encryption_keys map.\nMutually exclusive with disable_callback_token_encryption."
+        },
+        "disableCallbackTokenEncryption": {
+          "type": "boolean",
+          "description": "Opt-out of callback token encryption. Not recommended if this service targets an untrusted party.\nMutually exclusive with callback_token_encryption_keys and callback_token_encryption_key_id."
         }
       },
       "description": "Contains mutable fields for an OutgoingService."
@@ -7168,6 +7223,32 @@
         }
       },
       "title": "StructuredCalendarSpec describes an event specification relative to the\ncalendar, in a form that's easy to work with programmatically. Each field can\nbe one or more ranges.\nA timestamp matches if at least one range of each field matches the\ncorresponding fields of the timestamp, except for year: if year is missing,\nthat means all years match. For all fields besides year, at least one Range\nmust be present to match anything.\nTODO: add relative-to-end-of-month\nTODO: add nth day-of-week in month"
+    },
+    "v1TLSOptions": {
+      "type": "object",
+      "properties": {
+        "tlsCertPath": {
+          "type": "string",
+          "description": "If not empty, this path is expected to contain a valid x509 certificate.\nEither both or none of tls_cert_path and tls_key_path should be set."
+        },
+        "tlsKeyPath": {
+          "type": "string",
+          "description": "If not empty, this path is expected to contain a valid private certificate key.\nEither both or none of tls_cert_path and tls_key_path should be set."
+        },
+        "tlsCaPath": {
+          "type": "string",
+          "description": "If not empty, this path is expected to contain a valid CA certificate."
+        },
+        "tlsDisableHostVerification": {
+          "type": "boolean",
+          "description": "Disable TLS host verification - generally not recommended for production use."
+        },
+        "tlsServerName": {
+          "type": "string",
+          "description": "Overrides the target name (SNI) used for TLS host name checking. If this attribute is not specified, the name\nused for TLS host name checking will be the URL host. Adding this override should be done with care."
+        }
+      },
+      "description": "Options for making TLS requests in various contexts."
     },
     "v1TaskIdBlock": {
       "type": "object",

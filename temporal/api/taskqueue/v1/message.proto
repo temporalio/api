@@ -54,31 +54,21 @@ message TaskQueueMetadata {
     google.protobuf.DoubleValue max_tasks_per_second = 1;
 }
 
-// Used to describe a group of versions the caller is interested in.
-message TaskQueueVersionGroup {
-    // Optional. If not provided, the result for the default Build ID will be returned. The default Build ID is the one
-    // mentioned in the first unconditional Assignment Rule. If there is no default Build ID, the result for the
-    // unversioned queue will be returned.
-    // (-- api-linter: core::0140::prepositions --)
-    oneof versions {
-        BuildIdList build_ids = 6;
-        // Explicitly ask for the unversioned queue.
-        bool unversioned = 7;
-        // Ask for all active versions (including unversioned). A version is considered active if it has had new
-        // tasks or polls recently.
-        bool all_active = 8;
-    }
-
-    message BuildIdList {
-        repeated string build_ids = 1;
-    }
+// Used for specifying versions the caller is interested in.
+message TaskQueueVersionSelection {
+    // Include specific Build IDs.
+    repeated string build_ids = 1;
+    // Include the unversioned queue.
+    bool unversioned = 2;
+    // Include all active versions. A version is considered active if it has had new
+    // tasks or polls recently.
+    bool all_active = 3;
 }
 
 message TaskQueueVersionInfo {
     // Empty means unversioned.
     string build_id = 1;
     repeated TaskQueueTypeInfo types_info = 3;
-    // Only applicable to versioned workers (workers with `useVersioning=true`).
     temporal.api.enums.v1.BuildIdTaskReachability task_reachability = 4;
 }
 
@@ -166,9 +156,6 @@ message BuildIdReachability {
 message RampByPercentage {
     // Acceptable range is [0,100).
     float ramp_percentage = 1;
-}
-
-message RampByWorkerRatio {
 }
 
 // These rules assign a Build ID to Unassigned Workflow Executions and

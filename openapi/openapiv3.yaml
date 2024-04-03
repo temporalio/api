@@ -1275,6 +1275,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/execute-operations:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ExecuteMultiOperation executes multiple operations within a single workflow.
+
+         Operations are processed transactionally, meaning if *any* operation fails to be admitted, none are executed,
+         and the request fails. Upon admission, the API returns only when *all* operations have a response.
+
+         NOTE: Experimental API.
+      operationId: ExecuteMultiOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteMultiOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteMultiOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}:
     get:
       tags:
@@ -2870,6 +2907,43 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CallbackInfo'
+    ExecuteMultiOperationRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecuteMultiOperationRequest_Operation'
+          description: |-
+            List of operations to execute within a single workflow.
+
+             Preconditions:
+             - The list of operations must not be empty.
+             - The workflow ids must match across operations.
+             - The only valid set of operations at this time is [StartWorkflow, UpdateWorkflow], in this order.
+    ExecuteMultiOperationRequest_Operation:
+      type: object
+      properties:
+        startWorkflow:
+          $ref: '#/components/schemas/StartWorkflowExecutionRequest'
+        updateWorkflow:
+          $ref: '#/components/schemas/UpdateWorkflowExecutionRequest'
+    ExecuteMultiOperationResponse:
+      type: object
+      properties:
+        responses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecuteMultiOperationResponse_Response'
+    ExecuteMultiOperationResponse_Response:
+      type: object
+      properties:
+        startWorkflow:
+          $ref: '#/components/schemas/StartWorkflowExecutionResponse'
+        updateWorkflow:
+          $ref: '#/components/schemas/UpdateWorkflowExecutionResponse'
     ExternalWorkflowExecutionCancelRequestedEventAttributes:
       type: object
       properties:

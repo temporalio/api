@@ -2154,6 +2154,13 @@
         "url": {
           "type": "string",
           "description": "Callback URL."
+        },
+        "header": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Header to attach to callback request."
         }
       }
     },
@@ -5816,6 +5823,11 @@
     "v1NexusOperationCanceledEventAttributes": {
       "type": "object",
       "properties": {
+        "scheduledEventId": {
+          "type": "string",
+          "format": "int64",
+          "description": "The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation."
+        },
         "failure": {
           "$ref": "#/definitions/apifailurev1Failure",
           "description": "Cancelation details."
@@ -5824,11 +5836,6 @@
           "type": "string",
           "format": "int64",
           "description": "ID of the `NEXUS_OPERATION_CANCEL_REQUESTED` event, if any."
-        },
-        "scheduledEventId": {
-          "type": "string",
-          "format": "int64",
-          "description": "The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation."
         }
       },
       "description": "Nexus operation completed as canceled. May or may not have been due to a cancelation request by the workflow."
@@ -5836,14 +5843,14 @@
     "v1NexusOperationCompletedEventAttributes": {
       "type": "object",
       "properties": {
-        "result": {
-          "$ref": "#/definitions/v1Payload",
-          "description": "Serialized result of the Nexus operation. The response of the Nexus handler.\nDelivered either via a completion callback or as a response to a synchronous operation."
-        },
         "scheduledEventId": {
           "type": "string",
           "format": "int64",
           "description": "The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation."
+        },
+        "result": {
+          "$ref": "#/definitions/v1Payload",
+          "description": "Serialized result of the Nexus operation. The response of the Nexus handler.\nDelivered either via a completion callback or as a response to a synchronous operation."
         }
       },
       "description": "Nexus operation completed successfully."
@@ -5851,14 +5858,14 @@
     "v1NexusOperationFailedEventAttributes": {
       "type": "object",
       "properties": {
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "Failure details."
-        },
         "scheduledEventId": {
           "type": "string",
           "format": "int64",
           "description": "The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "Failure details."
         }
       },
       "description": "Nexus operation failed."
@@ -5870,11 +5877,6 @@
           "type": "string",
           "format": "int64",
           "description": "The NexusOperationScheduled event ID."
-        },
-        "startedEventId": {
-          "type": "string",
-          "format": "int64",
-          "description": "The NexusOperationStarted event ID - may be 0 if the operation completed synchronously."
         },
         "service": {
           "type": "string",
@@ -5904,7 +5906,7 @@
         "input": {
           "$ref": "#/definitions/v1Payload"
         },
-        "timeout": {
+        "scheduleToCloseTimeout": {
           "type": "string",
           "description": "Schedule-to-close timeout for this operation.\nIndicates how long the caller is willing to wait for operation completion.\nCalls are retried internally by the server."
         },
@@ -5945,14 +5947,14 @@
     "v1NexusOperationTimedOutEventAttributes": {
       "type": "object",
       "properties": {
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "Failure details."
-        },
         "scheduledEventId": {
           "type": "string",
           "format": "int64",
           "description": "The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "Failure details."
         }
       },
       "description": "Nexus operation timed out."
@@ -6150,7 +6152,7 @@
           "type": "string",
           "description": "Operation ID. Only set for asynchronous operations after a successful StartOperation call."
         },
-        "timeout": {
+        "scheduleToCloseTimeout": {
           "type": "string",
           "description": "Schedule-to-close timeout for this operation.\nThis is the only timeout settable by a workflow."
         },
@@ -7247,7 +7249,7 @@
           "$ref": "#/definitions/v1Payload",
           "description": "Input for the operation. The server converts this into Nexus request content and the appropriate content headers\ninternally when sending the StartOperation request. On the handler side, if it is also backed by Temporal, the\ncontent is transformed back to the original Payload send in this command."
         },
-        "timeout": {
+        "scheduleToCloseTimeout": {
           "type": "string",
           "description": "Schedule-to-close timeout for this operation.\nIndicates how long the caller is willing to wait for operation completion.\nCalls are retried internally by the server."
         },

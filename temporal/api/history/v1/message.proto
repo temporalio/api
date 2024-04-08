@@ -804,7 +804,9 @@ message NexusOperationScheduledEventAttributes {
     // Schedule-to-close timeout for this operation.
     // Indicates how long the caller is willing to wait for operation completion.
     // Calls are retried internally by the server.
-    google.protobuf.Duration timeout = 4;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 4;
     // Header to attach to the Nexus request.
     map<string, string> header = 5;
     // The `WORKFLOW_TASK_COMPLETED` event that the corresponding ScheduleNexusOperation command was reported with.
@@ -826,37 +828,37 @@ message NexusOperationStartedEventAttributes {
 
 // Nexus operation completed successfully.
 message NexusOperationCompletedEventAttributes {
+    // The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+    int64 scheduled_event_id = 1;
     // Serialized result of the Nexus operation. The response of the Nexus handler.
     // Delivered either via a completion callback or as a response to a synchronous operation.
-    temporal.api.common.v1.Payload result = 1;
-    // The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
-    int64 scheduled_event_id = 2;
+    temporal.api.common.v1.Payload result = 2;
 }
 
 // Nexus operation failed.
 message NexusOperationFailedEventAttributes {
-    // Failure details.
-    temporal.api.failure.v1.Failure failure = 1;
     // The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
-    int64 scheduled_event_id = 2;
+    int64 scheduled_event_id = 1;
+    // Failure details.
+    temporal.api.failure.v1.Failure failure = 2;
 }
 
 // Nexus operation timed out.
 message NexusOperationTimedOutEventAttributes {
-    // Failure details.
-    temporal.api.failure.v1.Failure failure = 1;
     // The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
-    int64 scheduled_event_id = 2;
+    int64 scheduled_event_id = 1;
+    // Failure details.
+    temporal.api.failure.v1.Failure failure = 2;
 }
 
 // Nexus operation completed as canceled. May or may not have been due to a cancelation request by the workflow.
 message NexusOperationCanceledEventAttributes {
-    // Cancelation details.
-    temporal.api.failure.v1.Failure failure = 1;
-    // ID of the `NEXUS_OPERATION_CANCEL_REQUESTED` event, if any.
-    int64 cancel_requested_event_id = 2;
     // The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
-    int64 scheduled_event_id = 3;
+    int64 scheduled_event_id = 1;
+    // Cancelation details.
+    temporal.api.failure.v1.Failure failure = 2;
+    // ID of the `NEXUS_OPERATION_CANCEL_REQUESTED` event, if any.
+    int64 cancel_requested_event_id = 3;
 }
 
 message NexusOperationCancelRequestedEventAttributes {

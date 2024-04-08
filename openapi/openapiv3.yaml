@@ -2465,6 +2465,11 @@ components:
         url:
           type: string
           description: Callback URL.
+        header:
+          type: object
+          additionalProperties:
+            type: string
+          description: Header to attach to callback request.
     CanceledFailureInfo:
       type: object
       properties:
@@ -3820,6 +3825,9 @@ components:
     NexusOperationCanceledEventAttributes:
       type: object
       properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
         failure:
           allOf:
             - $ref: '#/components/schemas/Failure'
@@ -3827,33 +3835,30 @@ components:
         cancelRequestedEventId:
           type: string
           description: ID of the `NEXUS_OPERATION_CANCEL_REQUESTED` event, if any.
-        scheduledEventId:
-          type: string
-          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
       description: Nexus operation completed as canceled. May or may not have been due to a cancelation request by the workflow.
     NexusOperationCompletedEventAttributes:
       type: object
       properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
         result:
           allOf:
             - $ref: '#/components/schemas/Payload'
           description: |-
             Serialized result of the Nexus operation. The response of the Nexus handler.
              Delivered either via a completion callback or as a response to a synchronous operation.
-        scheduledEventId:
-          type: string
-          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
       description: Nexus operation completed successfully.
     NexusOperationFailedEventAttributes:
       type: object
       properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
         failure:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: Failure details.
-        scheduledEventId:
-          type: string
-          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
       description: Nexus operation failed.
     NexusOperationFailureInfo:
       type: object
@@ -3861,9 +3866,6 @@ components:
         scheduledEventId:
           type: string
           description: The NexusOperationScheduled event ID.
-        startedEventId:
-          type: string
-          description: The NexusOperationStarted event ID - may be 0 if the operation completed synchronously.
         service:
           type: string
           description: Service name.
@@ -3884,13 +3886,15 @@ components:
           description: Operation name.
         input:
           $ref: '#/components/schemas/Payload'
-        timeout:
+        scheduleToCloseTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
             Schedule-to-close timeout for this operation.
              Indicates how long the caller is willing to wait for operation completion.
              Calls are retried internally by the server.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
         header:
           type: object
           additionalProperties:
@@ -3922,13 +3926,13 @@ components:
     NexusOperationTimedOutEventAttributes:
       type: object
       properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
         failure:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: Failure details.
-        scheduledEventId:
-          type: string
-          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
       description: Nexus operation timed out.
     Outcome:
       type: object
@@ -4055,12 +4059,14 @@ components:
         operationId:
           type: string
           description: Operation ID. Only set for asynchronous operations after a successful StartOperation call.
-        timeout:
+        scheduleToCloseTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
             Schedule-to-close timeout for this operation.
              This is the only timeout settable by a workflow.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
         scheduledTime:
           type: string
           description: The time when the operation was scheduled.

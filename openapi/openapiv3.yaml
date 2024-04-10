@@ -896,7 +896,9 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: Fetches the worker build id versioning sets for a task queue.
+      description: |-
+        Deprecated. Use `GetWorkerVersioningRules`.
+         Fetches the worker build id versioning sets for a task queue.
       operationId: GetWorkerBuildIdCompatibility
       parameters:
         - name: namespace
@@ -931,11 +933,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/worker-versioning-rules:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        Fetches the Build ID assignment and redirect rules for a Task Queue.
+         WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+      operationId: GetWorkerVersioningRules
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: taskQueue
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkerVersioningRulesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/task-queues/{task_queue.name}:
     get:
       tags:
         - WorkflowService
-      description: DescribeTaskQueue returns information about the target task queue.
+      description: |-
+        DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:
+           - List of pollers
+           - Workflow Reachability status
+           - Backlog info for Workflow and/or Activity tasks
       operationId: DescribeTaskQueue
       parameters:
         - name: namespace
@@ -971,7 +1009,9 @@ paths:
             type: string
         - name: taskQueueType
           in: query
-          description: If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
+          description: |-
+            Deprecated. Use `ENHANCED` mode with `task_queue_types`. Ignored in `ENHANCED` mode.
+             If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
           schema:
             enum:
               - TASK_QUEUE_TYPE_UNSPECIFIED
@@ -982,6 +1022,63 @@ paths:
             format: enum
         - name: includeTaskQueueStatus
           in: query
+          description: Deprecated. Ignored in `ENHANCED` mode.
+          schema:
+            type: boolean
+        - name: apiMode
+          in: query
+          description: All options except `task_queue_type` and `include_task_queue_status` are only available in the `ENHANCED` mode.
+          schema:
+            enum:
+              - DESCRIBE_TASK_QUEUE_MODE_UNSPECIFIED
+              - DESCRIBE_TASK_QUEUE_MODE_ENHANCED
+            type: string
+            format: enum
+        - name: versions.buildIds
+          in: query
+          description: Include specific Build IDs.
+          schema:
+            type: array
+            items:
+              type: string
+        - name: versions.unversioned
+          in: query
+          description: Include the unversioned queue.
+          schema:
+            type: boolean
+        - name: versions.allActive
+          in: query
+          description: |-
+            Include all active versions. A version is considered active if it has had new
+             tasks or polls recently.
+          schema:
+            type: boolean
+        - name: taskQueueTypes
+          in: query
+          description: Task queue types to report info about. If not specified, all types are considered.
+          schema:
+            type: array
+            items:
+              enum:
+                - TASK_QUEUE_TYPE_UNSPECIFIED
+                - TASK_QUEUE_TYPE_WORKFLOW
+                - TASK_QUEUE_TYPE_ACTIVITY
+                - TASK_QUEUE_TYPE_NEXUS
+              type: string
+              format: enum
+        - name: reportPollers
+          in: query
+          description: |-
+            Report backlog info for the requested task queue types and versions
+             bool report_backlog_info = 8;
+             Report list of pollers for requested task queue types and versions
+          schema:
+            type: boolean
+        - name: reportTaskReachability
+          in: query
+          description: |-
+            Report task reachability for the requested versions and all task types (task reachability is not reported
+             per task type).
           schema:
             type: boolean
       responses:
@@ -1035,7 +1132,9 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        Fetches task reachability to determine whether a worker may be retired.
+        Deprecated. Use `DescribeTaskQueue`.
+
+         Fetches task reachability to determine whether a worker may be retired.
          The request may specify task queues to query for or let the server fetch all task queues mapped to the given
          build IDs.
 
@@ -1774,7 +1873,9 @@ components:
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: Version info of the worker who processed this workflow task.
+          description: |-
+            Version info of the worker who processed this workflow task.
+             Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     ActivityTaskCompletedEventAttributes:
       type: object
       properties:
@@ -1794,7 +1895,9 @@ components:
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: Version info of the worker who processed this workflow task.
+          description: |-
+            Version info of the worker who processed this workflow task.
+             Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     ActivityTaskFailedEventAttributes:
       type: object
       properties:
@@ -1826,7 +1929,9 @@ components:
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: Version info of the worker who processed this workflow task.
+          description: |-
+            Version info of the worker who processed this workflow task.
+             Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     ActivityTaskScheduledEventAttributes:
       type: object
       properties:
@@ -1885,12 +1990,11 @@ components:
             Activities are assigned a default retry policy controlled by the service's dynamic
              configuration. Retries will happen up to `schedule_to_close_timeout`. To disable retries set
              retry_policy.maximum_attempts to 1.
-        useCompatibleVersion:
+        useWorkflowBuildId:
           type: boolean
           description: |-
-            If this is set, the workflow executing this command wishes to start the activity using
-             a version compatible with the version that this workflow most recently ran on, if such
-             behavior is possible.
+            If this is set, the activity would be assigned to the Build ID of the workflow. Otherwise,
+             Assignment rules of the activity's Task Queue will be used to determine the Build ID.
     ActivityTaskStartedEventAttributes:
       type: object
       properties:
@@ -1913,6 +2017,15 @@ components:
           description: |-
             Will be set to the most recent failure details, if this task has previously failed and then
              been retried.
+        workerVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerVersionStamp'
+          description: Version info of the worker to whom this task was dispatched.
+        buildIdRedirectCounter:
+          type: string
+          description: |-
+            Used by server internally to properly reapply build ID redirects to an execution
+             when rebuilding it from events.
     ActivityTaskTimedOutEventAttributes:
       type: object
       properties:
@@ -2134,6 +2247,56 @@ components:
         BatchOperationTermination sends terminate requests to batch workflows.
          Keep the parameter in sync with temporal.api.workflowservice.v1.TerminateWorkflowExecutionRequest.
          Ignore first_execution_run_id because this is used for single workflow operation.
+    BuildIdAssignmentRule:
+      type: object
+      properties:
+        targetBuildId:
+          type: string
+        percentageRamp:
+          allOf:
+            - $ref: '#/components/schemas/RampByPercentage'
+          description: |-
+            This ramp is useful for gradual Blue/Green deployments (and similar)
+             where you want to send a certain portion of the traffic to the target
+             Build ID.
+      description: |-
+        These rules assign a Build ID to Unassigned Workflow Executions and
+         Activities.
+
+         Specifically, assignment rules are applied to the following Executions or
+         Activities when they are scheduled in a Task Queue:
+            - Generally, any new Workflow Execution, except:
+              - When A Child Workflow or a Continue-As-New Execution inherits the
+                Build ID from its parent/previous execution by setting the
+                `inherit_build_id` flag.
+              - Workflow Executions started Eagerly are assigned to the Build ID of
+                the Starter.
+            - An Activity that is scheduled on a Task Queue different from the one
+              their Workflow runs on, unless the `use_workflow_build_id` flag is set.
+
+         In absence of (applicable) redirect rules (`CompatibleBuildIdRedirectRule`s)
+         the task will be dispatched to Workers of the Build ID determined by the
+         assignment rules. Otherwise, the final Build ID will be determined by the
+         redirect rules.
+
+         When using Worker Versioning, in the steady state, for a given Task Queue,
+         there should typically be exactly one assignment rule to send all Unassigned
+         tasks to the latest Build ID. Existence of at least one such "unconditional"
+         rule at all times is enforce by the system, unless the `force` flag is used
+         by the user when replacing/deleting these rules (for exceptional cases).
+
+         During a deployment, one or more additional rules can be added to assign a
+         subset of the tasks to a new Build ID based on a "ramp percentage".
+
+         When there are multiple assignment rules for a Task Queue, the rules are
+         evaluated in order, starting from index 0. The first applicable rule will be
+         applied and the rest will be ignored.
+
+         In the event that no assignment rule is applicable on a task (or the Task
+         Queue is simply not versioned), the tasks will be sent to unversioned
+         workers, if available. Otherwise, they remain Unassigned, and will be
+         retried for assignment, or dispatch to unversioned workers, at a later time
+         depending on the availability of workers.
     BuildIdReachability:
       type: object
       properties:
@@ -2444,6 +2607,35 @@ components:
       properties:
         clusterName:
           type: string
+    CompatibleBuildIdRedirectRule:
+      type: object
+      properties:
+        sourceBuildId:
+          type: string
+        targetBuildId:
+          type: string
+      description: |-
+        These rules apply to tasks assigned to a particular Build ID
+         (`source_build_id`) to redirect them to another *compatible* Build ID
+         (`target_build_id`).
+
+         It is user's responsibility to ensure that the target Build ID is compatible
+         with the source Build ID (e.g. by using the Patching API).
+
+         Most deployments are not expected to need these rules, however following
+         situations can greatly benefit from redirects:
+          - Need to move long-running Workflow Executions from an old Build ID to a
+            newer one.
+          - Need to hotfix some broken or stuck Workflow Executions.
+
+         In steady state, redirect rules are beneficial when dealing with old
+         Executions ran on now-decommissioned Build IDs:
+          - To redirecting the Workflow Queries to the current (compatible) Build ID.
+          - To be able to Reset an old Execution so it can run on the current
+            (compatible) Build ID.
+
+         Redirect rules can be chained, but only the last rule in the chain can have
+         a ramp.
     CompatibleVersionSet:
       type: object
       properties:
@@ -2643,8 +2835,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PollerInfo'
+          description: |-
+            Deprecated. Use `versions_info.types_info.pollers` with `ENHANCED` mode instead.
+             Not set in `ENHANCED` mode.
         taskQueueStatus:
-          $ref: '#/components/schemas/TaskQueueStatus'
+          allOf:
+            - $ref: '#/components/schemas/TaskQueueStatus'
+          description: Deprecated. Not set in `ENHANCED` mode.
+        versionsInfo:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TaskQueueVersionInfo'
+          description: Only set in `ENHANCED` mode.
     DescribeWorkflowExecutionResponse:
       type: object
       properties:
@@ -2855,6 +3057,25 @@ components:
 
              Open source users can adjust this limit by setting the server's dynamic config value for
              `limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store.
+      description: Deprecated. Use `DescribeTaskQueue`.
+    GetWorkerVersioningRulesResponse:
+      type: object
+      properties:
+        assignmentRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimestampedBuildIdAssignmentRule'
+        compatibleRedirectRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimestampedCompatibleBuildIdRedirectRule'
+        conflictToken:
+          type: string
+          description: |-
+            This value can be passed back to UpdateWorkerVersioningRulesRequest to
+             ensure that the rules were not modified between this List and the Update,
+             which could lead to lost updates and other confusion.
+          format: bytes
     GetWorkflowExecutionHistoryResponse:
       type: object
       properties:
@@ -3514,6 +3735,17 @@ components:
           $ref: '#/components/schemas/Failure'
         lastWorkerIdentity:
           type: string
+        lastIndependentlyAssignedBuildId:
+          type: string
+          description: |-
+            This means the activity is independently versioned and not bound to the build ID of its workflow.
+             The activity will use the build id in this field instead.
+             If the task fails and is scheduled again, the assigned build ID may change according to the latest versioning
+             rules.
+        lastWorkerVersionStamp:
+          allOf:
+            - $ref: '#/components/schemas/WorkerVersionStamp'
+          description: The version stamp of the worker to whom this activity was most recently dispatched
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -3699,6 +3931,13 @@ components:
           $ref: '#/components/schemas/Payloads'
         queryRejected:
           $ref: '#/components/schemas/QueryRejected'
+    RampByPercentage:
+      type: object
+      properties:
+        rampPercentage:
+          type: number
+          description: Acceptable range is [0,100).
+          format: float
     Range:
       type: object
       properties:
@@ -4949,12 +5188,11 @@ components:
           $ref: '#/components/schemas/Memo'
         searchAttributes:
           $ref: '#/components/schemas/SearchAttributes'
-        useCompatibleVersion:
+        inheritBuildId:
           type: boolean
           description: |-
-            If this is set, the workflow executing this command wishes to start the child workflow using
-             a version compatible with the version that this workflow most recently ran on, if such
-             behavior is possible.
+            If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment
+             rules of the child's Task Queue will be used to independently assign a Build ID to it.
     StartWorkflowExecutionRequest:
       type: object
       properties:
@@ -5225,6 +5463,41 @@ components:
           format: double
         taskIdBlock:
           $ref: '#/components/schemas/TaskIdBlock'
+      description: Deprecated. Use `InternalTaskQueueStatus`. This is kept until `DescribeTaskQueue` supports legacy behavior.
+    TaskQueueTypeInfo:
+      type: object
+      properties:
+        type:
+          enum:
+            - TASK_QUEUE_TYPE_UNSPECIFIED
+            - TASK_QUEUE_TYPE_WORKFLOW
+            - TASK_QUEUE_TYPE_ACTIVITY
+            - TASK_QUEUE_TYPE_NEXUS
+          type: string
+          format: enum
+        pollers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollerInfo'
+          description: Unversioned workers (with `useVersioning=false`) are reported in unversioned result even if they set a Build ID.
+    TaskQueueVersionInfo:
+      type: object
+      properties:
+        buildId:
+          type: string
+          description: Empty means unversioned.
+        typesInfo:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskQueueTypeInfo'
+        taskReachability:
+          enum:
+            - BUILD_ID_TASK_REACHABILITY_UNSPECIFIED
+            - BUILD_ID_TASK_REACHABILITY_REACHABLE
+            - BUILD_ID_TASK_REACHABILITY_CLOSED_WORKFLOWS_ONLY
+            - BUILD_ID_TASK_REACHABILITY_UNREACHABLE
+          type: string
+          format: enum
     TerminateWorkflowExecutionRequest:
       type: object
       properties:
@@ -5308,6 +5581,22 @@ components:
         workflowTaskCompletedEventId:
           type: string
           description: The `WORKFLOW_TASK_COMPLETED` event which this command was reported with
+    TimestampedBuildIdAssignmentRule:
+      type: object
+      properties:
+        rule:
+          $ref: '#/components/schemas/BuildIdAssignmentRule'
+        createTime:
+          type: string
+          format: date-time
+    TimestampedCompatibleBuildIdRedirectRule:
+      type: object
+      properties:
+        rule:
+          $ref: '#/components/schemas/CompatibleBuildIdRedirectRule'
+        createTime:
+          type: string
+          format: date-time
     TriggerImmediatelyRequest:
       type: object
       properties:
@@ -5554,11 +5843,6 @@ components:
           description: |-
             An opaque whole-worker identifier. Replaces the deprecated `binary_checksum` field when this
              message is included in requests which previously used that.
-        bundleId:
-          type: string
-          description: |-
-            Set if the worker used a dynamically loadable bundle to process
-             the task. The bundle could be a WASM blob, JS bundle, etc.
         useVersioning:
           type: boolean
           description: |-
@@ -5680,11 +5964,11 @@ components:
           $ref: '#/components/schemas/Memo'
         searchAttributes:
           $ref: '#/components/schemas/SearchAttributes'
-        useCompatibleVersion:
+        inheritBuildId:
           type: boolean
           description: |-
-            If this is set, the workflow executing this command wishes to continue as new using a version
-             compatible with the version that this workflow most recently ran on.
+            If this is set, the new execution inherits the Build ID of the current execution. Otherwise,
+             the assignment rules will be used to independently assign a Build ID to the new execution.
     WorkflowExecutionFailedEventAttributes:
       type: object
       properties:
@@ -5787,6 +6071,20 @@ components:
                  - The root workflow of all three workflows is W1.
                Scenario 5: Workflow W1 is reseted, creating W2.
                  - The root workflow of W1 is W1 and the root workflow of W2 is W2.
+        assignedBuildId:
+          type: string
+          description: |-
+            The currently assigned build ID for this execution. Presence of this value means worker versioning is used
+             for this execution. Assigned build ID is selected based on Worker Versioning Assignment Rules
+             when the first workflow task of the execution is scheduled. If the first workflow task fails and is scheduled
+             again, the assigned build ID may change according to the latest versioning rules.
+             Assigned build ID can also change in the middle of a execution if Compatible Redirect Rules are applied to
+             this execution.
+        inheritedBuildId:
+          type: string
+          description: |-
+            Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead
+             of using the assignment rules.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:
@@ -5924,6 +6222,7 @@ components:
           description: |-
             If this workflow intends to use anything other than the current overall default version for
              the queue, then we include it here.
+             Deprecated. use `inherited_build_id` instead
         completionCallbacks:
           type: array
           items:
@@ -5950,6 +6249,9 @@ components:
                  - The root workflow of all three workflows is W1.
                Scenario 5: Workflow W1 is reseted, creating W2.
                  - The root workflow of W1 is W1 and the root workflow of W2 is W2.
+        inheritedBuildId:
+          type: string
+          description: When present, this execution is assigned to the build ID of its parent or previous execution.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -6131,6 +6433,7 @@ components:
             Version info of the worker who processed this workflow task. If present, the `build_id` field
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
+             Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
         sdkMetadata:
           allOf:
             - $ref: '#/components/schemas/WorkflowTaskCompletedMetadata'
@@ -6269,6 +6572,7 @@ components:
             Version info of the worker who processed this workflow task. If present, the `build_id` field
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
+             Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
     WorkflowTaskScheduledEventAttributes:
       type: object
       properties:
@@ -6311,6 +6615,15 @@ components:
             Total history size in bytes, which the workflow might use to decide when to
              continue-as-new regardless of the suggestion. Note that history event count is
              just the event id of this event, so we don't include it explicitly here.
+        workerVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerVersionStamp'
+          description: Version info of the worker to whom this task was dispatched.
+        buildIdRedirectCounter:
+          type: string
+          description: |-
+            Used by server internally to properly reapply build ID redirects to an execution
+             when rebuilding it from events.
     WorkflowTaskTimedOutEventAttributes:
       type: object
       properties:

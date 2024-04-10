@@ -436,7 +436,10 @@ service WorkflowService {
         };
     }
 
-    // DescribeTaskQueue returns information about the target task queue.
+    // DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:
+    //   - List of pollers
+    //   - Workflow Reachability status
+    //   - Backlog info for Workflow and/or Activity tasks
     rpc DescribeTaskQueue (DescribeTaskQueueRequest) returns (DescribeTaskQueueResponse) {
         option (google.api.http) = {
             get: "/api/v1/namespaces/{namespace}/task-queues/{task_queue.name}"
@@ -514,6 +517,8 @@ service WorkflowService {
         };
     }
 
+    // Deprecated. Use `UpdateWorkerVersioningRules`.
+    //
     // Allows users to specify sets of worker build id versions on a per task queue basis. Versions
     // are ordered, and may be either compatible with some extant version, or a new incompatible
     // version, forming sets of ids which are incompatible with each other, but whose contained
@@ -531,6 +536,7 @@ service WorkflowService {
     //     aip.dev/not-precedent: We do yet expose versioning API to HTTP. --)
     rpc UpdateWorkerBuildIdCompatibility (UpdateWorkerBuildIdCompatibilityRequest) returns (UpdateWorkerBuildIdCompatibilityResponse) {}
 
+    // Deprecated. Use `GetWorkerVersioningRules`.
     // Fetches the worker build id versioning sets for a task queue.
     rpc GetWorkerBuildIdCompatibility (GetWorkerBuildIdCompatibilityRequest) returns (GetWorkerBuildIdCompatibilityResponse) {
         option (google.api.http) = {
@@ -538,6 +544,22 @@ service WorkflowService {
         };
     }
 
+    // Allows updating the Build ID assignment and redirect rules for a given Task Queue.
+    // WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: We do yet expose versioning API to HTTP. --)
+    rpc UpdateWorkerVersioningRules (UpdateWorkerVersioningRulesRequest) returns (UpdateWorkerVersioningRulesResponse) {}
+
+    // Fetches the Build ID assignment and redirect rules for a Task Queue.
+    // WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+    rpc GetWorkerVersioningRules (GetWorkerVersioningRulesRequest) returns (GetWorkerVersioningRulesResponse) {
+        option (google.api.http) = {
+            get: "/api/v1/namespaces/{namespace}/task-queues/{task_queue}/worker-versioning-rules"
+        };
+    }
+
+    // Deprecated. Use `DescribeTaskQueue`.
+    //
     // Fetches task reachability to determine whether a worker may be retired.
     // The request may specify task queues to query for or let the server fetch all task queues mapped to the given
     // build IDs.

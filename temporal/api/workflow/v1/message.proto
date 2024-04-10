@@ -32,6 +32,7 @@ option ruby_package = "Temporalio::Api::Workflow::V1";
 option csharp_namespace = "Temporalio.Api.Workflow.V1";
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 import "temporal/api/enums/v1/common.proto";
@@ -79,6 +80,16 @@ message WorkflowExecutionInfo {
     //   Scenario 5: Workflow W1 is reseted, creating W2.
     //     - The root workflow of W1 is W1 and the root workflow of W2 is W2.
     temporal.api.common.v1.WorkflowExecution root_execution = 18;
+    // The currently assigned build ID for this execution. Presence of this value means worker versioning is used
+    // for this execution. Assigned build ID is selected based on Worker Versioning Assignment Rules
+    // when the first workflow task of the execution is scheduled. If the first workflow task fails and is scheduled
+    // again, the assigned build ID may change according to the latest versioning rules.
+    // Assigned build ID can also change in the middle of a execution if Compatible Redirect Rules are applied to
+    // this execution.
+    string assigned_build_id = 19;
+    // Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead
+    // of using the assignment rules.
+    string inherited_build_id = 20;
 }
 
 message WorkflowExecutionConfig {
@@ -101,6 +112,20 @@ message PendingActivityInfo {
     google.protobuf.Timestamp expiration_time = 10;
     temporal.api.failure.v1.Failure last_failure = 11;
     string last_worker_identity = 12;
+    // Absence of `assigned_build_id` generally means this task is on an "unversioned" task queue.
+    // In rare cases, it can also mean that the task queue is versioned but we failed to write activity's
+    // independently-assigned build ID to the database. This case heals automatically once the task is dispatched.
+    oneof assigned_build_id {
+        // When present, it means this activity is assigned to the build ID of its workflow.
+        google.protobuf.Empty use_workflow_build_id = 13;
+        // This means the activity is independently versioned and not bound to the build ID of its workflow.
+        // The activity will use the build id in this field instead.
+        // If the task fails and is scheduled again, the assigned build ID may change according to the latest versioning
+        // rules.
+        string last_independently_assigned_build_id = 14;
+    }
+    // The version stamp of the worker to whom this activity was most recently dispatched
+    temporal.api.common.v1.WorkerVersionStamp last_worker_version_stamp = 15;
 }
 
 message PendingChildExecutionInfo {

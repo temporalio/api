@@ -1196,8 +1196,15 @@
             "collectionFormat": "multi"
           },
           {
+            "name": "reportBacklogInfo",
+            "description": "Report backlog info for the requested task queue types and versions",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
             "name": "reportPollers",
-            "description": "Report backlog info for the requested task queue types and versions\nbool report_backlog_info = 8;\nReport list of pollers for requested task queue types and versions",
+            "description": "Report list of pollers for requested task queue types and versions",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -3437,6 +3444,31 @@
         }
       }
     },
+    "v1BacklogInfo": {
+      "type": "object",
+      "properties": {
+        "approximateBacklogCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually converges\nto the right value."
+        },
+        "approximateBacklogAge": {
+          "type": "string",
+          "description": "Approximate age of the backlog based on the create timestamp of the task at the head of the queue."
+        },
+        "tasksAddRate": {
+          "type": "number",
+          "format": "float",
+          "title": "Approximate tasks per second added to the queue based on recent activity"
+        },
+        "tasksDispatchRate": {
+          "type": "number",
+          "format": "float",
+          "title": "Approximate tasks per second dispatched to workers based on recent activity"
+        }
+      },
+      "description": "For workflow task queues, we only report the normal queue metrics, not sticky queues. This means the stats\nreported here do not count all workflow tasks. However, because the tasks queued in sticky queues only remain\nvalid for a few seconds, the inaccuracy becomes less significant as the backlog age grows."
+    },
     "v1BadBinaries": {
       "type": "object",
       "properties": {
@@ -4425,6 +4457,10 @@
             "$ref": "#/definitions/v1TaskQueueVersionInfo"
           },
           "description": "This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.\nOnly set in `ENHANCED` mode."
+        },
+        "backlogInfo": {
+          "$ref": "#/definitions/v1BacklogInfo",
+          "description": "Only set in `ENHANCED` mode."
         }
       }
     },

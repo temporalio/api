@@ -1066,12 +1066,14 @@ paths:
                 - TASK_QUEUE_TYPE_NEXUS
               type: string
               format: enum
+        - name: reportBacklogInfo
+          in: query
+          description: Report backlog info for the requested task queue types and versions
+          schema:
+            type: boolean
         - name: reportPollers
           in: query
-          description: |-
-            Report backlog info for the requested task queue types and versions
-             bool report_backlog_info = 8;
-             Report list of pollers for requested task queue types and versions
+          description: Report list of pollers for requested task queue types and versions
           schema:
             type: boolean
         - name: reportTaskReachability
@@ -2122,6 +2124,30 @@ components:
           type: string
           description: If set, override overlap policy for this request.
           format: enum
+    BacklogInfo:
+      type: object
+      properties:
+        approximateBacklogCount:
+          type: string
+          description: |-
+            The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually converges
+             to the right value.
+        approximateBacklogAge:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Approximate age of the backlog based on the create timestamp of the task at the head of the queue.
+        tasksAddRate:
+          type: number
+          description: Approximate tasks per second added to the queue based on recent activity
+          format: float
+        tasksDispatchRate:
+          type: number
+          description: Approximate tasks per second dispatched to workers based on recent activity
+          format: float
+      description: |-
+        For workflow task queues, we only report the normal queue metrics, not sticky queues. This means the stats
+         reported here do not count all workflow tasks. However, because the tasks queued in sticky queues only remain
+         valid for a few seconds, the inaccuracy becomes less significant as the backlog age grows.
     BadBinaries:
       type: object
       properties:
@@ -2849,6 +2875,10 @@ components:
           description: |-
             This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
              Only set in `ENHANCED` mode.
+        backlogInfo:
+          allOf:
+            - $ref: '#/components/schemas/BacklogInfo'
+          description: Only set in `ENHANCED` mode.
     DescribeWorkflowExecutionResponse:
       type: object
       properties:

@@ -1583,3 +1583,39 @@ message RespondNexusTaskFailedRequest {
 
 message RespondNexusTaskFailedResponse {
 }
+
+message ExecuteMultiOperationRequest {
+    string namespace = 1;
+
+    // List of operations to execute within a single workflow.
+    //
+    // Preconditions:
+    // - The list of operations must not be empty.
+    // - The workflow ids must match across operations.
+    // - The only valid list of operations at this time is [StartWorkflow, UpdateWorkflow], in this order.
+    //
+    // Note that additional operation-specific restrictions have to be considered.
+    repeated Operation operations = 2;
+
+    message Operation {
+        oneof operation {
+            // Additional restrictions:
+            // - setting `cron_schedule` is invalid
+            // - setting `request_eager_execution` is invalid
+            StartWorkflowExecutionRequest start_workflow = 1;
+
+            UpdateWorkflowExecutionRequest update_workflow = 2;
+        }
+    }
+}
+
+message ExecuteMultiOperationResponse {
+    repeated Response responses = 1;
+
+    message Response {
+        oneof response {
+            StartWorkflowExecutionResponse start_workflow = 1;
+            UpdateWorkflowExecutionResponse update_workflow = 2;
+        }
+    }
+}

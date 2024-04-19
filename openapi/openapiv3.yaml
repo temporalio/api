@@ -3832,9 +3832,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: Cancelation details.
-        cancelRequestedEventId:
-          type: string
-          description: ID of the `NEXUS_OPERATION_CANCEL_REQUESTED` event, if any.
       description: Nexus operation completed as canceled. May or may not have been due to a cancelation request by the workflow.
     NexusOperationCompletedEventAttributes:
       type: object
@@ -3858,7 +3855,7 @@ components:
         failure:
           allOf:
             - $ref: '#/components/schemas/Failure'
-          description: Failure details.
+          description: Failure details. A NexusOperationFailureInfo wrapping an ApplicationFailureInfo.
       description: Nexus operation failed.
     NexusOperationFailureInfo:
       type: object
@@ -3885,7 +3882,12 @@ components:
           type: string
           description: Operation name.
         input:
-          $ref: '#/components/schemas/Payload'
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Input for the operation. The server converts this into Nexus request content and the appropriate content headers
+             internally when sending the StartOperation request. On the handler side, if it is also backed by Temporal, the
+             content is transformed back to the original Payload stored in this event.
         scheduleToCloseTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
@@ -3923,6 +3925,8 @@ components:
       description: |-
         Event marking an asynchronous operation was started by the responding Nexus handler.
          If the operation completes synchronously, this event is not generated.
+         In rare situations, such as request timeouts, the service may fail to record the actual start time and will fabricate
+         this event upon receiving the operation completion via callback.
     NexusOperationTimedOutEventAttributes:
       type: object
       properties:
@@ -3932,7 +3936,7 @@ components:
         failure:
           allOf:
             - $ref: '#/components/schemas/Failure'
-          description: Failure details.
+          description: Failure details. A NexusOperationFailureInfo wrapping a CanceledFailureInfo.
       description: Nexus operation timed out.
     Outcome:
       type: object

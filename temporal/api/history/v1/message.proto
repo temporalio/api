@@ -800,6 +800,9 @@ message NexusOperationScheduledEventAttributes {
     string service = 1;
     // Operation name.
     string operation = 2;
+    // Input for the operation. The server converts this into Nexus request content and the appropriate content headers
+    // internally when sending the StartOperation request. On the handler side, if it is also backed by Temporal, the
+    // content is transformed back to the original Payload stored in this event.
     temporal.api.common.v1.Payload input = 3;
     // Schedule-to-close timeout for this operation.
     // Indicates how long the caller is willing to wait for operation completion.
@@ -818,6 +821,8 @@ message NexusOperationScheduledEventAttributes {
 
 // Event marking an asynchronous operation was started by the responding Nexus handler.
 // If the operation completes synchronously, this event is not generated.
+// In rare situations, such as request timeouts, the service may fail to record the actual start time and will fabricate
+// this event upon receiving the operation completion via callback.
 message NexusOperationStartedEventAttributes {
     // The ID of the `NEXUS_OPERATION_SCHEDULED` event this task corresponds to.
     int64 scheduled_event_id = 1;
@@ -839,7 +844,7 @@ message NexusOperationCompletedEventAttributes {
 message NexusOperationFailedEventAttributes {
     // The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
     int64 scheduled_event_id = 1;
-    // Failure details.
+    // Failure details. A NexusOperationFailureInfo wrapping an ApplicationFailureInfo.
     temporal.api.failure.v1.Failure failure = 2;
 }
 
@@ -847,7 +852,7 @@ message NexusOperationFailedEventAttributes {
 message NexusOperationTimedOutEventAttributes {
     // The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
     int64 scheduled_event_id = 1;
-    // Failure details.
+    // Failure details. A NexusOperationFailureInfo wrapping a CanceledFailureInfo.
     temporal.api.failure.v1.Failure failure = 2;
 }
 
@@ -857,8 +862,6 @@ message NexusOperationCanceledEventAttributes {
     int64 scheduled_event_id = 1;
     // Cancelation details.
     temporal.api.failure.v1.Failure failure = 2;
-    // ID of the `NEXUS_OPERATION_CANCEL_REQUESTED` event, if any.
-    int64 cancel_requested_event_id = 3;
 }
 
 message NexusOperationCancelRequestedEventAttributes {

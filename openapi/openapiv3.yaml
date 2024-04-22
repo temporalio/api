@@ -3786,21 +3786,32 @@ components:
           description: |-
             The `WORKFLOW_TASK_COMPLETED` event that the corresponding RequestCancelNexusOperation command was reported
              with.
-    NexusOperationCancelationInfo:
+    NexusOperationCanceledEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Cancellation details.
+      description: Nexus operation completed as canceled. May or may not have been due to a cancellation request by the workflow.
+    NexusOperationCancellationInfo:
       type: object
       properties:
         requestedTime:
           type: string
-          description: The time when cancelation was requested.
+          description: The time when cancellation was requested.
           format: date-time
         state:
           enum:
-            - NEXUS_OPERATION_CANCELATION_STATE_UNSPECIFIED
-            - NEXUS_OPERATION_CANCELATION_STATE_SCHEDULED
-            - NEXUS_OPERATION_CANCELATION_STATE_BACKING_OFF
-            - NEXUS_OPERATION_CANCELATION_STATE_SUCCEEDED
-            - NEXUS_OPERATION_CANCELATION_STATE_FAILED
-            - NEXUS_OPERATION_CANCELATION_STATE_TIMED_OUT
+            - NEXUS_OPERATION_CANCELLATION_STATE_UNSPECIFIED
+            - NEXUS_OPERATION_CANCELLATION_STATE_SCHEDULED
+            - NEXUS_OPERATION_CANCELLATION_STATE_BACKING_OFF
+            - NEXUS_OPERATION_CANCELLATION_STATE_SUCCEEDED
+            - NEXUS_OPERATION_CANCELLATION_STATE_FAILED
+            - NEXUS_OPERATION_CANCELLATION_STATE_TIMED_OUT
           type: string
           format: enum
         attempt:
@@ -3821,18 +3832,7 @@ components:
           type: string
           description: The time when the next attempt is scheduled.
           format: date-time
-      description: NexusOperationCancelationInfo contains the state of a nexus operation cancelation.
-    NexusOperationCanceledEventAttributes:
-      type: object
-      properties:
-        scheduledEventId:
-          type: string
-          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
-        failure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: Cancelation details.
-      description: Nexus operation completed as canceled. May or may not have been due to a cancelation request by the workflow.
+      description: NexusOperationCancellationInfo contains the state of a nexus operation cancellation.
     NexusOperationCompletedEventAttributes:
       type: object
       properties:
@@ -3897,7 +3897,7 @@ components:
              Calls are retried internally by the server.
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
-        header:
+        nexusHeader:
           type: object
           additionalProperties:
             type: string
@@ -4101,8 +4101,8 @@ components:
           type: string
           description: The time when the next attempt is scheduled.
           format: date-time
-        cancelationInfo:
-          $ref: '#/components/schemas/NexusOperationCancelationInfo'
+        cancellationInfo:
+          $ref: '#/components/schemas/NexusOperationCancellationInfo'
       description: PendingNexusOperationInfo contains the state of a pending Nexus operation.
     PendingWorkflowTaskInfo:
       type: object

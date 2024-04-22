@@ -5769,16 +5769,31 @@
         }
       }
     },
-    "v1NexusOperationCancelationInfo": {
+    "v1NexusOperationCanceledEventAttributes": {
+      "type": "object",
+      "properties": {
+        "scheduledEventId": {
+          "type": "string",
+          "format": "int64",
+          "description": "The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "Cancellation details."
+        }
+      },
+      "description": "Nexus operation completed as canceled. May or may not have been due to a cancellation request by the workflow."
+    },
+    "v1NexusOperationCancellationInfo": {
       "type": "object",
       "properties": {
         "requestedTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The time when cancelation was requested."
+          "description": "The time when cancellation was requested."
         },
         "state": {
-          "$ref": "#/definitions/v1NexusOperationCancelationState"
+          "$ref": "#/definitions/v1NexusOperationCancellationState"
         },
         "attempt": {
           "type": "integer",
@@ -5800,35 +5815,20 @@
           "description": "The time when the next attempt is scheduled."
         }
       },
-      "description": "NexusOperationCancelationInfo contains the state of a nexus operation cancelation."
+      "description": "NexusOperationCancellationInfo contains the state of a nexus operation cancellation."
     },
-    "v1NexusOperationCancelationState": {
+    "v1NexusOperationCancellationState": {
       "type": "string",
       "enum": [
-        "NEXUS_OPERATION_CANCELATION_STATE_UNSPECIFIED",
-        "NEXUS_OPERATION_CANCELATION_STATE_SCHEDULED",
-        "NEXUS_OPERATION_CANCELATION_STATE_BACKING_OFF",
-        "NEXUS_OPERATION_CANCELATION_STATE_SUCCEEDED",
-        "NEXUS_OPERATION_CANCELATION_STATE_FAILED",
-        "NEXUS_OPERATION_CANCELATION_STATE_TIMED_OUT"
+        "NEXUS_OPERATION_CANCELLATION_STATE_UNSPECIFIED",
+        "NEXUS_OPERATION_CANCELLATION_STATE_SCHEDULED",
+        "NEXUS_OPERATION_CANCELLATION_STATE_BACKING_OFF",
+        "NEXUS_OPERATION_CANCELLATION_STATE_SUCCEEDED",
+        "NEXUS_OPERATION_CANCELLATION_STATE_FAILED",
+        "NEXUS_OPERATION_CANCELLATION_STATE_TIMED_OUT"
       ],
-      "default": "NEXUS_OPERATION_CANCELATION_STATE_UNSPECIFIED",
-      "description": "State of a Nexus operation cancelation.\n\n - NEXUS_OPERATION_CANCELATION_STATE_UNSPECIFIED: Default value, unspecified state.\n - NEXUS_OPERATION_CANCELATION_STATE_SCHEDULED: Cancelation request is in the queue waiting to be executed or is currently executing.\n - NEXUS_OPERATION_CANCELATION_STATE_BACKING_OFF: Cancelation request has failed with a retryable error and is backing off before the next attempt.\n - NEXUS_OPERATION_CANCELATION_STATE_SUCCEEDED: Cancelation request succeeded.\n - NEXUS_OPERATION_CANCELATION_STATE_FAILED: Cancelation request failed with a non-retryable error.\n - NEXUS_OPERATION_CANCELATION_STATE_TIMED_OUT: The associated operation timed out - exceeded the user supplied schedule-to-close timeout."
-    },
-    "v1NexusOperationCanceledEventAttributes": {
-      "type": "object",
-      "properties": {
-        "scheduledEventId": {
-          "type": "string",
-          "format": "int64",
-          "description": "The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation."
-        },
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "Cancelation details."
-        }
-      },
-      "description": "Nexus operation completed as canceled. May or may not have been due to a cancelation request by the workflow."
+      "default": "NEXUS_OPERATION_CANCELLATION_STATE_UNSPECIFIED",
+      "description": "State of a Nexus operation cancellation.\n\n - NEXUS_OPERATION_CANCELLATION_STATE_UNSPECIFIED: Default value, unspecified state.\n - NEXUS_OPERATION_CANCELLATION_STATE_SCHEDULED: Cancellation request is in the queue waiting to be executed or is currently executing.\n - NEXUS_OPERATION_CANCELLATION_STATE_BACKING_OFF: Cancellation request has failed with a retryable error and is backing off before the next attempt.\n - NEXUS_OPERATION_CANCELLATION_STATE_SUCCEEDED: Cancellation request succeeded.\n - NEXUS_OPERATION_CANCELLATION_STATE_FAILED: Cancellation request failed with a non-retryable error.\n - NEXUS_OPERATION_CANCELLATION_STATE_TIMED_OUT: The associated operation timed out - exceeded the user supplied schedule-to-close timeout."
     },
     "v1NexusOperationCompletedEventAttributes": {
       "type": "object",
@@ -5901,7 +5901,7 @@
           "type": "string",
           "description": "Schedule-to-close timeout for this operation.\nIndicates how long the caller is willing to wait for operation completion.\nCalls are retried internally by the server."
         },
-        "header": {
+        "nexusHeader": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
@@ -6000,7 +6000,7 @@
         },
         "publicCallbackUrl": {
           "type": "string",
-          "description": "Callback URL that is attached to every StartOperation request for this service.\nThe URL should be accessable to the handler of the StartOperation requests.\nThe service handles callbacks in the /api/v1/namespaces/{namespace_name}/nexus/callback route. Note that if the\nnamespace is renamed this URL will no longer be valid.\nSee https://github.com/nexus-rpc/api/blob/main/SPEC.md#query-parameters for more information."
+          "description": "Callback URL that is attached to every StartOperation request for this service.\nThe URL should be accessible to the handler of the StartOperation requests.\nThe service handles callbacks in the /api/v1/namespaces/{namespace_name}/nexus/callback route. Note that if the\nnamespace is renamed this URL will no longer be valid.\nSee https://github.com/nexus-rpc/api/blob/main/SPEC.md#query-parameters for more information."
         }
       },
       "description": "Contains mutable fields for an OutgoingService."
@@ -6174,8 +6174,8 @@
           "format": "date-time",
           "description": "The time when the next attempt is scheduled."
         },
-        "cancelationInfo": {
-          "$ref": "#/definitions/v1NexusOperationCancelationInfo"
+        "cancellationInfo": {
+          "$ref": "#/definitions/v1NexusOperationCancellationInfo"
         }
       },
       "description": "PendingNexusOperationInfo contains the state of a pending Nexus operation."
@@ -6742,7 +6742,7 @@
         "scheduledEventId": {
           "type": "string",
           "format": "int64",
-          "description": "The `NEXUS_OPERATION_SCHEDULED` event ID (a unique identifier) for the operation to be canceled.\nThe operation may ignore cancelation and end up with any completion state."
+          "description": "The `NEXUS_OPERATION_SCHEDULED` event ID (a unique identifier) for the operation to be canceled.\nThe operation may ignore cancellation and end up with any completion state."
         }
       }
     },
@@ -7244,12 +7244,12 @@
           "type": "string",
           "description": "Schedule-to-close timeout for this operation.\nIndicates how long the caller is willing to wait for operation completion.\nCalls are retried internally by the server."
         },
-        "header": {
+        "nexusHeader": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Header to attach to the Nexus request.\nDo not put sensitive information in this header as it is stored in workflow history and transmitted to external\nservices as-is.\nThis is useful propagating tracing information.\nNote that it is not using temporal.api.common.v1.Header because the Nexus protocol only supports string header\nvalues."
+          "description": "Header to attach to the Nexus request.\nDo not put sensitive information in this header as it is stored in workflow history and transmitted to external\nservices as-is.\nThis is useful for propagating tracing information.\nNote that it is not using temporal.api.common.v1.Header because the Nexus protocol only supports string header\nvalues."
         }
       }
     },

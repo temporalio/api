@@ -2465,6 +2465,11 @@ components:
         url:
           type: string
           description: Callback URL.
+        header:
+          type: object
+          additionalProperties:
+            type: string
+          description: Header to attach to callback request.
     CanceledFailureInfo:
       type: object
       properties:
@@ -2912,6 +2917,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CallbackInfo'
+        pendingNexusOperations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingNexusOperationInfo'
     ExecuteMultiOperationRequest:
       type: object
       properties:
@@ -3035,6 +3044,8 @@ components:
           $ref: '#/components/schemas/ActivityFailureInfo'
         childWorkflowExecutionFailureInfo:
           $ref: '#/components/schemas/ChildWorkflowExecutionFailureInfo'
+        nexusOperationExecutionFailureInfo:
+          $ref: '#/components/schemas/NexusOperationFailureInfo'
     GetClusterInfoResponse:
       type: object
       properties:
@@ -3275,6 +3286,13 @@ components:
             - EVENT_TYPE_ACTIVITY_PROPERTIES_MODIFIED_EXTERNALLY
             - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED
             - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ADMITTED
+            - EVENT_TYPE_NEXUS_OPERATION_SCHEDULED
+            - EVENT_TYPE_NEXUS_OPERATION_STARTED
+            - EVENT_TYPE_NEXUS_OPERATION_COMPLETED
+            - EVENT_TYPE_NEXUS_OPERATION_FAILED
+            - EVENT_TYPE_NEXUS_OPERATION_CANCELED
+            - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT
+            - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
           type: string
           format: enum
         version:
@@ -3384,6 +3402,20 @@ components:
           $ref: '#/components/schemas/WorkflowPropertiesModifiedEventAttributes'
         workflowExecutionUpdateAdmittedEventAttributes:
           $ref: '#/components/schemas/WorkflowExecutionUpdateAdmittedEventAttributes'
+        nexusOperationScheduledEventAttributes:
+          $ref: '#/components/schemas/NexusOperationScheduledEventAttributes'
+        nexusOperationStartedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationStartedEventAttributes'
+        nexusOperationCompletedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCompletedEventAttributes'
+        nexusOperationFailedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationFailedEventAttributes'
+        nexusOperationCanceledEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCanceledEventAttributes'
+        nexusOperationTimedOutEventAttributes:
+          $ref: '#/components/schemas/NexusOperationTimedOutEventAttributes'
+        nexusOperationCancelRequestedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCancelRequestedEventAttributes'
       description: |-
         History events are the method by which Temporal SDKs advance (or recreate) workflow state.
          See the `EventType` enum for more info about what each event is for.
@@ -3743,6 +3775,172 @@ components:
       description: |-
         NewWorkflowExecutionInfo is a shared message that encapsulates all the
          required arguments to starting a workflow in different contexts.
+    NexusOperationCancelRequestedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The id of the `NEXUS_OPERATION_SCHEDULED` event this cancel request corresponds to.
+        workflowTaskCompletedEventId:
+          type: string
+          description: |-
+            The `WORKFLOW_TASK_COMPLETED` event that the corresponding RequestCancelNexusOperation command was reported
+             with.
+    NexusOperationCanceledEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Cancellation details.
+      description: Nexus operation completed as canceled. May or may not have been due to a cancellation request by the workflow.
+    NexusOperationCancellationInfo:
+      type: object
+      properties:
+        requestedTime:
+          type: string
+          description: The time when cancellation was requested.
+          format: date-time
+        state:
+          enum:
+            - NEXUS_OPERATION_CANCELLATION_STATE_UNSPECIFIED
+            - NEXUS_OPERATION_CANCELLATION_STATE_SCHEDULED
+            - NEXUS_OPERATION_CANCELLATION_STATE_BACKING_OFF
+            - NEXUS_OPERATION_CANCELLATION_STATE_SUCCEEDED
+            - NEXUS_OPERATION_CANCELLATION_STATE_FAILED
+            - NEXUS_OPERATION_CANCELLATION_STATE_TIMED_OUT
+          type: string
+          format: enum
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to deliver the cancel operation request.
+             This number represents a minimum bound since the attempt is incremented after the request completes.
+          format: int32
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled.
+          format: date-time
+      description: NexusOperationCancellationInfo contains the state of a nexus operation cancellation.
+    NexusOperationCompletedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Serialized result of the Nexus operation. The response of the Nexus handler.
+             Delivered either via a completion callback or as a response to a synchronous operation.
+      description: Nexus operation completed successfully.
+    NexusOperationFailedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Failure details. A NexusOperationFailureInfo wrapping an ApplicationFailureInfo.
+      description: Nexus operation failed.
+    NexusOperationFailureInfo:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The NexusOperationScheduled event ID.
+        service:
+          type: string
+          description: Service name.
+        operation:
+          type: string
+          description: Operation name.
+        operationId:
+          type: string
+          description: Operation ID - may be empty if the operation completed synchronously.
+    NexusOperationScheduledEventAttributes:
+      type: object
+      properties:
+        service:
+          type: string
+          description: Service name, resolved to a URL and a call config via the namespace's outgoing service registry.
+        operation:
+          type: string
+          description: Operation name.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Input for the operation. The server converts this into Nexus request content and the appropriate content headers
+             internally when sending the StartOperation request. On the handler side, if it is also backed by Temporal, the
+             content is transformed back to the original Payload stored in this event.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this operation.
+             Indicates how long the caller is willing to wait for operation completion.
+             Calls are retried internally by the server.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        nexusHeader:
+          type: object
+          additionalProperties:
+            type: string
+          description: |-
+            Header to attach to the Nexus request. Note these headers are not the same as Temporal headers on internal
+             activities and child workflows, these are transmitted to Nexus operations that may be external and are not
+             traditional payloads.
+        workflowTaskCompletedEventId:
+          type: string
+          description: The `WORKFLOW_TASK_COMPLETED` event that the corresponding ScheduleNexusOperation command was reported with.
+        requestId:
+          type: string
+          description: |-
+            A unique ID generated by the history service upon creation of this event.
+             The ID will be transmitted with all nexus StartOperation requests and is used as an idempotentency key.
+      description: Event marking that an operation was scheduled by a workflow via the ScheduleNexusOperation command.
+    NexusOperationStartedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event this task corresponds to.
+        operationId:
+          type: string
+          description: |-
+            The operation ID returned by the Nexus handler in the response to the StartOperation request.
+             This ID is used when canceling the operation.
+      description: |-
+        Event marking an asynchronous operation was started by the responding Nexus handler.
+         If the operation completes synchronously, this event is not generated.
+         In rare situations, such as request timeouts, the service may fail to record the actual start time and will fabricate
+         this event upon receiving the operation completion via callback.
+    NexusOperationTimedOutEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Failure details. A NexusOperationFailureInfo wrapping a CanceledFailureInfo.
+      description: Nexus operation timed out.
     Outcome:
       type: object
       properties:
@@ -3854,6 +4052,61 @@ components:
           type: string
           description: 'Default: PARENT_CLOSE_POLICY_TERMINATE.'
           format: enum
+    PendingNexusOperationInfo:
+      type: object
+      properties:
+        service:
+          type: string
+          description: |-
+            Service name.
+             Resolved to a URL via the outgoing service registry for this workflow's namespace.
+        operation:
+          type: string
+          description: Operation name.
+        operationId:
+          type: string
+          description: Operation ID. Only set for asynchronous operations after a successful StartOperation call.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this operation.
+             This is the only timeout settable by a workflow.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        scheduledTime:
+          type: string
+          description: The time when the operation was scheduled.
+          format: date-time
+        state:
+          enum:
+            - PENDING_NEXUS_OPERATION_STATE_UNSPECIFIED
+            - PENDING_NEXUS_OPERATION_STATE_SCHEDULED
+            - PENDING_NEXUS_OPERATION_STATE_BACKING_OFF
+            - PENDING_NEXUS_OPERATION_STATE_STARTED
+          type: string
+          format: enum
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to deliver the start operation request.
+             This number represents a minimum bound since the attempt is incremented after the request completes.
+          format: int32
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled.
+          format: date-time
+        cancellationInfo:
+          $ref: '#/components/schemas/NexusOperationCancellationInfo'
+      description: PendingNexusOperationInfo contains the state of a pending Nexus operation.
     PendingWorkflowTaskInfo:
       type: object
       properties:
@@ -6620,6 +6873,10 @@ components:
             - WORKFLOW_TASK_FAILED_CAUSE_PENDING_REQUEST_CANCEL_LIMIT_EXCEEDED
             - WORKFLOW_TASK_FAILED_CAUSE_BAD_UPDATE_WORKFLOW_EXECUTION_MESSAGE
             - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_UPDATE
+            - WORKFLOW_TASK_FAILED_CAUSE_BAD_SCHEDULE_NEXUS_OPERATION_ATTRIBUTES
+            - WORKFLOW_TASK_FAILED_CAUSE_PENDING_NEXUS_OPERATIONS_LIMIT_EXCEEDED
+            - WORKFLOW_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_NEXUS_OPERATION_ATTRIBUTES
+            - WORKFLOW_TASK_FAILED_CAUSE_FEATURE_DISABLED
           type: string
           format: enum
         failure:

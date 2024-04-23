@@ -232,6 +232,37 @@ message ProtocolMessageCommandAttributes {
     string message_id = 1;
 }
 
+message ScheduleNexusOperationCommandAttributes {
+    // Service name, resolved to a URL and a call config via the namespace's outgoing service registry.
+    string service = 1;
+    // Operation name.
+    string operation = 2;
+    // Input for the operation. The server converts this into Nexus request content and the appropriate content headers
+    // internally when sending the StartOperation request. On the handler side, if it is also backed by Temporal, the
+    // content is transformed back to the original Payload sent in this command.
+    temporal.api.common.v1.Payload input = 3;
+    // Schedule-to-close timeout for this operation.
+    // Indicates how long the caller is willing to wait for operation completion.
+    // Calls are retried internally by the server.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 4;
+
+    // Header to attach to the Nexus request.
+    // Users are responsible for encrypting sensitive data in this header as it is stored in workflow history and
+    // transmitted to external services as-is.
+    // This is useful for propagating tracing information.
+    // Note these headers are not the same as Temporal headers on internal activities and child workflows, these are
+    // transmitted to Nexus operations that may be external and are not traditional payloads.
+    map<string, string> nexus_header = 5;
+}
+
+message RequestCancelNexusOperationCommandAttributes {
+    // The `NEXUS_OPERATION_SCHEDULED` event ID (a unique identifier) for the operation to be canceled.
+    // The operation may ignore cancellation and end up with any completion state.
+    int64 scheduled_event_id = 1;
+}
+
 message Command {
     temporal.api.enums.v1.CommandType command_type = 1;
     oneof attributes {
@@ -251,5 +282,8 @@ message Command {
         ProtocolMessageCommandAttributes protocol_message_command_attributes = 15;
         // 16 is available for use - it was used as part of a prototype that never made it into a release
         ModifyWorkflowPropertiesCommandAttributes modify_workflow_properties_command_attributes = 17;
+
+        ScheduleNexusOperationCommandAttributes schedule_nexus_operation_command_attributes = 18;
+        RequestCancelNexusOperationCommandAttributes request_cancel_nexus_operation_command_attributes = 19;
     }
 }

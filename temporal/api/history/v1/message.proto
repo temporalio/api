@@ -44,6 +44,7 @@ import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/sdk/v1/task_complete_metadata.proto";
+import "temporal/api/sdk/v1/user_metadata.proto";
 
 // Always the first event in workflow history
 message WorkflowExecutionStartedEventAttributes {
@@ -55,7 +56,7 @@ message WorkflowExecutionStartedEventAttributes {
     // Contains information about parent workflow execution that initiated the child workflow these attributes belong to.
     // If the workflow these attributes belong to is not a child workflow of any other execution, this field will not be populated.
     temporal.api.common.v1.WorkflowExecution parent_workflow_execution = 3;
-    // EventID of the child execution initiated event in parent workflow 
+    // EventID of the child execution initiated event in parent workflow
     int64 parent_initiated_event_id = 4;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 5;
     // SDK will deserialize this and provide it as arguments to the workflow function
@@ -434,8 +435,8 @@ message TimerCanceledEventAttributes {
 
 message WorkflowExecutionCancelRequestedEventAttributes {
     // User provided reason for requesting cancellation
-    // TODO: shall we create a new field with name "reason" and deprecate this one? 
-    string cause = 1; 
+    // TODO: shall we create a new field with name "reason" and deprecate this one?
+    string cause = 1;
     // TODO: Is this the ID of the event in the workflow which initiated this cancel, if there was one?
     int64 external_initiated_event_id = 2;
     temporal.api.common.v1.WorkflowExecution external_workflow_execution = 3;
@@ -468,7 +469,7 @@ message WorkflowExecutionSignaledEventAttributes {
     temporal.api.common.v1.Payloads input = 2;
     // id of the worker/client who sent this signal
     string identity = 3;
-    // Headers that were passed by the sender of the signal and copied by temporal 
+    // Headers that were passed by the sender of the signal and copied by temporal
     // server into the workflow task.
     temporal.api.common.v1.Header header = 4;
     // Indicates the signal did not generate a new workflow task when received.
@@ -891,6 +892,7 @@ message HistoryEvent {
     // acceptable for the event type and/or attributes to be uninterpretable.
     bool worker_may_ignore = 300;
     // The event details. The type must match that in `event_type`.
+    temporal.api.sdk.v1.UserMetadata user_metadata = 301;
     oneof attributes {
         WorkflowExecutionStartedEventAttributes workflow_execution_started_event_attributes = 6;
         WorkflowExecutionCompletedEventAttributes workflow_execution_completed_event_attributes = 7;

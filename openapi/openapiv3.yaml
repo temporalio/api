@@ -600,6 +600,190 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/nexus/outgoing-services:
+    get:
+      tags:
+        - OperatorService
+      description: |-
+        List all Nexus outgoing services for a namespace, sorted by service name in ascending order. Set page_token in
+         the request to the next_page_token field of the previous response to get the next page of results. An empty
+         next_page_token indicates that there are no more results. During pagination, a newly added service with a name
+         lexicographically earlier than the previous page's last service name may be missed.
+      operationId: ListNexusOutgoingServices
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace to scope the list request to.
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          description: Maximum number of services to return in a single page.
+          schema:
+            type: integer
+            format: int32
+        - name: pageToken
+          in: query
+          description: Pass in the next_page_token from the previous response here.
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListNexusOutgoingServicesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - OperatorService
+      description: |-
+        Create a Nexus service. This will fail if a service with the same name already exists in the namespace with a
+         status of ALREADY_EXISTS.
+         Returns the created service with its initial version. You may use this version for subsequent updates. You don't
+         need to increment the version yourself. The server will increment the version for you after each update.
+      operationId: CreateNexusOutgoingService
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace to create this service definition in.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNexusOutgoingServiceRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateNexusOutgoingServiceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/nexus/outgoing-services/{name}:
+    get:
+      tags:
+        - OperatorService
+      description: |-
+        Get a registered outgoing Nexus service by namespace and service name. The returned version can be used for
+         optimistic updates.
+      operationId: GetNexusOutgoingService
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace that contains this outgoing service definition.
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: Name of service to retrieve.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetNexusOutgoingServiceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      tags:
+        - OperatorService
+      description: Delete an outgoing Nexus service by namespace and service name.
+      operationId: DeleteNexusOutgoingService
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace that contains this outgoing service definition.
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: Name of service to delete.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteNexusOutgoingServiceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/nexus/outgoing-services/{name}/update:
+    post:
+      tags:
+        - OperatorService
+      description: |-
+        Update an outgoing Nexus service by namespace and service name. The version in the request should match the
+         current version of the service. This will fail with a status of FAILED_PRECONDITION if the version does not match.
+         Returns the updated service with the updated version, which can be used for subsequent updates. You don't need
+         to increment the version yourself. The server will increment the version for you.
+      operationId: UpdateNexusOutgoingService
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace to find and update this service definition in.
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: path
+          description: Service name, unique for this namespace. Must match `[a-zA-Z_][a-zA-Z0-9_]*`.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNexusOutgoingServiceRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateNexusOutgoingServiceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/schedules:
     get:
       tags:
@@ -625,6 +809,11 @@ paths:
           schema:
             type: string
             format: bytes
+        - name: query
+          in: query
+          description: Query to filter schedules.
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -891,7 +1080,9 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: Fetches the worker build id versioning sets for a task queue.
+      description: |-
+        Deprecated. Use `GetWorkerVersioningRules`.
+         Fetches the worker build id versioning sets for a task queue.
       operationId: GetWorkerBuildIdCompatibility
       parameters:
         - name: namespace
@@ -926,11 +1117,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/worker-versioning-rules:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        Fetches the Build ID assignment and redirect rules for a Task Queue.
+         WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+      operationId: GetWorkerVersioningRules
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: taskQueue
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkerVersioningRulesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/task-queues/{task_queue.name}:
     get:
       tags:
         - WorkflowService
-      description: DescribeTaskQueue returns information about the target task queue.
+      description: |-
+        DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:
+           - List of pollers
+           - Workflow Reachability status
+           - Backlog info for Workflow and/or Activity tasks
       operationId: DescribeTaskQueue
       parameters:
         - name: namespace
@@ -966,7 +1193,9 @@ paths:
             type: string
         - name: taskQueueType
           in: query
-          description: If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
+          description: |-
+            Deprecated. Use `ENHANCED` mode with `task_queue_types`. Ignored in `ENHANCED` mode.
+             If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
           schema:
             enum:
               - TASK_QUEUE_TYPE_UNSPECIFIED
@@ -977,6 +1206,63 @@ paths:
             format: enum
         - name: includeTaskQueueStatus
           in: query
+          description: Deprecated. Ignored in `ENHANCED` mode.
+          schema:
+            type: boolean
+        - name: apiMode
+          in: query
+          description: All options except `task_queue_type` and `include_task_queue_status` are only available in the `ENHANCED` mode.
+          schema:
+            enum:
+              - DESCRIBE_TASK_QUEUE_MODE_UNSPECIFIED
+              - DESCRIBE_TASK_QUEUE_MODE_ENHANCED
+            type: string
+            format: enum
+        - name: versions.buildIds
+          in: query
+          description: Include specific Build IDs.
+          schema:
+            type: array
+            items:
+              type: string
+        - name: versions.unversioned
+          in: query
+          description: Include the unversioned queue.
+          schema:
+            type: boolean
+        - name: versions.allActive
+          in: query
+          description: |-
+            Include all active versions. A version is considered active if it has had new
+             tasks or polls recently.
+          schema:
+            type: boolean
+        - name: taskQueueTypes
+          in: query
+          description: Task queue types to report info about. If not specified, all types are considered.
+          schema:
+            type: array
+            items:
+              enum:
+                - TASK_QUEUE_TYPE_UNSPECIFIED
+                - TASK_QUEUE_TYPE_WORKFLOW
+                - TASK_QUEUE_TYPE_ACTIVITY
+                - TASK_QUEUE_TYPE_NEXUS
+              type: string
+              format: enum
+        - name: reportPollers
+          in: query
+          description: |-
+            Report backlog info for the requested task queue types and versions
+             bool report_backlog_info = 8;
+             Report list of pollers for requested task queue types and versions
+          schema:
+            type: boolean
+        - name: reportTaskReachability
+          in: query
+          description: |-
+            Report task reachability for the requested versions and all task types (task reachability is not reported
+             per task type).
           schema:
             type: boolean
       responses:
@@ -1030,7 +1316,9 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        Fetches task reachability to determine whether a worker may be retired.
+        Deprecated. Use `DescribeTaskQueue`.
+
+         Fetches task reachability to determine whether a worker may be retired.
          The request may specify task queues to query for or let the server fetch all task queues mapped to the given
          build IDs.
 
@@ -1165,6 +1453,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListWorkflowExecutionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/execute-multi-operation:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ExecuteMultiOperation executes multiple operations within a single workflow.
+
+         Operations are started atomically, meaning if *any* operation fails to be started, none are,
+         and the request fails. Upon start, the API returns only when *all* operations have a response.
+
+         Upon failure, it returns `MultiOperationExecutionFailure` where the status code
+         equals the status code of the *first* operation that failed to be started.
+
+         NOTE: Experimental API.
+      operationId: ExecuteMultiOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteMultiOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteMultiOperationResponse'
         default:
           description: Default error response
           content:
@@ -1678,6 +2006,172 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/nexus/incoming-services:
+    get:
+      tags:
+        - OperatorService
+      description: |-
+        List all Nexus incoming services for the cluster, sorted by service ID in ascending order. Set page_token in the
+         request to the next_page_token field of the previous response to get the next page of results. An empty
+         next_page_token indicates that there are no more results. During pagination, a newly added service with an ID
+         lexicographically earlier than the previous page's last service name may be missed.
+      operationId: ListNexusIncomingServices
+      parameters:
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          description: |-
+            To get the next page, pass in `ListNexusIncomingServicesResponse.next_page_token` from the previous page's
+             response, the token will be empty if there's no other page.
+             Note: the last page may be empty if the total number of services registered is a multiple of the page size.
+          schema:
+            type: string
+            format: bytes
+        - name: name
+          in: query
+          description: |-
+            Name of the incoming service to filter on - optional. Specifying this will result in zero or one results.
+             (-- api-linter: core::203::field-behavior-required=disabled
+                 aip.dev/not-precedent: Not following linter rules. --)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListNexusIncomingServicesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - OperatorService
+      description: |-
+        Create a Nexus service. This will fail if a service with the same name already exists in the namespace with a
+         status of ALREADY_EXISTS.
+         Returns the created service with its initial version. You may use this version for subsequent updates.
+      operationId: CreateNexusIncomingService
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNexusIncomingServiceRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateNexusIncomingServiceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/nexus/incoming-services/{id}:
+    get:
+      tags:
+        - OperatorService
+      description: Get a registered incoming Nexus service by ID. The returned version can be used for optimistic updates.
+      operationId: GetNexusIncomingService
+      parameters:
+        - name: id
+          in: path
+          description: Server-generated unique service ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetNexusIncomingServiceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      tags:
+        - OperatorService
+      description: Delete an incoming Nexus service by ID.
+      operationId: DeleteNexusIncomingService
+      parameters:
+        - name: id
+          in: path
+          description: Server-generated unique service ID.
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: query
+          description: Data version for this service. Must match current version.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteNexusIncomingServiceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/nexus/incoming-services/{id}/update:
+    post:
+      tags:
+        - OperatorService
+      description: |-
+        Optimistically update a Nexus service based on provided version as obtained via the
+         `GetNexusIncomingService` or `ListNexusOutgoingServicesResponse` APIs. This will fail with a status of
+         FAILED_PRECONDITION if the version does not match.
+         Returns the updated service with its updated version. You may use this version for subsequent updates. You don't
+         need to increment the version yourself. The server will increment the version for you after each update.
+      operationId: UpdateNexusIncomingService
+      parameters:
+        - name: id
+          in: path
+          description: Server-generated unique service ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNexusIncomingServiceRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateNexusIncomingServiceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/system-info:
     get:
       tags:
@@ -1769,7 +2263,9 @@ components:
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: Version info of the worker who processed this workflow task.
+          description: |-
+            Version info of the worker who processed this workflow task.
+             Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     ActivityTaskCompletedEventAttributes:
       type: object
       properties:
@@ -1789,7 +2285,9 @@ components:
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: Version info of the worker who processed this workflow task.
+          description: |-
+            Version info of the worker who processed this workflow task.
+             Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     ActivityTaskFailedEventAttributes:
       type: object
       properties:
@@ -1821,7 +2319,9 @@ components:
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: Version info of the worker who processed this workflow task.
+          description: |-
+            Version info of the worker who processed this workflow task.
+             Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
     ActivityTaskScheduledEventAttributes:
       type: object
       properties:
@@ -1880,12 +2380,11 @@ components:
             Activities are assigned a default retry policy controlled by the service's dynamic
              configuration. Retries will happen up to `schedule_to_close_timeout`. To disable retries set
              retry_policy.maximum_attempts to 1.
-        useCompatibleVersion:
+        useWorkflowBuildId:
           type: boolean
           description: |-
-            If this is set, the workflow executing this command wishes to start the activity using
-             a version compatible with the version that this workflow most recently ran on, if such
-             behavior is possible.
+            If this is set, the activity would be assigned to the Build ID of the workflow. Otherwise,
+             Assignment rules of the activity's Task Queue will be used to determine the Build ID.
     ActivityTaskStartedEventAttributes:
       type: object
       properties:
@@ -1908,6 +2407,15 @@ components:
           description: |-
             Will be set to the most recent failure details, if this task has previously failed and then
              been retried.
+        workerVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerVersionStamp'
+          description: Version info of the worker to whom this task was dispatched.
+        buildIdRedirectCounter:
+          type: string
+          description: |-
+            Used by server internally to properly reapply build ID redirects to an execution
+             when rebuilding it from events.
     ActivityTaskTimedOutEventAttributes:
       type: object
       properties:
@@ -2129,6 +2637,56 @@ components:
         BatchOperationTermination sends terminate requests to batch workflows.
          Keep the parameter in sync with temporal.api.workflowservice.v1.TerminateWorkflowExecutionRequest.
          Ignore first_execution_run_id because this is used for single workflow operation.
+    BuildIdAssignmentRule:
+      type: object
+      properties:
+        targetBuildId:
+          type: string
+        percentageRamp:
+          allOf:
+            - $ref: '#/components/schemas/RampByPercentage'
+          description: |-
+            This ramp is useful for gradual Blue/Green deployments (and similar)
+             where you want to send a certain portion of the traffic to the target
+             Build ID.
+      description: |-
+        These rules assign a Build ID to Unassigned Workflow Executions and
+         Activities.
+
+         Specifically, assignment rules are applied to the following Executions or
+         Activities when they are scheduled in a Task Queue:
+            - Generally, any new Workflow Execution, except:
+              - When A Child Workflow or a Continue-As-New Execution inherits the
+                Build ID from its parent/previous execution by setting the
+                `inherit_build_id` flag.
+              - Workflow Executions started Eagerly are assigned to the Build ID of
+                the Starter.
+            - An Activity that is scheduled on a Task Queue different from the one
+              their Workflow runs on, unless the `use_workflow_build_id` flag is set.
+
+         In absence of (applicable) redirect rules (`CompatibleBuildIdRedirectRule`s)
+         the task will be dispatched to Workers of the Build ID determined by the
+         assignment rules. Otherwise, the final Build ID will be determined by the
+         redirect rules.
+
+         When using Worker Versioning, in the steady state, for a given Task Queue,
+         there should typically be exactly one assignment rule to send all Unassigned
+         tasks to the latest Build ID. Existence of at least one such "unconditional"
+         rule at all times is enforce by the system, unless the `force` flag is used
+         by the user when replacing/deleting these rules (for exceptional cases).
+
+         During a deployment, one or more additional rules can be added to assign a
+         subset of the tasks to a new Build ID based on a "ramp percentage".
+
+         When there are multiple assignment rules for a Task Queue, the rules are
+         evaluated in order, starting from index 0. The first applicable rule will be
+         applied and the rest will be ignored.
+
+         In the event that no assignment rule is applicable on a task (or the Task
+         Queue is simply not versioned), the tasks will be sent to unversioned
+         workers, if available. Otherwise, they remain Unassigned, and will be
+         retried for assignment, or dispatch to unversioned workers, at a later time
+         depending on the availability of workers.
     BuildIdReachability:
       type: object
       properties:
@@ -2255,6 +2813,11 @@ components:
         url:
           type: string
           description: Callback URL.
+        header:
+          type: object
+          additionalProperties:
+            type: string
+          description: Header to attach to callback request.
     CanceledFailureInfo:
       type: object
       properties:
@@ -2439,6 +3002,35 @@ components:
       properties:
         clusterName:
           type: string
+    CompatibleBuildIdRedirectRule:
+      type: object
+      properties:
+        sourceBuildId:
+          type: string
+        targetBuildId:
+          type: string
+      description: |-
+        These rules apply to tasks assigned to a particular Build ID
+         (`source_build_id`) to redirect them to another *compatible* Build ID
+         (`target_build_id`).
+
+         It is user's responsibility to ensure that the target Build ID is compatible
+         with the source Build ID (e.g. by using the Patching API).
+
+         Most deployments are not expected to need these rules, however following
+         situations can greatly benefit from redirects:
+          - Need to move long-running Workflow Executions from an old Build ID to a
+            newer one.
+          - Need to hotfix some broken or stuck Workflow Executions.
+
+         In steady state, redirect rules are beneficial when dealing with old
+         Executions ran on now-decommissioned Build IDs:
+          - To redirecting the Workflow Queries to the current (compatible) Build ID.
+          - To be able to Reset an old Execution so it can run on the current
+            (compatible) Build ID.
+
+         Redirect rules can be chained, but only the last rule in the chain can have
+         a ramp.
     CompatibleVersionSet:
       type: object
       properties:
@@ -2477,6 +3069,40 @@ components:
             $ref: '#/components/schemas/Payload'
         count:
           type: string
+    CreateNexusIncomingServiceRequest:
+      type: object
+      properties:
+        spec:
+          allOf:
+            - $ref: '#/components/schemas/IncomingServiceSpec'
+          description: Service definition to create.
+    CreateNexusIncomingServiceResponse:
+      type: object
+      properties:
+        service:
+          allOf:
+            - $ref: '#/components/schemas/IncomingService'
+          description: Data post acceptance. Can be used to issue additional updates to this record.
+    CreateNexusOutgoingServiceRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace to create this service definition in.
+        name:
+          type: string
+          description: Name of service to create.
+        spec:
+          allOf:
+            - $ref: '#/components/schemas/OutgoingServiceSpec'
+          description: Service definition to create. Does not contain a version because there's nothing to match against.
+    CreateNexusOutgoingServiceResponse:
+      type: object
+      properties:
+        service:
+          allOf:
+            - $ref: '#/components/schemas/OutgoingService'
+          description: Data post acceptance. Can be used to issue additional updates to this record.
     CreateScheduleRequest:
       type: object
       properties:
@@ -2528,6 +3154,12 @@ components:
         data:
           type: string
           format: bytes
+    DeleteNexusIncomingServiceResponse:
+      type: object
+      properties: {}
+    DeleteNexusOutgoingServiceResponse:
+      type: object
+      properties: {}
     DeleteScheduleResponse:
       type: object
       properties: {}
@@ -2638,8 +3270,20 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PollerInfo'
+          description: |-
+            Deprecated. Use `versions_info.types_info.pollers` with `ENHANCED` mode instead.
+             Not set in `ENHANCED` mode.
         taskQueueStatus:
-          $ref: '#/components/schemas/TaskQueueStatus'
+          allOf:
+            - $ref: '#/components/schemas/TaskQueueStatus'
+          description: Deprecated. Not set in `ENHANCED` mode.
+        versionsInfo:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TaskQueueVersionInfo'
+          description: |-
+            This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
+             Only set in `ENHANCED` mode.
     DescribeWorkflowExecutionResponse:
       type: object
       properties:
@@ -2661,6 +3305,54 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CallbackInfo'
+        pendingNexusOperations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingNexusOperationInfo'
+    ExecuteMultiOperationRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecuteMultiOperationRequest_Operation'
+          description: |-
+            List of operations to execute within a single workflow.
+
+             Preconditions:
+             - The list of operations must not be empty.
+             - The workflow ids must match across operations.
+             - The only valid list of operations at this time is [StartWorkflow, UpdateWorkflow], in this order.
+
+             Note that additional operation-specific restrictions have to be considered.
+    ExecuteMultiOperationRequest_Operation:
+      type: object
+      properties:
+        startWorkflow:
+          allOf:
+            - $ref: '#/components/schemas/StartWorkflowExecutionRequest'
+          description: |-
+            Additional restrictions:
+             - setting `cron_schedule` is invalid
+             - setting `request_eager_execution` is invalid
+        updateWorkflow:
+          $ref: '#/components/schemas/UpdateWorkflowExecutionRequest'
+    ExecuteMultiOperationResponse:
+      type: object
+      properties:
+        responses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecuteMultiOperationResponse_Response'
+    ExecuteMultiOperationResponse_Response:
+      type: object
+      properties:
+        startWorkflow:
+          $ref: '#/components/schemas/StartWorkflowExecutionResponse'
+        updateWorkflow:
+          $ref: '#/components/schemas/UpdateWorkflowExecutionResponse'
     ExternalWorkflowExecutionCancelRequestedEventAttributes:
       type: object
       properties:
@@ -2740,6 +3432,8 @@ components:
           $ref: '#/components/schemas/ActivityFailureInfo'
         childWorkflowExecutionFailureInfo:
           $ref: '#/components/schemas/ChildWorkflowExecutionFailureInfo'
+        nexusOperationExecutionFailureInfo:
+          $ref: '#/components/schemas/NexusOperationFailureInfo'
     GetClusterInfoResponse:
       type: object
       properties:
@@ -2766,6 +3460,16 @@ components:
         visibilityStore:
           type: string
       description: GetClusterInfoResponse contains information about Temporal cluster.
+    GetNexusIncomingServiceResponse:
+      type: object
+      properties:
+        service:
+          $ref: '#/components/schemas/IncomingService'
+    GetNexusOutgoingServiceResponse:
+      type: object
+      properties:
+        service:
+          $ref: '#/components/schemas/OutgoingService'
     GetSystemInfoResponse:
       type: object
       properties:
@@ -2850,6 +3554,25 @@ components:
 
              Open source users can adjust this limit by setting the server's dynamic config value for
              `limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store.
+      description: Deprecated. Use `DescribeTaskQueue`.
+    GetWorkerVersioningRulesResponse:
+      type: object
+      properties:
+        assignmentRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimestampedBuildIdAssignmentRule'
+        compatibleRedirectRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimestampedCompatibleBuildIdRedirectRule'
+        conflictToken:
+          type: string
+          description: |-
+            This value can be passed back to UpdateWorkerVersioningRulesRequest to
+             ensure that the rules were not modified between this List and the Update,
+             which could lead to lost updates and other confusion.
+          format: bytes
     GetWorkflowExecutionHistoryResponse:
       type: object
       properties:
@@ -2960,7 +3683,14 @@ components:
             - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED_EXTERNALLY
             - EVENT_TYPE_ACTIVITY_PROPERTIES_MODIFIED_EXTERNALLY
             - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED
-            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_REQUESTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ADMITTED
+            - EVENT_TYPE_NEXUS_OPERATION_SCHEDULED
+            - EVENT_TYPE_NEXUS_OPERATION_STARTED
+            - EVENT_TYPE_NEXUS_OPERATION_COMPLETED
+            - EVENT_TYPE_NEXUS_OPERATION_FAILED
+            - EVENT_TYPE_NEXUS_OPERATION_CANCELED
+            - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT
+            - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
           type: string
           format: enum
         version:
@@ -3080,11 +3810,80 @@ components:
           $ref: '#/components/schemas/ActivityPropertiesModifiedExternallyEventAttributes'
         workflowPropertiesModifiedEventAttributes:
           $ref: '#/components/schemas/WorkflowPropertiesModifiedEventAttributes'
-        workflowExecutionUpdateRequestedEventAttributes:
-          $ref: '#/components/schemas/WorkflowExecutionUpdateRequestedEventAttributes'
+        workflowExecutionUpdateAdmittedEventAttributes:
+          $ref: '#/components/schemas/WorkflowExecutionUpdateAdmittedEventAttributes'
+        nexusOperationScheduledEventAttributes:
+          $ref: '#/components/schemas/NexusOperationScheduledEventAttributes'
+        nexusOperationStartedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationStartedEventAttributes'
+        nexusOperationCompletedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCompletedEventAttributes'
+        nexusOperationFailedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationFailedEventAttributes'
+        nexusOperationCanceledEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCanceledEventAttributes'
+        nexusOperationTimedOutEventAttributes:
+          $ref: '#/components/schemas/NexusOperationTimedOutEventAttributes'
+        nexusOperationCancelRequestedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCancelRequestedEventAttributes'
       description: |-
         History events are the method by which Temporal SDKs advance (or recreate) workflow state.
          See the `EventType` enum for more info about what each event is for.
+    IncomingService:
+      type: object
+      properties:
+        version:
+          type: string
+          description: Data version for this service, incremented for every update issued via the UpdateNexusIncomingService API.
+        id:
+          type: string
+          description: Unique server-generated service ID.
+        spec:
+          allOf:
+            - $ref: '#/components/schemas/IncomingServiceSpec'
+          description: Spec for the service.
+        createdTime:
+          type: string
+          description: |-
+            The date and time when the service was created.
+             (-- api-linter: core::0142::time-field-names=disabled
+                 aip.dev/not-precedent: Not following linter rules. --)
+          format: date-time
+        lastModifiedTime:
+          type: string
+          description: |-
+            The date and time when the service was last modified.
+             Will not be set if the service has never been modified.
+             (-- api-linter: core::0142::time-field-names=disabled
+                 aip.dev/not-precedent: Not following linter rules. --)
+          format: date-time
+        urlPrefix:
+          type: string
+          description: |-
+            Server exposed URL prefix for invocation of operations on this service.
+             This doesn't include the protocol, hostname or port as the server does not know how it should be accessed
+             publicly. The URL is stable in the face of service renames.
+      description: |-
+        A cluster-global binding from a service ID to namespace, task queue, and metadata for dispatching incoming Nexus
+         requests.
+    IncomingServiceSpec:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name, unique for this cluster. Must match `[a-zA-Z_][a-zA-Z0-9_]*`.
+        namespace:
+          type: string
+          description: Namespace to route requests to.
+        taskQueue:
+          type: string
+          description: Task queue to route requests to.
+        metadata:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/GoogleProtobufAny'
+          description: Generic service metadata that is available to the server's authorizer.
+      description: Contains mutable fields for an IncomingService.
     Input:
       type: object
       properties:
@@ -3152,6 +3951,29 @@ components:
             $ref: '#/components/schemas/DescribeNamespaceResponse'
         nextPageToken:
           type: string
+          format: bytes
+    ListNexusIncomingServicesResponse:
+      type: object
+      properties:
+        nextPageToken:
+          type: string
+          description: Token for getting the next page.
+          format: bytes
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncomingService'
+    ListNexusOutgoingServicesResponse:
+      type: object
+      properties:
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/OutgoingService'
+          description: List of services in the namespace for the requested page.
+        nextPageToken:
+          type: string
+          description: Token for getting the next page.
           format: bytes
     ListScheduleMatchingTimesResponse:
       type: object
@@ -3438,16 +4260,175 @@ components:
           $ref: '#/components/schemas/SearchAttributes'
         header:
           $ref: '#/components/schemas/Header'
-        userMetadata:
-          allOf:
-            - $ref: '#/components/schemas/UserMetadata'
-          description: |-
-            Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionConfig
-             for use by user interfaces to display the fixed as-of-start summary and details of the
-             workflow.
       description: |-
         NewWorkflowExecutionInfo is a shared message that encapsulates all the
          required arguments to starting a workflow in different contexts.
+    NexusOperationCancelRequestedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The id of the `NEXUS_OPERATION_SCHEDULED` event this cancel request corresponds to.
+        workflowTaskCompletedEventId:
+          type: string
+          description: |-
+            The `WORKFLOW_TASK_COMPLETED` event that the corresponding RequestCancelNexusOperation command was reported
+             with.
+    NexusOperationCanceledEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Cancellation details.
+      description: Nexus operation completed as canceled. May or may not have been due to a cancellation request by the workflow.
+    NexusOperationCancellationInfo:
+      type: object
+      properties:
+        requestedTime:
+          type: string
+          description: The time when cancellation was requested.
+          format: date-time
+        state:
+          enum:
+            - NEXUS_OPERATION_CANCELLATION_STATE_UNSPECIFIED
+            - NEXUS_OPERATION_CANCELLATION_STATE_SCHEDULED
+            - NEXUS_OPERATION_CANCELLATION_STATE_BACKING_OFF
+            - NEXUS_OPERATION_CANCELLATION_STATE_SUCCEEDED
+            - NEXUS_OPERATION_CANCELLATION_STATE_FAILED
+            - NEXUS_OPERATION_CANCELLATION_STATE_TIMED_OUT
+          type: string
+          format: enum
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to deliver the cancel operation request.
+             This number represents a minimum bound since the attempt is incremented after the request completes.
+          format: int32
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled.
+          format: date-time
+      description: NexusOperationCancellationInfo contains the state of a nexus operation cancellation.
+    NexusOperationCompletedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Serialized result of the Nexus operation. The response of the Nexus handler.
+             Delivered either via a completion callback or as a response to a synchronous operation.
+      description: Nexus operation completed successfully.
+    NexusOperationFailedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Failure details. A NexusOperationFailureInfo wrapping an ApplicationFailureInfo.
+      description: Nexus operation failed.
+    NexusOperationFailureInfo:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The NexusOperationScheduled event ID.
+        service:
+          type: string
+          description: Service name.
+        operation:
+          type: string
+          description: Operation name.
+        operationId:
+          type: string
+          description: Operation ID - may be empty if the operation completed synchronously.
+    NexusOperationScheduledEventAttributes:
+      type: object
+      properties:
+        service:
+          type: string
+          description: Service name, resolved to a URL and a call config via the namespace's outgoing service registry.
+        operation:
+          type: string
+          description: Operation name.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Input for the operation. The server converts this into Nexus request content and the appropriate content headers
+             internally when sending the StartOperation request. On the handler side, if it is also backed by Temporal, the
+             content is transformed back to the original Payload stored in this event.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this operation.
+             Indicates how long the caller is willing to wait for operation completion.
+             Calls are retried internally by the server.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        nexusHeader:
+          type: object
+          additionalProperties:
+            type: string
+          description: |-
+            Header to attach to the Nexus request. Note these headers are not the same as Temporal headers on internal
+             activities and child workflows, these are transmitted to Nexus operations that may be external and are not
+             traditional payloads.
+        workflowTaskCompletedEventId:
+          type: string
+          description: The `WORKFLOW_TASK_COMPLETED` event that the corresponding ScheduleNexusOperation command was reported with.
+        requestId:
+          type: string
+          description: |-
+            A unique ID generated by the history service upon creation of this event.
+             The ID will be transmitted with all nexus StartOperation requests and is used as an idempotentency key.
+      description: Event marking that an operation was scheduled by a workflow via the ScheduleNexusOperation command.
+    NexusOperationStartedEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event this task corresponds to.
+        operationId:
+          type: string
+          description: |-
+            The operation ID returned by the Nexus handler in the response to the StartOperation request.
+             This ID is used when canceling the operation.
+      description: |-
+        Event marking an asynchronous operation was started by the responding Nexus handler.
+         If the operation completes synchronously, this event is not generated.
+         In rare situations, such as request timeouts, the service may fail to record the actual start time and will fabricate
+         this event upon receiving the operation completion via callback.
+    NexusOperationTimedOutEventAttributes:
+      type: object
+      properties:
+        scheduledEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_SCHEDULED` event. Uniquely identifies this operation.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Failure details. A NexusOperationFailureInfo wrapping a CanceledFailureInfo.
+      description: Nexus operation timed out.
     Outcome:
       type: object
       properties:
@@ -3456,6 +4437,52 @@ components:
         failure:
           $ref: '#/components/schemas/Failure'
       description: The outcome of a workflow update - success or failure.
+    OutgoingService:
+      type: object
+      properties:
+        version:
+          type: string
+          description: Data version for this service, incremented for every mutation.
+        name:
+          type: string
+          description: Name of the service
+        spec:
+          allOf:
+            - $ref: '#/components/schemas/OutgoingServiceSpec'
+          description: Spec for the service.
+        createdTime:
+          type: string
+          description: |-
+            The date and time when the service was created.
+             (-- api-linter: core::0142::time-field-names=disabled
+                 aip.dev/not-precedent: Not following linter rules. --)
+          format: date-time
+        lastModifiedTime:
+          type: string
+          description: |-
+            The date and time when the service was last modified.
+             Will not be set if the service has never been modified.
+             (-- api-linter: core::0142::time-field-names=disabled
+                 aip.dev/not-precedent: Not following linter rules. --)
+          format: date-time
+      description: |-
+        A per-namespace binding from service name to URL that is used by the service to invoke Nexus requests that are
+         initiated by workflows.
+    OutgoingServiceSpec:
+      type: object
+      properties:
+        url:
+          type: string
+          description: URL to invoke requests.
+        publicCallbackUrl:
+          type: string
+          description: |-
+            Callback URL that is attached to every StartOperation request for this service.
+             The URL should be accessible to the handler of the StartOperation requests.
+             The service handles callbacks in the /api/v1/namespaces/{namespace_name}/nexus/callback route. Note that if the
+             namespace is renamed this URL will no longer be valid.
+             See https://github.com/nexus-rpc/api/blob/main/SPEC.md#query-parameters for more information.
+      description: Contains mutable fields for an OutgoingService.
     PatchScheduleRequest:
       type: object
       properties:
@@ -3528,6 +4555,17 @@ components:
           $ref: '#/components/schemas/Failure'
         lastWorkerIdentity:
           type: string
+        lastIndependentlyAssignedBuildId:
+          type: string
+          description: |-
+            This means the activity is independently versioned and not bound to the build ID of its workflow.
+             The activity will use the build id in this field instead.
+             If the task fails and is scheduled again, the assigned build ID may change according to the latest versioning
+             rules.
+        lastWorkerVersionStamp:
+          allOf:
+            - $ref: '#/components/schemas/WorkerVersionStamp'
+          description: The version stamp of the worker to whom this activity was most recently dispatched
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -3548,6 +4586,61 @@ components:
           type: string
           description: 'Default: PARENT_CLOSE_POLICY_TERMINATE.'
           format: enum
+    PendingNexusOperationInfo:
+      type: object
+      properties:
+        service:
+          type: string
+          description: |-
+            Service name.
+             Resolved to a URL via the outgoing service registry for this workflow's namespace.
+        operation:
+          type: string
+          description: Operation name.
+        operationId:
+          type: string
+          description: Operation ID. Only set for asynchronous operations after a successful StartOperation call.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this operation.
+             This is the only timeout settable by a workflow.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        scheduledTime:
+          type: string
+          description: The time when the operation was scheduled.
+          format: date-time
+        state:
+          enum:
+            - PENDING_NEXUS_OPERATION_STATE_UNSPECIFIED
+            - PENDING_NEXUS_OPERATION_STATE_SCHEDULED
+            - PENDING_NEXUS_OPERATION_STATE_BACKING_OFF
+            - PENDING_NEXUS_OPERATION_STATE_STARTED
+          type: string
+          format: enum
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to deliver the start operation request.
+             This number represents a minimum bound since the attempt is incremented after the request completes.
+          format: int32
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled.
+          format: date-time
+        cancellationInfo:
+          $ref: '#/components/schemas/NexusOperationCancellationInfo'
+      description: PendingNexusOperationInfo contains the state of a pending Nexus operation.
     PendingWorkflowTaskInfo:
       type: object
       properties:
@@ -3713,6 +4806,13 @@ components:
           $ref: '#/components/schemas/Payloads'
         queryRejected:
           $ref: '#/components/schemas/QueryRejected'
+    RampByPercentage:
+      type: object
+      properties:
+        rampPercentage:
+          type: number
+          description: Acceptable range is [0,100).
+          format: float
     Range:
       type: object
       properties:
@@ -3961,13 +5061,25 @@ components:
             - RESET_REAPPLY_TYPE_NONE
             - RESET_REAPPLY_TYPE_ALL_ELIGIBLE
           type: string
-          description: History event reapply options.
+          description: |-
+            Event types to be reapplied (deprecated)
+             Default: RESET_REAPPLY_TYPE_SIGNAL
           format: enum
         currentRunOnly:
           type: boolean
           description: |-
             If true, limit the reset to only within the current run. (Applies to build_id targets and
              possibly others in the future.)
+        resetReapplyExcludeTypes:
+          type: array
+          items:
+            enum:
+              - RESET_REAPPLY_EXCLUDE_TYPE_UNSPECIFIED
+              - RESET_REAPPLY_EXCLUDE_TYPE_SIGNAL
+              - RESET_REAPPLY_EXCLUDE_TYPE_UPDATE
+            type: string
+            format: enum
+          description: Event types not to be reapplied
       description: |-
         Describes where and how to reset a workflow, used for batch reset currently
          and may be used for single-workflow reset later.
@@ -4036,7 +5148,7 @@ components:
           type: string
           description: |-
             Event types to be reapplied (deprecated)
-             Default: RESET_REAPPLY_TYPE_ALL_ELIGIBLE
+             Default: RESET_REAPPLY_TYPE_SIGNAL
           format: enum
         resetReapplyExcludeTypes:
           type: array
@@ -4970,12 +6082,11 @@ components:
           $ref: '#/components/schemas/Memo'
         searchAttributes:
           $ref: '#/components/schemas/SearchAttributes'
-        useCompatibleVersion:
+        inheritBuildId:
           type: boolean
           description: |-
-            If this is set, the workflow executing this command wishes to start the child workflow using
-             a version compatible with the version that this workflow most recently ran on, if such
-             behavior is possible.
+            If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment
+             rules of the child's Task Queue will be used to independently assign a Build ID to it.
     StartWorkflowExecutionRequest:
       type: object
       properties:
@@ -5253,6 +6364,31 @@ components:
           format: double
         taskIdBlock:
           $ref: '#/components/schemas/TaskIdBlock'
+      description: Deprecated. Use `InternalTaskQueueStatus`. This is kept until `DescribeTaskQueue` supports legacy behavior.
+    TaskQueueTypeInfo:
+      type: object
+      properties:
+        pollers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollerInfo'
+          description: Unversioned workers (with `useVersioning=false`) are reported in unversioned result even if they set a Build ID.
+    TaskQueueVersionInfo:
+      type: object
+      properties:
+        typesInfo:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TaskQueueTypeInfo'
+          description: Task Queue info per Task Type. Key is the numerical value of the temporal.api.enums.v1.TaskQueueType enum.
+        taskReachability:
+          enum:
+            - BUILD_ID_TASK_REACHABILITY_UNSPECIFIED
+            - BUILD_ID_TASK_REACHABILITY_REACHABLE
+            - BUILD_ID_TASK_REACHABILITY_CLOSED_WORKFLOWS_ONLY
+            - BUILD_ID_TASK_REACHABILITY_UNREACHABLE
+          type: string
+          format: enum
     TerminateWorkflowExecutionRequest:
       type: object
       properties:
@@ -5336,6 +6472,22 @@ components:
         workflowTaskCompletedEventId:
           type: string
           description: The `WORKFLOW_TASK_COMPLETED` event which this command was reported with
+    TimestampedBuildIdAssignmentRule:
+      type: object
+      properties:
+        rule:
+          $ref: '#/components/schemas/BuildIdAssignmentRule'
+        createTime:
+          type: string
+          format: date-time
+    TimestampedCompatibleBuildIdRedirectRule:
+      type: object
+      properties:
+        rule:
+          $ref: '#/components/schemas/CompatibleBuildIdRedirectRule'
+        createTime:
+          type: string
+          format: date-time
     TriggerImmediatelyRequest:
       type: object
       properties:
@@ -5408,6 +6560,47 @@ components:
           type: string
         isGlobalNamespace:
           type: boolean
+    UpdateNexusIncomingServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Server-generated unique service ID.
+        version:
+          type: string
+          description: Data version for this service. Must match current version.
+        spec:
+          $ref: '#/components/schemas/IncomingServiceSpec'
+    UpdateNexusIncomingServiceResponse:
+      type: object
+      properties:
+        service:
+          allOf:
+            - $ref: '#/components/schemas/IncomingService'
+          description: Data post acceptance. Can be used to issue additional updates to this record.
+    UpdateNexusOutgoingServiceRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace to find and update this service definition in.
+        name:
+          type: string
+          description: Service name, unique for this namespace. Must match `[a-zA-Z_][a-zA-Z0-9_]*`.
+        version:
+          type: string
+          description: Version of the service definition to update. Must match the current version.
+        spec:
+          allOf:
+            - $ref: '#/components/schemas/OutgoingServiceSpec'
+          description: What to update the service spec to.
+    UpdateNexusOutgoingServiceResponse:
+      type: object
+      properties:
+        service:
+          allOf:
+            - $ref: '#/components/schemas/OutgoingService'
+          description: Data post acceptance. Can be used to issue additional updates to this record.
     UpdateRef:
       type: object
       properties:
@@ -5447,6 +6640,15 @@ components:
         requestId:
           type: string
           description: A unique identifier for this update request for idempotence. Typically UUIDv4.
+        searchAttributes:
+          allOf:
+            - $ref: '#/components/schemas/SearchAttributes'
+          description: |-
+            Schedule search attributes to be updated.
+             Do not set this field if you do not want to update the search attributes.
+             A non-null empty object will set the search attributes to an empty map.
+             Note: you cannot only update the search attributes with `UpdateScheduleRequest`,
+             you must also set the `schedule` field; otherwise, it will unset the schedule.
     UpdateScheduleResponse:
       type: object
       properties: {}
@@ -5601,11 +6803,6 @@ components:
           description: |-
             An opaque whole-worker identifier. Replaces the deprecated `binary_checksum` field when this
              message is included in requests which previously used that.
-        bundleId:
-          type: string
-          description: |-
-            Set if the worker used a dynamically loadable bundle to process
-             the task. The bundle could be a WASM blob, JS bundle, etc.
         useVersioning:
           type: boolean
           description: |-
@@ -5731,11 +6928,11 @@ components:
           $ref: '#/components/schemas/Memo'
         searchAttributes:
           $ref: '#/components/schemas/SearchAttributes'
-        useCompatibleVersion:
+        inheritBuildId:
           type: boolean
           description: |-
-            If this is set, the workflow executing this command wishes to continue as new using a version
-             compatible with the version that this workflow most recently ran on.
+            If this is set, the new execution inherits the Build ID of the current execution. Otherwise,
+             the assignment rules will be used to independently assign a Build ID to the new execution.
     WorkflowExecutionFailedEventAttributes:
       type: object
       properties:
@@ -5811,6 +7008,47 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
           description: If set, the most recent worker version stamp that appeared in a workflow task completion
+        executionDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Workflow execution duration is defined as difference between close time and execution time.
+             This field is only populated if the workflow is closed.
+        rootExecution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: |-
+            Contains information about the root workflow execution.
+             The root workflow execution is defined as follows:
+             1. A workflow without parent workflow is its own root workflow.
+             2. A workflow that has a parent workflow has the same root workflow as its parent workflow.
+             Note: workflows continued as new or reseted may or may not have parents, check examples below.
+
+             Examples:
+               Scenario 1: Workflow W1 starts child workflow W2, and W2 starts child workflow W3.
+                 - The root workflow of all three workflows is W1.
+               Scenario 2: Workflow W1 starts child workflow W2, and W2 continued as new W3.
+                 - The root workflow of all three workflows is W1.
+               Scenario 3: Workflow W1 continued as new W2.
+                 - The root workflow of W1 is W1 and the root workflow of W2 is W2.
+               Scenario 4: Workflow W1 starts child workflow W2, and W2 is reseted, creating W3
+                 - The root workflow of all three workflows is W1.
+               Scenario 5: Workflow W1 is reseted, creating W2.
+                 - The root workflow of W1 is W1 and the root workflow of W2 is W2.
+        assignedBuildId:
+          type: string
+          description: |-
+            The currently assigned build ID for this execution. Presence of this value means worker versioning is used
+             for this execution. Assigned build ID is selected based on Worker Versioning Assignment Rules
+             when the first workflow task of the execution is scheduled. If the first workflow task fails and is scheduled
+             again, the assigned build ID may change according to the latest versioning rules.
+             Assigned build ID can also change in the middle of a execution if Compatible Redirect Rules are applied to
+             this execution.
+        inheritedBuildId:
+          type: string
+          description: |-
+            Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead
+             of using the assignment rules.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:
@@ -5948,11 +7186,36 @@ components:
           description: |-
             If this workflow intends to use anything other than the current overall default version for
              the queue, then we include it here.
+             Deprecated. use `inherited_build_id` instead
         completionCallbacks:
           type: array
           items:
             $ref: '#/components/schemas/Callback'
           description: Completion callbacks attached when this workflow was started.
+        rootWorkflowExecution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: |-
+            Contains information about the root workflow execution.
+             The root workflow execution is defined as follows:
+             1. A workflow without parent workflow is its own root workflow.
+             2. A workflow that has a parent workflow has the same root workflow as its parent workflow.
+             Note: workflows continued as new or reseted may or may not have parents, check examples below.
+
+             Examples:
+               Scenario 1: Workflow W1 starts child workflow W2, and W2 starts child workflow W3.
+                 - The root workflow of all three workflows is W1.
+               Scenario 2: Workflow W1 starts child workflow W2, and W2 continued as new W3.
+                 - The root workflow of all three workflows is W1.
+               Scenario 3: Workflow W1 continued as new W2.
+                 - The root workflow of W1 is W1 and the root workflow of W2 is W2.
+               Scenario 4: Workflow W1 starts child workflow W2, and W2 is reseted, creating W3
+                 - The root workflow of all three workflows is W1.
+               Scenario 5: Workflow W1 is reseted, creating W2.
+                 - The root workflow of W1 is W1 and the root workflow of W2 is W2.
+        inheritedBuildId:
+          type: string
+          description: When present, this execution is assigned to the build ID of its parent or previous execution.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -6004,6 +7267,20 @@ components:
           description: |-
             The message payload of the original request message that initiated this
              update.
+    WorkflowExecutionUpdateAdmittedEventAttributes:
+      type: object
+      properties:
+        request:
+          allOf:
+            - $ref: '#/components/schemas/Request'
+          description: The update request associated with this event.
+        origin:
+          enum:
+            - UPDATE_ADMITTED_EVENT_ORIGIN_UNSPECIFIED
+            - UPDATE_ADMITTED_EVENT_ORIGIN_REAPPLY
+          type: string
+          description: An explanation of why this event was written to history.
+          format: enum
     WorkflowExecutionUpdateCompletedEventAttributes:
       type: object
       properties:
@@ -6043,20 +7320,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: The cause of rejection.
-    WorkflowExecutionUpdateRequestedEventAttributes:
-      type: object
-      properties:
-        request:
-          allOf:
-            - $ref: '#/components/schemas/Request'
-          description: The update request associated with this event.
-        origin:
-          enum:
-            - UPDATE_REQUESTED_EVENT_ORIGIN_UNSPECIFIED
-            - UPDATE_REQUESTED_EVENT_ORIGIN_REAPPLY
-          type: string
-          description: An explanation of why this event was written to history.
-          format: enum
     WorkflowPropertiesModifiedEventAttributes:
       type: object
       properties:
@@ -6134,6 +7397,7 @@ components:
             Version info of the worker who processed this workflow task. If present, the `build_id` field
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
+             Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
         sdkMetadata:
           allOf:
             - $ref: '#/components/schemas/WorkflowTaskCompletedMetadata'
@@ -6242,6 +7506,10 @@ components:
             - WORKFLOW_TASK_FAILED_CAUSE_PENDING_REQUEST_CANCEL_LIMIT_EXCEEDED
             - WORKFLOW_TASK_FAILED_CAUSE_BAD_UPDATE_WORKFLOW_EXECUTION_MESSAGE
             - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_UPDATE
+            - WORKFLOW_TASK_FAILED_CAUSE_BAD_SCHEDULE_NEXUS_OPERATION_ATTRIBUTES
+            - WORKFLOW_TASK_FAILED_CAUSE_PENDING_NEXUS_OPERATIONS_LIMIT_EXCEEDED
+            - WORKFLOW_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_NEXUS_OPERATION_ATTRIBUTES
+            - WORKFLOW_TASK_FAILED_CAUSE_FEATURE_DISABLED
           type: string
           format: enum
         failure:
@@ -6272,6 +7540,7 @@ components:
             Version info of the worker who processed this workflow task. If present, the `build_id` field
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
+             Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
     WorkflowTaskScheduledEventAttributes:
       type: object
       properties:
@@ -6314,6 +7583,15 @@ components:
             Total history size in bytes, which the workflow might use to decide when to
              continue-as-new regardless of the suggestion. Note that history event count is
              just the event id of this event, so we don't include it explicitly here.
+        workerVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerVersionStamp'
+          description: Version info of the worker to whom this task was dispatched.
+        buildIdRedirectCounter:
+          type: string
+          description: |-
+            Used by server internally to properly reapply build ID redirects to an execution
+             when rebuilding it from events.
     WorkflowTaskTimedOutEventAttributes:
       type: object
       properties:

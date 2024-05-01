@@ -233,20 +233,22 @@ message ProtocolMessageCommandAttributes {
 }
 
 message ScheduleNexusOperationCommandAttributes {
-    // Service name, resolved to a URL and a call config via the namespace's outgoing service registry.
-    string service = 1;
+    // Endpoint name, must exist in the endpoint registry or this command will fail.
+    string endpoint = 1;
+    // Service name.
+    string service = 2;
     // Operation name.
-    string operation = 2;
+    string operation = 3;
     // Input for the operation. The server converts this into Nexus request content and the appropriate content headers
     // internally when sending the StartOperation request. On the handler side, if it is also backed by Temporal, the
     // content is transformed back to the original Payload sent in this command.
-    temporal.api.common.v1.Payload input = 3;
+    temporal.api.common.v1.Payload input = 4;
     // Schedule-to-close timeout for this operation.
     // Indicates how long the caller is willing to wait for operation completion.
     // Calls are retried internally by the server.
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-    google.protobuf.Duration schedule_to_close_timeout = 4;
+    google.protobuf.Duration schedule_to_close_timeout = 5;
 
     // Header to attach to the Nexus request.
     // Users are responsible for encrypting sensitive data in this header as it is stored in workflow history and
@@ -254,7 +256,7 @@ message ScheduleNexusOperationCommandAttributes {
     // This is useful for propagating tracing information.
     // Note these headers are not the same as Temporal headers on internal activities and child workflows, these are
     // transmitted to Nexus operations that may be external and are not traditional payloads.
-    map<string, string> nexus_header = 5;
+    map<string, string> nexus_header = 6;
 }
 
 message RequestCancelNexusOperationCommandAttributes {

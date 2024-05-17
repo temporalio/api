@@ -600,190 +600,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/nexus/outgoing-services:
-    get:
-      tags:
-        - OperatorService
-      description: |-
-        List all Nexus outgoing services for a namespace, sorted by service name in ascending order. Set page_token in
-         the request to the next_page_token field of the previous response to get the next page of results. An empty
-         next_page_token indicates that there are no more results. During pagination, a newly added service with a name
-         lexicographically earlier than the previous page's last service name may be missed.
-      operationId: ListNexusOutgoingServices
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace to scope the list request to.
-          required: true
-          schema:
-            type: string
-        - name: pageSize
-          in: query
-          description: Maximum number of services to return in a single page.
-          schema:
-            type: integer
-            format: int32
-        - name: pageToken
-          in: query
-          description: Pass in the next_page_token from the previous response here.
-          schema:
-            type: string
-            format: bytes
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListNexusOutgoingServicesResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-    post:
-      tags:
-        - OperatorService
-      description: |-
-        Create a Nexus service. This will fail if a service with the same name already exists in the namespace with a
-         status of ALREADY_EXISTS.
-         Returns the created service with its initial version. You may use this version for subsequent updates. You don't
-         need to increment the version yourself. The server will increment the version for you after each update.
-      operationId: CreateNexusOutgoingService
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace to create this service definition in.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateNexusOutgoingServiceRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateNexusOutgoingServiceResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/nexus/outgoing-services/{name}:
-    get:
-      tags:
-        - OperatorService
-      description: |-
-        Get a registered outgoing Nexus service by namespace and service name. The returned version can be used for
-         optimistic updates.
-      operationId: GetNexusOutgoingService
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace that contains this outgoing service definition.
-          required: true
-          schema:
-            type: string
-        - name: name
-          in: path
-          description: Name of service to retrieve.
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetNexusOutgoingServiceResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-    delete:
-      tags:
-        - OperatorService
-      description: Delete an outgoing Nexus service by namespace and service name.
-      operationId: DeleteNexusOutgoingService
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace that contains this outgoing service definition.
-          required: true
-          schema:
-            type: string
-        - name: name
-          in: path
-          description: Name of service to delete.
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteNexusOutgoingServiceResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/nexus/outgoing-services/{name}/update:
-    post:
-      tags:
-        - OperatorService
-      description: |-
-        Update an outgoing Nexus service by namespace and service name. The version in the request should match the
-         current version of the service. This will fail with a status of FAILED_PRECONDITION if the version does not match.
-         Returns the updated service with the updated version, which can be used for subsequent updates. You don't need
-         to increment the version yourself. The server will increment the version for you.
-      operationId: UpdateNexusOutgoingService
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace to find and update this service definition in.
-          required: true
-          schema:
-            type: string
-        - name: name
-          in: path
-          description: Service name, unique for this namespace. Must match `[a-zA-Z_][a-zA-Z0-9_]*`.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateNexusOutgoingServiceRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpdateNexusOutgoingServiceResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/schedules:
     get:
       tags:
@@ -2006,16 +1822,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/nexus/incoming-services:
+  /api/v1/nexus/endpoints:
     get:
       tags:
         - OperatorService
       description: |-
-        List all Nexus incoming services for the cluster, sorted by service ID in ascending order. Set page_token in the
-         request to the next_page_token field of the previous response to get the next page of results. An empty
-         next_page_token indicates that there are no more results. During pagination, a newly added service with an ID
-         lexicographically earlier than the previous page's last service name may be missed.
-      operationId: ListNexusIncomingServices
+        List all Nexus endpoints for the cluster, sorted by ID in ascending order. Set page_token in the request to the
+         next_page_token field of the previous response to get the next page of results. An empty next_page_token
+         indicates that there are no more results. During pagination, a newly added service with an ID lexicographically
+         earlier than the previous page's last endpoint's ID may be missed.
+      operationId: ListNexusEndpoints
       parameters:
         - name: pageSize
           in: query
@@ -2025,16 +1841,16 @@ paths:
         - name: nextPageToken
           in: query
           description: |-
-            To get the next page, pass in `ListNexusIncomingServicesResponse.next_page_token` from the previous page's
+            To get the next page, pass in `ListNexusEndpointsResponse.next_page_token` from the previous page's
              response, the token will be empty if there's no other page.
-             Note: the last page may be empty if the total number of services registered is a multiple of the page size.
+             Note: the last page may be empty if the total number of endpoints registered is a multiple of the page size.
           schema:
             type: string
             format: bytes
         - name: name
           in: query
           description: |-
-            Name of the incoming service to filter on - optional. Specifying this will result in zero or one results.
+            Name of the incoming endpoint to filter on - optional. Specifying this will result in zero or one results.
              (-- api-linter: core::203::field-behavior-required=disabled
                  aip.dev/not-precedent: Not following linter rules. --)
           schema:
@@ -2045,7 +1861,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ListNexusIncomingServicesResponse'
+                $ref: '#/components/schemas/ListNexusEndpointsResponse'
         default:
           description: Default error response
           content:
@@ -2056,15 +1872,15 @@ paths:
       tags:
         - OperatorService
       description: |-
-        Create a Nexus service. This will fail if a service with the same name already exists in the namespace with a
-         status of ALREADY_EXISTS.
-         Returns the created service with its initial version. You may use this version for subsequent updates.
-      operationId: CreateNexusIncomingService
+        Create a Nexus endpoint. This will fail if an endpoint with the same name is already registered with a status of
+         ALREADY_EXISTS.
+         Returns the created endpoint with its initial version. You may use this version for subsequent updates.
+      operationId: CreateNexusEndpoint
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateNexusIncomingServiceRequest'
+              $ref: '#/components/schemas/CreateNexusEndpointRequest'
         required: true
       responses:
         "200":
@@ -2072,23 +1888,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateNexusIncomingServiceResponse'
+                $ref: '#/components/schemas/CreateNexusEndpointResponse'
         default:
           description: Default error response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/nexus/incoming-services/{id}:
+  /api/v1/nexus/endpoints/{id}:
     get:
       tags:
         - OperatorService
-      description: Get a registered incoming Nexus service by ID. The returned version can be used for optimistic updates.
-      operationId: GetNexusIncomingService
+      description: Get a registered Nexus endpoint by ID. The returned version can be used for optimistic updates.
+      operationId: GetNexusEndpoint
       parameters:
         - name: id
           in: path
-          description: Server-generated unique service ID.
+          description: Server-generated unique endpoint ID.
           required: true
           schema:
             type: string
@@ -2098,7 +1914,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetNexusIncomingServiceResponse'
+                $ref: '#/components/schemas/GetNexusEndpointResponse'
         default:
           description: Default error response
           content:
@@ -2109,17 +1925,17 @@ paths:
       tags:
         - OperatorService
       description: Delete an incoming Nexus service by ID.
-      operationId: DeleteNexusIncomingService
+      operationId: DeleteNexusEndpoint
       parameters:
         - name: id
           in: path
-          description: Server-generated unique service ID.
+          description: Server-generated unique endpoint ID.
           required: true
           schema:
             type: string
         - name: version
           in: query
-          description: Data version for this service. Must match current version.
+          description: Data version for this endpoint. Must match current version.
           schema:
             type: string
       responses:
@@ -2128,28 +1944,28 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeleteNexusIncomingServiceResponse'
+                $ref: '#/components/schemas/DeleteNexusEndpointResponse'
         default:
           description: Default error response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/nexus/incoming-services/{id}/update:
+  /api/v1/nexus/endpoints/{id}/update:
     post:
       tags:
         - OperatorService
       description: |-
-        Optimistically update a Nexus service based on provided version as obtained via the
-         `GetNexusIncomingService` or `ListNexusOutgoingServicesResponse` APIs. This will fail with a status of
-         FAILED_PRECONDITION if the version does not match.
-         Returns the updated service with its updated version. You may use this version for subsequent updates. You don't
+        Optimistically update a Nexus endpoint based on provided version as obtained via the `GetNexusEndpoint` or
+         `ListNexusEndpointResponse` APIs. This will fail with a status of FAILED_PRECONDITION if the version does not
+         match.
+         Returns the updated endpoint with its updated version. You may use this version for subsequent updates. You don't
          need to increment the version yourself. The server will increment the version for you after each update.
-      operationId: UpdateNexusIncomingService
+      operationId: UpdateNexusEndpoint
       parameters:
         - name: id
           in: path
-          description: Server-generated unique service ID.
+          description: Server-generated unique endpoint ID.
           required: true
           schema:
             type: string
@@ -2157,7 +1973,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateNexusIncomingServiceRequest'
+              $ref: '#/components/schemas/UpdateNexusEndpointRequest'
         required: true
       responses:
         "200":
@@ -2165,7 +1981,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateNexusIncomingServiceResponse'
+                $ref: '#/components/schemas/UpdateNexusEndpointResponse'
         default:
           description: Default error response
           content:
@@ -3069,39 +2885,19 @@ components:
             $ref: '#/components/schemas/Payload'
         count:
           type: string
-    CreateNexusIncomingServiceRequest:
+    CreateNexusEndpointRequest:
       type: object
       properties:
         spec:
           allOf:
-            - $ref: '#/components/schemas/IncomingServiceSpec'
-          description: Service definition to create.
-    CreateNexusIncomingServiceResponse:
+            - $ref: '#/components/schemas/EndpointSpec'
+          description: Endpoint definition to create.
+    CreateNexusEndpointResponse:
       type: object
       properties:
-        service:
+        endpoint:
           allOf:
-            - $ref: '#/components/schemas/IncomingService'
-          description: Data post acceptance. Can be used to issue additional updates to this record.
-    CreateNexusOutgoingServiceRequest:
-      type: object
-      properties:
-        namespace:
-          type: string
-          description: Namespace to create this service definition in.
-        name:
-          type: string
-          description: Name of service to create.
-        spec:
-          allOf:
-            - $ref: '#/components/schemas/OutgoingServiceSpec'
-          description: Service definition to create. Does not contain a version because there's nothing to match against.
-    CreateNexusOutgoingServiceResponse:
-      type: object
-      properties:
-        service:
-          allOf:
-            - $ref: '#/components/schemas/OutgoingService'
+            - $ref: '#/components/schemas/Endpoint'
           description: Data post acceptance. Can be used to issue additional updates to this record.
     CreateScheduleRequest:
       type: object
@@ -3154,10 +2950,7 @@ components:
         data:
           type: string
           format: bytes
-    DeleteNexusIncomingServiceResponse:
-      type: object
-      properties: {}
-    DeleteNexusOutgoingServiceResponse:
+    DeleteNexusEndpointResponse:
       type: object
       properties: {}
     DeleteScheduleResponse:
@@ -3309,6 +3102,88 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PendingNexusOperationInfo'
+    Endpoint:
+      type: object
+      properties:
+        version:
+          type: string
+          description: Data version for this endpoint, incremented for every update issued via the UpdateNexusEndpoint API.
+        id:
+          type: string
+          description: Unique server-generated endpoint ID.
+        spec:
+          allOf:
+            - $ref: '#/components/schemas/EndpointSpec'
+          description: Spec for the endpoint.
+        createdTime:
+          type: string
+          description: |-
+            The date and time when the endpoint was created.
+             (-- api-linter: core::0142::time-field-names=disabled
+                 aip.dev/not-precedent: Not following linter rules. --)
+          format: date-time
+        lastModifiedTime:
+          type: string
+          description: |-
+            The date and time when the endpoint was last modified.
+             Will not be set if the endpoint has never been modified.
+             (-- api-linter: core::0142::time-field-names=disabled
+                 aip.dev/not-precedent: Not following linter rules. --)
+          format: date-time
+        urlPrefix:
+          type: string
+          description: |-
+            Server exposed URL prefix for invocation of operations on this endpoint.
+             This doesn't include the protocol, hostname or port as the server does not know how it should be accessed
+             publicly. The URL is stable in the face of endpoint renames.
+      description: A cluster-global binding from an endpoint ID to a target for dispatching incoming Nexus requests.
+    EndpointSpec:
+      type: object
+      properties:
+        name:
+          type: string
+          description: |-
+            Endpoint name, unique for this cluster. Must match `[a-zA-Z_][a-zA-Z0-9_]*`.
+             Renaming an endpoint breaks all workflow callers that reference this endpoint, causing operations to fail.
+        description:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Markdown description serialized as a single JSON string.
+             If the Payload is encrypted, the UI and CLI may decrypt with the configured codec server endpoint.
+        target:
+          allOf:
+            - $ref: '#/components/schemas/EndpointTarget'
+          description: Target to route requests to.
+      description: Contains mutable fields for an Endpoint.
+    EndpointTarget:
+      type: object
+      properties:
+        worker:
+          $ref: '#/components/schemas/EndpointTarget_Worker'
+        external:
+          $ref: '#/components/schemas/EndpointTarget_External'
+      description: Target to route requests to.
+    EndpointTarget_External:
+      type: object
+      properties:
+        url:
+          type: string
+          description: URL to call.
+      description: |-
+        Target an external server by URL.
+         At a later point, this will support providing credentials, in the meantime, an http.RoundTripper can be injected
+         into the server to modify the request.
+    EndpointTarget_Worker:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace to route requests to.
+        taskQueue:
+          type: string
+          description: Nexus task queue to route requests to.
+      description: Target a worker polling on a Nexus task queue in a specific namespace.
     ExecuteMultiOperationRequest:
       type: object
       properties:
@@ -3460,16 +3335,11 @@ components:
         visibilityStore:
           type: string
       description: GetClusterInfoResponse contains information about Temporal cluster.
-    GetNexusIncomingServiceResponse:
+    GetNexusEndpointResponse:
       type: object
       properties:
-        service:
-          $ref: '#/components/schemas/IncomingService'
-    GetNexusOutgoingServiceResponse:
-      type: object
-      properties:
-        service:
-          $ref: '#/components/schemas/OutgoingService'
+        endpoint:
+          $ref: '#/components/schemas/Endpoint'
     GetSystemInfoResponse:
       type: object
       properties:
@@ -3829,61 +3699,6 @@ components:
       description: |-
         History events are the method by which Temporal SDKs advance (or recreate) workflow state.
          See the `EventType` enum for more info about what each event is for.
-    IncomingService:
-      type: object
-      properties:
-        version:
-          type: string
-          description: Data version for this service, incremented for every update issued via the UpdateNexusIncomingService API.
-        id:
-          type: string
-          description: Unique server-generated service ID.
-        spec:
-          allOf:
-            - $ref: '#/components/schemas/IncomingServiceSpec'
-          description: Spec for the service.
-        createdTime:
-          type: string
-          description: |-
-            The date and time when the service was created.
-             (-- api-linter: core::0142::time-field-names=disabled
-                 aip.dev/not-precedent: Not following linter rules. --)
-          format: date-time
-        lastModifiedTime:
-          type: string
-          description: |-
-            The date and time when the service was last modified.
-             Will not be set if the service has never been modified.
-             (-- api-linter: core::0142::time-field-names=disabled
-                 aip.dev/not-precedent: Not following linter rules. --)
-          format: date-time
-        urlPrefix:
-          type: string
-          description: |-
-            Server exposed URL prefix for invocation of operations on this service.
-             This doesn't include the protocol, hostname or port as the server does not know how it should be accessed
-             publicly. The URL is stable in the face of service renames.
-      description: |-
-        A cluster-global binding from a service ID to namespace, task queue, and metadata for dispatching incoming Nexus
-         requests.
-    IncomingServiceSpec:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Service name, unique for this cluster. Must match `[a-zA-Z_][a-zA-Z0-9_]*`.
-        namespace:
-          type: string
-          description: Namespace to route requests to.
-        taskQueue:
-          type: string
-          description: Task queue to route requests to.
-        metadata:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/GoogleProtobufAny'
-          description: Generic service metadata that is available to the server's authorizer.
-      description: Contains mutable fields for an IncomingService.
     Input:
       type: object
       properties:
@@ -3952,29 +3767,17 @@ components:
         nextPageToken:
           type: string
           format: bytes
-    ListNexusIncomingServicesResponse:
+    ListNexusEndpointsResponse:
       type: object
       properties:
         nextPageToken:
           type: string
           description: Token for getting the next page.
           format: bytes
-        services:
+        endpoints:
           type: array
           items:
-            $ref: '#/components/schemas/IncomingService'
-    ListNexusOutgoingServicesResponse:
-      type: object
-      properties:
-        services:
-          type: array
-          items:
-            $ref: '#/components/schemas/OutgoingService'
-          description: List of services in the namespace for the requested page.
-        nextPageToken:
-          type: string
-          description: Token for getting the next page.
-          format: bytes
+            $ref: '#/components/schemas/Endpoint'
     ListScheduleMatchingTimesResponse:
       type: object
       properties:
@@ -4351,6 +4154,9 @@ components:
         scheduledEventId:
           type: string
           description: The NexusOperationScheduled event ID.
+        endpoint:
+          type: string
+          description: Endpoint name.
         service:
           type: string
           description: Service name.
@@ -4363,9 +4169,12 @@ components:
     NexusOperationScheduledEventAttributes:
       type: object
       properties:
+        endpoint:
+          type: string
+          description: Endpoint name, must exist in the endpoint registry.
         service:
           type: string
-          description: Service name, resolved to a URL and a call config via the namespace's outgoing service registry.
+          description: Service name.
         operation:
           type: string
           description: Operation name.
@@ -4437,52 +4246,6 @@ components:
         failure:
           $ref: '#/components/schemas/Failure'
       description: The outcome of a workflow update - success or failure.
-    OutgoingService:
-      type: object
-      properties:
-        version:
-          type: string
-          description: Data version for this service, incremented for every mutation.
-        name:
-          type: string
-          description: Name of the service
-        spec:
-          allOf:
-            - $ref: '#/components/schemas/OutgoingServiceSpec'
-          description: Spec for the service.
-        createdTime:
-          type: string
-          description: |-
-            The date and time when the service was created.
-             (-- api-linter: core::0142::time-field-names=disabled
-                 aip.dev/not-precedent: Not following linter rules. --)
-          format: date-time
-        lastModifiedTime:
-          type: string
-          description: |-
-            The date and time when the service was last modified.
-             Will not be set if the service has never been modified.
-             (-- api-linter: core::0142::time-field-names=disabled
-                 aip.dev/not-precedent: Not following linter rules. --)
-          format: date-time
-      description: |-
-        A per-namespace binding from service name to URL that is used by the service to invoke Nexus requests that are
-         initiated by workflows.
-    OutgoingServiceSpec:
-      type: object
-      properties:
-        url:
-          type: string
-          description: URL to invoke requests.
-        publicCallbackUrl:
-          type: string
-          description: |-
-            Callback URL that is attached to every StartOperation request for this service.
-             The URL should be accessible to the handler of the StartOperation requests.
-             The service handles callbacks in the /api/v1/namespaces/{namespace_name}/nexus/callback route. Note that if the
-             namespace is renamed this URL will no longer be valid.
-             See https://github.com/nexus-rpc/api/blob/main/SPEC.md#query-parameters for more information.
-      description: Contains mutable fields for an OutgoingService.
     PatchScheduleRequest:
       type: object
       properties:
@@ -4589,11 +4352,14 @@ components:
     PendingNexusOperationInfo:
       type: object
       properties:
-        service:
+        endpoint:
           type: string
           description: |-
-            Service name.
-             Resolved to a URL via the outgoing service registry for this workflow's namespace.
+            Endpoint name.
+             Resolved to a URL via the cluster's endpoint registry.
+        service:
+          type: string
+          description: Service name.
         operation:
           type: string
           description: Operation name.
@@ -6560,46 +6326,23 @@ components:
           type: string
         isGlobalNamespace:
           type: boolean
-    UpdateNexusIncomingServiceRequest:
+    UpdateNexusEndpointRequest:
       type: object
       properties:
         id:
           type: string
-          description: Server-generated unique service ID.
+          description: Server-generated unique endpoint ID.
         version:
           type: string
-          description: Data version for this service. Must match current version.
+          description: Data version for this endpoint. Must match current version.
         spec:
-          $ref: '#/components/schemas/IncomingServiceSpec'
-    UpdateNexusIncomingServiceResponse:
+          $ref: '#/components/schemas/EndpointSpec'
+    UpdateNexusEndpointResponse:
       type: object
       properties:
-        service:
+        endpoint:
           allOf:
-            - $ref: '#/components/schemas/IncomingService'
-          description: Data post acceptance. Can be used to issue additional updates to this record.
-    UpdateNexusOutgoingServiceRequest:
-      type: object
-      properties:
-        namespace:
-          type: string
-          description: Namespace to find and update this service definition in.
-        name:
-          type: string
-          description: Service name, unique for this namespace. Must match `[a-zA-Z_][a-zA-Z0-9_]*`.
-        version:
-          type: string
-          description: Version of the service definition to update. Must match the current version.
-        spec:
-          allOf:
-            - $ref: '#/components/schemas/OutgoingServiceSpec'
-          description: What to update the service spec to.
-    UpdateNexusOutgoingServiceResponse:
-      type: object
-      properties:
-        service:
-          allOf:
-            - $ref: '#/components/schemas/OutgoingService'
+            - $ref: '#/components/schemas/Endpoint'
           description: Data post acceptance. Can be used to issue additional updates to this record.
     UpdateRef:
       type: object

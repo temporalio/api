@@ -56,6 +56,7 @@ import "temporal/api/update/v1/message.proto";
 import "temporal/api/version/v1/message.proto";
 import "temporal/api/batch/v1/message.proto";
 import "temporal/api/sdk/v1/task_complete_metadata.proto";
+import "temporal/api/sdk/v1/user_metadata.proto";
 import "temporal/api/nexus/v1/message.proto";
 
 import "google/protobuf/duration.proto";
@@ -192,6 +193,10 @@ message StartWorkflowExecutionRequest {
     // If the workflow continues-as-new, these callbacks will be carried over to the new execution.
     // Callback addresses must be whitelisted in the server's dynamic configuration.
     repeated temporal.api.common.v1.Callback completion_callbacks = 21;
+    // Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo
+    // for use by user interfaces to display the fixed as-of-start summary and details of the
+    // workflow.
+    temporal.api.sdk.v1.UserMetadata user_metadata = 23;
 }
 
 message StartWorkflowExecutionResponse {
@@ -676,6 +681,10 @@ message SignalWithStartWorkflowExecutionRequest {
     google.protobuf.Duration workflow_start_delay = 20;
     // Indicates that a new workflow task should not be generated when this signal is received.
     bool skip_generate_workflow_task = 21;
+    // Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo
+    // for use by user interfaces to display the fixed as-of-start summary and details of the
+    // workflow.
+    temporal.api.sdk.v1.UserMetadata user_metadata = 23;
 }
 
 message SignalWithStartWorkflowExecutionResponse {
@@ -695,7 +704,7 @@ message ResetWorkflowExecutionRequest {
     // Used to de-dupe reset requests
     string request_id = 5;
     // Event types to be reapplied (deprecated)
-    // Default: RESET_REAPPLY_TYPE_ALL_ELIGIBLE
+    // Default: RESET_REAPPLY_TYPE_SIGNAL
     temporal.api.enums.v1.ResetReapplyType reset_reapply_type = 6;
     // Event types not to be reapplied
     repeated temporal.api.enums.v1.ResetReapplyExcludeType reset_reapply_exclude_types = 7;
@@ -876,6 +885,7 @@ message DescribeWorkflowExecutionResponse {
     repeated temporal.api.workflow.v1.PendingChildExecutionInfo pending_children = 4;
     temporal.api.workflow.v1.PendingWorkflowTaskInfo pending_workflow_task = 5;
     repeated temporal.api.workflow.v1.CallbackInfo callbacks = 6;
+    repeated temporal.api.workflow.v1.PendingNexusOperationInfo pending_nexus_operations = 7;
 }
 
 // (-- api-linter: core::0203::optional=disabled
@@ -1070,6 +1080,12 @@ message UpdateScheduleRequest {
     string identity = 5;
     // A unique identifier for this update request for idempotence. Typically UUIDv4.
     string request_id = 6;
+    // Schedule search attributes to be updated.
+    // Do not set this field if you do not want to update the search attributes.
+    // A non-null empty object will set the search attributes to an empty map.
+    // Note: you cannot only update the search attributes with `UpdateScheduleRequest`,
+    // you must also set the `schedule` field; otherwise, it will unset the schedule.
+    temporal.api.common.v1.SearchAttributes search_attributes = 7;
 }
 
 message UpdateScheduleResponse {

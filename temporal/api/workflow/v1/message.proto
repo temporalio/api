@@ -40,6 +40,7 @@ import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
+import "temporal/api/sdk/v1/user_metadata.proto";
 
 message WorkflowExecutionInfo {
     temporal.api.common.v1.WorkflowExecution execution = 1;
@@ -97,6 +98,8 @@ message WorkflowExecutionConfig {
     google.protobuf.Duration workflow_execution_timeout = 2;
     google.protobuf.Duration workflow_run_timeout = 3;
     google.protobuf.Duration default_workflow_task_timeout = 4;
+    // User metadata provided on start workflow.
+    temporal.api.sdk.v1.UserMetadata user_metadata = 5;
 }
 
 message PendingActivityInfo {
@@ -197,6 +200,10 @@ message NewWorkflowExecutionInfo {
     temporal.api.common.v1.Memo memo = 11;
     temporal.api.common.v1.SearchAttributes search_attributes = 12;
     temporal.api.common.v1.Header header = 13;
+    // Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionConfig
+    // for use by user interfaces to display the fixed as-of-start summary and details of the
+    // workflow.
+    temporal.api.sdk.v1.UserMetadata user_metadata = 14;
 }
 
 // CallbackInfo contains the state of an attached workflow callback.
@@ -228,4 +235,61 @@ message CallbackInfo {
     temporal.api.failure.v1.Failure last_attempt_failure = 7;
     // The time when the next attempt is scheduled.
     google.protobuf.Timestamp next_attempt_schedule_time = 8;
+}
+
+// PendingNexusOperationInfo contains the state of a pending Nexus operation.
+message PendingNexusOperationInfo {
+    // Endpoint name.
+    // Resolved to a URL via the cluster's endpoint registry.
+    string endpoint = 1;
+    // Service name.
+    string service = 2;
+    // Operation name.
+    string operation = 3;
+
+    // Operation ID. Only set for asynchronous operations after a successful StartOperation call.
+    string operation_id = 4;
+
+    // Schedule-to-close timeout for this operation.
+    // This is the only timeout settable by a workflow.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 5;
+
+    // The time when the operation was scheduled.
+    google.protobuf.Timestamp scheduled_time = 6;
+
+    temporal.api.enums.v1.PendingNexusOperationState state = 7;
+
+    // The number of attempts made to deliver the start operation request.
+    // This number represents a minimum bound since the attempt is incremented after the request completes.
+    int32 attempt = 8;
+
+    // The time when the last attempt completed.
+    google.protobuf.Timestamp last_attempt_complete_time = 9;
+    // The last attempt's failure, if any.
+    temporal.api.failure.v1.Failure last_attempt_failure = 10;
+    // The time when the next attempt is scheduled.
+    google.protobuf.Timestamp next_attempt_schedule_time = 11;
+
+    NexusOperationCancellationInfo cancellation_info = 12;
+}
+
+// NexusOperationCancellationInfo contains the state of a nexus operation cancellation.
+message NexusOperationCancellationInfo {
+    // The time when cancellation was requested.
+    google.protobuf.Timestamp requested_time = 1;
+
+    temporal.api.enums.v1.NexusOperationCancellationState state = 2;
+
+    // The number of attempts made to deliver the cancel operation request.
+    // This number represents a minimum bound since the attempt is incremented after the request completes.
+    int32 attempt = 3;
+
+    // The time when the last attempt completed.
+    google.protobuf.Timestamp last_attempt_complete_time = 4;
+    // The last attempt's failure, if any.
+    temporal.api.failure.v1.Failure last_attempt_failure = 5;
+    // The time when the next attempt is scheduled.
+    google.protobuf.Timestamp next_attempt_schedule_time = 6;
 }

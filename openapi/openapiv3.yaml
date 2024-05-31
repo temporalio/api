@@ -1066,12 +1066,14 @@ paths:
                 - TASK_QUEUE_TYPE_NEXUS
               type: string
               format: enum
+        - name: reportStats
+          in: query
+          description: Report stats for the requested task queue types and versions
+          schema:
+            type: boolean
         - name: reportPollers
           in: query
-          description: |-
-            Report backlog info for the requested task queue types and versions
-             bool report_backlog_info = 8;
-             Report list of pollers for requested task queue types and versions
+          description: Report list of pollers for requested task queue types and versions
           schema:
             type: boolean
         - name: reportTaskReachability
@@ -6121,6 +6123,34 @@ components:
              See the TaskReachability docstring for information about each enum variant.
              If reachability is empty, this worker is considered unreachable in this task queue.
       description: Reachability of tasks for a worker on a single task queue.
+    TaskQueueStats:
+      type: object
+      properties:
+        approximateBacklogCount:
+          type: string
+          description: |-
+            The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually converges
+             to the right value.
+        approximateBacklogAge:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Approximate age of the oldest task in the backlog based on the create timestamp of the task at the head of the queue.
+        tasksAddRate:
+          type: number
+          description: |-
+            Approximate tasks per second added to the task queue based on activity within a fixed window. This includes both backlogged and
+             sync-matched tasks.
+          format: float
+        tasksDispatchRate:
+          type: number
+          description: |-
+            Approximate tasks per second dispatched to workers based on activity within a fixed window. This includes both backlogged and
+             sync-matched tasks.
+          format: float
+      description: |-
+        For workflow task queues, we only report the normal queue stats, not sticky queues. This means the stats
+         reported here do not count all workflow tasks. However, because the tasks queued in sticky queues only remain
+         valid for a few seconds, the inaccuracy becomes less significant as the backlog age grows.
     TaskQueueStatus:
       type: object
       properties:
@@ -6144,6 +6174,8 @@ components:
           items:
             $ref: '#/components/schemas/PollerInfo'
           description: Unversioned workers (with `useVersioning=false`) are reported in unversioned result even if they set a Build ID.
+        stats:
+          $ref: '#/components/schemas/TaskQueueStats'
     TaskQueueVersionInfo:
       type: object
       properties:

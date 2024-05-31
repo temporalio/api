@@ -84,6 +84,24 @@ message TaskQueueVersionInfo {
 message TaskQueueTypeInfo {
     // Unversioned workers (with `useVersioning=false`) are reported in unversioned result even if they set a Build ID.
     repeated PollerInfo pollers = 1;
+    TaskQueueStats stats = 2;
+}
+
+// For workflow task queues, we only report the normal queue stats, not sticky queues. This means the stats
+// reported here do not count all workflow tasks. However, because the tasks queued in sticky queues only remain
+// valid for a few seconds, the inaccuracy becomes less significant as the backlog age grows.
+message TaskQueueStats {
+    // The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually converges
+    // to the right value.
+    int64 approximate_backlog_count = 1;
+    // Approximate age of the oldest task in the backlog based on the create timestamp of the task at the head of the queue.
+    google.protobuf.Duration approximate_backlog_age = 2;
+    // Approximate tasks per second added to the task queue based on activity within a fixed window. This includes both backlogged and
+    // sync-matched tasks.
+    float tasks_add_rate = 3;
+    // Approximate tasks per second dispatched to workers based on activity within a fixed window. This includes both backlogged and
+    // sync-matched tasks.
+    float tasks_dispatch_rate = 4;
 }
 
 // Deprecated. Use `InternalTaskQueueStatus`. This is kept until `DescribeTaskQueue` supports legacy behavior.

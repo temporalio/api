@@ -1196,8 +1196,15 @@
             "collectionFormat": "multi"
           },
           {
+            "name": "reportStats",
+            "description": "Report stats for the requested task queue types and versions",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
             "name": "reportPollers",
-            "description": "Report backlog info for the requested task queue types and versions\nbool report_backlog_info = 8;\nReport list of pollers for requested task queue types and versions",
+            "description": "Report list of pollers for requested task queue types and versions",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -8314,6 +8321,31 @@
       },
       "description": "Reachability of tasks for a worker on a single task queue."
     },
+    "v1TaskQueueStats": {
+      "type": "object",
+      "properties": {
+        "approximateBacklogCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually converges\nto the right value."
+        },
+        "approximateBacklogAge": {
+          "type": "string",
+          "description": "Approximate age of the oldest task in the backlog based on the create timestamp of the task at the head of the queue."
+        },
+        "tasksAddRate": {
+          "type": "number",
+          "format": "float",
+          "description": "Approximate tasks per second added to the task queue based on activity within a fixed window. This includes both backlogged and\nsync-matched tasks."
+        },
+        "tasksDispatchRate": {
+          "type": "number",
+          "format": "float",
+          "description": "Approximate tasks per second dispatched to workers based on activity within a fixed window. This includes both backlogged and\nsync-matched tasks."
+        }
+      },
+      "description": "For workflow task queues, we only report the normal queue stats, not sticky queues. This means the stats\nreported here do not count all workflow tasks. However, because the tasks queued in sticky queues only remain\nvalid for a few seconds, the inaccuracy becomes less significant as the backlog age grows."
+    },
     "v1TaskQueueStatus": {
       "type": "object",
       "properties": {
@@ -8360,6 +8392,9 @@
             "$ref": "#/definitions/v1PollerInfo"
           },
           "description": "Unversioned workers (with `useVersioning=false`) are reported in unversioned result even if they set a Build ID."
+        },
+        "stats": {
+          "$ref": "#/definitions/v1TaskQueueStats"
         }
       }
     },

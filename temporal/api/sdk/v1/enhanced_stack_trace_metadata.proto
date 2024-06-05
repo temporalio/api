@@ -1,0 +1,71 @@
+// The MIT License
+//
+// Copyright (c) 2020 Temporal Technologies Inc.  All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package temporal.api.sdk.v1;
+
+option go_package = "go.temporal.io/api/sdk/v1;sdk";
+option java_package = "io.temporal.api.sdk.v1";
+option java_multiple_files = true;
+option java_outer_classname = "EnhancedStackTraceMetadataProto";
+option ruby_package = "Temporalio::Api::Sdk::V1";
+option csharp_namespace = "Temporalio.Api.Sdk.V1";
+
+// Internal structure used to create worker stack traces with references to code.
+message EnhancedStackTraceMetadata {
+    SDKInfoDefinition sdk = 1;
+    map<string, FileSliceDefinition> sources = 2;
+    repeated StackTraceDefinition stacks = 3;
+}
+
+// (-- api-linter: core::0123::resource-annotation=disabled
+//     aip.dev/not-precedent: Naming sdk version is optional.  --)
+message SDKInfoDefinition {
+    optional string name = 1;
+    string version = 2;
+}
+
+// "Slice" of a file -- a line offset and code fragment corresponding to the worker's stack.
+message FileSliceDefinition {
+    // (-- api-linter: core::0141::forbidden-types=disabled
+    //     aip.dev/not-precedent: These really shouldn't have negative values. --)
+    uint32 line_offset = 1;
+    string content = 2;
+}
+
+// More specific location details of a file: its path, precise line and column numbers if applicable, and function name if available.
+message FileLocationDefinition {
+    string file_path = 1;
+    // (-- api-linter: core::0141::forbidden-types=disabled
+    //     aip.dev/not-precedent: These really shouldn't have negative values. --)
+    optional uint32 line = 2;
+    // (-- api-linter: core::0141::forbidden-types=disabled
+    //     aip.dev/not-precedent: These really shouldn't have negative values. --)
+    optional uint32 column = 3;
+    optional string function_name = 4;
+}
+
+// Collection of FileLocation messages from a single stack.
+message StackTraceDefinition {
+    repeated FileLocationDefinition locations = 1;
+}

@@ -27,40 +27,52 @@ package temporal.api.sdk.v1;
 option go_package = "go.temporal.io/api/sdk/v1;sdk";
 option java_package = "io.temporal.api.sdk.v1";
 option java_multiple_files = true;
-option java_outer_classname = "EnhancedStackTraceMetadataProto";
+option java_outer_classname = "EnhancedStackTraceProto";
 option ruby_package = "Temporalio::Api::Sdk::V1";
 option csharp_namespace = "Temporalio.Api.Sdk.V1";
 
 // Internal structure used to create worker stack traces with references to code.
-message EnhancedStackTraceMetadata {
+message EnhancedStackTrace {
     string sdk_name = 1;
     string sdk_version = 2;
     map<string, FileSlice> sources = 3;
     repeated StackTrace stacks = 4;
 }
 
-// "Slice" of a file -- a line offset and code fragment corresponding to the worker's stack.
+// "Slice" of a file starting at line_offset -- a line offset and code fragment corresponding to the worker's stack.
 message FileSlice {
     // (-- api-linter: core::0141::forbidden-types=disabled
     //     aip.dev/not-precedent: These really shouldn't have negative values. --)
+    // Only used possible to trim the file without breaking syntax highlighting.
     uint32 line_offset = 1;
+
+    // Slice of a file with `\n` (newline) line terminator.
     string content = 2;
 }
 
 // More specific location details of a file: its path, precise line and column numbers if applicable, and function name if available.
+// In essence, a pointer to a location in a file
 message FileLocation {
+    // Path to source file (absolute or relative).
+    // If the paths are relative, ensure that they are all relative to the same root.
     string file_path = 1;
     // (-- api-linter: core::0141::forbidden-types=disabled
     //     aip.dev/not-precedent: These really shouldn't have negative values. --)
+    // Optional; If possible, SDK should send this -- this is required for displaying the code location.
     uint32 line = 2;
     // (-- api-linter: core::0141::forbidden-types=disabled
     //     aip.dev/not-precedent: These really shouldn't have negative values. --)
+    // Optional; if possible, SDK should send this.
     uint32 column = 3;
+    // Function name this line belongs to, if applicable.
+    // Used for falling back to stack trace view.
     string function_name = 4;
+    // Flag to communicate whether a location should be hidden by default in the stack view.
     bool hide_default = 5;
 }
 
 // Collection of FileLocation messages from a single stack.
 message StackTrace {
+    // Collection of `FileLocation`s, each for a stack frame that comprise a stack trace.
     repeated FileLocation locations = 1;
 }

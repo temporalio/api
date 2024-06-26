@@ -42,7 +42,7 @@
         ]
       }
     },
-    "/namespaces": {
+    "/cluster/namespaces": {
       "get": {
         "summary": "ListNamespaces returns the information and configuration for all namespaces.",
         "operationId": "ListNamespaces",
@@ -120,7 +120,7 @@
         ]
       }
     },
-    "/namespaces/{namespace}": {
+    "/cluster/namespaces/{namespace}": {
       "get": {
         "summary": "DescribeNamespace returns the information and configuration for a registered namespace.",
         "operationId": "DescribeNamespace",
@@ -154,6 +154,264 @@
         ],
         "tags": [
           "WorkflowService"
+        ]
+      }
+    },
+    "/cluster/namespaces/{namespace}/search-attributes": {
+      "get": {
+        "summary": "ListSearchAttributes returns comprehensive information about search attributes.",
+        "operationId": "ListSearchAttributes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSearchAttributesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OperatorService"
+        ]
+      }
+    },
+    "/cluster/namespaces/{namespace}/update": {
+      "post": {
+        "summary": "UpdateNamespace is used to update the information and configuration of a registered\nnamespace.",
+        "operationId": "UpdateNamespace",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateNamespaceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceUpdateNamespaceBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/cluster/nexus/endpoints": {
+      "get": {
+        "summary": "List all Nexus endpoints for the cluster, sorted by ID in ascending order. Set page_token in the request to the\nnext_page_token field of the previous response to get the next page of results. An empty next_page_token\nindicates that there are no more results. During pagination, a newly added service with an ID lexicographically\nearlier than the previous page's last endpoint's ID may be missed.",
+        "operationId": "ListNexusEndpoints",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListNexusEndpointsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "nextPageToken",
+            "description": "To get the next page, pass in `ListNexusEndpointsResponse.next_page_token` from the previous page's\nresponse, the token will be empty if there's no other page.\nNote: the last page may be empty if the total number of endpoints registered is a multiple of the page size.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "name",
+            "description": "Name of the incoming endpoint to filter on - optional. Specifying this will result in zero or one results.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OperatorService"
+        ]
+      },
+      "post": {
+        "summary": "Create a Nexus endpoint. This will fail if an endpoint with the same name is already registered with a status of\nALREADY_EXISTS.\nReturns the created endpoint with its initial version. You may use this version for subsequent updates.",
+        "operationId": "CreateNexusEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateNexusEndpointResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateNexusEndpointRequest"
+            }
+          }
+        ],
+        "tags": [
+          "OperatorService"
+        ]
+      }
+    },
+    "/cluster/nexus/endpoints/{id}": {
+      "get": {
+        "summary": "Get a registered Nexus endpoint by ID. The returned version can be used for optimistic updates.",
+        "operationId": "GetNexusEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetNexusEndpointResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Server-generated unique endpoint ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "OperatorService"
+        ]
+      },
+      "delete": {
+        "summary": "Delete an incoming Nexus service by ID.",
+        "operationId": "DeleteNexusEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteNexusEndpointResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Server-generated unique endpoint ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "description": "Data version for this endpoint. Must match current version.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "OperatorService"
+        ]
+      }
+    },
+    "/cluster/nexus/endpoints/{id}/update": {
+      "post": {
+        "summary": "Optimistically update a Nexus endpoint based on provided version as obtained via the `GetNexusEndpoint` or\n`ListNexusEndpointResponse` APIs. This will fail with a status of FAILED_PRECONDITION if the version does not\nmatch.\nReturns the updated endpoint with its updated version. You may use this version for subsequent updates. You don't\nneed to increment the version yourself. The server will increment the version for you after each update.",
+        "operationId": "UpdateNexusEndpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateNexusEndpointResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Server-generated unique endpoint ID.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OperatorServiceUpdateNexusEndpointBody"
+            }
+          }
+        ],
+        "tags": [
+          "OperatorService"
         ]
       }
     },
@@ -1038,37 +1296,6 @@
         ]
       }
     },
-    "/namespaces/{namespace}/search-attributes": {
-      "get": {
-        "summary": "ListSearchAttributes returns comprehensive information about search attributes.",
-        "operationId": "ListSearchAttributes",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListSearchAttributesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "OperatorService"
-        ]
-      }
-    },
     "/namespaces/{namespace}/task-queues/{taskQueue.name}": {
       "get": {
         "summary": "DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:\n  - List of pollers\n  - Workflow Reachability status\n  - Backlog info for Workflow and/or Activity tasks",
@@ -1298,45 +1525,6 @@
             "in": "path",
             "required": true,
             "type": "string"
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/{namespace}/update": {
-      "post": {
-        "summary": "UpdateNamespace is used to update the information and configuration of a registered\nnamespace.",
-        "operationId": "UpdateNamespace",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateNamespaceResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUpdateNamespaceBody"
-            }
           }
         ],
         "tags": [
@@ -2115,194 +2303,6 @@
         ],
         "tags": [
           "WorkflowService"
-        ]
-      }
-    },
-    "/nexus/endpoints": {
-      "get": {
-        "summary": "List all Nexus endpoints for the cluster, sorted by ID in ascending order. Set page_token in the request to the\nnext_page_token field of the previous response to get the next page of results. An empty next_page_token\nindicates that there are no more results. During pagination, a newly added service with an ID lexicographically\nearlier than the previous page's last endpoint's ID may be missed.",
-        "operationId": "ListNexusEndpoints",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListNexusEndpointsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": false,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "nextPageToken",
-            "description": "To get the next page, pass in `ListNexusEndpointsResponse.next_page_token` from the previous page's\nresponse, the token will be empty if there's no other page.\nNote: the last page may be empty if the total number of endpoints registered is a multiple of the page size.",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "byte"
-          },
-          {
-            "name": "name",
-            "description": "Name of the incoming endpoint to filter on - optional. Specifying this will result in zero or one results.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "OperatorService"
-        ]
-      },
-      "post": {
-        "summary": "Create a Nexus endpoint. This will fail if an endpoint with the same name is already registered with a status of\nALREADY_EXISTS.\nReturns the created endpoint with its initial version. You may use this version for subsequent updates.",
-        "operationId": "CreateNexusEndpoint",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CreateNexusEndpointResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1CreateNexusEndpointRequest"
-            }
-          }
-        ],
-        "tags": [
-          "OperatorService"
-        ]
-      }
-    },
-    "/nexus/endpoints/{id}": {
-      "get": {
-        "summary": "Get a registered Nexus endpoint by ID. The returned version can be used for optimistic updates.",
-        "operationId": "GetNexusEndpoint",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1GetNexusEndpointResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "Server-generated unique endpoint ID.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "OperatorService"
-        ]
-      },
-      "delete": {
-        "summary": "Delete an incoming Nexus service by ID.",
-        "operationId": "DeleteNexusEndpoint",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteNexusEndpointResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "Server-generated unique endpoint ID.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "description": "Data version for this endpoint. Must match current version.",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "int64"
-          }
-        ],
-        "tags": [
-          "OperatorService"
-        ]
-      }
-    },
-    "/nexus/endpoints/{id}/update": {
-      "post": {
-        "summary": "Optimistically update a Nexus endpoint based on provided version as obtained via the `GetNexusEndpoint` or\n`ListNexusEndpointResponse` APIs. This will fail with a status of FAILED_PRECONDITION if the version does not\nmatch.\nReturns the updated endpoint with its updated version. You may use this version for subsequent updates. You don't\nneed to increment the version yourself. The server will increment the version for you after each update.",
-        "operationId": "UpdateNexusEndpoint",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateNexusEndpointResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "Server-generated unique endpoint ID.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/OperatorServiceUpdateNexusEndpointBody"
-            }
-          }
-        ],
-        "tags": [
-          "OperatorService"
         ]
       }
     },

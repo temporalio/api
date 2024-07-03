@@ -6,6 +6,2009 @@ info:
   title: ""
   version: 0.0.1
 paths:
+  /api/v1/cluster-info:
+    get:
+      tags:
+        - WorkflowService
+      description: GetClusterInfo returns information about temporal cluster
+      operationId: GetClusterInfo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetClusterInfoResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces:
+    get:
+      tags:
+        - WorkflowService
+      description: ListNamespaces returns the information and configuration for all namespaces.
+      operationId: ListNamespaces
+      parameters:
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          schema:
+            type: string
+            format: bytes
+        - name: namespaceFilter.includeDeleted
+          in: query
+          description: |-
+            By default namespaces in NAMESPACE_STATE_DELETED state are not included.
+             Setting include_deleted to true will include deleted namespaces.
+             Note: Namespace is in NAMESPACE_STATE_DELETED state when it was deleted from the system but associated data is not deleted yet.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListNamespacesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RegisterNamespace creates a new namespace which can be used as a container for all resources.
+
+         A Namespace is a top level entity within Temporal, and is used as a container for resources
+         like workflow executions, task queues, etc. A Namespace acts as a sandbox and provides
+         isolation for all resources within the namespace. All resources belongs to exactly one
+         namespace.
+      operationId: RegisterNamespace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterNamespaceRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterNamespaceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}:
+    get:
+      tags:
+        - WorkflowService
+      description: DescribeNamespace returns the information and configuration for a registered namespace.
+      operationId: DescribeNamespace
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeNamespaceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/cancel:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RespondActivityTaskFailed is called by workers when processing an activity task fails.
+
+         This results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
+         and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
+         no longer valid due to activity timeout, already being completed, or never having existed.
+      operationId: RespondActivityTaskCanceled
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespondActivityTaskCanceledRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespondActivityTaskCanceledResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/cancel-by-id:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        See `RecordActivityTaskCanceled`. This version allows clients to record failures by
+         namespace/workflow id/activity id instead of task token.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: RespondActivityTaskCanceledById
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespondActivityTaskCanceledByIdRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespondActivityTaskCanceledByIdResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/complete:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RespondActivityTaskCompleted is called by workers when they successfully complete an activity
+         task.
+
+         This results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history
+         and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
+         no longer valid due to activity timeout, already being completed, or never having existed.
+      operationId: RespondActivityTaskCompleted
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespondActivityTaskCompletedRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespondActivityTaskCompletedResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/complete-by-id:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        See `RecordActivityTaskCompleted`. This version allows clients to record completions by
+         namespace/workflow id/activity id instead of task token.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: RespondActivityTaskCompletedById
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespondActivityTaskCompletedByIdRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespondActivityTaskCompletedByIdResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/fail:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RespondActivityTaskFailed is called by workers when processing an activity task fails.
+
+         This results in a new `ACTIVITY_TASK_FAILED` event being written to the workflow history and
+         a new workflow task created for the workflow. Fails with `NotFound` if the task token is no
+         longer valid due to activity timeout, already being completed, or never having existed.
+      operationId: RespondActivityTaskFailed
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespondActivityTaskFailedRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespondActivityTaskFailedResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/fail-by-id:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        See `RecordActivityTaskFailed`. This version allows clients to record failures by
+         namespace/workflow id/activity id instead of task token.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: RespondActivityTaskFailedById
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespondActivityTaskFailedByIdRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespondActivityTaskFailedByIdResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/heartbeat:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.
+
+         If worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
+         then it will be marked as timed out and an `ACTIVITY_TASK_TIMED_OUT` event will be written to
+         the workflow history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in
+         such situations, in that event, the SDK should request cancellation of the activity.
+      operationId: RecordActivityTaskHeartbeat
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordActivityTaskHeartbeatRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordActivityTaskHeartbeatResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/heartbeat-by-id:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        See `RecordActivityTaskHeartbeat`. This version allows clients to record heartbeats by
+         namespace/workflow id/activity id instead of task token.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: RecordActivityTaskHeartbeatById
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordActivityTaskHeartbeatByIdRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordActivityTaskHeartbeatByIdResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/archived-workflows:
+    get:
+      tags:
+        - WorkflowService
+      description: ListArchivedWorkflowExecutions is a visibility API to list archived workflow executions in a specific namespace.
+      operationId: ListArchivedWorkflowExecutions
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          schema:
+            type: string
+            format: bytes
+        - name: query
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListArchivedWorkflowExecutionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/batch-operations:
+    get:
+      tags:
+        - WorkflowService
+      description: ListBatchOperations returns a list of batch operations
+      operationId: ListBatchOperations
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace that contains the batch operation
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          description: List page size
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          description: Next page token
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListBatchOperationsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/batch-operations/{jobId}:
+    get:
+      tags:
+        - WorkflowService
+      description: DescribeBatchOperation returns the information about a batch operation
+      operationId: DescribeBatchOperation
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace that contains the batch operation
+          required: true
+          schema:
+            type: string
+        - name: jobId
+          in: path
+          description: Batch job id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeBatchOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: StartBatchOperation starts a new batch operation
+      operationId: StartBatchOperation
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace that contains the batch operation
+          required: true
+          schema:
+            type: string
+        - name: jobId
+          in: path
+          description: Job ID defines the unique ID for the batch job
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartBatchOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartBatchOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/batch-operations/{jobId}/stop:
+    post:
+      tags:
+        - WorkflowService
+      description: StopBatchOperation stops a batch operation
+      operationId: StopBatchOperation
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace that contains the batch operation
+          required: true
+          schema:
+            type: string
+        - name: jobId
+          in: path
+          description: Batch job id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StopBatchOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StopBatchOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/schedules:
+    get:
+      tags:
+        - WorkflowService
+      description: List all schedules in a namespace.
+      operationId: ListSchedules
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace to list schedules in.
+          required: true
+          schema:
+            type: string
+        - name: maximumPageSize
+          in: query
+          description: How many to return at once.
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          description: Token to get the next page of results.
+          schema:
+            type: string
+            format: bytes
+        - name: query
+          in: query
+          description: Query to filter schedules.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSchedulesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/schedules/{scheduleId}:
+    get:
+      tags:
+        - WorkflowService
+      description: Returns the schedule description and current state of an existing schedule.
+      operationId: DescribeSchedule
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace of the schedule to describe.
+          required: true
+          schema:
+            type: string
+        - name: scheduleId
+          in: path
+          description: The id of the schedule to describe.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeScheduleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: Creates a new schedule.
+      operationId: CreateSchedule
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace the schedule should be created in.
+          required: true
+          schema:
+            type: string
+        - name: scheduleId
+          in: path
+          description: The id of the new schedule.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateScheduleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      tags:
+        - WorkflowService
+      description: Deletes a schedule, removing it from the system.
+      operationId: DeleteSchedule
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace of the schedule to delete.
+          required: true
+          schema:
+            type: string
+        - name: scheduleId
+          in: path
+          description: The id of the schedule to delete.
+          required: true
+          schema:
+            type: string
+        - name: identity
+          in: query
+          description: The identity of the client who initiated this request.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteScheduleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/schedules/{scheduleId}/matching-times:
+    get:
+      tags:
+        - WorkflowService
+      description: Lists matching times within a range.
+      operationId: ListScheduleMatchingTimes
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace of the schedule to query.
+          required: true
+          schema:
+            type: string
+        - name: scheduleId
+          in: path
+          description: The id of the schedule to query.
+          required: true
+          schema:
+            type: string
+        - name: startTime
+          in: query
+          description: Time range to query.
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListScheduleMatchingTimesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/schedules/{scheduleId}/patch:
+    post:
+      tags:
+        - WorkflowService
+      description: Makes a specific change to a schedule or triggers an immediate action.
+      operationId: PatchSchedule
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace of the schedule to patch.
+          required: true
+          schema:
+            type: string
+        - name: scheduleId
+          in: path
+          description: The id of the schedule to patch.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchScheduleRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatchScheduleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/schedules/{scheduleId}/update:
+    post:
+      tags:
+        - WorkflowService
+      description: Changes the configuration or state of an existing schedule.
+      operationId: UpdateSchedule
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace of the schedule to update.
+          required: true
+          schema:
+            type: string
+        - name: scheduleId
+          in: path
+          description: The id of the schedule to update.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateScheduleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/search-attributes:
+    get:
+      tags:
+        - OperatorService
+      description: ListSearchAttributes returns comprehensive information about search attributes.
+      operationId: ListSearchAttributes
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSearchAttributesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/worker-build-id-compatibility:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        Deprecated. Use `GetWorkerVersioningRules`.
+         Fetches the worker build id versioning sets for a task queue.
+      operationId: GetWorkerBuildIdCompatibility
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: taskQueue
+          in: path
+          description: Must be set, the task queue to interrogate about worker id compatibility.
+          required: true
+          schema:
+            type: string
+        - name: maxSets
+          in: query
+          description: |-
+            Limits how many compatible sets will be returned. Specify 1 to only return the current
+             default major version set. 0 returns all sets.
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkerBuildIdCompatibilityResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/worker-versioning-rules:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        Fetches the Build ID assignment and redirect rules for a Task Queue.
+         WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+      operationId: GetWorkerVersioningRules
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: taskQueue
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkerVersioningRulesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/task-queues/{task_queue.name}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:
+           - List of pollers
+           - Workflow Reachability status
+           - Backlog info for Workflow and/or Activity tasks
+      operationId: DescribeTaskQueue
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: task_queue.name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: taskQueue.name
+          in: query
+          schema:
+            type: string
+        - name: taskQueue.kind
+          in: query
+          description: 'Default: TASK_QUEUE_KIND_NORMAL.'
+          schema:
+            enum:
+              - TASK_QUEUE_KIND_UNSPECIFIED
+              - TASK_QUEUE_KIND_NORMAL
+              - TASK_QUEUE_KIND_STICKY
+            type: string
+            format: enum
+        - name: taskQueue.normalName
+          in: query
+          description: |-
+            Iff kind == TASK_QUEUE_KIND_STICKY, then this field contains the name of
+             the normal task queue that the sticky worker is running on.
+          schema:
+            type: string
+        - name: taskQueueType
+          in: query
+          description: |-
+            Deprecated. Use `ENHANCED` mode with `task_queue_types`. Ignored in `ENHANCED` mode.
+             If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
+          schema:
+            enum:
+              - TASK_QUEUE_TYPE_UNSPECIFIED
+              - TASK_QUEUE_TYPE_WORKFLOW
+              - TASK_QUEUE_TYPE_ACTIVITY
+              - TASK_QUEUE_TYPE_NEXUS
+            type: string
+            format: enum
+        - name: includeTaskQueueStatus
+          in: query
+          description: Deprecated. Ignored in `ENHANCED` mode.
+          schema:
+            type: boolean
+        - name: apiMode
+          in: query
+          description: All options except `task_queue_type` and `include_task_queue_status` are only available in the `ENHANCED` mode.
+          schema:
+            enum:
+              - DESCRIBE_TASK_QUEUE_MODE_UNSPECIFIED
+              - DESCRIBE_TASK_QUEUE_MODE_ENHANCED
+            type: string
+            format: enum
+        - name: versions.buildIds
+          in: query
+          description: Include specific Build IDs.
+          schema:
+            type: array
+            items:
+              type: string
+        - name: versions.unversioned
+          in: query
+          description: Include the unversioned queue.
+          schema:
+            type: boolean
+        - name: versions.allActive
+          in: query
+          description: |-
+            Include all active versions. A version is considered active if it has had new
+             tasks or polls recently.
+          schema:
+            type: boolean
+        - name: taskQueueTypes
+          in: query
+          description: Task queue types to report info about. If not specified, all types are considered.
+          schema:
+            type: array
+            items:
+              enum:
+                - TASK_QUEUE_TYPE_UNSPECIFIED
+                - TASK_QUEUE_TYPE_WORKFLOW
+                - TASK_QUEUE_TYPE_ACTIVITY
+                - TASK_QUEUE_TYPE_NEXUS
+              type: string
+              format: enum
+        - name: reportStats
+          in: query
+          description: Report stats for the requested task queue types and versions
+          schema:
+            type: boolean
+        - name: reportPollers
+          in: query
+          description: Report list of pollers for requested task queue types and versions
+          schema:
+            type: boolean
+        - name: reportTaskReachability
+          in: query
+          description: |-
+            Report task reachability for the requested versions and all task types (task reachability is not reported
+             per task type).
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeTaskQueueResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/update:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        UpdateNamespace is used to update the information and configuration of a registered
+         namespace.
+      operationId: UpdateNamespace
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNamespaceRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateNamespaceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/worker-task-reachability:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        Deprecated. Use `DescribeTaskQueue`.
+
+         Fetches task reachability to determine whether a worker may be retired.
+         The request may specify task queues to query for or let the server fetch all task queues mapped to the given
+         build IDs.
+
+         When requesting a large number of task queues or all task queues associated with the given build ids in a
+         namespace, all task queues will be listed in the response but some of them may not contain reachability
+         information due to a server enforced limit. When reaching the limit, task queues that reachability information
+         could not be retrieved for will be marked with a single TASK_REACHABILITY_UNSPECIFIED entry. The caller may issue
+         another call to get the reachability for those task queues.
+
+         Open source users can adjust this limit by setting the server's dynamic config value for
+         `limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store.
+      operationId: GetWorkerTaskReachability
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: buildIds
+          in: query
+          description: |-
+            Build ids to retrieve reachability for. An empty string will be interpreted as an unversioned worker.
+             The number of build ids that can be queried in a single API call is limited.
+             Open source users can adjust this limit by setting the server's dynamic config value for
+             `limit.reachabilityQueryBuildIds` with the caveat that this call can strain the visibility store.
+          schema:
+            type: array
+            items:
+              type: string
+        - name: taskQueues
+          in: query
+          description: |-
+            Task queues to retrieve reachability for. Leave this empty to query for all task queues associated with given
+             build ids in the namespace.
+             Must specify at least one task queue if querying for an unversioned worker.
+             The number of task queues that the server will fetch reachability information for is limited.
+             See the `GetWorkerTaskReachabilityResponse` documentation for more information.
+          schema:
+            type: array
+            items:
+              type: string
+        - name: reachability
+          in: query
+          description: |-
+            Type of reachability to query for.
+             `TASK_REACHABILITY_NEW_WORKFLOWS` is always returned in the response.
+             Use `TASK_REACHABILITY_EXISTING_WORKFLOWS` if your application needs to respond to queries on closed workflows.
+             Otherwise, use `TASK_REACHABILITY_OPEN_WORKFLOWS`. Default is `TASK_REACHABILITY_EXISTING_WORKFLOWS` if left
+             unspecified.
+             See the TaskReachability docstring for information about each enum variant.
+          schema:
+            enum:
+              - TASK_REACHABILITY_UNSPECIFIED
+              - TASK_REACHABILITY_NEW_WORKFLOWS
+              - TASK_REACHABILITY_EXISTING_WORKFLOWS
+              - TASK_REACHABILITY_OPEN_WORKFLOWS
+              - TASK_REACHABILITY_CLOSED_WORKFLOWS
+            type: string
+            format: enum
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkerTaskReachabilityResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflow-count:
+    get:
+      tags:
+        - WorkflowService
+      description: CountWorkflowExecutions is a visibility API to count of workflow executions in a specific namespace.
+      operationId: CountWorkflowExecutions
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountWorkflowExecutionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows:
+    get:
+      tags:
+        - WorkflowService
+      description: ListWorkflowExecutions is a visibility API to list workflow executions in a specific namespace.
+      operationId: ListWorkflowExecutions
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          schema:
+            type: string
+            format: bytes
+        - name: query
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWorkflowExecutionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/execute-multi-operation:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ExecuteMultiOperation executes multiple operations within a single workflow.
+
+         Operations are started atomically, meaning if *any* operation fails to be started, none are,
+         and the request fails. Upon start, the API returns only when *all* operations have a response.
+
+         Upon failure, it returns `MultiOperationExecutionFailure` where the status code
+         equals the status code of the *first* operation that failed to be started.
+
+         NOTE: Experimental API.
+      operationId: ExecuteMultiOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteMultiOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteMultiOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}:
+    get:
+      tags:
+        - WorkflowService
+      description: DescribeWorkflowExecution returns information about the specified workflow execution.
+      operationId: DescribeWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: execution.runId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/history:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        GetWorkflowExecutionHistory returns the history of specified workflow execution. Fails with
+         `NotFound` if the specified workflow execution is unknown to the service.
+      operationId: GetWorkflowExecutionHistory
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: execution.runId
+          in: query
+          schema:
+            type: string
+        - name: maximumPageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          description: |-
+            If a `GetWorkflowExecutionHistoryResponse` or a `PollWorkflowTaskQueueResponse` had one of
+             these, it should be passed here to fetch the next page.
+          schema:
+            type: string
+            format: bytes
+        - name: waitNewEvent
+          in: query
+          description: |-
+            If set to true, the RPC call will not resolve until there is a new event which matches
+             the `history_event_filter_type`, or a timeout is hit.
+          schema:
+            type: boolean
+        - name: historyEventFilterType
+          in: query
+          description: |-
+            Filter returned events such that they match the specified filter type.
+             Default: HISTORY_EVENT_FILTER_TYPE_ALL_EVENT.
+          schema:
+            enum:
+              - HISTORY_EVENT_FILTER_TYPE_UNSPECIFIED
+              - HISTORY_EVENT_FILTER_TYPE_ALL_EVENT
+              - HISTORY_EVENT_FILTER_TYPE_CLOSE_EVENT
+            type: string
+            format: enum
+        - name: skipArchival
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowExecutionHistoryResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/history-reverse:
+    get:
+      tags:
+        - WorkflowService
+      description: "GetWorkflowExecutionHistoryReverse returns the history of specified workflow execution in reverse \n order (starting from last event). Fails with`NotFound` if the specified workflow execution is \n unknown to the service."
+      operationId: GetWorkflowExecutionHistoryReverse
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: execution.runId
+          in: query
+          schema:
+            type: string
+        - name: maximumPageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowExecutionHistoryReverseResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/query/{query.query_type}:
+    post:
+      tags:
+        - WorkflowService
+      description: QueryWorkflow requests a query be executed for a specified workflow execution.
+      operationId: QueryWorkflow
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: query.query_type
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryWorkflowRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryWorkflowResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflowId}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        StartWorkflowExecution starts a new workflow execution.
+
+         It will create the execution with a `WORKFLOW_EXECUTION_STARTED` event in its history and
+         also schedule the first workflow task. Returns `WorkflowExecutionAlreadyStarted`, if an
+         instance already exists with same workflow id.
+      operationId: StartWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflowId}/signal-with-start/{signalName}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        SignalWithStartWorkflowExecution is used to ensure a signal is sent to a workflow, even if
+         it isn't yet started.
+
+         If the workflow is running, a `WORKFLOW_EXECUTION_SIGNALED` event is recorded in the history
+         and a workflow task is generated.
+
+         If the workflow is not running or not found, then the workflow is created with
+         `WORKFLOW_EXECUTION_STARTED` and `WORKFLOW_EXECUTION_SIGNALED` events in its history, and a
+         workflow task is generated.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "With" is used to indicate combined operation. --)
+      operationId: SignalWithStartWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: signalName
+          in: path
+          description: The workflow author-defined name of the signal to send to the workflow
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignalWithStartWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignalWithStartWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/cancel:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RequestCancelWorkflowExecution is called by workers when they want to request cancellation of
+         a workflow execution.
+
+         This results in a new `WORKFLOW_EXECUTION_CANCEL_REQUESTED` event being written to the
+         workflow history and a new workflow task created for the workflow. It returns success if the requested
+         workflow is already closed. It fails with 'NotFound' if the requested workflow doesn't exist.
+      operationId: RequestCancelWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCancelWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestCancelWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/reset:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ResetWorkflowExecution will reset an existing workflow execution to a specified
+         `WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current
+         execution instance.
+         TODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?
+      operationId: ResetWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/signal/{signalName}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        SignalWorkflowExecution is used to send a signal to a running workflow execution.
+
+         This results in a `WORKFLOW_EXECUTION_SIGNALED` event recorded in the history and a workflow
+         task being created for the execution.
+      operationId: SignalWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: signalName
+          in: path
+          description: The workflow author-defined name of the signal to send to the workflow
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignalWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignalWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/terminate:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        TerminateWorkflowExecution terminates an existing workflow execution by recording a
+         `WORKFLOW_EXECUTION_TERMINATED` event in the history and immediately terminating the
+         execution instance.
+      operationId: TerminateWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminateWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/update/{request.input.name}:
+    post:
+      tags:
+        - WorkflowService
+      description: Invokes the specified update function on user workflow code.
+      operationId: UpdateWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace name of the target workflow
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: request.input.name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/nexus/endpoints:
+    get:
+      tags:
+        - OperatorService
+      description: |-
+        List all Nexus endpoints for the cluster, sorted by ID in ascending order. Set page_token in the request to the
+         next_page_token field of the previous response to get the next page of results. An empty next_page_token
+         indicates that there are no more results. During pagination, a newly added service with an ID lexicographically
+         earlier than the previous page's last endpoint's ID may be missed.
+      operationId: ListNexusEndpoints
+      parameters:
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          description: |-
+            To get the next page, pass in `ListNexusEndpointsResponse.next_page_token` from the previous page's
+             response, the token will be empty if there's no other page.
+             Note: the last page may be empty if the total number of endpoints registered is a multiple of the page size.
+          schema:
+            type: string
+            format: bytes
+        - name: name
+          in: query
+          description: |-
+            Name of the incoming endpoint to filter on - optional. Specifying this will result in zero or one results.
+             (-- api-linter: core::203::field-behavior-required=disabled
+                 aip.dev/not-precedent: Not following linter rules. --)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListNexusEndpointsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - OperatorService
+      description: |-
+        Create a Nexus endpoint. This will fail if an endpoint with the same name is already registered with a status of
+         ALREADY_EXISTS.
+         Returns the created endpoint with its initial version. You may use this version for subsequent updates.
+      operationId: CreateNexusEndpoint
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNexusEndpointRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateNexusEndpointResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/nexus/endpoints/{id}:
+    get:
+      tags:
+        - OperatorService
+      description: Get a registered Nexus endpoint by ID. The returned version can be used for optimistic updates.
+      operationId: GetNexusEndpoint
+      parameters:
+        - name: id
+          in: path
+          description: Server-generated unique endpoint ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetNexusEndpointResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      tags:
+        - OperatorService
+      description: Delete an incoming Nexus service by ID.
+      operationId: DeleteNexusEndpoint
+      parameters:
+        - name: id
+          in: path
+          description: Server-generated unique endpoint ID.
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: query
+          description: Data version for this endpoint. Must match current version.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteNexusEndpointResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/nexus/endpoints/{id}/update:
+    post:
+      tags:
+        - OperatorService
+      description: |-
+        Optimistically update a Nexus endpoint based on provided version as obtained via the `GetNexusEndpoint` or
+         `ListNexusEndpointResponse` APIs. This will fail with a status of FAILED_PRECONDITION if the version does not
+         match.
+         Returns the updated endpoint with its updated version. You may use this version for subsequent updates. You don't
+         need to increment the version yourself. The server will increment the version for you after each update.
+      operationId: UpdateNexusEndpoint
+      parameters:
+        - name: id
+          in: path
+          description: Server-generated unique endpoint ID.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNexusEndpointRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateNexusEndpointResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/system-info:
+    get:
+      tags:
+        - WorkflowService
+      description: GetSystemInfo returns information about the system.
+      operationId: GetSystemInfo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSystemInfoResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /cluster:
     get:
       tags:

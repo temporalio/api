@@ -7062,12 +7062,16 @@
           "$ref": "#/definitions/v1TaskQueueStatus",
           "description": "Deprecated. Not set in `ENHANCED` mode."
         },
-        "versionsInfo": {
+        "unversionedInfo": {
+          "$ref": "#/definitions/v1TaskQueueInfo",
+          "description": "Unversioned Task Queue information.\nOnly set in `ENHANCED` mode.\nMay or may not be set for versioned task queues depending on the `DescribeTaskQueueRequest.versions` input."
+        },
+        "buildIdInfo": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/v1TaskQueueVersionInfo"
+            "$ref": "#/definitions/v1TaskQueueInfo"
           },
-          "description": "This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.\nOnly set in `ENHANCED` mode."
+          "description": "This map contains Task Queue information for each Build ID.\nOnly set in `ENHANCED` mode.\nWARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly."
         }
       }
     },
@@ -10617,6 +10621,22 @@
       },
       "title": "See https://docs.temporal.io/docs/concepts/task-queues/"
     },
+    "v1TaskQueueInfo": {
+      "type": "object",
+      "properties": {
+        "typesInfo": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1TaskQueueTypeInfo"
+          },
+          "description": "Task Queue info per Task Type. Key is the numerical value of the temporal.api.enums.v1.TaskQueueType enum."
+        },
+        "taskReachability": {
+          "$ref": "#/definitions/v1BuildIdTaskReachability",
+          "description": "Task Reachability is eventually consistent; there may be a delay until it converges to the most\naccurate value but it is designed in a way to take the more conservative side until it converges.\nFor example REACHABLE is more conservative than CLOSED_WORKFLOWS_ONLY.\n\nNote: future activities who inherit their workflow's Build ID but not its Task Queue will not be\naccounted for reachability as server cannot know if they'll happen as they do not use\nassignment rules of their Task Queue. Same goes for Child Workflows or Continue-As-New Workflows\nwho inherit the parent/previous workflow's Build ID but not its Task Queue. In those cases, make\nsure to query reachability for the parent/previous workflow's Task Queue as well."
+        }
+      }
+    },
     "v1TaskQueueKind": {
       "type": "string",
       "enum": [
@@ -10740,22 +10760,6 @@
         },
         "stats": {
           "$ref": "#/definitions/v1TaskQueueStats"
-        }
-      }
-    },
-    "v1TaskQueueVersionInfo": {
-      "type": "object",
-      "properties": {
-        "typesInfo": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/v1TaskQueueTypeInfo"
-          },
-          "description": "Task Queue info per Task Type. Key is the numerical value of the temporal.api.enums.v1.TaskQueueType enum."
-        },
-        "taskReachability": {
-          "$ref": "#/definitions/v1BuildIdTaskReachability",
-          "description": "Task Reachability is eventually consistent; there may be a delay until it converges to the most\naccurate value but it is designed in a way to take the more conservative side until it converges.\nFor example REACHABLE is more conservative than CLOSED_WORKFLOWS_ONLY.\n\nNote: future activities who inherit their workflow's Build ID but not its Task Queue will not be\naccounted for reachability as server cannot know if they'll happen as they do not use\nassignment rules of their Task Queue. Same goes for Child Workflows or Continue-As-New Workflows\nwho inherit the parent/previous workflow's Build ID but not its Task Queue. In those cases, make\nsure to query reachability for the parent/previous workflow's Task Queue as well."
         }
       }
     },

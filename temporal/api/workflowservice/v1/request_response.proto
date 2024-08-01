@@ -1398,6 +1398,106 @@ message GetWorkerTaskReachabilityResponse {
     repeated temporal.api.taskqueue.v1.BuildIdReachability build_id_reachability = 1;
 }
 
+message GetWorkerVersioningConfigRequest {
+    string namespace = 1;
+    string task_queue = 2;
+}
+
+message GetWorkerVersioningConfigResponse {
+    // New workflows will dispatch their first task to the default build ID
+    // unless overridden by the current rollout. (There are some exceptions, read the
+    // docs for `GetWorkerVersioningConfigResponse`)
+    //
+    // After completing their first workflow task, pinned executions will stay on
+    // the same build ID even if the task queue's default build ID (or rollout)
+    // changes.
+    //
+    // All existing unpinned executions will dispatch their next task to the default
+    // build ID unless overridden by the current rollout.
+    string default_build_id = 1;
+
+    // Overrides the default build ID for a fraction of executions. Use for gradual
+    // rollout of a new build ID.
+    temporal.api.taskqueue.v1.Rollout current_rollout = 2;
+}
+
+message GetWorkerVersioningRolloutHistoryRequest {
+    string namespace = 1;
+    string task_queue = 2;
+}
+
+message GetWorkerVersioningRolloutHistoryResponse {
+    repeated temporal.api.taskqueue.v1.Rollout rollouts = 1;
+}
+
+message UpdateWorkerVersioningConfigRequest {
+    string namespace = 1;
+    string task_queue = 2;
+
+    oneof operation {
+        SetDefaultBuildId set_default_build_id = 3;
+        StartRollout start_rollout = 4;
+        UpdateRolloutRamp update_rollout_ramp = 5;
+        CompleteRollout complete_rollout = 6;
+        CancelRollout cancel_rollout = 7;
+    }
+
+    // Updates task queue's default build ID. Cannot be called when there is an
+    // ongoing rollout.
+    // This starts and immediately completes a rollout and adds it to the rollout
+    // history.
+    message SetDefaultBuildId {
+        string build_id = 1;
+    }
+
+    // Starts a rollout for the given build ID with a 0% ramp.
+    message StartRollout {
+        string build_id = 1;
+    }
+
+    // Updates the ramp config for the current rollout.
+    message UpdateRolloutRamp {
+        // If present, the ramp percentage will be updated.
+        NewPercentage new_percentage = 1;
+
+        message NewPercentage {
+            // Percentage of executions that should use the rollout build id instead of
+            // the default build ID. Valid range is [0, 100]
+            // The ramp decision is based on a hash of the Root Workflow ID of the task
+            // at hand. So if the number of distinct root workflow IDs is not statistically
+            // significant, the ramp will be approximate.
+            float value = 1;
+        }
+    }
+
+    // Completes and clears the current rollout and updates the default build ID.
+    message CompleteRollout {
+    }
+
+    // Cancels and clears the current rollout. Default build ID will stay the same.
+    message CancelRollout {
+    }
+}
+
+message UpdateWorkerVersioningConfigResponse {
+}
+
+message GetBuildIdReachabilityRequest {
+    string namespace = 1;
+    string task_queue = 2;
+
+    temporal.api.taskqueue.v1.TaskQueueVersionSelection versions = 3;
+}
+
+message GetBuildIdReachabilityResponse {
+    // Empty key means unversioned.
+    map<string, BuildIdReachability> reachability_by_version = 1;
+
+    message BuildIdReachability {
+        temporal.api.enums.v1.BuildIdTaskReachabilityStatus reachability_status = 1;
+    }
+}
+
 // (-- api-linter: core::0134=disabled
 //     aip.dev/not-precedent: Update RPCs don't follow Google API format. --)
 message UpdateWorkflowExecutionRequest {

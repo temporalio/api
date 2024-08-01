@@ -729,6 +729,110 @@ service WorkflowService {
         };
     }
 
+    // Updates Worker Versioning config for a given task queue.
+    //
+    // If multiple task queues are polled by a worker process, versioning config for
+    // each should be updated separately.
+    //
+    // A Task Queue's Worker Versioning Config specifies what build ID should be used
+    // for new pinned workflows, and for both new and existing unpinned workflows.
+    // The versioning config is also used for selecting build ID of activities when
+    // they belong to an unpinned workflow, or when they belong to a pinned workflow
+    // but run on a different task queue (overridable, see exceptions below).
+    //
+    // For new executions the config is evaluated when the first workflow task is
+    // dispatched. For existing unpinned executions, the config is evaluated at every
+    // task dispatch.
+    //
+    // Build ID selection happens based on the configured default build ID and
+    // a possible ongoing rollout. The rollout overrides the build ID for a subset of
+    // the executions.
+    //
+    // **Example:** Assume default build ID is set to v1, and there is a rollout of v2
+    // with 10% ramp. Here is what happens:
+    //   - New executions: 90% start their first task on v1, 10% on v2. Pinned/unpinned
+    //     does not matter.
+    //   - Existing unpinned executions: 90% start their next task on v1, 10% on v2.
+    //     Does not matter what build ID they used before. But selection of the 10%
+    //     is bashed on consistent hashing so we do not send one wf back and forth
+    //     between build IDs, unless when the ramp changes.
+    //   - Existing pinned executions: 100% stay in the build ID they used before.
+    //
+    // In the following exceptions versioning config will not be used:
+    //   - By default New CaN executions or Child workflows will use the versioning
+    //     config unless explicitly ask to be pinned to the same build ID as their
+    //     previous/parent executions, in which case they’ll not use the versioning
+    //     config.
+    //   - Activities of pinned workflows who run in a different task queue, by
+    //     default, will go to the build ID dictated by their task queues versioning
+    //     config. User can choose to keep them pinned to the same build ID as the
+    //     workflow by setting `PinToWorkflowBuildId=true`.
+    //   - Workflows that are started Eagerly use the build ID of their Starter for
+    //     their first task. If they are pinned, they’d stay in that build ID,
+    //     otherwise, they’ll use the build ID dictated by the task queue’s
+    //     versioning config on their second task.
+    //
+    // WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+    rpc UpdateWorkerVersioningConfig (UpdateWorkerVersioningConfigRequest) returns (UpdateWorkerVersioningConfigResponse) {}
+
+    // Returns Worker Versioning config for a given task queue. See the documentations
+    //  of `UpdateWorkerVersioningConfig` for more details.
+    //
+    // WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+    rpc GetWorkerVersioningConfig (GetWorkerVersioningConfigRequest) returns (GetWorkerVersioningConfigResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/task-queues/{task_queue}/versioning-config"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/task-queues/{task_queue}/versioning-config"
+            }
+        };
+    }
+
+    // Returns up to 100 most-recent previous versioning rollouts (completed or canceled) for a given
+    // task queue.
+    //
+    // WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+    rpc GetWorkerVersioningRolloutHistory (GetWorkerVersioningRolloutHistoryRequest) returns (GetWorkerVersioningRolloutHistoryResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/task-queues/{task_queue}/rollout-history"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/task-queues/{task_queue}/rollout-history"
+            }
+        };
+    }
+
+    // Specifies if workers of a certain Build ID are reachable by tasks. Helps to
+    // decide when to kill old workers.
+    //
+    // Note 1: it may take up to few minutes for reachability result to reflect the
+    // latest status. These is due to eventual consistency nature of this API and
+    // caching.
+    //
+    // Note 2: tasks that fall in the following execution cases are excluded from the
+    // reachability result:
+    //  - Workflow Queries sent to closed pinned workflows are not accounted for.
+    //    If you have such a use case, consider making the workflow type unpinned.
+    //  - Future activities of pinned workflows who will inherit their workflow's
+    //    Build ID but not its Task Queue will not be accounted for reachability as
+    //    Temporal Server cannot not know if they'll happen as they do not use the
+    //    versioning config of their own Task Queue. In this case make sure you query
+    //    reachability of both task queues before killing the worker.
+    //  - Similarly, future pinned Child Workflows or Continue-As-New Workflows who
+    //    will inherit the parent/previous workflow's Build ID but not its Task Queue
+    //    will not be accounted for reachability. In these cases make sure you query
+    //    reachability of both task queues before killing the worker.
+    //  - Future pinned workflows who will start Eagerly do not use the versioning
+    //    config and can't be predicted by Temporal Server, so they are not accounted
+    //    for.
+    rpc GetBuildIdReachability (GetBuildIdReachabilityRequest) returns (GetBuildIdReachabilityResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/build-id-reachability"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/build-id-reachability"
+            }
+        };
+    }
+
     // Deprecated. Use `DescribeTaskQueue`.
     //
     // Fetches task reachability to determine whether a worker may be retired.

@@ -521,9 +521,26 @@ service WorkflowService {
     // 1. StickyTaskQueue
     // 2. StickyScheduleToStartTimeout
     //
+    // When possible, ShutdownStickyTaskQueue should be preferred over
+    // ResetStickyTaskQueue (particularly when a worker is shutting down or
+    // cycling).
+    //
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: We do not expose worker API to HTTP. --)
     rpc ResetStickyTaskQueue (ResetStickyTaskQueueRequest) returns (ResetStickyTaskQueueResponse) {
+    }
+
+    // ShutdownStickyTaskQueue is used to indicate that the given sticky task
+    // queue is no longer being polled by its worker. Following the completion of
+    // ShutdownStickyTaskQueue, newly-added workflow tasks will instead be placed
+    // in the normal task queue, eligible for any worker to pick up.
+    //
+    // ShutdownStickyTaskQueue should be called by workers while shutting down,
+    // after they've shut down their pollers.
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: We do not expose worker API to HTTP. --)
+    rpc ShutdownStickyTaskQueue (ShutdownStickyTaskQueueRequest) returns (ShutdownStickyTaskQueueResponse) {
     }
 
     // QueryWorkflow requests a query be executed for a specified workflow execution.

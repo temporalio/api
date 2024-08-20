@@ -8942,9 +8942,9 @@
           "$ref": "#/definitions/v1RetryPolicy",
           "description": "This is the retry policy the service uses which may be different from the one provided\n(or not) during activity scheduling. The service can override the provided one if some\nvalues are not specified or exceed configured system limits."
         },
-        "syncMatchWaitDuration": {
-          "type": "string",
-          "description": "This field is set if the task was delivered as a result of a sync match, and it is set to the\namount of time we waited to make such a match. If the task was delievered from the blacklog,\nthen the field is unset."
+        "taskResponseData": {
+          "$ref": "#/definitions/v1TaskResponsePollingData",
+          "description": "See `TaskResponsePollingData`\nNOTE: Not yet implemented. Update this docstring when released with version."
         }
       }
     },
@@ -8960,9 +8960,9 @@
           "$ref": "#/definitions/apinexusv1Request",
           "description": "Embedded request as translated from the incoming frontend request."
         },
-        "syncMatchWaitDuration": {
-          "type": "string",
-          "description": "This field is set if the task was delivered as a result of a sync match, and it is set to the\namount of time we waited to make such a match. If the task was delievered from the blacklog,\nthen the field is unset."
+        "taskResponseData": {
+          "$ref": "#/definitions/v1TaskResponsePollingData",
+          "description": "See `TaskResponsePollingData`\nNOTE: Not yet implemented. Update this docstring when released with version."
         }
       }
     },
@@ -9059,9 +9059,9 @@
           },
           "title": "Protocol messages piggybacking on a WFT as a transport"
         },
-        "syncMatchWaitDuration": {
-          "type": "string",
-          "description": "This field is set if the task was delivered as a result of a sync match, and it is set to the\namount of time we waited to make such a match. If the task was delievered from the blacklog,\nthen the field is unset."
+        "taskResponseData": {
+          "$ref": "#/definitions/v1TaskResponsePollingData",
+          "description": "See `TaskResponsePollingData`\nNOTE: Not yet implemented. Update this docstring when released with version."
         }
       }
     },
@@ -10907,6 +10907,24 @@
       ],
       "default": "TASK_REACHABILITY_UNSPECIFIED",
       "description": "Specifies which category of tasks may reach a worker on a versioned task queue.\nUsed both in a reachability query and its response.\nDeprecated.\n\n - TASK_REACHABILITY_NEW_WORKFLOWS: There's a possiblity for a worker to receive new workflow tasks. Workers should *not* be retired.\n - TASK_REACHABILITY_EXISTING_WORKFLOWS: There's a possiblity for a worker to receive existing workflow and activity tasks from existing workflows. Workers\nshould *not* be retired.\nThis enum value does not distinguish between open and closed workflows.\n - TASK_REACHABILITY_OPEN_WORKFLOWS: There's a possiblity for a worker to receive existing workflow and activity tasks from open workflows. Workers\nshould *not* be retired.\n - TASK_REACHABILITY_CLOSED_WORKFLOWS: There's a possiblity for a worker to receive existing workflow tasks from closed workflows. Workers may be\nretired dependending on application requirements. For example, if there's no need to query closed workflows."
+    },
+    "v1TaskResponsePollingData": {
+      "type": "object",
+      "properties": {
+        "wasSyncMatch": {
+          "type": "boolean",
+          "description": "Set to true if the returned task was a result of a sync match."
+        },
+        "timePollerWaited": {
+          "type": "string",
+          "description": "Set to the amount of time a poll call waited for a task to be available. This value is allowed to be unset\nif the match was not sync. It is useful to help the SDK understand if it may reduce the number of pollers, since\nany substantial wait time here means the backlog is drained, and poll calls are idling waiting for tasks."
+        },
+        "stats": {
+          "$ref": "#/definitions/v1TaskQueueStats",
+          "description": "See `TaskQueueStats`. This field is only set if the poll hit the root partition, where the data is readily\navailable. SDKs should cache this data, and explicitly refresh it with a call to `DescribeTaskQueue` if some\nTTL has expired."
+        }
+      },
+      "description": "Data attached to successful poll responses (for any task type) which the SDK can use to optimize its polling\nstrategy."
     },
     "v1TerminateWorkflowExecutionResponse": {
       "type": "object"

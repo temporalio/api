@@ -6617,13 +6617,12 @@ components:
           items:
             $ref: '#/components/schemas/Message'
           description: Protocol messages piggybacking on a WFT as a transport
-        syncMatchWaitDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
+        taskResponseData:
+          allOf:
+            - $ref: '#/components/schemas/TaskResponsePollingData'
           description: |-
-            This field is set if the task was delivered as a result of a sync match, and it is set to the
-             amount of time we waited to make such a match. If the task was delievered from the blacklog,
-             then the field is unset.
+            See `TaskResponsePollingData`
+             NOTE: Not yet implemented. Update this docstring when released with version.
     PollerInfo:
       type: object
       properties:
@@ -8311,6 +8310,29 @@ components:
              who inherit the parent/previous workflow's Build ID but not its Task Queue. In those cases, make
              sure to query reachability for the parent/previous workflow's Task Queue as well.
           format: enum
+    TaskResponsePollingData:
+      type: object
+      properties:
+        wasSyncMatch:
+          type: boolean
+          description: Set to true if the returned task was a result of a sync match.
+        timePollerWaited:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Set to the amount of time a poll call waited for a task to be available. This value is allowed to be unset
+             if the match was not sync. It is useful to help the SDK understand if it may reduce the number of pollers, since
+             any substantial wait time here means the backlog is drained, and poll calls are idling waiting for tasks.
+        stats:
+          allOf:
+            - $ref: '#/components/schemas/TaskQueueStats'
+          description: |-
+            See `TaskQueueStats`. This field is only set if the poll hit the root partition, where the data is readily
+             available. SDKs should cache this data, and explicitly refresh it with a call to `DescribeTaskQueue` if some
+             TTL has expired.
+      description: |-
+        Data attached to successful poll responses (for any task type) which the SDK can use to optimize its polling
+         strategy.
     TerminateWorkflowExecutionRequest:
       type: object
       properties:

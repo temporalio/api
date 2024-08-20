@@ -258,3 +258,18 @@ message TimestampedCompatibleBuildIdRedirectRule {
     CompatibleBuildIdRedirectRule rule = 1;
     google.protobuf.Timestamp create_time = 2;
 }
+
+// Data attached to successful poll responses (for any task type) which the SDK can use to optimize its polling
+// strategy.
+message TaskResponsePollingData {
+    // Set to true if the returned task was a result of a sync match.
+    bool was_sync_match = 1;
+    // Set to the amount of time a poll call waited for a task to be available. This value is allowed to be unset
+    // if the match was not sync. It is useful to help the SDK understand if it may reduce the number of pollers, since
+    // any substantial wait time here means the backlog is drained, and poll calls are idling waiting for tasks.
+    google.protobuf.Duration time_poller_waited = 2;
+    // See `TaskQueueStats`. This field is only set if the poll hit the root partition, where the data is readily
+    // available. SDKs should cache this data, and explicitly refresh it with a call to `DescribeTaskQueue` if some
+    // TTL has expired.
+    TaskQueueStats stats = 3;
+}

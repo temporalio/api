@@ -206,3 +206,28 @@ message Callback {
         Internal internal = 3;
     }
 }
+
+// Link can be associated with history events. It might contain information about an external entity
+// related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
+// in this case, a history event in workflow A could contain a Link to the workflow started event in
+// workflow B, and vice-versa.
+message Link {
+    message WorkflowEvent {
+        string namespace = 1;
+        string workflow_id = 2;
+        string run_id = 3;
+
+        // Additional information about the workflow event.
+        // Eg: the caller workflow can send the history event ID that made the Nexus call.
+        oneof event {
+            int64 event_id = 100;
+            string signal_request_id = 101;
+            string update_id = 102;
+        }
+    }
+
+    reserved 1; // For a generic link to be added later
+    oneof variant {
+        WorkflowEvent workflow_event = 2;
+    }
+}

@@ -5635,6 +5635,11 @@ components:
               * workflow_execution_started_event_attributes - summary and details from start workflow.
               * timer_started_event_attributes - summary represents an identifier for the timer for use by
                 user interfaces.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links associated with the event.
         workflowExecutionStartedEventAttributes:
           $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes'
         workflowExecutionCompletedEventAttributes:
@@ -5783,6 +5788,27 @@ components:
          xx:19:00. An interval of 28 days with phase zero would match
          2022-02-17T00:00:00Z (among other times). The same interval with a phase of 3
          days, 5 hours, and 23 minutes would match 2022-02-20T05:23:00Z instead.
+    Link:
+      type: object
+      properties:
+        workflowEvent:
+          $ref: '#/components/schemas/Link_WorkflowEvent'
+      description: |-
+        Link can be associated with history events. It might contain information about an external entity
+         related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
+         in this case, a history event in workflow A could contain a Link to the workflow started event in
+         workflow B, and vice-versa.
+    Link_WorkflowEvent:
+      type: object
+      properties:
+        namespace:
+          type: string
+        workflowId:
+          type: string
+        runId:
+          type: string
+        eventRef:
+          $ref: '#/components/schemas/WorkflowEvent_EventReference'
     ListArchivedWorkflowExecutionsResponse:
       type: object
       properties:
@@ -8043,6 +8069,11 @@ components:
             Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo
              for use by user interfaces to display the fixed as-of-start summary and details of the
              workflow.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to be associated with the workflow.
     StartWorkflowExecutionResponse:
       type: object
       properties:
@@ -8670,6 +8701,70 @@ components:
             If set, the worker is opting in to worker versioning. Otherwise, this is used only as a
              marker for workflow reset points and the BuildIDs search attribute.
       description: Identifies the version(s) of a worker that processed a task
+    WorkflowEvent_EventReference:
+      type: object
+      properties:
+        eventId:
+          type: string
+        eventType:
+          enum:
+            - EVENT_TYPE_UNSPECIFIED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_STARTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT
+            - EVENT_TYPE_WORKFLOW_TASK_SCHEDULED
+            - EVENT_TYPE_WORKFLOW_TASK_STARTED
+            - EVENT_TYPE_WORKFLOW_TASK_COMPLETED
+            - EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT
+            - EVENT_TYPE_WORKFLOW_TASK_FAILED
+            - EVENT_TYPE_ACTIVITY_TASK_SCHEDULED
+            - EVENT_TYPE_ACTIVITY_TASK_STARTED
+            - EVENT_TYPE_ACTIVITY_TASK_COMPLETED
+            - EVENT_TYPE_ACTIVITY_TASK_FAILED
+            - EVENT_TYPE_ACTIVITY_TASK_TIMED_OUT
+            - EVENT_TYPE_ACTIVITY_TASK_CANCEL_REQUESTED
+            - EVENT_TYPE_ACTIVITY_TASK_CANCELED
+            - EVENT_TYPE_TIMER_STARTED
+            - EVENT_TYPE_TIMER_FIRED
+            - EVENT_TYPE_TIMER_CANCELED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED
+            - EVENT_TYPE_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED
+            - EVENT_TYPE_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_EXTERNAL_WORKFLOW_EXECUTION_CANCEL_REQUESTED
+            - EVENT_TYPE_MARKER_RECORDED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_CONTINUED_AS_NEW
+            - EVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_INITIATED
+            - EVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_STARTED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_COMPLETED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_CANCELED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_TIMED_OUT
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_TERMINATED
+            - EVENT_TYPE_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED
+            - EVENT_TYPE_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_EXTERNAL_WORKFLOW_EXECUTION_SIGNALED
+            - EVENT_TYPE_UPSERT_WORKFLOW_SEARCH_ATTRIBUTES
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ADMITTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_REJECTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_COMPLETED
+            - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED_EXTERNALLY
+            - EVENT_TYPE_ACTIVITY_PROPERTIES_MODIFIED_EXTERNALLY
+            - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED
+            - EVENT_TYPE_NEXUS_OPERATION_SCHEDULED
+            - EVENT_TYPE_NEXUS_OPERATION_STARTED
+            - EVENT_TYPE_NEXUS_OPERATION_COMPLETED
+            - EVENT_TYPE_NEXUS_OPERATION_FAILED
+            - EVENT_TYPE_NEXUS_OPERATION_CANCELED
+            - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT
+            - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
+          type: string
+          format: enum
     WorkflowExecution:
       type: object
       properties:

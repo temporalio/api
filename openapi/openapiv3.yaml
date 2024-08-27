@@ -1317,6 +1317,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  ? /api/v1/namespaces/{namespace}/workflows/{activity_execution.workflow_execution.workflow_id}/activities/{activity_execution.activity_id}/update
+  : post:
+      tags:
+        - WorkflowService
+      operationId: UpdateActivityOptions
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activity_execution.workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activity_execution.activity_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateActivityOptionsRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateActivityOptionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}:
     get:
       tags:
@@ -3486,6 +3526,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  ? /namespaces/{namespace}/workflows/{activity_execution.workflow_execution.workflow_id}/activities/{activity_execution.activity_id}/update
+  : post:
+      tags:
+        - WorkflowService
+      operationId: UpdateActivityOptions
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activity_execution.workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activity_execution.activity_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateActivityOptionsRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateActivityOptionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{execution.workflow_id}:
     get:
       tags:
@@ -4014,6 +4094,18 @@ paths:
                 $ref: '#/components/schemas/Status'
 components:
   schemas:
+    ActivityExecution:
+      type: object
+      properties:
+        workflowExecution:
+          $ref: '#/components/schemas/WorkflowExecution'
+        activityId:
+          type: string
+      description: |-
+        Identifies a specific activity within a namespace. ActivityExecution is expected to be
+         globally unique for running workflows.
+         run_id in workflow_execution can be empty,
+         when run_id is empty the latest run of the workflow should be selected
     ActivityFailureInfo:
       type: object
       properties:
@@ -6339,6 +6431,18 @@ components:
           type: string
           description: The request ID allocated at schedule time.
       description: Nexus operation timed out.
+    OptionsUpdate:
+      type: object
+      properties:
+        taskQueue:
+          type: string
+        timeouts:
+          $ref: '#/components/schemas/Timeouts'
+        retryPolicy:
+          $ref: '#/components/schemas/RetryPolicy'
+        updateMask:
+          type: string
+          format: field-mask
     Outcome:
       type: object
       properties:
@@ -8381,6 +8485,47 @@ components:
           format: enum
         lastHeartbeatDetails:
           $ref: '#/components/schemas/Payloads'
+    Timeouts:
+      type: object
+      properties:
+        scheduleToClose:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Indicates how long the caller is willing to wait for activity completion. The "schedule" time
+             is when the activity is initially scheduled, not when the most recent retry is scheduled.
+             Limits how long retries will be attempted. Either this or `start_to_close_timeout` must be
+             specified. When not specified, defaults to the workflow execution timeout.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        scheduleToStart:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Limits the time an activity task can stay in a task queue before a worker picks it up. The
+             "schedule" time is when the most recent retry is scheduled. This timeout should usually not
+             be set: it's useful in specific scenarios like worker-specific task queues. This timeout is
+             always non retryable, as all a retry would achieve is to put it back into the same queue.
+             Defaults to `schedule_to_close_timeout` or workflow execution timeout if that is not
+             specified. More info:
+             https://docs.temporal.io/docs/content/what-is-a-schedule-to-start-timeout/
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        startToClose:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Maximum time an activity is allowed to execute after being picked up by a worker. This
+             timeout is always retryable. Either this or `schedule_to_close_timeout` must be specified.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        heartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Maximum permitted time between successful worker heartbeats.
     TimerCanceledEventAttributes:
       type: object
       properties:
@@ -8453,6 +8598,20 @@ components:
           type: string
           description: If set, override overlap policy for this one request.
           format: enum
+    UpdateActivityOptionsRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        activityExecution:
+          $ref: '#/components/schemas/ActivityExecution'
+        activityOptionsUpdate:
+          $ref: '#/components/schemas/OptionsUpdate'
+        identity:
+          type: string
+    UpdateActivityOptionsResponse:
+      type: object
+      properties: {}
     UpdateNamespaceInfo:
       type: object
       properties:

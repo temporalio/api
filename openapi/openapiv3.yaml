@@ -4131,6 +4131,15 @@ components:
             - RETRY_STATE_CANCEL_REQUESTED
           type: string
           format: enum
+    ActivityOptionsUpdate:
+      type: object
+      properties:
+        taskQueue:
+          type: string
+        timeouts:
+          $ref: '#/components/schemas/ActivityTimeouts'
+        retryPolicy:
+          $ref: '#/components/schemas/RetryPolicy'
     ActivityPropertiesModifiedExternallyEventAttributes:
       type: object
       properties:
@@ -4356,6 +4365,47 @@ components:
             - RETRY_STATE_CANCEL_REQUESTED
           type: string
           format: enum
+    ActivityTimeouts:
+      type: object
+      properties:
+        scheduleToClose:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Indicates how long the caller is willing to wait for activity completion. The "schedule" time
+             is when the activity is initially scheduled, not when the most recent retry is scheduled.
+             Limits how long retries will be attempted. Either this or `start_to_close_timeout` must be
+             specified. When not specified, defaults to the workflow execution timeout.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        scheduleToStart:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Limits the time an activity task can stay in a task queue before a worker picks it up. The
+             "schedule" time is when the most recent retry is scheduled. This timeout should usually not
+             be set: it's useful in specific scenarios like worker-specific task queues. This timeout is
+             always non retryable, as all a retry would achieve is to put it back into the same queue.
+             Defaults to `schedule_to_close_timeout` or workflow execution timeout if that is not
+             specified. More info:
+             https://docs.temporal.io/docs/content/what-is-a-schedule-to-start-timeout/
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        startToClose:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Maximum time an activity is allowed to execute after being picked up by a worker. This
+             timeout is always retryable. Either this or `schedule_to_close_timeout` must be specified.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        heartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Maximum permitted time between successful worker heartbeats.
     ActivityType:
       type: object
       properties:
@@ -6431,18 +6481,6 @@ components:
           type: string
           description: The request ID allocated at schedule time.
       description: Nexus operation timed out.
-    OptionsUpdate:
-      type: object
-      properties:
-        taskQueue:
-          type: string
-        timeouts:
-          $ref: '#/components/schemas/Timeouts'
-        retryPolicy:
-          $ref: '#/components/schemas/RetryPolicy'
-        updateMask:
-          type: string
-          format: field-mask
     Outcome:
       type: object
       properties:
@@ -8485,47 +8523,6 @@ components:
           format: enum
         lastHeartbeatDetails:
           $ref: '#/components/schemas/Payloads'
-    Timeouts:
-      type: object
-      properties:
-        scheduleToClose:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: |-
-            Indicates how long the caller is willing to wait for activity completion. The "schedule" time
-             is when the activity is initially scheduled, not when the most recent retry is scheduled.
-             Limits how long retries will be attempted. Either this or `start_to_close_timeout` must be
-             specified. When not specified, defaults to the workflow execution timeout.
-
-             (-- api-linter: core::0140::prepositions=disabled
-                 aip.dev/not-precedent: "to" is used to indicate interval. --)
-        scheduleToStart:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: |-
-            Limits the time an activity task can stay in a task queue before a worker picks it up. The
-             "schedule" time is when the most recent retry is scheduled. This timeout should usually not
-             be set: it's useful in specific scenarios like worker-specific task queues. This timeout is
-             always non retryable, as all a retry would achieve is to put it back into the same queue.
-             Defaults to `schedule_to_close_timeout` or workflow execution timeout if that is not
-             specified. More info:
-             https://docs.temporal.io/docs/content/what-is-a-schedule-to-start-timeout/
-
-             (-- api-linter: core::0140::prepositions=disabled
-                 aip.dev/not-precedent: "to" is used to indicate interval. --)
-        startToClose:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: |-
-            Maximum time an activity is allowed to execute after being picked up by a worker. This
-             timeout is always retryable. Either this or `schedule_to_close_timeout` must be specified.
-
-             (-- api-linter: core::0140::prepositions=disabled
-                 aip.dev/not-precedent: "to" is used to indicate interval. --)
-        heartbeatTimeout:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: Maximum permitted time between successful worker heartbeats.
     TimerCanceledEventAttributes:
       type: object
       properties:
@@ -8606,9 +8603,12 @@ components:
         activityExecution:
           $ref: '#/components/schemas/ActivityExecution'
         activityOptionsUpdate:
-          $ref: '#/components/schemas/OptionsUpdate'
+          $ref: '#/components/schemas/ActivityOptionsUpdate'
         identity:
           type: string
+        updateMask:
+          type: string
+          format: field-mask
     UpdateActivityOptionsResponse:
       type: object
       properties: {}

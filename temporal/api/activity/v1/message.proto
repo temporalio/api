@@ -35,40 +35,20 @@ import "temporal/api/common/v1/message.proto";
 
 import "google/protobuf/duration.proto";
 
-message ActivityTimeouts {
-  // Indicates how long the caller is willing to wait for activity completion. The "schedule" time
-  // is when the activity is initially scheduled, not when the most recent retry is scheduled.
-  // Limits how long retries will be attempted. Either this or `start_to_close_timeout` must be
-  // specified. When not specified, defaults to the workflow execution timeout.
-  //
-  // (-- api-linter: core::0140::prepositions=disabled
-  //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-  google.protobuf.Duration schedule_to_close = 1;
-  // Limits the time an activity task can stay in a task queue before a worker picks it up. The
-  // "schedule" time is when the most recent retry is scheduled. This timeout should usually not
-  // be set: it's useful in specific scenarios like worker-specific task queues. This timeout is
-  // always non retryable, as all a retry would achieve is to put it back into the same queue.
-  // Defaults to `schedule_to_close_timeout` or workflow execution timeout if that is not
-  // specified. More info:
-  // https://docs.temporal.io/docs/content/what-is-a-schedule-to-start-timeout/
-  //
-  // (-- api-linter: core::0140::prepositions=disabled
-  //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-  google.protobuf.Duration schedule_to_start = 2;
-  // Maximum time an activity is allowed to execute after being picked up by a worker. This
-  // timeout is always retryable. Either this or `schedule_to_close_timeout` must be specified.
-  //
-  // (-- api-linter: core::0140::prepositions=disabled
-  //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-  google.protobuf.Duration start_to_close = 3;
-  // Maximum permitted time between successful worker heartbeats.
-  google.protobuf.Duration heartbeat_timeout = 4;
-}
-
 message ActivityOptionsUpdate {
-  string task_queue = 1;
+    string task_queue = 1;
 
-  temporal.api.activity.v1.ActivityTimeouts timeouts = 2;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 2;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_start_timeout = 3;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 4;
+    // Maximum permitted time between successful worker heartbeats.
+    google.protobuf.Duration heartbeat_timeout = 5;
 
-  temporal.api.common.v1.RetryPolicy retry_policy = 3;
+    temporal.api.common.v1.RetryPolicy retry_policy = 6;
 }

@@ -446,40 +446,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/update-options-by-id:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: UpdateActivityOptionsById
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace of the workflow which scheduled this activity
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateActivityOptionsByIdRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpdateActivityOptionsByIdResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/archived-workflows:
     get:
       tags:
@@ -2737,40 +2703,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/update-options-by-id:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: UpdateActivityOptionsById
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace of the workflow which scheduled this activity
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateActivityOptionsByIdRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpdateActivityOptionsByIdResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/archived-workflows:
     get:
       tags:
@@ -4176,19 +4108,31 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            (-- api-linter: core::0140::prepositions=disabled
+            Indicates how long the caller is willing to wait for an activity completion. Limits how long
+             retries will be attempted. Either this or `start_to_close_timeout` must be specified.
+
+             (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
         scheduleToStartTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            (-- api-linter: core::0140::prepositions=disabled
+            Limits time an activity task can stay in a task queue before a worker picks it up. This
+             timeout is always non retryable, as all a retry would achieve is to put it back into the same
+             queue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not
+             specified.
+
+             (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
         startToCloseTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            (-- api-linter: core::0140::prepositions=disabled
+            Maximum time an activity is allowed to execute after being picked up by a worker. This
+             timeout is always retryable. Either this or `schedule_to_close_timeout` must be
+             specified.
+
+             (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
         heartbeatTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
@@ -8610,41 +8554,6 @@ components:
           type: string
           description: If set, override overlap policy for this one request.
           format: enum
-    UpdateActivityOptionsByIdRequest:
-      type: object
-      properties:
-        namespace:
-          type: string
-          description: Namespace of the workflow which scheduled this activity
-        workflowId:
-          type: string
-          description: Id of the workflow which scheduled this activity
-        runId:
-          type: string
-          description: |-
-            Run Id of the workflow which scheduled this activity
-             if empty - latest workflow is used
-        activityId:
-          type: string
-          description: Id of the activity we're updating
-        activityOptions:
-          allOf:
-            - $ref: '#/components/schemas/ActivityOptions'
-          description: Activity options. Partial updates are accepted and controlled by update_mask
-        identity:
-          type: string
-          description: The identity of the client who initiated this request
-        updateMask:
-          type: string
-          description: Controls which fields from `activity_options` will be applied
-          format: field-mask
-    UpdateActivityOptionsByIdResponse:
-      type: object
-      properties:
-        activityOptions:
-          allOf:
-            - $ref: '#/components/schemas/ActivityOptions'
-          description: Activity options after an update
     UpdateActivityOptionsRequest:
       type: object
       properties:

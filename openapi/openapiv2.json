@@ -515,45 +515,6 @@
         ]
       }
     },
-    "/api/v1/namespaces/{namespace}/activities/update-options-by-id": {
-      "post": {
-        "operationId": "UpdateActivityOptionsById2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateActivityOptionsByIdResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUpdateActivityOptionsByIdBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/api/v1/namespaces/{namespace}/archived-workflows": {
       "get": {
         "summary": "ListArchivedWorkflowExecutions is a visibility API to list archived workflow executions in a specific namespace.",
@@ -3160,45 +3121,6 @@
         ]
       }
     },
-    "/namespaces/{namespace}/activities/update-options-by-id": {
-      "post": {
-        "operationId": "UpdateActivityOptionsById",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateActivityOptionsByIdResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUpdateActivityOptionsByIdBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/namespaces/{namespace}/archived-workflows": {
       "get": {
         "summary": "ListArchivedWorkflowExecutions is a visibility API to list archived workflow executions in a specific namespace.",
@@ -5734,35 +5656,6 @@
         }
       }
     },
-    "WorkflowServiceUpdateActivityOptionsByIdBody": {
-      "type": "object",
-      "properties": {
-        "workflowId": {
-          "type": "string",
-          "title": "Id of the workflow which scheduled this activity"
-        },
-        "runId": {
-          "type": "string",
-          "title": "Run Id of the workflow which scheduled this activity\nif empty - latest workflow is used"
-        },
-        "activityId": {
-          "type": "string",
-          "title": "Id of the activity we're updating"
-        },
-        "activityOptions": {
-          "$ref": "#/definitions/v1ActivityOptions",
-          "title": "Activity options. Partial updates are accepted and controlled by update_mask"
-        },
-        "identity": {
-          "type": "string",
-          "title": "The identity of the client who initiated this request"
-        },
-        "updateMask": {
-          "type": "string",
-          "title": "Controls which fields from `activity_options` will be applied"
-        }
-      }
-    },
     "WorkflowServiceUpdateNamespaceBody": {
       "type": "object",
       "properties": {
@@ -6057,13 +5950,16 @@
           "$ref": "#/definitions/v1TaskQueue"
         },
         "scheduleToCloseTimeout": {
-          "type": "string"
+          "type": "string",
+          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted. Either this or `start_to_close_timeout` must be specified.\n"
         },
         "scheduleToStartTimeout": {
-          "type": "string"
+          "type": "string",
+          "description": "Limits time an activity task can stay in a task queue before a worker picks it up. This\ntimeout is always non retryable, as all a retry would achieve is to put it back into the same\nqueue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not\nspecified.\n"
         },
         "startToCloseTimeout": {
-          "type": "string"
+          "type": "string",
+          "description": "Maximum time an activity is allowed to execute after being picked up by a worker. This\ntimeout is always retryable. Either this or `schedule_to_close_timeout` must be\nspecified.\n"
         },
         "heartbeatTimeout": {
           "type": "string",
@@ -11253,15 +11149,6 @@
         },
         "failure": {
           "$ref": "#/definitions/apinexusv1Failure"
-        }
-      }
-    },
-    "v1UpdateActivityOptionsByIdResponse": {
-      "type": "object",
-      "properties": {
-        "activityOptions": {
-          "$ref": "#/definitions/v1ActivityOptions",
-          "title": "Activity options after an update"
         }
       }
     },

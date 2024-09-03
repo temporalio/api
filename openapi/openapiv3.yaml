@@ -416,14 +416,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/update-options:
+  /api/v1/namespaces/{namespace}/activities/update-options-by-id:
     post:
       tags:
         - WorkflowService
-      operationId: UpdateActivityOptions
+      description: |-
+        UpdateActivityOptionsById is called by the client to update the options of an activity
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: UpdateActivityOptionsById
       parameters:
         - name: namespace
           in: path
+          description: Namespace of the workflow which scheduled this activity
           required: true
           schema:
             type: string
@@ -431,7 +436,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateActivityOptionsRequest'
+              $ref: '#/components/schemas/UpdateActivityOptionsByIdRequest'
         required: true
       responses:
         "200":
@@ -439,7 +444,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateActivityOptionsResponse'
+                $ref: '#/components/schemas/UpdateActivityOptionsByIdResponse'
         default:
           description: Default error response
           content:
@@ -2673,14 +2678,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/update-options:
+  /namespaces/{namespace}/activities/update-options-by-id:
     post:
       tags:
         - WorkflowService
-      operationId: UpdateActivityOptions
+      description: |-
+        UpdateActivityOptionsById is called by the client to update the options of an activity
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: UpdateActivityOptionsById
       parameters:
         - name: namespace
           in: path
+          description: Namespace of the workflow which scheduled this activity
           required: true
           schema:
             type: string
@@ -2688,7 +2698,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateActivityOptionsRequest'
+              $ref: '#/components/schemas/UpdateActivityOptionsByIdRequest'
         required: true
       responses:
         "200":
@@ -2696,7 +2706,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateActivityOptionsResponse'
+                $ref: '#/components/schemas/UpdateActivityOptionsByIdResponse'
         default:
           description: Default error response
           content:
@@ -8554,15 +8564,23 @@ components:
           type: string
           description: If set, override overlap policy for this one request.
           format: enum
-    UpdateActivityOptionsRequest:
+    UpdateActivityOptionsByIdRequest:
       type: object
       properties:
         namespace:
           type: string
-        taskToken:
+          description: Namespace of the workflow which scheduled this activity
+        workflowId:
           type: string
-          description: A unique identifier for this task
-          format: bytes
+          description: Id of the workflow which scheduled this activity
+        runId:
+          type: string
+          description: |-
+            Run Id of the workflow which scheduled this activity
+             if empty - latest workflow is used
+        activityId:
+          type: string
+          description: Id of the activity we're updating
         activityOptions:
           allOf:
             - $ref: '#/components/schemas/ActivityOptions'
@@ -8574,7 +8592,7 @@ components:
           type: string
           description: Controls which fields from `activity_options` will be applied
           format: field-mask
-    UpdateActivityOptionsResponse:
+    UpdateActivityOptionsByIdResponse:
       type: object
       properties:
         activityOptions:

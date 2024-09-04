@@ -1413,23 +1413,26 @@ message GetWorkerTaskReachabilityResponse {
 // (-- api-linter: core::0134=disabled
 //     aip.dev/not-precedent: Update RPCs don't follow Google API format. --)
 message UpdateWorkflowExecutionRequest {
-    // The namespace name of the target workflow
+    // The namespace name of the target Workflow.
     string namespace = 1;
-    // The target workflow id and (optionally) a specific run thereof
+    // The target Workflow Id and (optionally) a specific Run Id thereof.
     // (-- api-linter: core::0203::optional=disabled
     //     aip.dev/not-precedent: false positive triggered by the word "optional" --)
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
-    // If set, this call will error if the most recent (if no run id is set on
-    // `workflow_execution`), or specified (if it is) workflow execution is not
-    // part of the same execution chain as this id.
+    // If set, this call will error if the most recent (if no Run Id is set on
+    // `workflow_execution`), or specified (if it is) Workflow Execution is not
+    // part of the same execution chain as this Id.
     string first_execution_run_id = 3;
 
-    // Describes when this request should return - basically whether the
-    // update is synchronous, asynchronous, or somewhere in between.
+    // Specifies client's intent to wait for Update results.
+    // NOTE: This field works together with API call timeout which is limited by
+    // server timeout (maximum wait time). If server timeout is expired before
+    // user specified timeout, API call returns even if specified stage is not reached.
+    // Actual reached stage will be included in the response.
     temporal.api.update.v1.WaitPolicy wait_policy = 4;
 
     // The request information that will be delivered all the way down to the
-    // workflow execution.
+    // Workflow Execution.
     temporal.api.update.v1.Request request = 5;
 }
 
@@ -1437,8 +1440,8 @@ message UpdateWorkflowExecutionResponse {
     // Enough information for subsequent poll calls if needed. Never null.
     temporal.api.update.v1.UpdateRef update_ref = 1;
 
-    // The outcome of the update if and only if the workflow execution update
-    // has completed. If this response is being returned before the update has
+    // The outcome of the Update if and only if the Workflow Update
+    // has completed. If this response is being returned before the Update has
     // completed then this field will not be set.
     temporal.api.update.v1.Outcome outcome = 2;
 
@@ -1548,15 +1551,14 @@ message ListBatchOperationsResponse {
 }
 
 message PollWorkflowExecutionUpdateRequest {
-    // The namespace of the workflow execution to which the update was
+    // The namespace of the Workflow Execution to which the Update was
     // originally issued.
     string namespace = 1;
-    // The update reference returned in the initial
-    // UpdateWorkflowExecutionResponse
+    // The Update reference returned in the initial UpdateWorkflowExecutionResponse.
     temporal.api.update.v1.UpdateRef update_ref = 2;
-    // The identity of the worker/client who is polling this update outcome
+    // The identity of the worker/client who is polling this Update outcome.
     string identity = 3;
-    // Describes when this poll request should return a response.
+    // Specifies client's intent to wait for Update results.
     // Omit to request a non-blocking poll.
     temporal.api.update.v1.WaitPolicy wait_policy = 4;
 }
@@ -1579,7 +1581,7 @@ message PollWorkflowExecutionUpdateResponse {
     // request WaitPolicy, and before the context deadline expired; clients may
     // may then retry the call as needed.
     temporal.api.enums.v1.UpdateWorkflowExecutionLifecycleStage stage = 2;
-    // Sufficient information to address this update.
+    // Sufficient information to address this Update.
     temporal.api.update.v1.UpdateRef update_ref = 3;
 }
 

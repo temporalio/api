@@ -35,6 +35,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
 
 import "temporal/api/enums/v1/common.proto";
+import "temporal/api/enums/v1/event_type.proto";
 import "temporal/api/enums/v1/reset.proto";
 
 message DataBlob {
@@ -204,5 +205,32 @@ message Callback {
     oneof variant {
         Nexus nexus = 2;
         Internal internal = 3;
+    }
+}
+
+// Link can be associated with history events. It might contain information about an external entity
+// related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
+// in this case, a history event in workflow A could contain a Link to the workflow started event in
+// workflow B, and vice-versa.
+message Link {
+    message WorkflowEvent {
+        message EventReference {
+            int64 event_id = 1;
+            temporal.api.enums.v1.EventType event_type = 2;
+        }
+
+        string namespace = 1;
+        string workflow_id = 2;
+        string run_id = 3;
+
+        // Additional information about the workflow event.
+        // Eg: the caller workflow can send the history event details that made the Nexus call.
+        oneof reference {
+            EventReference event_ref = 100;
+        }
+    }
+
+    oneof variant {
+        WorkflowEvent workflow_event = 1;
     }
 }

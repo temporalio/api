@@ -1173,7 +1173,7 @@
           },
           {
             "name": "versions.allActive",
-            "description": "Include all active versions. A version is considered active if it has had new\ntasks or polls recently.",
+            "description": "Include all active versions. A version is considered active if, in the last few minutes,\nit has had new tasks or polls, or it has been the subject of certain task queue API calls.",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -3710,7 +3710,7 @@
           },
           {
             "name": "versions.allActive",
-            "description": "Include all active versions. A version is considered active if it has had new\ntasks or polls recently.",
+            "description": "Include all active versions. A version is considered active if, in the last few minutes,\nit has had new tasks or polls, or it has been the subject of certain task queue API calls.",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -4725,11 +4725,28 @@
       "properties": {
         "startWorkflow": {
           "$ref": "#/definitions/v1StartWorkflowExecutionRequest",
-          "title": "Additional restrictions:\n- setting `cron_schedule` is invalid\n- setting `request_eager_execution` is invalid"
+          "title": "Additional restrictions:\n- setting `cron_schedule` is invalid\n- setting `request_eager_execution` is invalid\n- setting `workflow_start_delay` is invalid"
         },
         "updateWorkflow": {
           "$ref": "#/definitions/v1UpdateWorkflowExecutionRequest",
           "title": "Additional restrictions:\n- setting `first_execution_run_id` is invalid\n- setting `workflow_execution.run_id` is invalid"
+        }
+      }
+    },
+    "LinkWorkflowEvent": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "workflowId": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "eventRef": {
+          "$ref": "#/definitions/WorkflowEventEventReference"
         }
       }
     },
@@ -4751,6 +4768,13 @@
       "properties": {
         "operationId": {
           "type": "string"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
         }
       },
       "description": "The operation will complete asynchronously.\nThe returned ID can be used to reference this operation."
@@ -4876,6 +4900,18 @@
         }
       },
       "description": "Replaces the routing rule with the given source Build ID."
+    },
+    "WorkflowEventEventReference": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "eventType": {
+          "$ref": "#/definitions/v1EventType"
+        }
+      }
     },
     "WorkflowServiceCreateScheduleBody": {
       "type": "object",
@@ -5469,6 +5505,14 @@
         "userMetadata": {
           "$ref": "#/definitions/v1UserMetadata",
           "description": "Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo\nfor use by user interfaces to display the fixed as-of-start summary and details of the\nworkflow."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apicommonv1Link"
+          },
+          "description": "Links to be associated with the workflow."
         }
       }
     },
@@ -5609,6 +5653,15 @@
         }
       }
     },
+    "apicommonv1Link": {
+      "type": "object",
+      "properties": {
+        "workflowEvent": {
+          "$ref": "#/definitions/LinkWorkflowEvent"
+        }
+      },
+      "description": "Link can be associated with history events. It might contain information about an external entity\nrelated to the history event. For example, workflow A makes a Nexus call that starts workflow B:\nin this case, a history event in workflow A could contain a Link to the workflow started event in\nworkflow B, and vice-versa."
+    },
     "apifailurev1Failure": {
       "type": "object",
       "properties": {
@@ -5676,6 +5729,18 @@
         }
       },
       "title": "A general purpose failure message.\nSee: https://github.com/nexus-rpc/api/blob/main/SPEC.md#failure"
+    },
+    "apinexusv1Link": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "See https://github.com/nexus-rpc/api/blob/main/SPEC.md#links."
+        },
+        "type": {
+          "type": "string"
+        }
+      }
     },
     "apinexusv1Request": {
       "type": "object",
@@ -7626,6 +7691,14 @@
         "userMetadata": {
           "$ref": "#/definitions/v1UserMetadata",
           "description": "Metadata on the event. This is often carried over from commands and client calls. Most events\nwon't have this information, and how this information is used is dependent upon the interface\nthat reads it.\n\nCurrent well-known uses:\n * workflow_execution_started_event_attributes - summary and details from start workflow.\n * timer_started_event_attributes - summary represents an identifier for the timer for use by\n   user interfaces."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apicommonv1Link"
+          },
+          "description": "Links associated with the event."
         },
         "workflowExecutionStartedEventAttributes": {
           "$ref": "#/definitions/v1WorkflowExecutionStartedEventAttributes"
@@ -10018,6 +10091,9 @@
       ],
       "default": "SEVERITY_UNSPECIFIED"
     },
+    "v1ShutdownWorkerResponse": {
+      "type": "object"
+    },
     "v1SignalExternalWorkflowExecutionCommandAttributes": {
       "type": "object",
       "properties": {
@@ -10358,6 +10434,14 @@
             "type": "string"
           },
           "description": "Header that is expected to be attached to the callback request when the operation completes."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          },
+          "description": "Links contain caller information and can be attached to the operations started by the handler."
         }
       },
       "description": "A request to start an operation."
@@ -10494,6 +10578,14 @@
         "userMetadata": {
           "$ref": "#/definitions/v1UserMetadata",
           "description": "Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo\nfor use by user interfaces to display the fixed as-of-start summary and details of the\nworkflow."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apicommonv1Link"
+          },
+          "description": "Links to be associated with the workflow."
         }
       }
     },
@@ -10687,24 +10779,24 @@
         "approximateBacklogCount": {
           "type": "string",
           "format": "int64",
-          "description": "The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually converges\nto the right value."
+          "description": "The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually\nconverges to the right value. Can be relied upon for scaling decisions.\n\nSpecial note for workflow task queue type: this metric does not count sticky queue tasks. However, because\nthose tasks only remain valid for a few seconds, the inaccuracy becomes less significant as the backlog size\ngrows."
         },
         "approximateBacklogAge": {
           "type": "string",
-          "description": "Approximate age of the oldest task in the backlog based on the create timestamp of the task at the head of the queue."
+          "description": "Approximate age of the oldest task in the backlog based on the creation time of the task at the head of\nthe queue. Can be relied upon for scaling decisions.\n\nSpecial note for workflow task queue type: this metric does not count sticky queue tasks. However, because\nthose tasks only remain valid for a few seconds, they should not affect the result when backlog is older than\nfew seconds."
         },
         "tasksAddRate": {
           "type": "number",
           "format": "float",
-          "description": "Approximate tasks per second added to the task queue based on activity within a fixed window. This includes both backlogged and\nsync-matched tasks."
+          "description": "The approximate tasks per second added to the task queue, averaging the last 30 seconds. These includes tasks\nwhether or not they were added to/dispatched from the backlog or they were dispatched immediately without going\nto the backlog (sync-matched).\n\nThe difference between `tasks_add_rate` and `tasks_dispatch_rate` is a reliable metric for the rate at which\nbacklog grows/shrinks.\n\nNote: the actual tasks delivered to the workers may significantly be higher than the numbers reported by\ntasks_add_rate, because:\n- Tasks can be sent to workers without going to the task queue. This is called Eager dispatch. Eager dispatch is\n  enable for activities by default in the latest SDKs.\n- Tasks going to Sticky queue are not accounted for. Note that, typically, only the first workflow task of each\n  workflow goes to a normal queue, and the rest workflow tasks go to the Sticky queue associated with a specific\n  worker instance."
         },
         "tasksDispatchRate": {
           "type": "number",
           "format": "float",
-          "description": "Approximate tasks per second dispatched to workers based on activity within a fixed window. This includes both backlogged and\nsync-matched tasks."
+          "description": "The approximate tasks per second dispatched from the task queue, averaging the last 30 seconds. These includes\ntasks whether or not they were added to/dispatched from the backlog or they were dispatched immediately without\ngoing to the backlog (sync-matched).\n\nThe difference between `tasks_add_rate` and `tasks_dispatch_rate` is a reliable metric for the rate at which\nbacklog grows/shrinks.\n\nNote: the actual tasks delivered to the workers may significantly be higher than the numbers reported by\ntasks_dispatch_rate, because:\n- Tasks can be sent to workers without going to the task queue. This is called Eager dispatch. Eager dispatch is\n  enable for activities by default in the latest SDKs.\n- Tasks going to Sticky queue are not accounted for. Note that, typically, only the first workflow task of each\n  workflow goes to a normal queue, and the rest workflow tasks go to the Sticky queue associated with a specific\n  worker instance."
         }
       },
-      "description": "For workflow task queues, we only report the normal queue stats, not sticky queues. This means the stats\nreported here do not count all workflow tasks. However, because the tasks queued in sticky queues only remain\nvalid for a few seconds, the inaccuracy becomes less significant as the backlog age grows."
+      "description": "TaskQueueStats contains statistics about task queue backlog and activity.\n\nFor workflow task queue type, this result is partial because tasks sent to sticky queues are not included. Read\ncomments above each metric to understand the impact of sticky queue exclusion on that metric accuracy."
     },
     "v1TaskQueueStatus": {
       "type": "object",
@@ -10790,7 +10882,7 @@
         },
         "allActive": {
           "type": "boolean",
-          "description": "Include all active versions. A version is considered active if it has had new\ntasks or polls recently."
+          "description": "Include all active versions. A version is considered active if, in the last few minutes,\nit has had new tasks or polls, or it has been the subject of certain task queue API calls."
         }
       },
       "description": "Used for specifying versions the caller is interested in."

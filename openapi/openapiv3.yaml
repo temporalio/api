@@ -1049,8 +1049,8 @@ paths:
         - name: versions.allActive
           in: query
           description: |-
-            Include all active versions. A version is considered active if it has had new
-             tasks or polls recently.
+            Include all active versions. A version is considered active if, in the last few minutes,
+             it has had new tasks or polls, or it has been the subject of certain task queue API calls.
           schema:
             type: boolean
         - name: taskQueueTypes
@@ -3251,8 +3251,8 @@ paths:
         - name: versions.allActive
           in: query
           description: |-
-            Include all active versions. A version is considered active if it has had new
-             tasks or polls recently.
+            Include all active versions. A version is considered active if, in the last few minutes,
+             it has had new tasks or polls, or it has been the subject of certain task queue API calls.
           schema:
             type: boolean
         - name: taskQueueTypes
@@ -5234,6 +5234,7 @@ components:
             Additional restrictions:
              - setting `cron_schedule` is invalid
              - setting `request_eager_execution` is invalid
+             - setting `workflow_start_delay` is invalid
         updateWorkflow:
           allOf:
             - $ref: '#/components/schemas/UpdateWorkflowExecutionRequest'
@@ -5634,6 +5635,11 @@ components:
               * workflow_execution_started_event_attributes - summary and details from start workflow.
               * timer_started_event_attributes - summary represents an identifier for the timer for use by
                 user interfaces.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links associated with the event.
         workflowExecutionStartedEventAttributes:
           $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes'
         workflowExecutionCompletedEventAttributes:
@@ -5782,6 +5788,27 @@ components:
          xx:19:00. An interval of 28 days with phase zero would match
          2022-02-17T00:00:00Z (among other times). The same interval with a phase of 3
          days, 5 hours, and 23 minutes would match 2022-02-20T05:23:00Z instead.
+    Link:
+      type: object
+      properties:
+        workflowEvent:
+          $ref: '#/components/schemas/Link_WorkflowEvent'
+      description: |-
+        Link can be associated with history events. It might contain information about an external entity
+         related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
+         in this case, a history event in workflow A could contain a Link to the workflow started event in
+         workflow B, and vice-versa.
+    Link_WorkflowEvent:
+      type: object
+      properties:
+        namespace:
+          type: string
+        workflowId:
+          type: string
+        runId:
+          type: string
+        eventRef:
+          $ref: '#/components/schemas/WorkflowEvent_EventReference'
     ListArchivedWorkflowExecutionsResponse:
       type: object
       properties:
@@ -8042,6 +8069,11 @@ components:
             Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo
              for use by user interfaces to display the fixed as-of-start summary and details of the
              workflow.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to be associated with the workflow.
     StartWorkflowExecutionResponse:
       type: object
       properties:
@@ -8199,28 +8231,63 @@ components:
         approximateBacklogCount:
           type: string
           description: |-
-            The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually converges
-             to the right value.
+            The approximate number of tasks backlogged in this task queue. May count expired tasks but eventually
+             converges to the right value. Can be relied upon for scaling decisions.
+
+             Special note for workflow task queue type: this metric does not count sticky queue tasks. However, because
+             those tasks only remain valid for a few seconds, the inaccuracy becomes less significant as the backlog size
+             grows.
         approximateBacklogAge:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Approximate age of the oldest task in the backlog based on the create timestamp of the task at the head of the queue.
+          description: |-
+            Approximate age of the oldest task in the backlog based on the creation time of the task at the head of
+             the queue. Can be relied upon for scaling decisions.
+
+             Special note for workflow task queue type: this metric does not count sticky queue tasks. However, because
+             those tasks only remain valid for a few seconds, they should not affect the result when backlog is older than
+             few seconds.
         tasksAddRate:
           type: number
           description: |-
-            Approximate tasks per second added to the task queue based on activity within a fixed window. This includes both backlogged and
-             sync-matched tasks.
+            The approximate tasks per second added to the task queue, averaging the last 30 seconds. These includes tasks
+             whether or not they were added to/dispatched from the backlog or they were dispatched immediately without going
+             to the backlog (sync-matched).
+
+             The difference between `tasks_add_rate` and `tasks_dispatch_rate` is a reliable metric for the rate at which
+             backlog grows/shrinks.
+
+             Note: the actual tasks delivered to the workers may significantly be higher than the numbers reported by
+             tasks_add_rate, because:
+             - Tasks can be sent to workers without going to the task queue. This is called Eager dispatch. Eager dispatch is
+               enable for activities by default in the latest SDKs.
+             - Tasks going to Sticky queue are not accounted for. Note that, typically, only the first workflow task of each
+               workflow goes to a normal queue, and the rest workflow tasks go to the Sticky queue associated with a specific
+               worker instance.
           format: float
         tasksDispatchRate:
           type: number
           description: |-
-            Approximate tasks per second dispatched to workers based on activity within a fixed window. This includes both backlogged and
-             sync-matched tasks.
+            The approximate tasks per second dispatched from the task queue, averaging the last 30 seconds. These includes
+             tasks whether or not they were added to/dispatched from the backlog or they were dispatched immediately without
+             going to the backlog (sync-matched).
+
+             The difference between `tasks_add_rate` and `tasks_dispatch_rate` is a reliable metric for the rate at which
+             backlog grows/shrinks.
+
+             Note: the actual tasks delivered to the workers may significantly be higher than the numbers reported by
+             tasks_dispatch_rate, because:
+             - Tasks can be sent to workers without going to the task queue. This is called Eager dispatch. Eager dispatch is
+               enable for activities by default in the latest SDKs.
+             - Tasks going to Sticky queue are not accounted for. Note that, typically, only the first workflow task of each
+               workflow goes to a normal queue, and the rest workflow tasks go to the Sticky queue associated with a specific
+               worker instance.
           format: float
       description: |-
-        For workflow task queues, we only report the normal queue stats, not sticky queues. This means the stats
-         reported here do not count all workflow tasks. However, because the tasks queued in sticky queues only remain
-         valid for a few seconds, the inaccuracy becomes less significant as the backlog age grows.
+        TaskQueueStats contains statistics about task queue backlog and activity.
+
+         For workflow task queue type, this result is partial because tasks sent to sticky queues are not included. Read
+         comments above each metric to understand the impact of sticky queue exclusion on that metric accuracy.
     TaskQueueStatus:
       type: object
       properties:
@@ -8669,6 +8736,70 @@ components:
             If set, the worker is opting in to worker versioning. Otherwise, this is used only as a
              marker for workflow reset points and the BuildIDs search attribute.
       description: Identifies the version(s) of a worker that processed a task
+    WorkflowEvent_EventReference:
+      type: object
+      properties:
+        eventId:
+          type: string
+        eventType:
+          enum:
+            - EVENT_TYPE_UNSPECIFIED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_STARTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT
+            - EVENT_TYPE_WORKFLOW_TASK_SCHEDULED
+            - EVENT_TYPE_WORKFLOW_TASK_STARTED
+            - EVENT_TYPE_WORKFLOW_TASK_COMPLETED
+            - EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT
+            - EVENT_TYPE_WORKFLOW_TASK_FAILED
+            - EVENT_TYPE_ACTIVITY_TASK_SCHEDULED
+            - EVENT_TYPE_ACTIVITY_TASK_STARTED
+            - EVENT_TYPE_ACTIVITY_TASK_COMPLETED
+            - EVENT_TYPE_ACTIVITY_TASK_FAILED
+            - EVENT_TYPE_ACTIVITY_TASK_TIMED_OUT
+            - EVENT_TYPE_ACTIVITY_TASK_CANCEL_REQUESTED
+            - EVENT_TYPE_ACTIVITY_TASK_CANCELED
+            - EVENT_TYPE_TIMER_STARTED
+            - EVENT_TYPE_TIMER_FIRED
+            - EVENT_TYPE_TIMER_CANCELED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED
+            - EVENT_TYPE_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED
+            - EVENT_TYPE_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_EXTERNAL_WORKFLOW_EXECUTION_CANCEL_REQUESTED
+            - EVENT_TYPE_MARKER_RECORDED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_CONTINUED_AS_NEW
+            - EVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_INITIATED
+            - EVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_STARTED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_COMPLETED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_CANCELED
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_TIMED_OUT
+            - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_TERMINATED
+            - EVENT_TYPE_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED
+            - EVENT_TYPE_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED
+            - EVENT_TYPE_EXTERNAL_WORKFLOW_EXECUTION_SIGNALED
+            - EVENT_TYPE_UPSERT_WORKFLOW_SEARCH_ATTRIBUTES
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ADMITTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_REJECTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_COMPLETED
+            - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED_EXTERNALLY
+            - EVENT_TYPE_ACTIVITY_PROPERTIES_MODIFIED_EXTERNALLY
+            - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED
+            - EVENT_TYPE_NEXUS_OPERATION_SCHEDULED
+            - EVENT_TYPE_NEXUS_OPERATION_STARTED
+            - EVENT_TYPE_NEXUS_OPERATION_COMPLETED
+            - EVENT_TYPE_NEXUS_OPERATION_FAILED
+            - EVENT_TYPE_NEXUS_OPERATION_CANCELED
+            - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT
+            - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
+          type: string
+          format: enum
     WorkflowExecution:
       type: object
       properties:

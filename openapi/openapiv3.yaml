@@ -1084,8 +1084,8 @@ paths:
         - name: versions.allActive
           in: query
           description: |-
-            Include all active versions. A version is considered active if it has had new
-             tasks or polls recently.
+            Include all active versions. A version is considered active if, in the last few minutes,
+             it has had new tasks or polls, or it has been the subject of certain task queue API calls.
           schema:
             type: boolean
         - name: taskQueueTypes
@@ -1821,12 +1821,12 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: Invokes the specified update function on user workflow code.
+      description: Invokes the specified Update function on user Workflow code.
       operationId: UpdateWorkflowExecution
       parameters:
         - name: namespace
           in: path
-          description: The namespace name of the target workflow
+          description: The namespace name of the target Workflow.
           required: true
           schema:
             type: string
@@ -3321,8 +3321,8 @@ paths:
         - name: versions.allActive
           in: query
           description: |-
-            Include all active versions. A version is considered active if it has had new
-             tasks or polls recently.
+            Include all active versions. A version is considered active if, in the last few minutes,
+             it has had new tasks or polls, or it has been the subject of certain task queue API calls.
           schema:
             type: boolean
         - name: taskQueueTypes
@@ -4025,12 +4025,12 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: Invokes the specified update function on user workflow code.
+      description: Invokes the specified Update function on user Workflow code.
       operationId: UpdateWorkflowExecution
       parameters:
         - name: namespace
           in: path
-          description: The namespace name of the target workflow
+          description: The namespace name of the target Workflow.
           required: true
           schema:
             type: string
@@ -5869,15 +5869,15 @@ components:
           allOf:
             - $ref: '#/components/schemas/Header'
           description: |-
-            Headers that are passed with the update from the requesting entity.
+            Headers that are passed with the Update from the requesting entity.
              These can include things like auth or tracing tokens.
         name:
           type: string
-          description: The name of the input handler to invoke on the target workflow
+          description: The name of the Update handler to invoke on the target Workflow.
         args:
           allOf:
             - $ref: '#/components/schemas/Payloads'
-          description: The arguments to pass to the named handler.
+          description: The arguments to pass to the named Update handler.
     IntervalSpec:
       type: object
       properties:
@@ -6085,11 +6085,11 @@ components:
       properties:
         updateId:
           type: string
-          description: An ID with workflow-scoped uniqueness for this update
+          description: An ID with workflow-scoped uniqueness for this Update.
         identity:
           type: string
-          description: A string identifying the agent that requested this update.
-      description: Metadata about a workflow execution update.
+          description: A string identifying the agent that requested this Update.
+      description: Metadata about a Workflow Update.
     MeteringMetadata:
       type: object
       properties:
@@ -6457,7 +6457,7 @@ components:
           $ref: '#/components/schemas/Payloads'
         failure:
           $ref: '#/components/schemas/Failure'
-      description: The outcome of a workflow update - success or failure.
+      description: 'The outcome of a Workflow Update: success or failure.'
     PatchScheduleRequest:
       type: object
       properties:
@@ -6936,7 +6936,7 @@ components:
           $ref: '#/components/schemas/Meta'
         input:
           $ref: '#/components/schemas/Input'
-      description: The client request that triggers a workflow execution update
+      description: The client request that triggers a Workflow Update.
     RequestCancelExternalWorkflowExecutionFailedEventAttributes:
       type: object
       properties:
@@ -8681,9 +8681,7 @@ components:
           $ref: '#/components/schemas/WorkflowExecution'
         updateId:
           type: string
-      description: |-
-        The data needed by a client to refer to a previously invoked workflow
-         execution update process.
+      description: The data needed by a client to refer to a previously invoked Workflow Update.
     UpdateScheduleRequest:
       type: object
       properties:
@@ -8730,32 +8728,35 @@ components:
       properties:
         namespace:
           type: string
-          description: The namespace name of the target workflow
+          description: The namespace name of the target Workflow.
         workflowExecution:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecution'
           description: |-
-            The target workflow id and (optionally) a specific run thereof
+            The target Workflow Id and (optionally) a specific Run Id thereof.
              (-- api-linter: core::0203::optional=disabled
                  aip.dev/not-precedent: false positive triggered by the word "optional" --)
         firstExecutionRunId:
           type: string
           description: |-
-            If set, this call will error if the most recent (if no run id is set on
-             `workflow_execution`), or specified (if it is) workflow execution is not
-             part of the same execution chain as this id.
+            If set, this call will error if the most recent (if no Run Id is set on
+             `workflow_execution`), or specified (if it is) Workflow Execution is not
+             part of the same execution chain as this Id.
         waitPolicy:
           allOf:
             - $ref: '#/components/schemas/WaitPolicy'
           description: |-
-            Describes when this request should return - basically whether the
-             update is synchronous, asynchronous, or somewhere in between.
+            Specifies client's intent to wait for Update results.
+             NOTE: This field works together with API call timeout which is limited by
+             server timeout (maximum wait time). If server timeout is expired before
+             user specified timeout, API call returns even if specified stage is not reached.
+             Actual reached stage will be included in the response.
         request:
           allOf:
             - $ref: '#/components/schemas/Request'
           description: |-
             The request information that will be delivered all the way down to the
-             workflow execution.
+             Workflow Execution.
       description: |-
         (-- api-linter: core::0134=disabled
              aip.dev/not-precedent: Update RPCs don't follow Google API format. --)
@@ -8770,8 +8771,8 @@ components:
           allOf:
             - $ref: '#/components/schemas/Outcome'
           description: |-
-            The outcome of the update if and only if the workflow execution update
-             has completed. If this response is being returned before the update has
+            The outcome of the Update if and only if the Workflow Update
+             has completed. If this response is being returned before the Update has
              completed then this field will not be set.
         stage:
           enum:
@@ -8847,12 +8848,13 @@ components:
             - UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED
           type: string
           description: |-
-            Indicates the update lifecycle stage that the gRPC call should wait for
-             before returning.
+            Indicates the Update lifecycle stage that the Update must reach before
+             API call is returned.
+             NOTE: This field works together with API call timeout which is limited by
+             server timeout (maximum wait time). If server timeout is expired before
+             user specified timeout, API call returns even if specified stage is not reached.
           format: enum
-      description: |-
-        Specifies to the gRPC server how long the client wants the an update-related
-         RPC call to wait before returning control to the caller.
+      description: Specifies client's intent to wait for Update results.
     WorkerVersionCapabilities:
       type: object
       properties:

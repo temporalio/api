@@ -32,14 +32,15 @@ option ruby_package = "Temporalio::Api::WorkflowService::V1";
 option csharp_namespace = "Temporalio.Api.WorkflowService.V1";
 
 import "temporal/api/enums/v1/batch_operation.proto";
+import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/enums/v1/namespace.proto";
 import "temporal/api/enums/v1/failed_cause.proto";
-import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/query.proto";
 import "temporal/api/enums/v1/reset.proto";
 import "temporal/api/enums/v1/task_queue.proto";
 import "temporal/api/enums/v1/update.proto";
+import "temporal/api/activity/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
@@ -60,6 +61,7 @@ import "temporal/api/sdk/v1/user_metadata.proto";
 import "temporal/api/nexus/v1/message.proto";
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
 message RegisterNamespaceRequest {
@@ -1666,4 +1668,30 @@ message ExecuteMultiOperationResponse {
             UpdateWorkflowExecutionResponse update_workflow = 2;
         }
     }
+}
+
+message UpdateActivityOptionsByIdRequest {
+    // Namespace of the workflow which scheduled this activity
+    string namespace = 1;
+    // Id of the workflow which scheduled this activity
+    string workflow_id = 2;
+    // Run Id of the workflow which scheduled this activity
+    // if empty - latest workflow is used
+    string run_id = 3;
+    // Id of the activity we're updating
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request
+    string identity = 5;
+
+    // Activity options. Partial updates are accepted and controlled by update_mask
+    temporal.api.activity.v1.ActivityOptions activity_options = 6;
+
+    // Controls which fields from `activity_options` will be applied
+    google.protobuf.FieldMask update_mask = 7;
+}
+
+message UpdateActivityOptionsByIdResponse {
+    // Activity options after an update
+    temporal.api.activity.v1.ActivityOptions activity_options = 1;
 }

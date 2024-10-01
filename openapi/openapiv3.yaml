@@ -270,7 +270,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activities/describe-by-id:
-    post:
+    get:
       tags:
         - WorkflowService
       description: |-
@@ -285,12 +285,28 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DescribeActivityByIdRequest'
-        required: true
+        - name: workflowId
+          in: query
+          description: Id of the workflow which scheduled this activity
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: |-
+            Run Id of the workflow which scheduled this activity
+             if empty - latest workflow is used
+          schema:
+            type: string
+        - name: activityId
+          in: query
+          description: Id of the activity we're updating
+          schema:
+            type: string
+        - name: identity
+          in: query
+          description: The identity of the client who initiated this request
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -457,6 +473,9 @@ paths:
         - WorkflowService
       description: |-
         PauseActivityById is called by the client to pause an activity.
+         Multiple calls to this function will return success.
+         If activity is already paused, this function will return success.
+         This call will fail if the activity is in a terminal state (finished).
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: PauseActivityById
@@ -492,6 +511,11 @@ paths:
         - WorkflowService
       description: |-
         ResetActivityById is called by the client to reset the activity to its "original" state.
+         This is useful when an activity is stuck in a state that cannot be resolved by other means.
+         With this call the number of attempts will be reset to 0 and the activity can be rescheduled.
+         This call will fail if the activity is in a terminal state (finished).
+         If activity is Pause state, it will be resumed if the corresponding flag is provided.
+         If activity currently running - it will be terminated and rescheduled if the corresponding flag is provided.
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: ResetActivityById
@@ -527,6 +551,9 @@ paths:
         - WorkflowService
       description: |-
         ResumeActivityById is called by the client to resume the activity that is in paused or waiting state.
+         If activity is already running, this function will return success.
+         Multiple calls to this function will return success.
+         This call will fail if the activity is in a terminal state (finished).
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: ResumeActivityById
@@ -2672,7 +2699,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/activities/describe-by-id:
-    post:
+    get:
       tags:
         - WorkflowService
       description: |-
@@ -2687,12 +2714,28 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DescribeActivityByIdRequest'
-        required: true
+        - name: workflowId
+          in: query
+          description: Id of the workflow which scheduled this activity
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: |-
+            Run Id of the workflow which scheduled this activity
+             if empty - latest workflow is used
+          schema:
+            type: string
+        - name: activityId
+          in: query
+          description: Id of the activity we're updating
+          schema:
+            type: string
+        - name: identity
+          in: query
+          description: The identity of the client who initiated this request
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -2859,6 +2902,9 @@ paths:
         - WorkflowService
       description: |-
         PauseActivityById is called by the client to pause an activity.
+         Multiple calls to this function will return success.
+         If activity is already paused, this function will return success.
+         This call will fail if the activity is in a terminal state (finished).
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: PauseActivityById
@@ -2894,6 +2940,11 @@ paths:
         - WorkflowService
       description: |-
         ResetActivityById is called by the client to reset the activity to its "original" state.
+         This is useful when an activity is stuck in a state that cannot be resolved by other means.
+         With this call the number of attempts will be reset to 0 and the activity can be rescheduled.
+         This call will fail if the activity is in a terminal state (finished).
+         If activity is Pause state, it will be resumed if the corresponding flag is provided.
+         If activity currently running - it will be terminated and rescheduled if the corresponding flag is provided.
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: ResetActivityById
@@ -2929,6 +2980,9 @@ paths:
         - WorkflowService
       description: |-
         ResumeActivityById is called by the client to resume the activity that is in paused or waiting state.
+         If activity is already running, this function will return success.
+         Multiple calls to this function will return success.
+         This call will fail if the activity is in a terminal state (finished).
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: ResumeActivityById
@@ -5368,26 +5422,6 @@ components:
     DeleteScheduleResponse:
       type: object
       properties: {}
-    DescribeActivityByIdRequest:
-      type: object
-      properties:
-        namespace:
-          type: string
-          description: Namespace of the workflow which scheduled this activity
-        workflowId:
-          type: string
-          description: Id of the workflow which scheduled this activity
-        runId:
-          type: string
-          description: |-
-            Run Id of the workflow which scheduled this activity
-             if empty - latest workflow is used
-        activityId:
-          type: string
-          description: Id of the activity we're updating
-        identity:
-          type: string
-          description: The identity of the client who initiated this request
     DescribeActivityByIdResponse:
       type: object
       properties:

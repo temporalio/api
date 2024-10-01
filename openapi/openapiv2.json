@@ -318,7 +318,7 @@
       }
     },
     "/api/v1/namespaces/{namespace}/activities/describe-by-id": {
-      "post": {
+      "get": {
         "summary": "DescribeActivityById is called by the client to get current activity options and state.",
         "operationId": "DescribeActivityById2",
         "responses": {
@@ -344,12 +344,32 @@
             "type": "string"
           },
           {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceDescribeActivityByIdBody"
-            }
+            "name": "workflowId",
+            "description": "Id of the workflow which scheduled this activity",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "runId",
+            "description": "Run Id of the workflow which scheduled this activity\nif empty - latest workflow is used",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activityId",
+            "description": "Id of the activity we're updating",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "identity",
+            "description": "The identity of the client who initiated this request",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -519,7 +539,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/pause-by-id": {
       "post": {
-        "summary": "PauseActivityById is called by the client to pause an activity.",
+        "summary": "PauseActivityById is called by the client to pause an activity.\nMultiple calls to this function will return success.\nIf activity is already paused, this function will return success.\nThis call will fail if the activity is in a terminal state (finished).",
         "operationId": "PauseActivityById2",
         "responses": {
           "200": {
@@ -559,7 +579,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/reset-by-id": {
       "post": {
-        "summary": "ResetActivityById is called by the client to reset the activity to its \"original\" state.",
+        "summary": "ResetActivityById is called by the client to reset the activity to its \"original\" state.\nThis is useful when an activity is stuck in a state that cannot be resolved by other means.\nWith this call the number of attempts will be reset to 0 and the activity can be rescheduled.\nThis call will fail if the activity is in a terminal state (finished).\nIf activity is Pause state, it will be resumed if the corresponding flag is provided.\nIf activity currently running - it will be terminated and rescheduled if the corresponding flag is provided.",
         "operationId": "ResetActivityById2",
         "responses": {
           "200": {
@@ -599,7 +619,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/resume-by-id": {
       "post": {
-        "summary": "ResumeActivityById is called by the client to resume the activity that is in paused or waiting state.",
+        "summary": "ResumeActivityById is called by the client to resume the activity that is in paused or waiting state.\nIf activity is already running, this function will return success.\nMultiple calls to this function will return success.\nThis call will fail if the activity is in a terminal state (finished).",
         "operationId": "ResumeActivityById2",
         "responses": {
           "200": {
@@ -3086,7 +3106,7 @@
       }
     },
     "/namespaces/{namespace}/activities/describe-by-id": {
-      "post": {
+      "get": {
         "summary": "DescribeActivityById is called by the client to get current activity options and state.",
         "operationId": "DescribeActivityById",
         "responses": {
@@ -3112,12 +3132,32 @@
             "type": "string"
           },
           {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceDescribeActivityByIdBody"
-            }
+            "name": "workflowId",
+            "description": "Id of the workflow which scheduled this activity",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "runId",
+            "description": "Run Id of the workflow which scheduled this activity\nif empty - latest workflow is used",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "activityId",
+            "description": "Id of the activity we're updating",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "identity",
+            "description": "The identity of the client who initiated this request",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -3287,7 +3327,7 @@
     },
     "/namespaces/{namespace}/activities/pause-by-id": {
       "post": {
-        "summary": "PauseActivityById is called by the client to pause an activity.",
+        "summary": "PauseActivityById is called by the client to pause an activity.\nMultiple calls to this function will return success.\nIf activity is already paused, this function will return success.\nThis call will fail if the activity is in a terminal state (finished).",
         "operationId": "PauseActivityById",
         "responses": {
           "200": {
@@ -3327,7 +3367,7 @@
     },
     "/namespaces/{namespace}/activities/reset-by-id": {
       "post": {
-        "summary": "ResetActivityById is called by the client to reset the activity to its \"original\" state.",
+        "summary": "ResetActivityById is called by the client to reset the activity to its \"original\" state.\nThis is useful when an activity is stuck in a state that cannot be resolved by other means.\nWith this call the number of attempts will be reset to 0 and the activity can be rescheduled.\nThis call will fail if the activity is in a terminal state (finished).\nIf activity is Pause state, it will be resumed if the corresponding flag is provided.\nIf activity currently running - it will be terminated and rescheduled if the corresponding flag is provided.",
         "operationId": "ResetActivityById",
         "responses": {
           "200": {
@@ -3367,7 +3407,7 @@
     },
     "/namespaces/{namespace}/activities/resume-by-id": {
       "post": {
-        "summary": "ResumeActivityById is called by the client to resume the activity that is in paused or waiting state.",
+        "summary": "ResumeActivityById is called by the client to resume the activity that is in paused or waiting state.\nIf activity is already running, this function will return success.\nMultiple calls to this function will return success.\nThis call will fail if the activity is in a terminal state (finished).",
         "operationId": "ResumeActivityById",
         "responses": {
           "200": {
@@ -5338,27 +5378,6 @@
         },
         "searchAttributes": {
           "$ref": "#/definitions/v1SearchAttributes"
-        }
-      }
-    },
-    "WorkflowServiceDescribeActivityByIdBody": {
-      "type": "object",
-      "properties": {
-        "workflowId": {
-          "type": "string",
-          "title": "Id of the workflow which scheduled this activity"
-        },
-        "runId": {
-          "type": "string",
-          "title": "Run Id of the workflow which scheduled this activity\nif empty - latest workflow is used"
-        },
-        "activityId": {
-          "type": "string",
-          "title": "Id of the activity we're updating"
-        },
-        "identity": {
-          "type": "string",
-          "title": "The identity of the client who initiated this request"
         }
       }
     },

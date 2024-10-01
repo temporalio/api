@@ -859,8 +859,7 @@ service WorkflowService {
     // UpdateActivityOptionsById is called by the client to update the options of an activity.
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
-    rpc UpdateActivityOptionsById (UpdateActivityOptionsByIdRequest) returns (UpdateActivityOptionsByIdResponse)
-    {
+    rpc UpdateActivityOptionsById (UpdateActivityOptionsByIdRequest) returns (UpdateActivityOptionsByIdResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/update-options-by-id"
             body: "*"
@@ -874,23 +873,23 @@ service WorkflowService {
     // DescribeActivityById is called by the client to get current activity options and state.
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
-    rpc DescribeActivityById (DescribeActivityByIdRequest) returns (DescribeActivityByIdResponse)
-    {
+    rpc DescribeActivityById (DescribeActivityByIdRequest) returns (DescribeActivityByIdResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/describe-by-id"
+            get: "/namespaces/{namespace}/activities/describe-by-id"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/describe-by-id"
-                body: "*"
+                get: "/api/v1/namespaces/{namespace}/activities/describe-by-id"
             }
         };
     }
 
     // PauseActivityById is called by the client to pause an activity.
+    // Multiple calls to this function will return success.
+    // If activity is already paused, this function will return success.
+    // This call will fail if the activity is in a terminal state (finished).
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
-    rpc PauseActivityById (PauseActivityByIdRequest) returns (PauseActivityByIdResponse)
-    {
+    rpc PauseActivityById (PauseActivityByIdRequest) returns (PauseActivityByIdResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/pause-by-id"
             body: "*"
@@ -902,10 +901,12 @@ service WorkflowService {
     }
 
     // ResumeActivityById is called by the client to resume the activity that is in paused or waiting state.
+    // If activity is already running, this function will return success.
+    // Multiple calls to this function will return success.
+    // This call will fail if the activity is in a terminal state (finished).
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
-    rpc ResumeActivityById (ResumeActivityByIdRequest) returns (ResumeActivityByIdResponse)
-    {
+    rpc ResumeActivityById (ResumeActivityByIdRequest) returns (ResumeActivityByIdResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/resume-by-id"
             body: "*"
@@ -917,10 +918,14 @@ service WorkflowService {
     }
 
     // ResetActivityById is called by the client to reset the activity to its "original" state.
+    // This is useful when an activity is stuck in a state that cannot be resolved by other means.
+    // With this call the number of attempts will be reset to 0 and the activity can be rescheduled.
+    // This call will fail if the activity is in a terminal state (finished).
+    // If activity is Pause state, it will be resumed if the corresponding flag is provided.
+    // If activity currently running - it will be terminated and rescheduled if the corresponding flag is provided.
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
-    rpc ResetActivityById (ResetActivityByIdRequest) returns (ResetActivityByIdResponse)
-    {
+    rpc ResetActivityById (ResetActivityByIdRequest) returns (ResetActivityByIdResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/reset-by-id"
             body: "*"

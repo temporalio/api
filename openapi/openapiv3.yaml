@@ -269,6 +269,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/describe-by-id:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeActivityById is called by the client to get activity options and info
+         for started or scheduled activities.
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: DescribeActivityById
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: query
+          description: Id of the workflow which scheduled this activity.
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: |-
+            Run Id of the workflow which scheduled this activity.
+             Can be empty, in this case the latest workflow will be used.
+          schema:
+            type: string
+        - name: activityId
+          in: query
+          description: Id of the activity we're updating.
+          schema:
+            type: string
+        - name: identity
+          in: query
+          description: The identity of the client who initiated this request,
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeActivityByIdResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activities/fail:
     post:
       tags:
@@ -2525,6 +2577,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespondActivityTaskCompletedByIdResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/describe-by-id:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeActivityById is called by the client to get activity options and info
+         for started or scheduled activities.
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: DescribeActivityById
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: query
+          description: Id of the workflow which scheduled this activity.
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: |-
+            Run Id of the workflow which scheduled this activity.
+             Can be empty, in this case the latest workflow will be used.
+          schema:
+            type: string
+        - name: activityId
+          in: query
+          description: Id of the activity we're updating.
+          schema:
+            type: string
+        - name: identity
+          in: query
+          description: The identity of the client who initiated this request,
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeActivityByIdResponse'
         default:
           description: Default error response
           content:
@@ -5088,6 +5192,17 @@ components:
     DeleteScheduleResponse:
       type: object
       properties: {}
+    DescribeActivityByIdResponse:
+      type: object
+      properties:
+        activityOptions:
+          allOf:
+            - $ref: '#/components/schemas/ActivityOptions'
+          description: Activity options after an update.
+        pendingActivityInfo:
+          allOf:
+            - $ref: '#/components/schemas/PendingActivityInfo'
+          description: Pending activity info.
     DescribeBatchOperationResponse:
       type: object
       properties:

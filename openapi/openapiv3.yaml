@@ -8917,8 +8917,11 @@ components:
           description: |-
             If set, the worker is opting in to worker versioning, and wishes to only receive appropriate
              tasks.
+        deploymentName:
+          type: string
+          description: Must be sent if user has set a deployment name (versioning-3).
       description: |-
-        Identifies the version(s) that a worker is compatible with when polling or identifying itself,
+        Identifies the version that a worker is compatible with when polling or identifying itself,
          and whether or not this worker is opting into the build-id based versioning feature. This is
          used by matching to determine which workers ought to receive what tasks.
     WorkerVersionStamp:
@@ -8934,7 +8937,10 @@ components:
           description: |-
             If set, the worker is opting in to worker versioning. Otherwise, this is used only as a
              marker for workflow reset points and the BuildIDs search attribute.
-      description: Identifies the version(s) of a worker that processed a task
+        deploymentName:
+          type: string
+          description: Must be sent if user has set a deployment name (versioning-3).
+      description: Identifies the version of a worker that received or processed a task
     WorkflowEvent_EventReference:
       type: object
       properties:
@@ -9234,11 +9240,33 @@ components:
              again, the assigned build ID may change according to the latest versioning rules.
              Assigned build ID can also change in the middle of a execution if Compatible Redirect Rules are applied to
              this execution.
+             Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
         inheritedBuildId:
           type: string
           description: |-
             Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead
              of using the assignment rules.
+        buildId:
+          type: string
+          description: |-
+            Current build ID of this workflow execution that determines the matching queue that new tasks of this execution
+             will be scheduled in. Current build ID is set after completion of the first workflow task, and
+             when workflow moves to a different build ID either automatically or manually. (versioning-3)
+        deploymentName:
+          type: string
+          description: |-
+            The deployment name associated with this workflow's task queue + build ID. This is updated when `build_id` is
+             updated. `deployment_name` should be set if `build_id` field is set.
+        versioningBehavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            Determines how server should treat this execution when workers are upgraded. `versioning_behavior` has to be set
+             if the `build_id` field is set.
+          format: enum
         firstRunId:
           type: string
           description: |-
@@ -9597,6 +9625,16 @@ components:
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
              Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
+        versioningBehavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            Versioning behavior sent by SDK for this workflow execution. Empty means behavior is not
+             changed in this event.
+          format: enum
         sdkMetadata:
           allOf:
             - $ref: '#/components/schemas/WorkflowTaskCompletedMetadata'

@@ -11449,6 +11449,16 @@
       },
       "description": "VersionInfo contains details about current and recommended release versions as well as alerts and upgrade instructions."
     },
+    "v1VersioningBehavior": {
+      "type": "string",
+      "enum": [
+        "VERSIONING_BEHAVIOR_UNSPECIFIED",
+        "VERSIONING_BEHAVIOR_PINNED",
+        "VERSIONING_BEHAVIOR_AUTO_UPGRADE"
+      ],
+      "default": "VERSIONING_BEHAVIOR_UNSPECIFIED",
+      "description": " - VERSIONING_BEHAVIOR_PINNED: Workflow should be pinned to the current build ID until manually moved.\n - VERSIONING_BEHAVIOR_AUTO_UPGRADE: Workflow automatically moves to the latest version (default build ID of the task queue) when the next\ntask is dispatched."
+    },
     "v1WaitPolicy": {
       "type": "object",
       "properties": {
@@ -11469,9 +11479,13 @@
         "useVersioning": {
           "type": "boolean",
           "description": "If set, the worker is opting in to worker versioning, and wishes to only receive appropriate\ntasks."
+        },
+        "deploymentName": {
+          "type": "string",
+          "description": "Must be sent if user has set a deployment name (versioning-3)."
         }
       },
-      "description": "Identifies the version(s) that a worker is compatible with when polling or identifying itself,\nand whether or not this worker is opting into the build-id based versioning feature. This is\nused by matching to determine which workers ought to receive what tasks."
+      "description": "Identifies the version that a worker is compatible with when polling or identifying itself,\nand whether or not this worker is opting into the build-id based versioning feature. This is\nused by matching to determine which workers ought to receive what tasks."
     },
     "v1WorkerVersionStamp": {
       "type": "object",
@@ -11483,9 +11497,13 @@
         "useVersioning": {
           "type": "boolean",
           "description": "If set, the worker is opting in to worker versioning. Otherwise, this is used only as a\nmarker for workflow reset points and the BuildIDs search attribute."
+        },
+        "deploymentName": {
+          "type": "string",
+          "description": "Must be sent if user has set a deployment name (versioning-3)."
         }
       },
-      "title": "Identifies the version(s) of a worker that processed a task"
+      "title": "Identifies the version of a worker that received or processed a task"
     },
     "v1WorkflowExecution": {
       "type": "object",
@@ -11731,11 +11749,23 @@
         },
         "assignedBuildId": {
           "type": "string",
-          "description": "The currently assigned build ID for this execution. Presence of this value means worker versioning is used\nfor this execution. Assigned build ID is selected based on Worker Versioning Assignment Rules\nwhen the first workflow task of the execution is scheduled. If the first workflow task fails and is scheduled\nagain, the assigned build ID may change according to the latest versioning rules.\nAssigned build ID can also change in the middle of a execution if Compatible Redirect Rules are applied to\nthis execution."
+          "title": "The currently assigned build ID for this execution. Presence of this value means worker versioning is used\nfor this execution. Assigned build ID is selected based on Worker Versioning Assignment Rules\nwhen the first workflow task of the execution is scheduled. If the first workflow task fails and is scheduled\nagain, the assigned build ID may change according to the latest versioning rules.\nAssigned build ID can also change in the middle of a execution if Compatible Redirect Rules are applied to\nthis execution.\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
         },
         "inheritedBuildId": {
           "type": "string",
           "description": "Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead\nof using the assignment rules."
+        },
+        "buildId": {
+          "type": "string",
+          "title": "Current build ID of this workflow execution that determines the matching queue that new tasks of this execution\nwill be scheduled in. Current build ID is set after completion of the first workflow task, and\nwhen workflow moves to a different build ID either automatically or manually. (versioning-3)"
+        },
+        "deploymentName": {
+          "type": "string",
+          "description": "The deployment name associated with this workflow's task queue + build ID. This is updated when `build_id` is\nupdated. `deployment_name` should be set if `build_id` field is set."
+        },
+        "versioningBehavior": {
+          "$ref": "#/definitions/v1VersioningBehavior",
+          "description": "Determines how server should treat this execution when workers are upgraded. `versioning_behavior` has to be set\nif the `build_id` field is set."
         },
         "firstRunId": {
           "type": "string",
@@ -12147,6 +12177,10 @@
         "workerVersion": {
           "$ref": "#/definitions/v1WorkerVersionStamp",
           "title": "Version info of the worker who processed this workflow task. If present, the `build_id` field\nwithin is also used as `binary_checksum`, which may be omitted in that case (it may also be\npopulated to preserve compatibility).\nDeprecated. Use the info inside the corresponding WorkflowTaskStartedEvent"
+        },
+        "versioningBehavior": {
+          "$ref": "#/definitions/v1VersioningBehavior",
+          "description": "Versioning behavior sent by SDK for this workflow execution. Empty means behavior is not\nchanged in this event."
         },
         "sdkMetadata": {
           "$ref": "#/definitions/v1WorkflowTaskCompletedMetadata",

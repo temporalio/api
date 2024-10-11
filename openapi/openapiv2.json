@@ -319,7 +319,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/describe-by-id": {
       "get": {
-        "summary": "DescribeActivityById is called by the client to get activity and for pending and completed activities.",
+        "summary": "DescribeActivityById is called by the client to get activity info for pending and completed activities.\nIf there are multiply activities with the same activity id - the last one will be used.",
         "operationId": "DescribeActivityById2",
         "responses": {
           "200": {
@@ -359,7 +359,7 @@
           },
           {
             "name": "activityId",
-            "description": "Id of the activity we're describing.",
+            "description": "ID of the activity to describe.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2987,7 +2987,7 @@
     },
     "/namespaces/{namespace}/activities/describe-by-id": {
       "get": {
-        "summary": "DescribeActivityById is called by the client to get activity and for pending and completed activities.",
+        "summary": "DescribeActivityById is called by the client to get activity info for pending and completed activities.\nIf there are multiply activities with the same activity id - the last one will be used.",
         "operationId": "DescribeActivityById",
         "responses": {
           "200": {
@@ -3027,7 +3027,7 @@
           },
           {
             "name": "activityId",
-            "description": "Id of the activity we're describing.",
+            "description": "ID of the activity to describe.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -6124,33 +6124,37 @@
       "properties": {
         "options": {
           "$ref": "#/definitions/v1ActivityOptions",
-          "description": "ActivityOptions contains the options that were used to operate the activity."
+          "description": "Contains the options that were used to operate the activity."
         },
         "type": {
           "$ref": "#/definitions/v1ActivityType",
-          "description": "ActivityType is the type of the activity."
+          "description": "Type of the activity."
         },
         "state": {
           "$ref": "#/definitions/v1ActivityState",
-          "description": "ActivityState is the current state of the activity."
+          "description": "Current state of the activity."
         },
-        "scheduledTime": {
+        "lastScheduledTime": {
           "type": "string",
           "format": "date-time",
-          "description": "ScheduledTime is the time last the activity was scheduled. ."
+          "description": "The last time the activity was scheduled."
         },
-        "startedTime": {
+        "lastStartedTime": {
           "type": "string",
           "format": "date-time",
-          "description": "StartedTime is the time last the activity was started."
+          "description": "Last time the activity was started."
         },
-        "completedTime": {
+        "lastCompletedTime": {
           "type": "string",
           "format": "date-time",
-          "description": "CompletedTime is the time last the activity was completed.\nIf activity is not yet completed, this field will be null."
+          "description": "Last time the activity was completed.\nIf activity is not yet completed, this field will be null."
+        },
+        "cancelRequested": {
+          "type": "boolean",
+          "description": "Indicates that activity receive cancel signal."
         }
       },
-      "description": "ActivityInfo contains information about an activity.\nIt is used to report activity state to the users.\nIt is expected to return information about pending activities and completed activities."
+      "description": "Information about an activity in any state including pending and completed activities."
     },
     "v1ActivityOptions": {
       "type": "object",
@@ -6198,16 +6202,16 @@
       "enum": [
         "ACTIVITY_STATE_UNSPECIFIED",
         "ACTIVITY_STATE_SCHEDULED",
-        "ACTIVITY_STATE_STARTED",
-        "ACTIVITY_STATE_CANCEL_REQUESTED",
-        "ACTIVITY_STATE_CANCEL_BACKING_OFF",
+        "ACTIVITY_STATE_RUNNING",
+        "ACTIVITY_STATE_BACKING_OFF",
         "ACTIVITY_STATE_PAUSED",
         "ACTIVITY_STATE_COMPLETED",
         "ACTIVITY_STATE_FAILED",
-        "ACTIVITY_STATE_TIMED_OUT"
+        "ACTIVITY_STATE_TIMED_OUT",
+        "ACTIVITY_STATE_CANCELLED"
       ],
       "default": "ACTIVITY_STATE_UNSPECIFIED",
-      "description": "More detailed state of an activity.\n\n - ACTIVITY_STATE_SCHEDULED: Activity was scheduled but not yet started.\n - ACTIVITY_STATE_STARTED: Activity has started executing.\n - ACTIVITY_STATE_CANCEL_REQUESTED: Activity was requested to be canceled.\n - ACTIVITY_STATE_CANCEL_BACKING_OFF: Activity failed and is backing off before retrying.\n - ACTIVITY_STATE_PAUSED: Activity was paused.\n - ACTIVITY_STATE_COMPLETED: Activity has completed successfully.\n - ACTIVITY_STATE_FAILED: Activity has failed.\n - ACTIVITY_STATE_TIMED_OUT: Activity has timed out."
+      "description": "Detailed state of an activity for both pending and completed activities.\n\n - ACTIVITY_STATE_SCHEDULED: Activity was scheduled but not yet started.\n - ACTIVITY_STATE_RUNNING: Activity has started executing.\n - ACTIVITY_STATE_BACKING_OFF: Activity failed and is backing off before retrying.\n - ACTIVITY_STATE_PAUSED: Activity was paused.\n - ACTIVITY_STATE_COMPLETED: Activity has completed successfully.\n - ACTIVITY_STATE_FAILED: Activity has failed.\n - ACTIVITY_STATE_TIMED_OUT: Activity has timed out.\n - ACTIVITY_STATE_CANCELLED: Activity has been cancelled."
     },
     "v1ActivityTaskCancelRequestedEventAttributes": {
       "type": "object",

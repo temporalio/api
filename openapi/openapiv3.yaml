@@ -274,7 +274,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        DescribeActivityById is called by the client to get activity and for pending and completed activities.
+        DescribeActivityById is called by the client to get activity info for pending and completed activities.
+         If there are multiply activities with the same activity id - the last one will be used.
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: DescribeActivityById
@@ -299,7 +300,7 @@ paths:
             type: string
         - name: activityId
           in: query
-          description: Id of the activity we're describing.
+          description: ID of the activity to describe.
           schema:
             type: string
         - name: identity
@@ -2587,7 +2588,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        DescribeActivityById is called by the client to get activity and for pending and completed activities.
+        DescribeActivityById is called by the client to get activity info for pending and completed activities.
+         If there are multiply activities with the same activity id - the last one will be used.
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: DescribeActivityById
@@ -2612,7 +2614,7 @@ paths:
             type: string
         - name: activityId
           in: query
-          description: Id of the activity we're describing.
+          description: ID of the activity to describe.
           schema:
             type: string
         - name: identity
@@ -4217,43 +4219,43 @@ components:
         options:
           allOf:
             - $ref: '#/components/schemas/ActivityOptions'
-          description: ActivityOptions contains the options that were used to operate the activity.
+          description: Contains the options that were used to operate the activity.
         type:
           allOf:
             - $ref: '#/components/schemas/ActivityType'
-          description: ActivityType is the type of the activity.
+          description: Type of the activity.
         state:
           enum:
             - ACTIVITY_STATE_UNSPECIFIED
             - ACTIVITY_STATE_SCHEDULED
-            - ACTIVITY_STATE_STARTED
-            - ACTIVITY_STATE_CANCEL_REQUESTED
-            - ACTIVITY_STATE_CANCEL_BACKING_OFF
+            - ACTIVITY_STATE_RUNNING
+            - ACTIVITY_STATE_BACKING_OFF
             - ACTIVITY_STATE_PAUSED
             - ACTIVITY_STATE_COMPLETED
             - ACTIVITY_STATE_FAILED
             - ACTIVITY_STATE_TIMED_OUT
+            - ACTIVITY_STATE_CANCELLED
           type: string
-          description: ActivityState is the current state of the activity.
+          description: Current state of the activity.
           format: enum
-        scheduledTime:
+        lastScheduledTime:
           type: string
-          description: ScheduledTime is the time last the activity was scheduled. .
+          description: The last time the activity was scheduled.
           format: date-time
-        startedTime:
+        lastStartedTime:
           type: string
-          description: StartedTime is the time last the activity was started.
+          description: Last time the activity was started.
           format: date-time
-        completedTime:
+        lastCompletedTime:
           type: string
           description: |-
-            CompletedTime is the time last the activity was completed.
+            Last time the activity was completed.
              If activity is not yet completed, this field will be null.
           format: date-time
-      description: |-
-        ActivityInfo contains information about an activity.
-         It is used to report activity state to the users.
-         It is expected to return information about pending activities and completed activities.
+        cancelRequested:
+          type: boolean
+          description: Indicates that activity receive cancel signal.
+      description: Information about an activity in any state including pending and completed activities.
     ActivityOptions:
       type: object
       properties:

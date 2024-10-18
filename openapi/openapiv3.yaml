@@ -1692,6 +1692,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/modify-properties:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ModifyWorkflowExecutionProperties will modify the properties of an existing workflow execution,
+         starting with just build_id and versioning_behavior, but eventually other things.
+      operationId: ModifyWorkflowExecutionProperties
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace name of the target Workflow.
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModifyWorkflowExecutionPropertiesRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModifyWorkflowExecutionPropertiesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/reset:
     post:
       tags:
@@ -3896,6 +3935,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/modify-properties:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ModifyWorkflowExecutionProperties will modify the properties of an existing workflow execution,
+         starting with just build_id and versioning_behavior, but eventually other things.
+      operationId: ModifyWorkflowExecutionProperties
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace name of the target Workflow.
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModifyWorkflowExecutionPropertiesRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModifyWorkflowExecutionPropertiesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/reset:
     post:
       tags:
@@ -4501,6 +4579,19 @@ components:
           type: string
           description: Batch operation close time
           format: date-time
+    BatchOperationModifyWorkflowProperties:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        options:
+          allOf:
+            - $ref: '#/components/schemas/ModifyWorkflowExecutionPropertiesOptions'
+          description: Options to specify in both single-workflow modify and batch modify
+      description: |-
+        BatchOperationModifyWorkflowProperties sends ModifyWorkflowExecutionProperties requests to batch workflows.
+         Keep the parameters in sync with temporal.api.workflowservice.v1.ModifyWorkflowExecutionPropertiesRequest.
     BatchOperationReset:
       type: object
       properties:
@@ -6115,6 +6206,59 @@ components:
                  aip.dev/not-precedent: Negative values make no sense to represent. --)
           format: uint32
       description: Metadata relevant for metering purposes
+    ModifyWorkflowExecutionPropertiesOptions:
+      type: object
+      properties:
+        buildId:
+          type: string
+          description: |-
+            If set, the workflow execution's current build ID will be set to this.
+             If pinned, future tasks will be scheduled on this build ID.
+             If unpinned, future tasks will be scheduled per the rollout config at
+             the time of dispatch. Until the next task is dispatched, the unpinned
+             workflow execution's current build ID is what determines it's reachability.
+        versioningBehavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: If set, the workflow execution's versioning behavior will be set to this.
+          format: enum
+        unsafe:
+          type: boolean
+          description: |-
+            If false, the property modification will be conditional on a successful
+             replay test of the workflow execution's history on the new worker it
+             would need to replay on after the change.
+
+             In the first release, unsafe=false will return an unimplemented error.
+             User must explicitly pass unsafe=true to use the API.
+    ModifyWorkflowExecutionPropertiesRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: The namespace name of the target Workflow.
+        workflowExecution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: |-
+            The target Workflow Id and (optionally) a specific Run Id thereof.
+             (-- api-linter: core::0203::optional=disabled
+                 aip.dev/not-precedent: false positive triggered by the word "optional" --)
+        reason:
+          type: string
+        requestId:
+          type: string
+          description: Used to de-dupe modify requests
+        option:
+          allOf:
+            - $ref: '#/components/schemas/ModifyWorkflowExecutionPropertiesOptions'
+          description: Options to specify in both single-workflow modify and batch modify
+    ModifyWorkflowExecutionPropertiesResponse:
+      type: object
+      properties: {}
     NamespaceConfig:
       type: object
       properties:
@@ -7096,6 +7240,10 @@ components:
             type: string
             format: enum
           description: Event types not to be reapplied
+        options:
+          allOf:
+            - $ref: '#/components/schemas/ModifyWorkflowExecutionPropertiesOptions'
+          description: If specified, atomically modify workflow properties with reset
       description: |-
         Describes where and how to reset a workflow, used for batch reset currently
          and may be used for single-workflow reset later.
@@ -7177,6 +7325,10 @@ components:
             type: string
             format: enum
           description: Event types not to be reapplied
+        options:
+          allOf:
+            - $ref: '#/components/schemas/ModifyWorkflowExecutionPropertiesOptions'
+          description: If specified, atomically modify workflow properties with reset
     ResetWorkflowExecutionResponse:
       type: object
       properties:
@@ -8010,6 +8162,8 @@ components:
           $ref: '#/components/schemas/BatchOperationDeletion'
         resetOperation:
           $ref: '#/components/schemas/BatchOperationReset'
+        modifyWorkflowPropertiesOperation:
+          $ref: '#/components/schemas/BatchOperationModifyWorkflowProperties'
     StartBatchOperationResponse:
       type: object
       properties: {}
@@ -9587,6 +9741,17 @@ components:
             If set, update the workflow memo with the provided values. The values will be merged with
              the existing memo. If the user wants to delete values, a default/empty Payload should be
              used as the value for the key being deleted.
+        buildId:
+          type: string
+          description: If present, it means the workflow's current Build ID was changed to that.
+        versioningBehavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: If true, it means the workflow'd versioning behavior was changed to that.
+          format: enum
     WorkflowQuery:
       type: object
       properties:

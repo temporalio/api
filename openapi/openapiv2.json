@@ -1863,6 +1863,52 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/modify-properties": {
+      "post": {
+        "summary": "ModifyWorkflowExecutionProperties will modify the properties of an existing workflow execution,\nstarting with just build_id and versioning_behavior, but eventually other things.",
+        "operationId": "ModifyWorkflowExecutionProperties2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ModifyWorkflowExecutionPropertiesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace name of the target Workflow.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "workflowExecution.workflowId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceModifyWorkflowExecutionPropertiesBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/reset": {
       "post": {
         "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance.\nTODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?",
@@ -4401,6 +4447,52 @@
         ]
       }
     },
+    "/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/modify-properties": {
+      "post": {
+        "summary": "ModifyWorkflowExecutionProperties will modify the properties of an existing workflow execution,\nstarting with just build_id and versioning_behavior, but eventually other things.",
+        "operationId": "ModifyWorkflowExecutionProperties",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ModifyWorkflowExecutionPropertiesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace name of the target Workflow.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "workflowExecution.workflowId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceModifyWorkflowExecutionPropertiesBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/reset": {
       "post": {
         "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance.\nTODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?",
@@ -5043,6 +5135,32 @@
         }
       }
     },
+    "WorkflowServiceModifyWorkflowExecutionPropertiesBody": {
+      "type": "object",
+      "properties": {
+        "workflowExecution": {
+          "type": "object",
+          "properties": {
+            "runId": {
+              "type": "string"
+            }
+          },
+          "description": "The target Workflow Id and (optionally) a specific Run Id thereof.",
+          "title": "The target Workflow Id and (optionally) a specific Run Id thereof."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string",
+          "title": "Used to de-dupe modify requests"
+        },
+        "option": {
+          "$ref": "#/definitions/v1ModifyWorkflowExecutionPropertiesOptions",
+          "title": "Options to specify in both single-workflow modify and batch modify"
+        }
+      }
+    },
     "WorkflowServicePatchScheduleBody": {
       "type": "object",
       "properties": {
@@ -5206,6 +5324,10 @@
             "$ref": "#/definitions/v1ResetReapplyExcludeType"
           },
           "title": "Event types not to be reapplied"
+        },
+        "options": {
+          "$ref": "#/definitions/v1ModifyWorkflowExecutionPropertiesOptions",
+          "title": "If specified, atomically modify workflow properties with reset"
         }
       }
     },
@@ -5531,6 +5653,9 @@
         },
         "resetOperation": {
           "$ref": "#/definitions/v1BatchOperationReset"
+        },
+        "modifyWorkflowPropertiesOperation": {
+          "$ref": "#/definitions/v1BatchOperationModifyWorkflowProperties"
         }
       }
     },
@@ -6392,6 +6517,20 @@
           "title": "Batch operation close time"
         }
       }
+    },
+    "v1BatchOperationModifyWorkflowProperties": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the worker/client."
+        },
+        "options": {
+          "$ref": "#/definitions/v1ModifyWorkflowExecutionPropertiesOptions",
+          "title": "Options to specify in both single-workflow modify and batch modify"
+        }
+      },
+      "description": "BatchOperationModifyWorkflowProperties sends ModifyWorkflowExecutionProperties requests to batch workflows.\nKeep the parameters in sync with temporal.api.workflowservice.v1.ModifyWorkflowExecutionPropertiesRequest."
     },
     "v1BatchOperationReset": {
       "type": "object",
@@ -8392,6 +8531,26 @@
       },
       "title": "Metadata relevant for metering purposes"
     },
+    "v1ModifyWorkflowExecutionPropertiesOptions": {
+      "type": "object",
+      "properties": {
+        "buildId": {
+          "type": "string",
+          "description": "If set, the workflow execution's current build ID will be set to this.\nIf pinned, future tasks will be scheduled on this build ID.\nIf unpinned, future tasks will be scheduled per the rollout config at\nthe time of dispatch. Until the next task is dispatched, the unpinned\nworkflow execution's current build ID is what determines it's reachability."
+        },
+        "versioningBehavior": {
+          "$ref": "#/definitions/v1VersioningBehavior",
+          "description": "If set, the workflow execution's versioning behavior will be set to this."
+        },
+        "unsafe": {
+          "type": "boolean",
+          "description": "If false, the property modification will be conditional on a successful\nreplay test of the workflow execution's history on the new worker it\nwould need to replay on after the change.\n\nIn the first release, unsafe=false will return an unimplemented error.\nUser must explicitly pass unsafe=true to use the API."
+        }
+      }
+    },
+    "v1ModifyWorkflowExecutionPropertiesResponse": {
+      "type": "object"
+    },
     "v1ModifyWorkflowPropertiesCommandAttributes": {
       "type": "object",
       "properties": {
@@ -9622,6 +9781,10 @@
             "$ref": "#/definitions/v1ResetReapplyExcludeType"
           },
           "title": "Event types not to be reapplied"
+        },
+        "options": {
+          "$ref": "#/definitions/v1ModifyWorkflowExecutionPropertiesOptions",
+          "title": "If specified, atomically modify workflow properties with reset"
         }
       },
       "description": "Describes where and how to reset a workflow, used for batch reset currently\nand may be used for single-workflow reset later."
@@ -12114,6 +12277,14 @@
         "upsertedMemo": {
           "$ref": "#/definitions/v1Memo",
           "description": "If set, update the workflow memo with the provided values. The values will be merged with\nthe existing memo. If the user wants to delete values, a default/empty Payload should be\nused as the value for the key being deleted."
+        },
+        "buildId": {
+          "type": "string",
+          "description": "If present, it means the workflow's current Build ID was changed to that."
+        },
+        "versioningBehavior": {
+          "$ref": "#/definitions/v1VersioningBehavior",
+          "description": "If true, it means the workflow'd versioning behavior was changed to that."
         }
       }
     },

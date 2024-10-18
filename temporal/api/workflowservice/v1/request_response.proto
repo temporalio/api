@@ -369,6 +369,8 @@ message RespondWorkflowTaskCompletedResponse {
     // Will be the event ID of the last workflow task started event in the history before the new workflow task.
     // Server is only expected to discard a workflow task if it could not have modified the workflow state.
     int64 reset_history_event_id = 3;
+    reserved 4;
+    reserved "capabilities";
 }
 
 message RespondWorkflowTaskFailedRequest {
@@ -734,6 +736,8 @@ message ResetWorkflowExecutionRequest {
     temporal.api.enums.v1.ResetReapplyType reset_reapply_type = 6;
     // Event types not to be reapplied
     repeated temporal.api.enums.v1.ResetReapplyExcludeType reset_reapply_exclude_types = 7;
+    // If specified, atomically modify workflow properties with reset
+    temporal.api.common.v1.ModifyWorkflowExecutionPropertiesOptions options = 8;
 }
 
 message ResetWorkflowExecutionResponse {
@@ -1502,6 +1506,7 @@ message StartBatchOperationRequest {
         temporal.api.batch.v1.BatchOperationCancellation cancellation_operation = 12;
         temporal.api.batch.v1.BatchOperationDeletion deletion_operation = 13;
         temporal.api.batch.v1.BatchOperationReset reset_operation = 14;
+        temporal.api.batch.v1.BatchOperationModifyWorkflowProperties modify_workflow_properties_operation = 15;
     }
 }
 
@@ -1709,4 +1714,23 @@ message UpdateActivityOptionsByIdRequest {
 message UpdateActivityOptionsByIdResponse {
     // Activity options after an update
     temporal.api.activity.v1.ActivityOptions activity_options = 1;
+}
+
+message ModifyWorkflowExecutionPropertiesRequest {
+    // The namespace name of the target Workflow.
+    string namespace = 1;
+    // The target Workflow Id and (optionally) a specific Run Id thereof.
+    // (-- api-linter: core::0203::optional=disabled
+    //     aip.dev/not-precedent: false positive triggered by the word "optional" --)
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+    string reason = 3;
+
+    // Used to de-dupe modify requests
+    string request_id = 4;
+
+    // Options to specify in both single-workflow modify and batch modify
+    temporal.api.common.v1.ModifyWorkflowExecutionPropertiesOptions option = 5;
+}
+
+message ModifyWorkflowExecutionPropertiesResponse {
 }

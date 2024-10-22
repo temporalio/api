@@ -859,8 +859,7 @@ service WorkflowService {
     // UpdateActivityOptionsById is called by the client to update the options of an activity
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
-    rpc UpdateActivityOptionsById (UpdateActivityOptionsByIdRequest) returns (UpdateActivityOptionsByIdResponse)
-    {
+    rpc UpdateActivityOptionsById (UpdateActivityOptionsByIdRequest) returns (UpdateActivityOptionsByIdResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/update-options-by-id"
             body: "*"
@@ -871,11 +870,21 @@ service WorkflowService {
         };
     }
 
-    // PauseActivityById is called by the client to pause the execution of an activity
+    // PauseActivityById pauses the execution of an activity specified by its ID.
+    // Returns a `NotFound` error if there is no pending activity with the provided ID.
+    //
+    // Pausing an activity means:
+    // - If the activity is currently waiting for a retry or is running and subsequently fails,
+    //   it will not be rescheduled until it is unpaused.
+    // - If the activity is already paused, calling this method will have no effect.
+    // - If the activity is running and will finish successfully, activity will be completed.
+    //
+    // For long-running activities:
+    // - Pausing will send a cancellation with "paused" as the reason.
+    // - The activity will respond to the cancellation accordingly.
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
-    rpc PauseActivityById (PauseActivityByIdRequest) returns (PauseActivityByIdResponse)
-    {
+    rpc PauseActivityById (PauseActivityByIdRequest) returns (PauseActivityByIdResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/pause-by-id"
             body: "*"

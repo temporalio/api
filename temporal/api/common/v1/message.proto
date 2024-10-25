@@ -38,7 +38,6 @@ import "google/protobuf/wrappers.proto";
 import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/event_type.proto";
 import "temporal/api/enums/v1/reset.proto";
-import "temporal/api/enums/v1/workflow.proto";
 
 message DataBlob {
     temporal.api.enums.v1.EncodingType encoding_type = 1;
@@ -251,25 +250,25 @@ message Link {
     }
 }
 
-message ModifyWorkflowExecutionPropertiesOptions {
-    // If set, the workflow execution's current build ID will be set to this.
-    // If pinned, future tasks will be scheduled on this build ID.
-    // If unpinned, future tasks will be scheduled per the rollout config at
-    // the time of dispatch. Until the next task is dispatched, the unpinned
-    // workflow execution's current build ID is what determines it's reachability.
-    google.protobuf.StringValue build_id = 1;
+message UpdateWorkflowExecutionOptionsConfig {
+    message UpdateVersioningOptions {
+        // If set, the workflow execution will be pinned to this build ID.
+        // All future tasks will be scheduled on this build ID.
+        google.protobuf.StringValue pinned_build_id_override = 1;
 
-    // If set, the workflow execution's versioning behavior will be set to this.
-    temporal.api.enums.v1.VersioningBehavior versioning_behavior = 2;
+        // If set to true, the workflow execution will become unpinned.
+        // If the workflow is already unpinned, this is a no-op.
+        // If set to false, this is a no-op; use pinned_build_id_override to pin a workflow execution.
+        bool make_unpinned = 2;
 
-    // If false, the property modification will be conditional on a successful
-    // replay test of the workflow execution's history on the new worker it
-    // would need to replay on after the change.
-    //
-    // In the first release, skip_replay_test=false will return an unimplemented error.
-    // User must explicitly pass skip_replay_test=true to use the API.
-    bool skip_replay_test = 3;
+        // If false, the update will be conditional on a successful
+        // replay test of the workflow execution's history on the new worker it
+        // would need to replay on after the change.
+        //
+        // In the first release, skip_replay_test=false will return an unimplemented error.
+        // User must explicitly pass skip_replay_test=true to use the API.
+        bool skip_replay_test = 3;
+    }
 
-    // If true, prints a diff of which properties would be changed without changing them.
-    // bool diff = 4;// omit this flag in initial release
+    UpdateVersioningOptions versioning_options = 1;
 }

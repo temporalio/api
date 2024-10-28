@@ -477,6 +477,9 @@ message RecordActivityTaskHeartbeatResponse {
     // Will be set to true if the activity has been asked to cancel itself. The SDK should then
     // notify the activity of cancellation if it is still running.
     bool cancel_requested = 1;
+
+    // Will be set to true if the activity has been put on pause.
+    bool activity_pause = 2;
 }
 
 message RecordActivityTaskHeartbeatByIdRequest {
@@ -1696,12 +1699,12 @@ message ExecuteMultiOperationResponse {
 message UpdateActivityOptionsByIdRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
-    // Id of the workflow which scheduled this activity
+    // ID of the workflow which scheduled this activity
     string workflow_id = 2;
-    // Run Id of the workflow which scheduled this activity
+    // Run ID of the workflow which scheduled this activity
     // if empty - latest workflow is used
     string run_id = 3;
-    // Id of the activity we're updating
+    // ID of the activity we're updating
     string activity_id = 4;
 
     // The identity of the client who initiated this request
@@ -1718,3 +1721,86 @@ message UpdateActivityOptionsByIdResponse {
     // Activity options after an update
     temporal.api.activity.v1.ActivityOptions activity_options = 1;
 }
+
+message PauseActivityByIdRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+    // ID of the activity we're updating.
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+}
+
+message PauseActivityByIdResponse {
+}
+
+message UnpauseActivityByIdRequest {
+    message ResumeAttributes {
+        // Indicates that activity should be scheduled immediately.
+        bool no_wait = 1;
+    }
+
+    message ResetAttributes {
+        // Indicates that activity should be scheduled immediately.
+        bool no_wait = 1;
+        // Indicates that activity should reset the heartbeats.
+        bool reset_heartbeat = 2;
+    }
+
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+    // ID of the activity we're updating.
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // there are two options to resume the activity - with 'resume' or with 'reset'
+    oneof operation{
+        ResumeAttributes resume_attributes = 6;
+        ResetAttributes reset_attributes = 7;
+    }
+}
+
+message UnpauseActivityByIdResponse {
+}
+
+message ResetActivityByIdRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+    // ID of the activity we're updating.
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Indicates that activity should be scheduled immediately.
+    // If this flag doesn't set, and activity currently running - temporal will wait until activity is completed.
+    bool no_wait = 6;
+
+    // Indicates that activity should reset the heartbeats.
+    // This flag will be applied only to the new instance of the activity.
+    bool reset_heartbeat = 7;
+
+}
+
+message ResetActivityByIdResponse {
+}
+
+

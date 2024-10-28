@@ -859,8 +859,7 @@ service WorkflowService {
     // UpdateActivityOptionsById is called by the client to update the options of an activity
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
-    rpc UpdateActivityOptionsById (UpdateActivityOptionsByIdRequest) returns (UpdateActivityOptionsByIdResponse)
-    {
+    rpc UpdateActivityOptionsById (UpdateActivityOptionsByIdRequest) returns (UpdateActivityOptionsByIdResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/update-options-by-id"
             body: "*"
@@ -870,6 +869,81 @@ service WorkflowService {
             }
         };
     }
+
+    // PauseActivityById pauses the execution of an activity specified by its ID.
+    // Returns a `NotFound` error if there is no pending activity with the provided ID.
+    //
+    // Pausing an activity means:
+    // - If the activity is currently waiting for a retry or is running and subsequently fails,
+    //   it will not be rescheduled until it is unpaused.
+    // - If the activity is already paused, calling this method will have no effect.
+    // - If the activity is running and will finish successfully, activity will be completed.
+    // - If the activity is running and will finish with failure:
+    //   * if there is no retry policy, or no retry left - activity will be completed.
+    //   * if there are more retries left - activity will be paused and will be retried later.
+    // For long-running activities:
+    // - Pausing will send a cancellation with "is_paused" set to 'true'.
+    // - The activity should respond to the cancellation accordingly.
+    // (-- api-linter: core::0136::prepositions=disabled
+    //     aip.dev/not-precedent: "By" is used to indicate request type. --)
+    rpc PauseActivityById (PauseActivityByIdRequest) returns (PauseActivityByIdResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activities/pause-by-id"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/pause-by-id"
+                body: "*"
+            }
+        };
+    }
+
+    // UnpauseActivityById unpauses the execution of an activity specified by its ID.
+    // Returns a `NotFound` error if there is no pending activity with the provided ID.
+    // There are two 'modes' of unpausing an activity:
+    // 'resume' - If the activity is paused, it will be resumed and scheduled for execution.
+    //    * If activity is currently running Unpause with 'resume' has no effect.
+    //    * if 'no_wait' flag is set and activity is waiting, the activity will be scheduled immediately.
+    // 'reset' - If the activity is paused, it will be reset to its initial state and (depending on parameters) scheduled for execution.
+    //    * If activity is currently running Unpause with 'reset' will reset the number of attempts.
+    //    * if 'no_wait' flag is set, the activity will be scheduled immediately.
+    //    * if 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.
+    // If activity is in waiting for retry and past it retry timeout, it will be scheduled immediately.
+    // Once activity is unpaused, all timeout timers will be regenerated.
+    // (-- api-linter: core::0136::prepositions=disabled
+    //     aip.dev/not-precedent: "By" is used to indicate request type. --)
+    rpc UnpauseActivityById (UnpauseActivityByIdRequest) returns (UnpauseActivityByIdResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activities/unpause-by-id"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/unpause-by-id"
+                body: "*"
+            }
+        };
+    }
+
+    // ResetActivityById unpauses the execution of an activity specified by its ID.
+    // Returns a `NotFound` error if there is no pending activity with the provided ID.
+    // Resting an activity means:
+    // * number of attempts will be reset to 0.
+    // * all timeout timers will be regenerated.
+    // If activity currently running:
+    // *  if 'no_wait' flag is provided, new instance of activity will be scheduled immediately.
+    // *  if 'no_wait' flag is not provided, activity will be scheduled after current instance completes if needed.
+    // If 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.
+    // (-- api-linter: core::0136::prepositions=disabled
+    //     aip.dev/not-precedent: "By" is used to indicate request type. --)
+    rpc ResetActivityById (ResetActivityByIdRequest) returns (ResetActivityByIdResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activities/reset-by-id"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/reset-by-id"
+                body: "*"
+            }
+        };
+    }
+
 
 }
 

@@ -480,7 +480,7 @@
     "/api/v1/namespaces/{namespace}/activities/pause-by-id": {
       "post": {
         "summary": "PauseActivityById pauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and will finish successfully, activity will be completed.\n- If the activity is running and will finish with failure:\n  * if there is no retry policy, or no retry left - activity will be completed.\n  * if there are more retries left - activity will be paused and will be retried later.\nFor long-running activities:\n- activity in paused state will send a cancellation with \"is_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
+        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and will finish successfully, activity will be completed.\n- If the activity is running and will finish with failure:\n  * if there is no retry left - activity will be completed.\n  * if there are more retries left - activity will be paused.\nFor long-running activities:\n- activity in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
         "operationId": "PauseActivityById2",
         "responses": {
           "200": {
@@ -520,7 +520,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/reset-by-id": {
       "post": {
-        "summary": "ResetActivityById unpauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.\nResting an activity means:\n* number of attempts will be reset to 0.\n* all timeout timers will be regenerated.\nIf activity currently running:\n*  if 'no_wait' flag is provided, new instance of activity will be scheduled immediately.\n*  if 'no_wait' flag is not provided, activity will be scheduled after current instance completes if needed.\nIf 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.",
+        "summary": "ResetActivityById unpauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.\nResetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be resetted.\nIf activity currently running:\n*  if 'no_wait' flag is provided, new instance of activity will be scheduled immediately.\n*  if 'no_wait' flag is not provided, activity will be scheduled after current instance completes if needed.\nIf 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.",
         "operationId": "ResetActivityById2",
         "responses": {
           "200": {
@@ -3209,7 +3209,7 @@
     "/namespaces/{namespace}/activities/pause-by-id": {
       "post": {
         "summary": "PauseActivityById pauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and will finish successfully, activity will be completed.\n- If the activity is running and will finish with failure:\n  * if there is no retry policy, or no retry left - activity will be completed.\n  * if there are more retries left - activity will be paused and will be retried later.\nFor long-running activities:\n- activity in paused state will send a cancellation with \"is_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
+        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and will finish successfully, activity will be completed.\n- If the activity is running and will finish with failure:\n  * if there is no retry left - activity will be completed.\n  * if there are more retries left - activity will be paused.\nFor long-running activities:\n- activity in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
         "operationId": "PauseActivityById",
         "responses": {
           "200": {
@@ -3249,7 +3249,7 @@
     },
     "/namespaces/{namespace}/activities/reset-by-id": {
       "post": {
-        "summary": "ResetActivityById unpauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.\nResting an activity means:\n* number of attempts will be reset to 0.\n* all timeout timers will be regenerated.\nIf activity currently running:\n*  if 'no_wait' flag is provided, new instance of activity will be scheduled immediately.\n*  if 'no_wait' flag is not provided, activity will be scheduled after current instance completes if needed.\nIf 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.",
+        "summary": "ResetActivityById unpauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.\nResetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be resetted.\nIf activity currently running:\n*  if 'no_wait' flag is provided, new instance of activity will be scheduled immediately.\n*  if 'no_wait' flag is not provided, activity will be scheduled after current instance completes if needed.\nIf 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.",
         "operationId": "ResetActivityById",
         "responses": {
           "200": {
@@ -5124,11 +5124,11 @@
       "properties": {
         "noWait": {
           "type": "boolean",
-          "description": "Indicates that activity should be scheduled immediately."
+          "description": "Indicates that activity should be scheduled immediately.\nNote that this may run simultaneously with any existing executions of the activity."
         },
         "resetHeartbeat": {
           "type": "boolean",
-          "description": "Indicates that activity should reset the heartbeats."
+          "title": "If set, the Heartbeat Details will be cleared out to make the Activity start over from the beginning"
         }
       }
     },
@@ -5137,7 +5137,7 @@
       "properties": {
         "noWait": {
           "type": "boolean",
-          "description": "Indicates that activity should be scheduled immediately."
+          "description": "Indicates that if activity is waiting for retry, it will  be scheduled immediately."
         }
       }
     },
@@ -9266,7 +9266,7 @@
           "format": "date-time",
           "description": "Next time when activity will be scheduled.\nIf activity is currently scheduled or started it will be null."
         },
-        "isPaused": {
+        "paused": {
           "type": "boolean",
           "description": "Indicates if activity was paused."
         }
@@ -9711,7 +9711,7 @@
           "type": "boolean",
           "description": "Will be set to true if the activity has been asked to cancel itself. The SDK should then\nnotify the activity of cancellation if it is still running."
         },
-        "activityPause": {
+        "activityPaused": {
           "type": "boolean",
           "description": "Will be set to true if the activity has been put on pause."
         }

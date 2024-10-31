@@ -477,6 +477,9 @@ message RecordActivityTaskHeartbeatResponse {
     // Will be set to true if the activity has been asked to cancel itself. The SDK should then
     // notify the activity of cancellation if it is still running.
     bool cancel_requested = 1;
+
+    // Will be set to true if the activity is paused.
+    bool activity_paused = 2;
 }
 
 message RecordActivityTaskHeartbeatByIdRequest {
@@ -1696,12 +1699,12 @@ message ExecuteMultiOperationResponse {
 message UpdateActivityOptionsByIdRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
-    // Id of the workflow which scheduled this activity
+    // ID of the workflow which scheduled this activity
     string workflow_id = 2;
-    // Run Id of the workflow which scheduled this activity
+    // Run ID of the workflow which scheduled this activity
     // if empty - latest workflow is used
     string run_id = 3;
-    // Id of the activity we're updating
+    // ID of the activity we're updating
     string activity_id = 4;
 
     // The identity of the client who initiated this request
@@ -1712,9 +1715,104 @@ message UpdateActivityOptionsByIdRequest {
 
     // Controls which fields from `activity_options` will be applied
     google.protobuf.FieldMask update_mask = 7;
+
+    // Used to de-dupe requests
+    string request_id = 8;
 }
 
 message UpdateActivityOptionsByIdResponse {
     // Activity options after an update
     temporal.api.activity.v1.ActivityOptions activity_options = 1;
 }
+
+message PauseActivityByIdRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+    // ID of the activity we're updating.
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Used to de-dupe requests.
+    string request_id = 6;
+}
+
+message PauseActivityByIdResponse {
+}
+
+message UnpauseActivityByIdRequest {
+    message ResumeOperation {
+        // Indicates that if the activity is waiting to retry, it will  be scheduled immediately.
+        bool no_wait = 1;
+    }
+
+    message ResetOperation {
+        // Indicates that the activity should be scheduled immediately.
+        // Note that this may run simultaneously with any existing executions of the activity.
+        bool no_wait = 1;
+        // If set, the Heartbeat Details will be cleared out to make the Activity start over from the beginning
+        bool reset_heartbeat = 2;
+    }
+
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+    // ID of the activity we're updating.
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Used to de-dupe requests.
+    string request_id = 6;
+
+    // There are two options to resume the activity - with 'resume' or with 'reset'.
+    oneof operation{
+        ResumeOperation resume = 7;
+        ResetOperation reset = 8;
+    }
+}
+
+message UnpauseActivityByIdResponse {
+}
+
+message ResetActivityByIdRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+    // ID of the activity we're updating.
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Used to de-dupe requests.
+    string request_id = 6;
+
+    // Indicates that activity should be scheduled immediately.
+    // If this flag doesn't set, and activity currently running - temporal will wait until activity is completed.
+    bool no_wait = 7;
+
+    // Indicates that activity should reset heartbeat details.
+    // This flag will be applied only to the new instance of the activity.
+    bool reset_heartbeat = 8;
+}
+
+message ResetActivityByIdResponse {
+}
+
+

@@ -33,11 +33,11 @@ option csharp_namespace = "Temporalio.Api.Common.V1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
-import "google/protobuf/wrappers.proto";
 
 import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/event_type.proto";
 import "temporal/api/enums/v1/reset.proto";
+import "temporal/api/enums/v1/workflow.proto";
 
 message DataBlob {
     temporal.api.enums.v1.EncodingType encoding_type = 1;
@@ -157,6 +157,21 @@ message WorkerVersionCapabilities {
     // Later, may include info like "I can process WASM and/or JS bundles"
 }
 
+// Used in both UpdateWorkflowExecutionOptions and StartWorkflowOptions to override
+// the versioning behavior of a specific workflow execution. If set, takes precedence
+// over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on.
+// To remove the override, call UpdateWorkflowExecutionOptions with a null VersioningBehaviorOverride,
+// and use the FieldMask to indicate that it should be mutated.
+message VersioningBehaviorOverride {
+    // Required.
+    temporal.api.enums.v1.VersioningBehavior behavior = 1;
+
+    // Required if behavior is 'pinned'. Must be null if behavior is 'unpinned'.
+    // Identifies the Deploy Group that the pinned Build ID is scoped to.
+    string deployment_name = 3;
+    string build_id = 4;
+}
+
 // Describes where and how to reset a workflow, used for batch reset currently
 // and may be used for single-workflow reset later.
 message ResetOptions {
@@ -248,27 +263,4 @@ message Link {
         WorkflowEvent workflow_event = 1;
         BatchJob batch_job = 2;
     }
-}
-
-message UpdateWorkflowExecutionOptionsConfig {
-    message UpdateVersioningOptions {
-        // If set, the workflow execution will be pinned to this build ID.
-        // All future tasks will be scheduled on this build ID.
-        google.protobuf.StringValue pinned_build_id_override = 1;
-
-        // If true, the workflow execution will become unpinned.
-        // If the workflow is already unpinned, this is a no-op.
-        // If unset/false, this is a no-op; use pinned_build_id_override to pin a workflow execution.
-        bool make_unpinned = 2;
-
-        // If false, the update will be conditional on a successful
-        // replay test of the workflow execution's history on the new worker it
-        // would need to replay on after the change.
-        //
-        // In the first release, skip_replay_test=false will return an unimplemented error.
-        // User must explicitly pass skip_replay_test=true to use the API.
-        bool skip_replay_test = 3;
-    }
-
-    UpdateVersioningOptions versioning_options = 1;
 }

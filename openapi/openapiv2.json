@@ -5082,23 +5082,6 @@
       },
       "description": "Replaces the routing rule with the given source Build ID."
     },
-    "UpdateWorkflowExecutionOptionsConfigUpdateVersioningOptions": {
-      "type": "object",
-      "properties": {
-        "pinnedBuildIdOverride": {
-          "type": "string",
-          "description": "If set, the workflow execution will be pinned to this build ID.\nAll future tasks will be scheduled on this build ID."
-        },
-        "makeUnpinned": {
-          "type": "boolean",
-          "description": "If true, the workflow execution will become unpinned.\nIf the workflow is already unpinned, this is a no-op.\nIf unset/false, this is a no-op; use pinned_build_id_override to pin a workflow execution."
-        },
-        "skipReplayTest": {
-          "type": "boolean",
-          "description": "If false, the update will be conditional on a successful\nreplay test of the workflow execution's history on the new worker it\nwould need to replay on after the change.\n\nIn the first release, skip_replay_test=false will return an unimplemented error.\nUser must explicitly pass skip_replay_test=true to use the API."
-        }
-      }
-    },
     "WorkflowEventEventReference": {
       "type": "object",
       "properties": {
@@ -5936,9 +5919,17 @@
           "type": "string",
           "title": "Used to de-dupe update-options requests"
         },
-        "config": {
-          "$ref": "#/definitions/v1UpdateWorkflowExecutionOptionsConfig",
-          "description": "Config to specify update-options behavior in both single-workflow and batch mode."
+        "workflowExecutionOptions": {
+          "$ref": "#/definitions/v1WorkflowExecutionOptions",
+          "description": "Workflow Execution options. Partial updates are accepted and controlled by update_mask."
+        },
+        "updateMask": {
+          "type": "string",
+          "description": "Controls which fields from `workflow_execution_options` will be applied.\nTo unset a field, set it to null and use the update mask to indicate that it should be mutated."
+        },
+        "forceReplayTestOnVersionBehaviorChange": {
+          "type": "boolean",
+          "description": "If true and if FieldMask mutates versioning behavior, the update will be conditional\non a successful replay test of the workflow execution's history on the new worker it\nwould need to replay on after the change. Not yet implemented."
         }
       }
     },
@@ -6618,9 +6609,24 @@
           "type": "string",
           "description": "The identity of the worker/client."
         },
-        "config": {
-          "$ref": "#/definitions/v1UpdateWorkflowExecutionOptionsConfig",
-          "description": "Config to specify update-options behavior in both single-workflow and batch mode."
+        "reason": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string",
+          "title": "Used to de-dupe update-options requests"
+        },
+        "workflowExecutionOptions": {
+          "$ref": "#/definitions/v1WorkflowExecutionOptions",
+          "description": "Workflow Execution options. Partial updates are accepted and controlled by update_mask."
+        },
+        "updateMask": {
+          "type": "string",
+          "description": "Controls which fields from `workflow_execution_options` will be applied.\nTo unset a field, set it to null and use the update mask to indicate that it should be mutated."
+        },
+        "forceReplayTestOnVersionBehaviorChange": {
+          "type": "boolean",
+          "description": "If true and if FieldMask mutates versioning behavior, the update will be conditional\non a successful replay test of the workflow execution's history on the new worker it\nwould need to replay on after the change. Not yet implemented."
         }
       },
       "description": "BatchOperationUpdateWorkflowExecutionOptions sends UpdateWorkflowExecutionOptions requests to batch workflows.\nKeep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest."
@@ -11498,16 +11504,14 @@
       "default": "UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_UNSPECIFIED",
       "description": "UpdateWorkflowExecutionLifecycleStage is specified by clients invoking\nWorkflow Updates and used to indicate to the server how long the\nclient wishes to wait for a return value from the API. If any value other\nthan UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED is sent by the\nclient then the API will complete before the Update is finished and will\nreturn a handle to the running Update so that it can later be polled for\ncompletion.\nIf specified stage wasn't reached before server timeout, server returns\nactual stage reached.\n\n - UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_UNSPECIFIED: An unspecified value for this enum.\n - UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ADMITTED: The API call will not return until the Update request has been admitted\nby the server - it may be the case that due to a considerations like load\nor resource limits that an Update is made to wait before the server will\nindicate that it has been received and will be processed. This value\ndoes not wait for any sort of acknowledgement from a worker.\n - UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED: The API call will not return until the Update has passed validation on a worker.\n - UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED: The API call will not return until the Update has executed to completion\non a worker and has either been rejected or returned a value or an error."
     },
-    "v1UpdateWorkflowExecutionOptionsConfig": {
+    "v1UpdateWorkflowExecutionOptionsResponse": {
       "type": "object",
       "properties": {
-        "versioningOptions": {
-          "$ref": "#/definitions/UpdateWorkflowExecutionOptionsConfigUpdateVersioningOptions"
+        "workflowExecutionOptions": {
+          "$ref": "#/definitions/v1WorkflowExecutionOptions",
+          "description": "Workflow Execution options after update."
         }
       }
-    },
-    "v1UpdateWorkflowExecutionOptionsResponse": {
-      "type": "object"
     },
     "v1UpdateWorkflowExecutionRequest": {
       "type": "object",
@@ -11621,6 +11625,23 @@
       ],
       "default": "VERSIONING_BEHAVIOR_UNSPECIFIED",
       "description": " - VERSIONING_BEHAVIOR_PINNED: Workflow should be pinned to the current build ID until manually moved.\n - VERSIONING_BEHAVIOR_AUTO_UPGRADE: Workflow automatically moves to the latest version (default build ID of the task queue) when the next\ntask is dispatched."
+    },
+    "v1VersioningBehaviorOverride": {
+      "type": "object",
+      "properties": {
+        "behavior": {
+          "$ref": "#/definitions/v1VersioningBehavior",
+          "description": "Required."
+        },
+        "deploymentName": {
+          "type": "string",
+          "description": "Required if behavior is 'pinned'. Must be null if behavior is 'unpinned'.\nIdentifies the Deploy Group that the pinned Build ID is scoped to."
+        },
+        "buildId": {
+          "type": "string"
+        }
+      },
+      "description": "Used in both UpdateWorkflowExecutionOptions and StartWorkflowOptions to override\nthe versioning behavior of a specific workflow execution. If set, takes precedence\nover the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on.\nTo remove the override, call UpdateWorkflowExecutionOptions with a null VersioningBehaviorOverride,\nand use the FieldMask to indicate that it should be mutated."
     },
     "v1WaitPolicy": {
       "type": "object",
@@ -11933,6 +11954,15 @@
         "firstRunId": {
           "type": "string",
           "title": "The first run ID in the execution chain.\nExecutions created via the following operations are considered to be in the same chain\n- ContinueAsNew\n- Workflow Retry\n- Workflow Reset\n- Cron Schedule"
+        }
+      }
+    },
+    "v1WorkflowExecutionOptions": {
+      "type": "object",
+      "properties": {
+        "versioningBehaviorOverride": {
+          "$ref": "#/definitions/v1VersioningBehaviorOverride",
+          "description": "If set, takes precedence over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on."
         }
       }
     },

@@ -4651,10 +4651,27 @@ components:
         identity:
           type: string
           description: The identity of the worker/client.
-        config:
+        reason:
+          type: string
+        requestId:
+          type: string
+          description: Used to de-dupe update-options requests
+        workflowExecutionOptions:
           allOf:
-            - $ref: '#/components/schemas/UpdateWorkflowExecutionOptionsConfig'
-          description: Config to specify update-options behavior in both single-workflow and batch mode.
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+        updateMask:
+          type: string
+          description: |-
+            Controls which fields from `workflow_execution_options` will be applied.
+             To unset a field, set it to null and use the update mask to indicate that it should be mutated.
+          format: field-mask
+        forceReplayTestOnVersionBehaviorChange:
+          type: boolean
+          description: |-
+            If true and if FieldMask mutates versioning behavior, the update will be conditional
+             on a successful replay test of the workflow execution's history on the new worker it
+             would need to replay on after the change. Not yet implemented.
       description: |-
         BatchOperationUpdateWorkflowExecutionOptions sends UpdateWorkflowExecutionOptions requests to batch workflows.
          Keep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest.
@@ -8867,34 +8884,6 @@ components:
     UpdateScheduleResponse:
       type: object
       properties: {}
-    UpdateWorkflowExecutionOptionsConfig:
-      type: object
-      properties:
-        versioningOptions:
-          $ref: '#/components/schemas/UpdateWorkflowExecutionOptionsConfig_UpdateVersioningOptions'
-    UpdateWorkflowExecutionOptionsConfig_UpdateVersioningOptions:
-      type: object
-      properties:
-        pinnedBuildIdOverride:
-          type: string
-          description: |-
-            If set, the workflow execution will be pinned to this build ID.
-             All future tasks will be scheduled on this build ID.
-        makeUnpinned:
-          type: boolean
-          description: |-
-            If true, the workflow execution will become unpinned.
-             If the workflow is already unpinned, this is a no-op.
-             If unset/false, this is a no-op; use pinned_build_id_override to pin a workflow execution.
-        skipReplayTest:
-          type: boolean
-          description: |-
-            If false, the update will be conditional on a successful
-             replay test of the workflow execution's history on the new worker it
-             would need to replay on after the change.
-
-             In the first release, skip_replay_test=false will return an unimplemented error.
-             User must explicitly pass skip_replay_test=true to use the API.
     UpdateWorkflowExecutionOptionsRequest:
       type: object
       properties:
@@ -8913,13 +8902,29 @@ components:
         requestId:
           type: string
           description: Used to de-dupe update-options requests
-        config:
+        workflowExecutionOptions:
           allOf:
-            - $ref: '#/components/schemas/UpdateWorkflowExecutionOptionsConfig'
-          description: Config to specify update-options behavior in both single-workflow and batch mode.
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+        updateMask:
+          type: string
+          description: |-
+            Controls which fields from `workflow_execution_options` will be applied.
+             To unset a field, set it to null and use the update mask to indicate that it should be mutated.
+          format: field-mask
+        forceReplayTestOnVersionBehaviorChange:
+          type: boolean
+          description: |-
+            If true and if FieldMask mutates versioning behavior, the update will be conditional
+             on a successful replay test of the workflow execution's history on the new worker it
+             would need to replay on after the change. Not yet implemented.
     UpdateWorkflowExecutionOptionsResponse:
       type: object
-      properties: {}
+      properties:
+        workflowExecutionOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: Workflow Execution options after update.
     UpdateWorkflowExecutionRequest:
       type: object
       properties:
@@ -9034,6 +9039,30 @@ components:
           type: string
           format: date-time
       description: VersionInfo contains details about current and recommended release versions as well as alerts and upgrade instructions.
+    VersioningBehaviorOverride:
+      type: object
+      properties:
+        behavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: Required.
+          format: enum
+        deploymentName:
+          type: string
+          description: |-
+            Required if behavior is 'pinned'. Must be null if behavior is 'unpinned'.
+             Identifies the Deploy Group that the pinned Build ID is scoped to.
+        buildId:
+          type: string
+      description: |-
+        Used in both UpdateWorkflowExecutionOptions and StartWorkflowOptions to override
+         the versioning behavior of a specific workflow execution. If set, takes precedence
+         over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on.
+         To remove the override, call UpdateWorkflowExecutionOptions with a null VersioningBehaviorOverride,
+         and use the FieldMask to indicate that it should be mutated.
     WaitPolicy:
       type: object
       properties:
@@ -9422,6 +9451,13 @@ components:
              - Workflow Retry
              - Workflow Reset
              - Cron Schedule
+    WorkflowExecutionOptions:
+      type: object
+      properties:
+        versioningBehaviorOverride:
+          allOf:
+            - $ref: '#/components/schemas/VersioningBehaviorOverride'
+          description: If set, takes precedence over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:

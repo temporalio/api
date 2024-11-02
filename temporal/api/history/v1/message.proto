@@ -33,7 +33,6 @@ option csharp_namespace = "Temporalio.Api.History.V1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "google/protobuf/wrappers.proto";
 
 import "temporal/api/enums/v1/event_type.proto";
 import "temporal/api/enums/v1/failed_cause.proto";
@@ -742,10 +741,13 @@ message WorkflowPropertiesModifiedExternallyEventAttributes {
     // the existing memo. If the user wants to delete values, a default/empty Payload should be
     // used as the value for the key being deleted.
     temporal.api.common.v1.Memo upserted_memo = 5;
-    // If set, the workflow execution was pinned to this build ID.
-    google.protobuf.StringValue pinned_build_id_override = 6;
-    // If true, the workflow execution was made unpinned. If the workflow was already unpinned, this is a no-op.
-    bool make_unpinned = 7;
+
+    // If not null, the versioning behavior override on this workflow execution was either set or unset.
+    // If it was set, 'override_set' describes how. If unset, 'override_unset' is true.
+    oneof version_override_mutation {
+        temporal.api.common.v1.VersioningBehaviorOverride override_set = 6;
+        bool override_unset = 7;
+    }
 }
 
 message ActivityPropertiesModifiedExternallyEventAttributes {

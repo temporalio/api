@@ -4342,12 +4342,27 @@ components:
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: Version info of the worker to whom this task was dispatched.
+          description: |-
+            Version info of the worker to whom this task was dispatched.
+             Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
         buildIdRedirectCounter:
           type: string
           description: |-
             Used by server internally to properly reapply build ID redirects to an execution
              when rebuilding it from events.
+             Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
+        redirectDeployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            When present, it means this task is dispatched to a new deployment and caused
+             the workflow execution to be redirected to that deployment from this point on.
+        deploymentRedirectCounter:
+          type: string
+          description: |-
+            Used by server internally to properly reapply deployment redirects to an
+             execution when rebuilding it from history events. This is non-zero if and
+             only if `redirect_deployment` is present.
     ActivityTaskTimedOutEventAttributes:
       type: object
       properties:
@@ -6551,7 +6566,9 @@ components:
         lastWorkerVersionStamp:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: The version stamp of the worker to whom this activity was most recently dispatched
+          description: |-
+            The version stamp of the worker to whom this activity was most recently dispatched
+             Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
         currentRetryInterval:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
@@ -6570,6 +6587,12 @@ components:
             Next time when activity will be scheduled.
              If activity is currently scheduled or started it will be null.
           format: date-time
+        lastStartedDeployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            Present if activity task queue is versioned. The deployment this activity
+             was dispatched to most recently.
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -6680,6 +6703,12 @@ components:
         attempt:
           type: integer
           format: int32
+        lastStartedDeployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            Present if the workflow is versioned. The deployment this workflow task
+             was dispatched to most recently.
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -8906,6 +8935,14 @@ components:
              user specified timeout, API call returns even if specified stage is not reached.
           format: enum
       description: Specifies client's intent to wait for Update results.
+    WorkerDeployment:
+      type: object
+      properties:
+        deploymentName:
+          type: string
+        buildId:
+          type: string
+      description: Identifies a versioned worker deployment.
     WorkerVersionCapabilities:
       type: object
       properties:
@@ -9203,7 +9240,9 @@ components:
         mostRecentWorkerVersionStamp:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: If set, the most recent worker version stamp that appeared in a workflow task completion
+          description: |-
+            If set, the most recent worker version stamp that appeared in a workflow task completion
+             Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
         executionDuration:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
@@ -9246,27 +9285,7 @@ components:
           description: |-
             Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead
              of using the assignment rules.
-        buildId:
-          type: string
-          description: |-
-            Current build ID of this workflow execution that determines the matching queue that new tasks of this execution
-             will be scheduled in. Current build ID is set after completion of the first workflow task, and
-             when workflow moves to a different build ID either automatically or manually. (versioning-3)
-        deploymentName:
-          type: string
-          description: |-
-            The deployment name associated with this workflow's task queue + build ID. This is updated when `build_id` is
-             updated. `deployment_name` should be set if `build_id` field is set.
-        versioningBehavior:
-          enum:
-            - VERSIONING_BEHAVIOR_UNSPECIFIED
-            - VERSIONING_BEHAVIOR_PINNED
-            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-          type: string
-          description: |-
-            Determines how server should treat this execution when workers are upgraded. `versioning_behavior` has to be set
-             if the `build_id` field is set.
-          format: enum
+             Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
         firstRunId:
           type: string
           description: |-
@@ -9276,6 +9295,59 @@ components:
              - Workflow Retry
              - Workflow Reset
              - Cron Schedule
+        versioningInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionInfo_VersioningInfo'
+          description: |-
+            Holds all the information about versioning for this particular execution.
+             This info is typically set after the completion of the first workflow
+             task because that is the time that versioning behavior and deployment for
+             the workflow is determined. In some other cases, such as for Child
+             Workflows, or when Starter has forced a particular behavior or deployment,
+             this field will be set before the completion of the first workflow task.
+    WorkflowExecutionInfo_VersioningInfo:
+      type: object
+      properties:
+        versioningBehavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            Determines how server should treat this execution when workers are upgraded.
+             When present it means that this workflow is versioned.
+          format: enum
+        deployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            The worker deployment to which this workflow is assigned currently.
+             Must be present if `versioning_behavior` is set.
+        versioningBehaviorOverride:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            Manual override for versioning behavior. Takes precedence over
+             `versioning_behavior`.
+          format: enum
+        deploymentOverride:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            Manual override for deployment. Takes precedence over `deployment`.
+             Must be set when if and only if `versioning_behavior_override` is PINNED.
+        redirectingDeployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            Indicates the workflow is being redirected to a different deployment.
+             Workflow redirect finishes at the next WorkflowTaskCompleted event.
+             Tasks that start while workflow has an ongoing redirect, will be
+             dispatched to `redirecting_deployment`.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:
@@ -9413,7 +9485,7 @@ components:
           description: |-
             If this workflow intends to use anything other than the current overall default version for
              the queue, then we include it here.
-             Deprecated. use `inherited_build_id` instead
+             Deprecated. [cleanup-experimental-wv]
         completionCallbacks:
           type: array
           items:
@@ -9442,7 +9514,9 @@ components:
                  - The root workflow of W1 is W1 and the root workflow of W2 is W2.
         inheritedBuildId:
           type: string
-          description: When present, this execution is assigned to the build ID of its parent or previous execution.
+          description: |-
+            When present, this execution is assigned to the build ID of its parent or previous execution.
+             Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -9823,12 +9897,27 @@ components:
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
-          description: Version info of the worker to whom this task was dispatched.
+          description: |-
+            Version info of the worker to whom this task was dispatched.
+             Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
         buildIdRedirectCounter:
           type: string
           description: |-
             Used by server internally to properly reapply build ID redirects to an execution
              when rebuilding it from events.
+             Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
+        redirectDeployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            When present, it means this task is dispatched to a new deployment and caused
+             the workflow execution to be redirected to that deployment from this point on.
+        deploymentRedirectCounter:
+          type: string
+          description: |-
+            Used by server internally to properly reapply deployment redirects to an
+             execution when rebuilding it from history events. This is non-zero if and
+             only if `redirect_deployment` is present.
     WorkflowTaskTimedOutEventAttributes:
       type: object
       properties:

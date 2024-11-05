@@ -5002,6 +5002,31 @@
         }
       }
     },
+    "WorkflowExecutionInfoVersioningInfo": {
+      "type": "object",
+      "properties": {
+        "versioningBehavior": {
+          "$ref": "#/definitions/v1VersioningBehavior",
+          "description": "Determines how server should treat this execution when workers are upgraded.\nWhen present it means that this workflow is versioned."
+        },
+        "deployment": {
+          "$ref": "#/definitions/v1WorkerDeployment",
+          "description": "The worker deployment to which this workflow is assigned currently.\nMust be present if `versioning_behavior` is set."
+        },
+        "versioningBehaviorOverride": {
+          "$ref": "#/definitions/v1VersioningBehavior",
+          "description": "Manual override for versioning behavior. Takes precedence over\n`versioning_behavior`."
+        },
+        "deploymentOverride": {
+          "$ref": "#/definitions/v1WorkerDeployment",
+          "description": "Manual override for deployment. Takes precedence over `deployment`.\nMust be set when if and only if `versioning_behavior_override` is PINNED."
+        },
+        "redirectingDeployment": {
+          "$ref": "#/definitions/v1WorkerDeployment",
+          "description": "Indicates the workflow is being redirected to a different deployment.\nWorkflow redirect finishes at the next WorkflowTaskCompleted event.\nTasks that start while workflow has an ongoing redirect, will be\ndispatched to `redirecting_deployment`."
+        }
+      }
+    },
     "WorkflowServiceCreateScheduleBody": {
       "type": "object",
       "properties": {
@@ -6221,12 +6246,21 @@
         },
         "workerVersion": {
           "$ref": "#/definitions/v1WorkerVersionStamp",
-          "description": "Version info of the worker to whom this task was dispatched."
+          "title": "Version info of the worker to whom this task was dispatched.\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
         },
         "buildIdRedirectCounter": {
           "type": "string",
           "format": "int64",
-          "description": "Used by server internally to properly reapply build ID redirects to an execution\nwhen rebuilding it from events."
+          "title": "Used by server internally to properly reapply build ID redirects to an execution\nwhen rebuilding it from events.\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
+        },
+        "redirectDeployment": {
+          "$ref": "#/definitions/v1WorkerDeployment",
+          "description": "When present, it means this task is dispatched to a new deployment and caused\nthe workflow execution to be redirected to that deployment from this point on."
+        },
+        "deploymentRedirectCounter": {
+          "type": "string",
+          "format": "int64",
+          "description": "Used by server internally to properly reapply deployment redirects to an\nexecution when rebuilding it from history events. This is non-zero if and\nonly if `redirect_deployment` is present."
         }
       }
     },
@@ -8906,7 +8940,7 @@
         },
         "lastWorkerVersionStamp": {
           "$ref": "#/definitions/v1WorkerVersionStamp",
-          "title": "The version stamp of the worker to whom this activity was most recently dispatched"
+          "title": "The version stamp of the worker to whom this activity was most recently dispatched\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
         },
         "currentRetryInterval": {
           "type": "string",
@@ -8921,6 +8955,10 @@
           "type": "string",
           "format": "date-time",
           "description": "Next time when activity will be scheduled.\nIf activity is currently scheduled or started it will be null."
+        },
+        "lastStartedDeployment": {
+          "$ref": "#/definitions/v1WorkerDeployment",
+          "description": "Present if activity task queue is versioned. The deployment this activity\nwas dispatched to most recently."
         }
       }
     },
@@ -9050,6 +9088,10 @@
         "attempt": {
           "type": "integer",
           "format": "int32"
+        },
+        "lastStartedDeployment": {
+          "$ref": "#/definitions/v1WorkerDeployment",
+          "description": "Present if the workflow is versioned. The deployment this workflow task\nwas dispatched to most recently."
         }
       }
     },
@@ -11469,6 +11511,18 @@
       },
       "description": "Specifies client's intent to wait for Update results."
     },
+    "v1WorkerDeployment": {
+      "type": "object",
+      "properties": {
+        "deploymentName": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "string"
+        }
+      },
+      "description": "Identifies a versioned worker deployment."
+    },
     "v1WorkerVersionCapabilities": {
       "type": "object",
       "properties": {
@@ -11737,7 +11791,7 @@
         },
         "mostRecentWorkerVersionStamp": {
           "$ref": "#/definitions/v1WorkerVersionStamp",
-          "title": "If set, the most recent worker version stamp that appeared in a workflow task completion"
+          "title": "If set, the most recent worker version stamp that appeared in a workflow task completion\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
         },
         "executionDuration": {
           "type": "string",
@@ -11753,23 +11807,15 @@
         },
         "inheritedBuildId": {
           "type": "string",
-          "description": "Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead\nof using the assignment rules."
-        },
-        "buildId": {
-          "type": "string",
-          "title": "Current build ID of this workflow execution that determines the matching queue that new tasks of this execution\nwill be scheduled in. Current build ID is set after completion of the first workflow task, and\nwhen workflow moves to a different build ID either automatically or manually. (versioning-3)"
-        },
-        "deploymentName": {
-          "type": "string",
-          "description": "The deployment name associated with this workflow's task queue + build ID. This is updated when `build_id` is\nupdated. `deployment_name` should be set if `build_id` field is set."
-        },
-        "versioningBehavior": {
-          "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "Determines how server should treat this execution when workers are upgraded. `versioning_behavior` has to be set\nif the `build_id` field is set."
+          "title": "Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead\nof using the assignment rules.\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
         },
         "firstRunId": {
           "type": "string",
           "title": "The first run ID in the execution chain.\nExecutions created via the following operations are considered to be in the same chain\n- ContinueAsNew\n- Workflow Retry\n- Workflow Reset\n- Cron Schedule"
+        },
+        "versioningInfo": {
+          "$ref": "#/definitions/WorkflowExecutionInfoVersioningInfo",
+          "description": "Holds all the information about versioning for this particular execution.\nThis info is typically set after the completion of the first workflow\ntask because that is the time that versioning behavior and deployment for\nthe workflow is determined. In some other cases, such as for Child\nWorkflows, or when Starter has forced a particular behavior or deployment,\nthis field will be set before the completion of the first workflow task."
         }
       }
     },
@@ -11912,7 +11958,7 @@
         },
         "sourceVersionStamp": {
           "$ref": "#/definitions/v1WorkerVersionStamp",
-          "title": "If this workflow intends to use anything other than the current overall default version for\nthe queue, then we include it here.\nDeprecated. use `inherited_build_id` instead"
+          "title": "If this workflow intends to use anything other than the current overall default version for\nthe queue, then we include it here.\nDeprecated. [cleanup-experimental-wv]"
         },
         "completionCallbacks": {
           "type": "array",
@@ -11928,7 +11974,7 @@
         },
         "inheritedBuildId": {
           "type": "string",
-          "description": "When present, this execution is assigned to the build ID of its parent or previous execution."
+          "title": "When present, this execution is assigned to the build ID of its parent or previous execution.\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
         }
       },
       "title": "Always the first event in workflow history"
@@ -12357,12 +12403,21 @@
         },
         "workerVersion": {
           "$ref": "#/definitions/v1WorkerVersionStamp",
-          "description": "Version info of the worker to whom this task was dispatched."
+          "title": "Version info of the worker to whom this task was dispatched.\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
         },
         "buildIdRedirectCounter": {
           "type": "string",
           "format": "int64",
-          "description": "Used by server internally to properly reapply build ID redirects to an execution\nwhen rebuilding it from events."
+          "title": "Used by server internally to properly reapply build ID redirects to an execution\nwhen rebuilding it from events.\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
+        },
+        "redirectDeployment": {
+          "$ref": "#/definitions/v1WorkerDeployment",
+          "description": "When present, it means this task is dispatched to a new deployment and caused\nthe workflow execution to be redirected to that deployment from this point on."
+        },
+        "deploymentRedirectCounter": {
+          "type": "string",
+          "format": "int64",
+          "description": "Used by server internally to properly reapply deployment redirects to an\nexecution when rebuilding it from history events. This is non-zero if and\nonly if `redirect_deployment` is present."
         }
       }
     },

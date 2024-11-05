@@ -59,6 +59,7 @@ message WorkflowExecutionInfo {
     int64 state_transition_count = 14;
     int64 history_size_bytes = 15;
     // If set, the most recent worker version stamp that appeared in a workflow task completion
+    // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     temporal.api.common.v1.WorkerVersionStamp most_recent_worker_version_stamp = 16;
     // Workflow execution duration is defined as difference between close time and execution time.
     // This field is only populated if the workflow is closed.
@@ -91,18 +92,8 @@ message WorkflowExecutionInfo {
     string assigned_build_id = 19;
     // Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead
     // of using the assignment rules.
+    // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     string inherited_build_id = 20;
-    // Current build ID of this workflow execution that determines the matching queue that new tasks of this execution
-    // will be scheduled in. Current build ID is set after completion of the first workflow task, and
-    // when workflow moves to a different build ID either automatically or manually. (versioning-3)
-    string build_id = 22;
-    // The deployment name associated with this workflow's task queue + build ID. This is updated when `build_id` is
-    // updated. `deployment_name` should be set if `build_id` field is set.
-    string deployment_name = 23;
-    // Determines how server should treat this execution when workers are upgraded. `versioning_behavior` has to be set
-    // if the `build_id` field is set.
-    temporal.api.enums.v1.VersioningBehavior versioning_behavior = 24;
-
     // The first run ID in the execution chain.
     // Executions created via the following operations are considered to be in the same chain
     // - ContinueAsNew
@@ -110,6 +101,34 @@ message WorkflowExecutionInfo {
     // - Workflow Reset
     // - Cron Schedule
     string first_run_id = 21;
+
+    // Holds all the information about versioning for this particular execution.
+    // This info is typically set after the completion of the first workflow
+    // task because that is the time that versioning behavior and deployment for
+    // the workflow is determined. In some other cases, such as for Child
+    // Workflows, or when Starter has forced a particular behavior or deployment,
+    // this field will be set before the completion of the first workflow task.
+    VersioningInfo versioning_info = 22;
+
+    message VersioningInfo {
+        // Determines how server should treat this execution when workers are upgraded.
+        // When present it means that this workflow is versioned.
+        temporal.api.enums.v1.VersioningBehavior versioning_behavior = 1;
+        // The worker deployment to which this workflow is assigned currently.
+        // Must be present if `versioning_behavior` is set.
+        temporal.api.common.v1.WorkerDeployment deployment = 2;
+        // Manual override for versioning behavior. Takes precedence over
+        // `versioning_behavior`.
+        temporal.api.enums.v1.VersioningBehavior versioning_behavior_override = 3;
+        // Manual override for deployment. Takes precedence over `deployment`.
+        // Must be set when if and only if `versioning_behavior_override` is PINNED.
+        temporal.api.common.v1.WorkerDeployment deployment_override = 4;
+        // Indicates the workflow is being redirected to a different deployment.
+        // Workflow redirect finishes at the next WorkflowTaskCompleted event.
+        // Tasks that start while workflow has an ongoing redirect, will be
+        // dispatched to `redirecting_deployment`.
+        temporal.api.common.v1.WorkerDeployment redirecting_deployment = 5;
+    }
 }
 
 message WorkflowExecutionConfig {
@@ -137,6 +156,7 @@ message PendingActivityInfo {
     // Absence of `assigned_build_id` generally means this task is on an "unversioned" task queue.
     // In rare cases, it can also mean that the task queue is versioned but we failed to write activity's
     // independently-assigned build ID to the database. This case heals automatically once the task is dispatched.
+    // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     oneof assigned_build_id {
         // When present, it means this activity is assigned to the build ID of its workflow.
         google.protobuf.Empty use_workflow_build_id = 13;
@@ -147,6 +167,7 @@ message PendingActivityInfo {
         string last_independently_assigned_build_id = 14;
     }
     // The version stamp of the worker to whom this activity was most recently dispatched
+    // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     temporal.api.common.v1.WorkerVersionStamp last_worker_version_stamp = 15;
 
     // The time activity will wait until the next retry.
@@ -161,6 +182,10 @@ message PendingActivityInfo {
     // Next time when activity will be scheduled.
     // If activity is currently scheduled or started it will be null.
     google.protobuf.Timestamp next_attempt_schedule_time = 18;
+
+    // Present if activity task queue is versioned. The deployment this activity
+    // was dispatched to most recently.
+    temporal.api.common.v1.WorkerDeployment last_started_deployment = 19;
 }
 
 message PendingChildExecutionInfo {
@@ -182,6 +207,9 @@ message PendingWorkflowTaskInfo {
     google.protobuf.Timestamp original_scheduled_time = 3;
     google.protobuf.Timestamp started_time = 4;
     int32 attempt = 5;
+    // Present if the workflow is versioned. The deployment this workflow task
+    // was dispatched to most recently.
+    temporal.api.common.v1.WorkerDeployment last_started_deployment = 6;
 }
 
 message ResetPoints {

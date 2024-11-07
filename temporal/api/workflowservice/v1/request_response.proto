@@ -347,9 +347,6 @@ message RespondWorkflowTaskCompletedRequest {
     // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
     // field to true. See message docstrings for more.
     temporal.api.common.v1.WorkerVersionStamp worker_version_stamp = 10;
-    // Must be set when versioning-3 is used (i.e. `worker_version_stamp.use_versioning` is `true`
-    // and `worker_version_stamp.deployment_name` is provided).
-    temporal.api.enums.v1.VersioningBehavior versioning_behavior = 14;
     // Default versioning behavior that is set at worker server level.
     // Protocol messages piggybacking on a WFT as a transport
     repeated temporal.api.protocol.v1.Message messages = 11;
@@ -358,6 +355,11 @@ message RespondWorkflowTaskCompletedRequest {
     temporal.api.sdk.v1.WorkflowTaskCompletedMetadata sdk_metadata = 12;
     // Local usage data collected for metering
     temporal.api.common.v1.MeteringMetadata metering_metadata = 13;
+    reserved 14;
+    reserved "capabilities";
+    // Must be set when versioning-3 is used (i.e. `worker_version_stamp.use_versioning` is `true`
+    // and `worker_version_stamp.deployment_name` is provided).
+    temporal.api.enums.v1.VersioningBehavior versioning_behavior = 15;
 }
 
 message RespondWorkflowTaskCompletedResponse {
@@ -1502,6 +1504,7 @@ message StartBatchOperationRequest {
         temporal.api.batch.v1.BatchOperationCancellation cancellation_operation = 12;
         temporal.api.batch.v1.BatchOperationDeletion deletion_operation = 13;
         temporal.api.batch.v1.BatchOperationReset reset_operation = 14;
+        temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions update_workflow_options_operation = 15;
     }
 }
 
@@ -1709,4 +1712,28 @@ message UpdateActivityOptionsByIdRequest {
 message UpdateActivityOptionsByIdResponse {
     // Activity options after an update
     temporal.api.activity.v1.ActivityOptions activity_options = 1;
+}
+
+message UpdateWorkflowExecutionOptionsRequest {
+    // The namespace name of the target Workflow.
+    string namespace = 1;
+    // The target Workflow Id and (optionally) a specific Run Id thereof.
+    // (-- api-linter: core::0203::optional=disabled
+    //     aip.dev/not-precedent: false positive triggered by the word "optional" --)
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+
+    // Used to de-dupe update-options requests
+    string request_id = 3;
+
+    // Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+    temporal.api.workflow.v1.WorkflowExecutionOptions workflow_execution_options = 4;
+
+    // Controls which fields from `workflow_execution_options` will be applied.
+    // To unset a field, set it to null and use the update mask to indicate that it should be mutated.
+    google.protobuf.FieldMask update_mask = 5;
+}
+
+message UpdateWorkflowExecutionOptionsResponse {
+    // Workflow Execution options after update.
+    temporal.api.workflow.v1.WorkflowExecutionOptions workflow_execution_options = 1;
 }

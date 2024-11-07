@@ -1817,6 +1817,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/update-options:
+    post:
+      tags:
+        - WorkflowService
+      description: UpdateWorkflowExecutionOptions partially updates the WorkflowExecutionOptions of an existing workflow execution.
+      operationId: UpdateWorkflowExecutionOptions
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace name of the target Workflow.
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkflowExecutionOptionsRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkflowExecutionOptionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/update/{request.input.name}:
     post:
       tags:
@@ -4021,6 +4058,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/update-options:
+    post:
+      tags:
+        - WorkflowService
+      description: UpdateWorkflowExecutionOptions partially updates the WorkflowExecutionOptions of an existing workflow execution.
+      operationId: UpdateWorkflowExecutionOptions
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace name of the target Workflow.
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkflowExecutionOptionsRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkflowExecutionOptionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/update/{request.input.name}:
     post:
       tags:
@@ -4582,6 +4656,28 @@ components:
         BatchOperationTermination sends terminate requests to batch workflows.
          Keep the parameter in sync with temporal.api.workflowservice.v1.TerminateWorkflowExecutionRequest.
          Ignore first_execution_run_id because this is used for single workflow operation.
+    BatchOperationUpdateWorkflowExecutionOptions:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        requestId:
+          type: string
+          description: Used to de-dupe update-options requests
+        workflowExecutionOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+        updateMask:
+          type: string
+          description: |-
+            Controls which fields from `workflow_execution_options` will be applied.
+             To unset a field, set it to null and use the update mask to indicate that it should be mutated.
+          format: field-mask
+      description: |-
+        BatchOperationUpdateWorkflowExecutionOptions sends UpdateWorkflowExecutionOptions requests to batch workflows.
+         Keep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest.
     BuildIdAssignmentRule:
       type: object
       properties:
@@ -5874,6 +5970,8 @@ components:
           $ref: '#/components/schemas/NexusOperationTimedOutEventAttributes'
         nexusOperationCancelRequestedEventAttributes:
           $ref: '#/components/schemas/NexusOperationCancelRequestedEventAttributes'
+        workflowExecutionOptionsUpdatedEventAttributes:
+          $ref: '#/components/schemas/WorkflowExecutionOptionsUpdatedEventAttributes'
       description: |-
         History events are the method by which Temporal SDKs advance (or recreate) workflow state.
          See the `EventType` enum for more info about what each event is for.
@@ -8039,6 +8137,8 @@ components:
           $ref: '#/components/schemas/BatchOperationDeletion'
         resetOperation:
           $ref: '#/components/schemas/BatchOperationReset'
+        updateWorkflowOptionsOperation:
+          $ref: '#/components/schemas/BatchOperationUpdateWorkflowExecutionOptions'
     StartBatchOperationResponse:
       type: object
       properties: {}
@@ -8803,6 +8903,39 @@ components:
     UpdateScheduleResponse:
       type: object
       properties: {}
+    UpdateWorkflowExecutionOptionsRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: The namespace name of the target Workflow.
+        workflowExecution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: |-
+            The target Workflow Id and (optionally) a specific Run Id thereof.
+             (-- api-linter: core::0203::optional=disabled
+                 aip.dev/not-precedent: false positive triggered by the word "optional" --)
+        requestId:
+          type: string
+          description: Used to de-dupe update-options requests
+        workflowExecutionOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+        updateMask:
+          type: string
+          description: |-
+            Controls which fields from `workflow_execution_options` will be applied.
+             To unset a field, set it to null and use the update mask to indicate that it should be mutated.
+          format: field-mask
+    UpdateWorkflowExecutionOptionsResponse:
+      type: object
+      properties:
+        workflowExecutionOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: Workflow Execution options after update.
     UpdateWorkflowExecutionRequest:
       type: object
       properties:
@@ -8917,6 +9050,29 @@ components:
           type: string
           format: date-time
       description: VersionInfo contains details about current and recommended release versions as well as alerts and upgrade instructions.
+    VersioningBehaviorOverride:
+      type: object
+      properties:
+        behavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: Required.
+          format: enum
+        workerDeployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            Required if behavior is 'pinned'. Must be null if behavior is 'unpinned'.
+             Identifies the Build ID and Deployment Name to pin the workflow to.
+      description: |-
+        Used in both UpdateWorkflowExecutionOptions and StartWorkflowOptions to override
+         the versioning behavior of a specific workflow execution. If set, takes precedence
+         over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on.
+         To remove the override, call UpdateWorkflowExecutionOptions with a null VersioningBehaviorOverride,
+         and use the FieldMask to indicate that it should be mutated.
     WaitPolicy:
       type: object
       properties:
@@ -9348,6 +9504,32 @@ components:
              Workflow redirect finishes at the next WorkflowTaskCompleted event.
              Tasks that start while workflow has an ongoing redirect, will be
              dispatched to `redirecting_deployment`.
+    WorkflowExecutionOptions:
+      type: object
+      properties:
+        versioningBehaviorOverride:
+          allOf:
+            - $ref: '#/components/schemas/VersioningBehaviorOverride'
+          description: If set, takes precedence over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on.
+    WorkflowExecutionOptionsUpdatedEventAttributes:
+      type: object
+      properties:
+        workflowExecutionOptionsUpdate:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: |-
+            Workflow Execution options that were sent in the UpdateWorkflowExecutionOptions request.
+             Partial updates are accepted and controlled by update_mask.
+        updateMask:
+          type: string
+          description: |-
+            Update mask that was sent in the UpdateWorkflowExecutionOptions request.
+             Indicates which fields from `workflow_execution_options_for_update` were applied.
+          format: field-mask
+        workflowExecutionOptionsResult:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: Workflow Execution options after the update. Also returned as gRPC response.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:

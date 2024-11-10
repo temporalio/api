@@ -4425,18 +4425,6 @@ components:
             Used by server internally to properly reapply build ID redirects to an execution
              when rebuilding it from events.
              Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
-        redirectDeployment:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeployment'
-          description: |-
-            When present, it means this task is dispatched to a new deployment and caused
-             the workflow execution to be redirected to that deployment from this point on.
-        deploymentRedirectCounter:
-          type: string
-          description: |-
-            Used by server internally to properly reapply deployment redirects to an
-             execution when rebuilding it from history events. This is non-zero if and
-             only if `redirect_deployment` is present.
     ActivityTaskTimedOutEventAttributes:
       type: object
       properties:
@@ -5101,6 +5089,36 @@ components:
       description: |-
         Used by the worker versioning APIs, represents an unordered set of one or more versions which are
          considered to be compatible with each other. Currently the versions are always worker build IDs.
+    CompletedDeploymentRedirectInfo:
+      type: object
+      properties:
+        deployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            The target deployment of the redirect. Null means a previously versioned workflow just
+             completed a redirect to unversioned workers.
+        versioningBehavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            Versioning behavior sent by SDK for this workflow execution on the new deployment.
+             Must be present if and only if `deployment` is set.
+          format: enum
+        versioningBehaviorOverride:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            If present, it means the redirect was initiated by a (safe) manual versioning
+             override. Such override is only applied to the workflow when and if the redirect
+             successfully completes.
+          format: enum
     CountWorkflowExecutionsResponse:
       type: object
       properties:
@@ -5513,6 +5531,15 @@ components:
         control:
           type: string
           description: Deprecated
+    FailedDeploymentRedirectInfo:
+      type: object
+      properties:
+        deployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            The target deployment of the failed redirect attempt. Null means a versioned workflow
+             tried to redirect to unversioned workers.
     FailoverStatus:
       type: object
       properties:
@@ -6689,8 +6716,8 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerDeployment'
           description: |-
-            Present if activity task queue is versioned. The deployment this activity
-             was dispatched to most recently.
+            The deployment this activity was dispatched to most recently. Present only if the activity
+             was dispatched to a versioned worker.
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -6801,12 +6828,6 @@ components:
         attempt:
           type: integer
           format: int32
-        lastStartedDeployment:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeployment'
-          description: |-
-            Present if the workflow is versioned. The deployment this workflow task
-             was dispatched to most recently.
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -9068,11 +9089,31 @@ components:
             Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
              Identifies the Build ID and Deployment Name to pin the workflow to.
       description: |-
-        Used in both UpdateWorkflowExecutionOptions and StartWorkflowOptions to override
+        Used in both UpdateWorkflowExecutionOptions and StartWorkflowExecution to override
          the versioning behavior of a specific workflow execution. If set, takes precedence
          over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on.
          To remove the override, call UpdateWorkflowExecutionOptions with a null VersioningBehaviorOverride,
          and use the FieldMask to indicate that it should be mutated.
+    VersioningInfo_RedirectInfo:
+      type: object
+      properties:
+        deployment:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeployment'
+          description: |-
+            The target deployment of the redirect. Null means a so-far-versioned workflow is
+             being redirected to unversioned workers.
+        behaviorOverride:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            If present, it means the redirect is initiated by a (safe) manual versioning
+             override. Such override is only applied to the workflow when and if the redirect
+             successfully completes.
+          format: enum
     WaitPolicy:
       type: object
       properties:
@@ -9454,17 +9495,11 @@ components:
         versioningInfo:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionInfo_VersioningInfo'
-          description: |-
-            Holds all the information about versioning for this particular execution.
-             This info is typically set after the completion of the first workflow
-             task because that is the time that versioning behavior and deployment for
-             the workflow is determined. In some other cases, such as for Child
-             Workflows, or when Starter has forced a particular behavior or deployment,
-             this field will be set before the completion of the first workflow task.
+          description: Holds all the information about versioning for this particular execution.
     WorkflowExecutionInfo_VersioningInfo:
       type: object
       properties:
-        versioningBehavior:
+        behavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
             - VERSIONING_BEHAVIOR_PINNED
@@ -9472,38 +9507,39 @@ components:
           type: string
           description: |-
             Determines how server should treat this execution when workers are upgraded.
-             When present it means that this workflow is versioned.
+             When present it means that this workflow is versioned. This is not set until an execution
+             completes its first workflow task on a versioned worker.
           format: enum
         deployment:
           allOf:
             - $ref: '#/components/schemas/WorkerDeployment'
           description: |-
             The worker deployment to which this workflow is assigned currently.
-             Must be present if `versioning_behavior` is set.
-        versioningBehaviorOverride:
+             Must be present if and only if `behavior` is set.
+        behaviorOverride:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
           type: string
-          description: |-
-            Manual override for versioning behavior. Takes precedence over
-             `versioning_behavior`.
+          description: Manual override for execution's versioning behavior. Takes precedence over `behavior`.
           format: enum
         deploymentOverride:
           allOf:
             - $ref: '#/components/schemas/WorkerDeployment'
           description: |-
-            Manual override for deployment. Takes precedence over `deployment`.
-             Must be set when if and only if `versioning_behavior_override` is PINNED.
-        redirectingDeployment:
+            Used to manually pin the execution to a deployment. Must be set when if and only if
+             `behavior_override` is PINNED. Takes precedence over `deployment`.
+        redirectInfo:
           allOf:
-            - $ref: '#/components/schemas/WorkerDeployment'
+            - $ref: '#/components/schemas/VersioningInfo_RedirectInfo'
           description: |-
-            Indicates the workflow is being redirected to a different deployment.
-             Workflow redirect finishes at the next WorkflowTaskCompleted event.
-             Tasks that start while workflow has an ongoing redirect, will be
-             dispatched to `redirecting_deployment`.
+            When present, indicates the workflow is being redirected to a different deployment.
+             A deployment redirect can only exist during the life time of a pending workflow task.
+             If the pending workflow task completes (at the next WorkflowTaskCompleted event), the
+             redirect is considered complete and the workflow's deployment is updated. If the pending
+             workflow task fails or times out, then the redirect is canceled and workflow remains on
+             the previous deployment.
     WorkflowExecutionOptions:
       type: object
       properties:
@@ -9877,16 +9913,6 @@ components:
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
              Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
-        versioningBehavior:
-          enum:
-            - VERSIONING_BEHAVIOR_UNSPECIFIED
-            - VERSIONING_BEHAVIOR_PINNED
-            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-          type: string
-          description: |-
-            Versioning behavior sent by SDK for this workflow execution. Unspecified means behavior is not
-             changed in this event.
-          format: enum
         sdkMetadata:
           allOf:
             - $ref: '#/components/schemas/WorkflowTaskCompletedMetadata'
@@ -9897,6 +9923,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/MeteringMetadata'
           description: Local usage data sent during workflow task completion and recorded here for posterity
+        completedRedirect:
+          allOf:
+            - $ref: '#/components/schemas/CompletedDeploymentRedirectInfo'
+          description: |-
+            Presence of this value means a deployment redirect completed in this workflow task.
+             completion event.
     WorkflowTaskCompletedMetadata:
       type: object
       properties:
@@ -10030,6 +10062,10 @@ components:
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
              Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
+        failedRedirect:
+          allOf:
+            - $ref: '#/components/schemas/FailedDeploymentRedirectInfo'
+          description: Presence of this value means a deployment redirect failed with this failed workflow task.
     WorkflowTaskScheduledEventAttributes:
       type: object
       properties:
@@ -10084,18 +10120,6 @@ components:
             Used by server internally to properly reapply build ID redirects to an execution
              when rebuilding it from events.
              Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
-        redirectDeployment:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeployment'
-          description: |-
-            When present, it means this task is dispatched to a new deployment and caused
-             the workflow execution to be redirected to that deployment from this point on.
-        deploymentRedirectCounter:
-          type: string
-          description: |-
-            Used by server internally to properly reapply deployment redirects to an
-             execution when rebuilding it from history events. This is non-zero if and
-             only if `redirect_deployment` is present.
     WorkflowTaskTimedOutEventAttributes:
       type: object
       properties:
@@ -10114,6 +10138,10 @@ components:
             - TIMEOUT_TYPE_HEARTBEAT
           type: string
           format: enum
+        failedRedirect:
+          allOf:
+            - $ref: '#/components/schemas/FailedDeploymentRedirectInfo'
+          description: Presence of this value means a deployment redirect failed due to this time out.
     WorkflowType:
       type: object
       properties:

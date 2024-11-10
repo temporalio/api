@@ -103,31 +103,38 @@ message WorkflowExecutionInfo {
     string first_run_id = 21;
 
     // Holds all the information about versioning for this particular execution.
-    // This info is typically set after the completion of the first workflow
-    // task because that is the time that versioning behavior and deployment for
-    // the workflow is determined. In some other cases, such as for Child
-    // Workflows, or when Starter has forced a particular behavior or deployment,
-    // this field will be set before the completion of the first workflow task.
     VersioningInfo versioning_info = 22;
 
     message VersioningInfo {
         // Determines how server should treat this execution when workers are upgraded.
-        // When present it means that this workflow is versioned.
-        temporal.api.enums.v1.VersioningBehavior versioning_behavior = 1;
+        // When present it means that this workflow is versioned. This is not set until an execution
+        // completes its first workflow task on a versioned worker.
+        temporal.api.enums.v1.VersioningBehavior behavior = 1;
         // The worker deployment to which this workflow is assigned currently.
-        // Must be present if `versioning_behavior` is set.
+        // Must be present if and only if `behavior` is set.
         temporal.api.common.v1.WorkerDeployment deployment = 2;
-        // Manual override for versioning behavior. Takes precedence over
-        // `versioning_behavior`.
-        temporal.api.enums.v1.VersioningBehavior versioning_behavior_override = 3;
-        // Manual override for deployment. Takes precedence over `deployment`.
-        // Must be set when if and only if `versioning_behavior_override` is PINNED.
+        // Manual override for execution's versioning behavior. Takes precedence over `behavior`.
+        temporal.api.enums.v1.VersioningBehavior behavior_override = 3;
+        // Used to manually pin the execution to a deployment. Must be set when if and only if
+        // `behavior_override` is PINNED. Takes precedence over `deployment`.
         temporal.api.common.v1.WorkerDeployment deployment_override = 4;
-        // Indicates the workflow is being redirected to a different deployment.
-        // Workflow redirect finishes at the next WorkflowTaskCompleted event.
-        // Tasks that start while workflow has an ongoing redirect, will be
-        // dispatched to `redirecting_deployment`.
-        temporal.api.common.v1.WorkerDeployment redirecting_deployment = 5;
+        // When present, indicates the workflow is being redirected to a different deployment.
+        // A deployment redirect can only exist during the life time of a pending workflow task.
+        // If the pending workflow task completes (at the next WorkflowTaskCompleted event), the
+        // redirect is considered complete and the workflow's deployment is updated. If the pending
+        // workflow task fails or times out, then the redirect is canceled and workflow remains on
+        // the previous deployment.
+        RedirectInfo redirect_info = 5;
+
+        message RedirectInfo {
+            // The target deployment of the redirect. Null means a so-far-versioned workflow is
+            // being redirected to unversioned workers.
+            temporal.api.common.v1.WorkerDeployment deployment = 1;
+            // If present, it means the redirect is initiated by a (safe) manual versioning
+            // override. Such override is only applied to the workflow when and if the redirect
+            // successfully completes.
+            temporal.api.enums.v1.VersioningBehavior behavior_override = 2;
+        }
     }
 }
 
@@ -183,8 +190,8 @@ message PendingActivityInfo {
     // If activity is currently scheduled or started it will be null.
     google.protobuf.Timestamp next_attempt_schedule_time = 18;
 
-    // Present if activity task queue is versioned. The deployment this activity
-    // was dispatched to most recently.
+    // The deployment this activity was dispatched to most recently. Present only if the activity
+    // was dispatched to a versioned worker.
     temporal.api.common.v1.WorkerDeployment last_started_deployment = 19;
 }
 
@@ -207,9 +214,6 @@ message PendingWorkflowTaskInfo {
     google.protobuf.Timestamp original_scheduled_time = 3;
     google.protobuf.Timestamp started_time = 4;
     int32 attempt = 5;
-    // Present if the workflow is versioned. The deployment this workflow task
-    // was dispatched to most recently.
-    temporal.api.common.v1.WorkerDeployment last_started_deployment = 6;
 }
 
 message ResetPoints {

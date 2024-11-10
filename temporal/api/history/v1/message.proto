@@ -223,13 +223,6 @@ message WorkflowTaskStartedEventAttributes {
     // when rebuilding it from events.
     // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     int64 build_id_redirect_counter = 7;
-    // When present, it means this task is dispatched to a new deployment and caused
-    // the workflow execution to be redirected to that deployment from this point on.
-    temporal.api.common.v1.WorkerDeployment redirect_deployment = 8;
-    // Used by server internally to properly reapply deployment redirects to an
-    // execution when rebuilding it from history events. This is non-zero if and
-    // only if `redirect_deployment` is present.
-    int64 deployment_redirect_counter = 9;
 }
 
 message WorkflowTaskCompletedEventAttributes {
@@ -246,16 +239,36 @@ message WorkflowTaskCompletedEventAttributes {
     // populated to preserve compatibility).
     // Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
     temporal.api.common.v1.WorkerVersionStamp worker_version = 5;
-    // Versioning behavior sent by SDK for this workflow execution. Unspecified means behavior is not
-    // changed in this event.
-    temporal.api.enums.v1.VersioningBehavior versioning_behavior = 7;
-
     // Data the SDK wishes to record for itself, but server need not interpret, and does not
     // directly impact workflow state.
     temporal.api.sdk.v1.WorkflowTaskCompletedMetadata sdk_metadata = 6;
 
     // Local usage data sent during workflow task completion and recorded here for posterity
     temporal.api.common.v1.MeteringMetadata metering_metadata = 13;
+
+    // Presence of this value means a deployment redirect completed in this workflow task.
+    // completion event.
+    CompletedDeploymentRedirectInfo completed_redirect = 8;
+
+}
+
+message CompletedDeploymentRedirectInfo {
+    // The target deployment of the redirect. Null means a previously versioned workflow just
+    // completed a redirect to unversioned workers.
+    temporal.api.common.v1.WorkerDeployment deployment = 1;
+    // Versioning behavior sent by SDK for this workflow execution on the new deployment.
+    // Must be present if and only if `deployment` is set.
+    temporal.api.enums.v1.VersioningBehavior versioning_behavior = 2;
+    // If present, it means the redirect was initiated by a (safe) manual versioning
+    // override. Such override is only applied to the workflow when and if the redirect
+    // successfully completes.
+    temporal.api.enums.v1.VersioningBehavior versioning_behavior_override = 3;
+}
+
+message FailedDeploymentRedirectInfo {
+    // The target deployment of the failed redirect attempt. Null means a versioned workflow
+    // tried to redirect to unversioned workers.
+    temporal.api.common.v1.WorkerDeployment deployment = 1;
 }
 
 message WorkflowTaskTimedOutEventAttributes {
@@ -264,6 +277,8 @@ message WorkflowTaskTimedOutEventAttributes {
     // The id of the `WORKFLOW_TASK_STARTED` event this task corresponds to
     int64 started_event_id = 2;
     temporal.api.enums.v1.TimeoutType timeout_type = 3;
+    // Presence of this value means a deployment redirect failed due to this time out.
+    FailedDeploymentRedirectInfo failed_redirect = 4;
 }
 
 message WorkflowTaskFailedEventAttributes {
@@ -290,6 +305,8 @@ message WorkflowTaskFailedEventAttributes {
     // populated to preserve compatibility).
     // Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
     temporal.api.common.v1.WorkerVersionStamp worker_version = 10;
+    // Presence of this value means a deployment redirect failed with this failed workflow task.
+    FailedDeploymentRedirectInfo failed_redirect = 11;
 }
 
 message ActivityTaskScheduledEventAttributes {
@@ -354,13 +371,6 @@ message ActivityTaskStartedEventAttributes {
     // when rebuilding it from events.
     // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     int64 build_id_redirect_counter = 7;
-    // When present, it means this task is dispatched to a new deployment and caused
-    // the workflow execution to be redirected to that deployment from this point on.
-    temporal.api.common.v1.WorkerDeployment redirect_deployment = 8;
-    // Used by server internally to properly reapply deployment redirects to an
-    // execution when rebuilding it from history events. This is non-zero if and
-    // only if `redirect_deployment` is present.
-    int64 deployment_redirect_counter = 9;
 }
 
 message ActivityTaskCompletedEventAttributes {

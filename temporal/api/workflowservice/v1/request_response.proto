@@ -39,12 +39,14 @@ import "temporal/api/enums/v1/failed_cause.proto";
 import "temporal/api/enums/v1/query.proto";
 import "temporal/api/enums/v1/reset.proto";
 import "temporal/api/enums/v1/task_queue.proto";
+import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/update.proto";
 import "temporal/api/activity/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/command/v1/message.proto";
+import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/filter/v1/message.proto";
 import "temporal/api/protocol/v1/message.proto";
@@ -1736,4 +1738,76 @@ message UpdateWorkflowExecutionOptionsRequest {
 message UpdateWorkflowExecutionOptionsResponse {
     // Workflow Execution options after update.
     temporal.api.workflow.v1.WorkflowExecutionOptions workflow_execution_options = 1;
+}
+
+message DescribeDeploymentRequest {
+    string namespace = 1;
+    deployment.v1.Deployment deployment = 2;
+}
+
+message DescribeDeploymentResponse {
+    deployment.v1.DeploymentInfo deployment_info = 1;
+}
+
+message ListDeploymentsRequest {
+    int32 page_size = 1;
+    bytes next_page_token = 2;
+    string namespace = 3;
+    // Optional. Use to filter based on deployment name.
+    string deployment_name = 4;
+}
+
+message ListDeploymentsResponse {
+    bytes next_page_token = 1;
+    repeated DeploymentInfo deployments = 2;
+
+    message DeploymentInfo {
+        deployment.v1.Deployment deployment = 1;
+        enums.v1.DeploymentStatus status = 2;
+        google.protobuf.Timestamp status_change_time = 3;
+    }
+}
+
+message SetCurrentDeploymentRequest {
+    string namespace = 1;
+    deployment.v1.Deployment deployment = 2;
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+    // Optional. Use to add or remove memo entries. Memo can contain user-defined keys and values
+    // that are exposed when describing deployments. It is a good place for such as operator name,
+    // links to internal deployment pipelines, etc.
+    UpdateDeploymentMemo update_memo = 4;
+}
+
+// Used as part of Deployment write APIs to update metadata attached to a deployment.
+message UpdateDeploymentMemo {
+    common.v1.Memo upsert_entries = 1;
+    repeated string remove_entries = 2;
+}
+
+message SetCurrentDeploymentResponse {
+    deployment.v1.DeploymentInfo current_deployment = 1;
+}
+
+// Returns the Current Deployment of a deployment name.
+message GetCurrentDeploymentRequest {
+    string namespace = 1;
+    string deployment_name = 2;
+}
+
+message GetCurrentDeploymentResponse {
+    deployment.v1.DeploymentInfo current_deployment_info = 1;
+}
+
+message GetDeploymentReachabilityRequest {
+    string namespace = 1;
+    deployment.v1.Deployment deployment = 2;
+}
+
+message GetDeploymentReachabilityResponse {
+    deployment.v1.DeploymentInfo deployment_info = 1;
+    enums.v1.DeploymentReachability reachability = 2;
+    // Reachability level might come from server cache. This timestamp specifies when the value
+    // was actually calculated.
+    google.protobuf.Timestamp last_update_time = 3;
 }

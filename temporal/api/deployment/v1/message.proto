@@ -35,35 +35,35 @@ import "google/protobuf/timestamp.proto";
 
 import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/task_queue.proto";
-import "temporal/api/common/v1/message.proto";
 
 // Identifies a worker deployment. A worker deployment is identified by the combination of
-// deployment name + build ID. Both values are required.
+// series name + build ID. Both values are required.
 message Deployment {
-    string deployment_name = 1;
+    string series_name = 1;
     string build_id = 2;
 }
 
 // Holds information about a worker deployment.
 message DeploymentInfo {
     Deployment deployment = 1;
-    enums.v1.DeploymentStatus status = 2;
+    temporal.api.enums.v1.DeploymentStatus status = 2;
     google.protobuf.Timestamp status_change_time = 3;
-    // A user-defined set of fields. Can be updated via other write operations to the deployment,
-    // such as SetCurrentDeployment.
-    common.v1.Memo memo = 4;
-    repeated TaskQueueInfo task_queues_info = 5;
+    // A user-defined set of key-values. Can be updated as part of write operations to the
+    // deployment, such as `SetCurrentDeployment`.
+    map<string, bytes> metadata = 4;
+    repeated TaskQueueInfo task_queue_infos = 5;
 
     message TaskQueueInfo {
-        string task_queue_name = 1;
-        enums.v1.TaskQueueType task_queue_type = 2;
+        string name = 1;
+        temporal.api.enums.v1.TaskQueueType type = 2;
         // When server saw the first poller for this task queue in this deployment.
         google.protobuf.Timestamp first_poller_time = 3;
     }
 }
 
 // Used as part of Deployment write APIs to update metadata attached to a deployment.
-message UpdateDeploymentMemo {
-    common.v1.Memo upsert_entries = 1;
+message UpdateDeploymentMetadata {
+    map<string, bytes> upsert_entries = 1;
+    // List of keys to remove from the metadata.
     repeated string remove_entries = 2;
 }

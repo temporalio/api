@@ -247,18 +247,19 @@ message WorkflowTaskCompletedEventAttributes {
     // Local usage data sent during workflow task completion and recorded here for posterity
     temporal.api.common.v1.MeteringMetadata metering_metadata = 13;
 
-    // Presence of this value means a deployment redirect completed in this workflow task.
-    // completion event.
+    // The deployment which completed this task. May or may not be set for unversioned workers,
+    // depending if a value is sent by SDK.
+    temporal.api.deployment.v1.Deployment deployment = 7;
+    // Presence of this value means a redirect completed in this workflow task.
     CompletedDeploymentRedirectInfo completed_redirect = 8;
 
 }
 
 message CompletedDeploymentRedirectInfo {
-    // The target deployment of the redirect. Null means a previously versioned workflow just
-    // completed a redirect to unversioned workers.
-    temporal.api.deployment.v1.Deployment deployment = 1;
     // Versioning behavior sent by SDK for this workflow execution on the new deployment.
-    // Must be present if and only if `deployment` is set.
+    // UNSPECIFIED means the new deployment is unversioned, in this case, the redirect is only valid
+    // if the workflow was already versioned. A redirect from unversioned to unversioned is not
+    // valid.
     temporal.api.enums.v1.VersioningBehavior versioning_behavior = 2;
     // If present, it means the redirect was initiated by a (safe) manual versioning
     // override. Such override is only applied to the workflow when and if the redirect

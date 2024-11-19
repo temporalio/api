@@ -38,6 +38,7 @@ import "google/protobuf/timestamp.proto";
 import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/common/v1/message.proto";
+import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
@@ -107,29 +108,27 @@ message WorkflowExecutionInfo {
 
     message VersioningInfo {
         // Determines how server should treat this execution when workers are upgraded.
-        // When present it means that this workflow is versioned. This is not set until an execution
+        // When present it means that this workflow is versioned. This is set after an execution
         // completes its first workflow task on a versioned worker.
         temporal.api.enums.v1.VersioningBehavior behavior = 1;
         // The worker deployment to which this workflow is assigned currently.
         // Must be present if and only if `behavior` is set.
-        temporal.api.common.v1.WorkerDeployment deployment = 2;
-        // Manual override for execution's versioning behavior. Takes precedence over `behavior`.
-        temporal.api.enums.v1.VersioningBehavior behavior_override = 3;
-        // Used to manually pin the execution to a deployment. Must be set when if and only if
-        // `behavior_override` is PINNED. Takes precedence over `deployment`.
-        temporal.api.common.v1.WorkerDeployment deployment_override = 4;
+        temporal.api.deployment.v1.Deployment deployment = 2;
+        // Present if user has set an execution-specific versioning override. This override takes
+        // precedence over SDK-sent `behavior` and `deployment`.
+        VersioningOverride versioning_override = 3;
         // When present, indicates the workflow is being redirected to a different deployment.
-        // A deployment redirect can only exist during the life time of a pending workflow task.
+        // A redirect can only exist during the lifetime of a pending workflow task.
         // If the pending workflow task completes (at the next WorkflowTaskCompleted event), the
         // redirect is considered complete and the workflow's deployment is updated. If the pending
         // workflow task fails or times out, then the redirect is canceled and workflow remains on
         // the previous deployment.
-        RedirectInfo redirect_info = 5;
+        RedirectInfo redirect_info = 4;
 
         message RedirectInfo {
             // The target deployment of the redirect. Null means a so-far-versioned workflow is
             // being redirected to unversioned workers.
-            temporal.api.common.v1.WorkerDeployment deployment = 1;
+            temporal.api.deployment.v1.Deployment deployment = 1;
             // If present, it means the redirect is initiated by a (safe) manual versioning
             // override. Such override is only applied to the workflow when and if the redirect
             // successfully completes.
@@ -192,7 +191,7 @@ message PendingActivityInfo {
 
     // The deployment this activity was dispatched to most recently. Present only if the activity
     // was dispatched to a versioned worker.
-    temporal.api.common.v1.WorkerDeployment last_started_deployment = 19;
+    temporal.api.deployment.v1.Deployment last_started_deployment = 19;
 }
 
 message PendingChildExecutionInfo {
@@ -363,6 +362,20 @@ message NexusOperationCancellationInfo {
 }
 
 message WorkflowExecutionOptions {
-    // If set, takes precedence over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on.
-    temporal.api.common.v1.VersioningBehaviorOverride versioning_behavior_override = 1;
+    // If set, takes precedence over the sdk-sent Versioning Behavior for the specific Workflow
+    // Execution it is set on.
+    VersioningOverride versioning_override = 1;
+}
+
+// Used to override the versioning behavior and deployment of a specific workflow execution. If set,
+// takes precedence over the worker-sent values. See `WorkflowExecutionInfo.VersioningInfo` for more
+// information. To remove the override, call `UpdateWorkflowExecutionOptions` with a null
+// `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
+message VersioningOverride {
+    // Required.
+    temporal.api.enums.v1.VersioningBehavior behavior = 1;
+
+    // Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
+    // Identifies the worker deployment to pin the workflow to.
+    temporal.api.deployment.v1.Deployment deployment = 2;
 }

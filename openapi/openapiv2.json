@@ -749,7 +749,7 @@
     },
     "/api/v1/namespaces/{namespace}/current-deployment/{deployment.seriesName}": {
       "post": {
-        "summary": "Sets a deployment as the current deployment for its deployment series. Can optionally update\nthe metadata of the deployment as well.",
+        "summary": "Sets a deployment as the current deployment for its deployment series. Can optionally update\nthe metadata of the deployment as well.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "SetCurrentDeployment2",
         "responses": {
           "200": {
@@ -794,7 +794,7 @@
     },
     "/api/v1/namespaces/{namespace}/current-deployment/{seriesName}": {
       "get": {
-        "summary": "Returns the current deployment (and its info) for a given deployment series.",
+        "summary": "Returns the current deployment (and its info) for a given deployment series.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "GetCurrentDeployment2",
         "responses": {
           "200": {
@@ -831,7 +831,7 @@
     },
     "/api/v1/namespaces/{namespace}/deployments": {
       "get": {
-        "summary": "Lists worker deployments in the namespace. Optionally can filter based on deployment series\nname.",
+        "summary": "Lists worker deployments in the namespace. Optionally can filter based on deployment series\nname.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "ListDeployments2",
         "responses": {
           "200": {
@@ -883,7 +883,7 @@
     },
     "/api/v1/namespaces/{namespace}/deployments/{deployment.seriesName}/{deployment.buildId}": {
       "get": {
-        "summary": "Describes a worker deployment.",
+        "summary": "Describes a worker deployment.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "DescribeDeployment2",
         "responses": {
           "200": {
@@ -926,7 +926,7 @@
     },
     "/api/v1/namespaces/{namespace}/deployments/{deployment.seriesName}/{deployment.buildId}/reachability": {
       "get": {
-        "summary": "Returns the reachability level of a worker deployment to help users decide when it is time\nto decommission a deployment. Reachability level is calculated based on the deployment's\n`status` and existing workflows that depend on the given deployment for their execution.",
+        "summary": "Returns the reachability level of a worker deployment to help users decide when it is time\nto decommission a deployment. Reachability level is calculated based on the deployment's\n`status` and existing workflows that depend on the given deployment for their execution.\nCalculating reachability is relatively expensive. Therefore, server might return a recently\ncached value. In such a case, the `last_update_time` will inform you about the actual\nreachability calculation time.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "GetDeploymentReachability2",
         "responses": {
           "200": {
@@ -3623,7 +3623,7 @@
     },
     "/namespaces/{namespace}/current-deployment/{deployment.seriesName}": {
       "post": {
-        "summary": "Sets a deployment as the current deployment for its deployment series. Can optionally update\nthe metadata of the deployment as well.",
+        "summary": "Sets a deployment as the current deployment for its deployment series. Can optionally update\nthe metadata of the deployment as well.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "SetCurrentDeployment",
         "responses": {
           "200": {
@@ -3668,7 +3668,7 @@
     },
     "/namespaces/{namespace}/current-deployment/{seriesName}": {
       "get": {
-        "summary": "Returns the current deployment (and its info) for a given deployment series.",
+        "summary": "Returns the current deployment (and its info) for a given deployment series.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "GetCurrentDeployment",
         "responses": {
           "200": {
@@ -3705,7 +3705,7 @@
     },
     "/namespaces/{namespace}/deployments": {
       "get": {
-        "summary": "Lists worker deployments in the namespace. Optionally can filter based on deployment series\nname.",
+        "summary": "Lists worker deployments in the namespace. Optionally can filter based on deployment series\nname.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "ListDeployments",
         "responses": {
           "200": {
@@ -3757,7 +3757,7 @@
     },
     "/namespaces/{namespace}/deployments/{deployment.seriesName}/{deployment.buildId}": {
       "get": {
-        "summary": "Describes a worker deployment.",
+        "summary": "Describes a worker deployment.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "DescribeDeployment",
         "responses": {
           "200": {
@@ -3800,7 +3800,7 @@
     },
     "/namespaces/{namespace}/deployments/{deployment.seriesName}/{deployment.buildId}/reachability": {
       "get": {
-        "summary": "Returns the reachability level of a worker deployment to help users decide when it is time\nto decommission a deployment. Reachability level is calculated based on the deployment's\n`status` and existing workflows that depend on the given deployment for their execution.",
+        "summary": "Returns the reachability level of a worker deployment to help users decide when it is time\nto decommission a deployment. Reachability level is calculated based on the deployment's\n`status` and existing workflows that depend on the given deployment for their execution.\nCalculating reachability is relatively expensive. Therefore, server might return a recently\ncached value. In such a case, the `last_update_time` will inform you about the actual\nreachability calculation time.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "GetDeploymentReachability",
         "responses": {
           "200": {
@@ -5574,9 +5574,9 @@
           "$ref": "#/definitions/v1Deployment",
           "description": "The worker deployment to which this workflow is assigned currently.\nMust be present if and only if `behavior` is set."
         },
-        "manualOverride": {
-          "$ref": "#/definitions/v1VersioningBehaviorOverride",
-          "description": "Manual override for execution's versioning behavior. Takes precedence over `behavior`\nand `deployment`."
+        "versioningOverride": {
+          "$ref": "#/definitions/v1VersioningOverride",
+          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` and `deployment`."
         },
         "redirectInfo": {
           "$ref": "#/definitions/VersioningInfoRedirectInfo",
@@ -6587,15 +6587,14 @@
         "status": {
           "$ref": "#/definitions/v1DeploymentStatus"
         },
-        "statusChangeTime": {
+        "lastBecameCurrentTime": {
           "type": "string",
           "format": "date-time"
         },
         "metadata": {
           "type": "object",
           "additionalProperties": {
-            "type": "string",
-            "format": "byte"
+            "type": "string"
           },
           "description": "A user-defined set of key-values. Can be updated as part of write operations to the\ndeployment, such as `SetCurrentDeployment`."
         },
@@ -7911,12 +7910,12 @@
       "type": "string",
       "enum": [
         "DEPLOYMENT_REACHABILITY_UNSPECIFIED",
-        "DEPLOYMENT_REACHABILITY_OPEN_WORKFLOWS",
+        "DEPLOYMENT_REACHABILITY_REACHABLE",
         "DEPLOYMENT_REACHABILITY_CLOSED_WORKFLOWS_ONLY",
         "DEPLOYMENT_REACHABILITY_UNREACHABLE"
       ],
       "default": "DEPLOYMENT_REACHABILITY_UNSPECIFIED",
-      "description": "Specify the reachability level for a deployment so users can decide if it is time to\ndecommission the deployment.\n\n - DEPLOYMENT_REACHABILITY_UNSPECIFIED: Reachability level is not specified.\n - DEPLOYMENT_REACHABILITY_OPEN_WORKFLOWS: The deployment is reachable by open workflows that can only run on this deployment. The\ndeployment cannot be decommissioned safely.\n - DEPLOYMENT_REACHABILITY_CLOSED_WORKFLOWS_ONLY: The deployment is not reachable by open workflows but might be still needed by closed\nworkflows who can only run Queries on this deployment. The deployment can be decommissioned\nsafely if user does not query closed workflows.\n - DEPLOYMENT_REACHABILITY_UNREACHABLE: The deployment is not reachable by any workflow because all the workflows who needed this\ndeployment went out of retention period. The deployment can be decommissioned\nsafely."
+      "description": "Specify the reachability level for a deployment so users can decide if it is time to\ndecommission the deployment.\n\n - DEPLOYMENT_REACHABILITY_UNSPECIFIED: Reachability level is not specified.\n - DEPLOYMENT_REACHABILITY_REACHABLE: The deployment is reachable by new and/or open workflows. The deployment cannot be\ndecommissioned safely.\n - DEPLOYMENT_REACHABILITY_CLOSED_WORKFLOWS_ONLY: The deployment is not reachable by new or open workflows, but might be still needed by\nQueries sent to closed workflows. The deployment can be decommissioned safely if user does\nnot query closed workflows.\n - DEPLOYMENT_REACHABILITY_UNREACHABLE: The deployment is not reachable by any workflow because all the workflows who needed this\ndeployment went out of retention period. The deployment can be decommissioned safely."
     },
     "v1DeploymentStatus": {
       "type": "string",
@@ -7927,7 +7926,7 @@
         "DEPLOYMENT_STATUS_CURRENT"
       ],
       "default": "DEPLOYMENT_STATUS_UNSPECIFIED",
-      "description": "Status of a deployment within its deployment series. Any given deployment series can at most have\none `RAMPING` deployment, and one `CURRENT` deployment.\n\n\n - DEPLOYMENT_STATUS_NO_STATUS: The deployment does not have a special status.\n - DEPLOYMENT_STATUS_RAMPING: The deployment is the ramping deployment for the deployment series.\n - DEPLOYMENT_STATUS_CURRENT: The deployment is the current deployment for the deployment series."
+      "description": "Status of a deployment within its deployment series. Any given deployment series can at most have\none `RAMPING` deployment, and one `CURRENT` deployment.\n\n\n - DEPLOYMENT_STATUS_UNSPECIFIED: Status of the deployment is not specified.\n - DEPLOYMENT_STATUS_NO_STATUS: The deployment does not have a special status.\n - DEPLOYMENT_STATUS_RAMPING: The deployment is the ramping deployment for the deployment series.\n - DEPLOYMENT_STATUS_CURRENT: The deployment is the current deployment for the deployment series."
     },
     "v1DeprecateNamespaceResponse": {
       "type": "object",
@@ -11097,7 +11096,10 @@
     "v1SetCurrentDeploymentResponse": {
       "type": "object",
       "properties": {
-        "currentDeployment": {
+        "currentDeploymentInfo": {
+          "$ref": "#/definitions/deploymentv1DeploymentInfo"
+        },
+        "previousCurrentDeploymentInfo": {
           "$ref": "#/definitions/deploymentv1DeploymentInfo"
         }
       }
@@ -12072,8 +12074,7 @@
         "upsertEntries": {
           "type": "object",
           "additionalProperties": {
-            "type": "string",
-            "format": "byte"
+            "type": "string"
           }
         },
         "removeEntries": {
@@ -12313,7 +12314,7 @@
       "default": "VERSIONING_BEHAVIOR_UNSPECIFIED",
       "description": " - VERSIONING_BEHAVIOR_PINNED: Workflow should be pinned to the current build ID until manually moved.\n - VERSIONING_BEHAVIOR_AUTO_UPGRADE: Workflow automatically moves to the latest version (default build ID of the task queue) when the next\ntask is dispatched."
     },
-    "v1VersioningBehaviorOverride": {
+    "v1VersioningOverride": {
       "type": "object",
       "properties": {
         "behavior": {
@@ -12636,9 +12637,9 @@
     "v1WorkflowExecutionOptions": {
       "type": "object",
       "properties": {
-        "versioningBehaviorOverride": {
-          "$ref": "#/definitions/v1VersioningBehaviorOverride",
-          "description": "If set, takes precedence over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on."
+        "versioningOverride": {
+          "$ref": "#/definitions/v1VersioningOverride",
+          "description": "If set, takes precedence over the sdk-sent Versioning Behavior for the specific Workflow\nExecution it is set on."
         }
       }
     },

@@ -642,6 +642,7 @@ paths:
       description: |-
         Sets a deployment as the current deployment for its deployment series. Can optionally update
          the metadata of the deployment as well.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: SetCurrentDeployment
       parameters:
         - name: namespace
@@ -677,7 +678,9 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: Returns the current deployment (and its info) for a given deployment series.
+      description: |-
+        Returns the current deployment (and its info) for a given deployment series.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: GetCurrentDeployment
       parameters:
         - name: namespace
@@ -710,6 +713,7 @@ paths:
       description: |-
         Lists worker deployments in the namespace. Optionally can filter based on deployment series
          name.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: ListDeployments
       parameters:
         - name: namespace
@@ -749,7 +753,9 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: Describes a worker deployment.
+      description: |-
+        Describes a worker deployment.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: DescribeDeployment
       parameters:
         - name: namespace
@@ -796,6 +802,10 @@ paths:
         Returns the reachability level of a worker deployment to help users decide when it is time
          to decommission a deployment. Reachability level is calculated based on the deployment's
          `status` and existing workflows that depend on the given deployment for their execution.
+         Calculating reachability is relatively expensive. Therefore, server might return a recently
+         cached value. In such a case, the `last_update_time` will inform you about the actual
+         reachability calculation time.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: GetDeploymentReachability
       parameters:
         - name: namespace
@@ -3140,6 +3150,7 @@ paths:
       description: |-
         Sets a deployment as the current deployment for its deployment series. Can optionally update
          the metadata of the deployment as well.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: SetCurrentDeployment
       parameters:
         - name: namespace
@@ -3175,7 +3186,9 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: Returns the current deployment (and its info) for a given deployment series.
+      description: |-
+        Returns the current deployment (and its info) for a given deployment series.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: GetCurrentDeployment
       parameters:
         - name: namespace
@@ -3208,6 +3221,7 @@ paths:
       description: |-
         Lists worker deployments in the namespace. Optionally can filter based on deployment series
          name.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: ListDeployments
       parameters:
         - name: namespace
@@ -3247,7 +3261,9 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: Describes a worker deployment.
+      description: |-
+        Describes a worker deployment.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: DescribeDeployment
       parameters:
         - name: namespace
@@ -3294,6 +3310,10 @@ paths:
         Returns the reachability level of a worker deployment to help users decide when it is time
          to decommission a deployment. Reachability level is calculated based on the deployment's
          `status` and existing workflows that depend on the given deployment for their execution.
+         Calculating reachability is relatively expensive. Therefore, server might return a recently
+         cached value. In such a case, the `last_update_time` will inform you about the actual
+         reachability calculation time.
+         Experimental. This API might significantly change or be removed in a future release.
       operationId: GetDeploymentReachability
       parameters:
         - name: namespace
@@ -5638,14 +5658,13 @@ components:
             - DEPLOYMENT_STATUS_CURRENT
           type: string
           format: enum
-        statusChangeTime:
+        lastBecameCurrentTime:
           type: string
           format: date-time
         metadata:
           type: object
           additionalProperties:
             type: string
-            format: bytes
           description: |-
             A user-defined set of key-values. Can be updated as part of write operations to the
              deployment, such as `SetCurrentDeployment`.
@@ -6098,7 +6117,7 @@ components:
         reachability:
           enum:
             - DEPLOYMENT_REACHABILITY_UNSPECIFIED
-            - DEPLOYMENT_REACHABILITY_OPEN_WORKFLOWS
+            - DEPLOYMENT_REACHABILITY_REACHABLE
             - DEPLOYMENT_REACHABILITY_CLOSED_WORKFLOWS_ONLY
             - DEPLOYMENT_REACHABILITY_UNREACHABLE
           type: string
@@ -8423,7 +8442,9 @@ components:
     SetCurrentDeploymentResponse:
       type: object
       properties:
-        currentDeployment:
+        currentDeploymentInfo:
+          $ref: '#/components/schemas/DeploymentInfo'
+        previousCurrentDeploymentInfo:
           $ref: '#/components/schemas/DeploymentInfo'
     SignalExternalWorkflowExecutionFailedEventAttributes:
       type: object
@@ -9338,7 +9359,6 @@ components:
           type: object
           additionalProperties:
             type: string
-            format: bytes
         removeEntries:
           type: array
           items:
@@ -9616,7 +9636,27 @@ components:
           type: string
           format: date-time
       description: VersionInfo contains details about current and recommended release versions as well as alerts and upgrade instructions.
-    VersioningBehaviorOverride:
+    VersioningInfo_RedirectInfo:
+      type: object
+      properties:
+        deployment:
+          allOf:
+            - $ref: '#/components/schemas/Deployment'
+          description: |-
+            The target deployment of the redirect. Null means a so-far-versioned workflow is
+             being redirected to unversioned workers.
+        behaviorOverride:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            If present, it means the redirect is initiated by a (safe) manual versioning
+             override. Such override is only applied to the workflow when and if the redirect
+             successfully completes.
+          format: enum
+    VersioningOverride:
       type: object
       properties:
         behavior:
@@ -9638,26 +9678,6 @@ components:
          precedence over the SDK-sent Versioning Behavior.
          To remove the override, call `UpdateWorkflowExecutionOptions` with a null
          `VersioningBehaviorOverride`, and use the `update_mask` to indicate that it should be mutated.
-    VersioningInfo_RedirectInfo:
-      type: object
-      properties:
-        deployment:
-          allOf:
-            - $ref: '#/components/schemas/Deployment'
-          description: |-
-            The target deployment of the redirect. Null means a so-far-versioned workflow is
-             being redirected to unversioned workers.
-        behaviorOverride:
-          enum:
-            - VERSIONING_BEHAVIOR_UNSPECIFIED
-            - VERSIONING_BEHAVIOR_PINNED
-            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-          type: string
-          description: |-
-            If present, it means the redirect is initiated by a (safe) manual versioning
-             override. Such override is only applied to the workflow when and if the redirect
-             successfully completes.
-          format: enum
     WaitPolicy:
       type: object
       properties:
@@ -10052,12 +10072,12 @@ components:
           description: |-
             The worker deployment to which this workflow is assigned currently.
              Must be present if and only if `behavior` is set.
-        manualOverride:
+        versioningOverride:
           allOf:
-            - $ref: '#/components/schemas/VersioningBehaviorOverride'
+            - $ref: '#/components/schemas/VersioningOverride'
           description: |-
-            Manual override for execution's versioning behavior. Takes precedence over `behavior`
-             and `deployment`.
+            Present if user has set an execution-specific versioning override. This override takes
+             precedence over SDK-sent `behavior` and `deployment`.
         redirectInfo:
           allOf:
             - $ref: '#/components/schemas/VersioningInfo_RedirectInfo'
@@ -10071,10 +10091,12 @@ components:
     WorkflowExecutionOptions:
       type: object
       properties:
-        versioningBehaviorOverride:
+        versioningOverride:
           allOf:
-            - $ref: '#/components/schemas/VersioningBehaviorOverride'
-          description: If set, takes precedence over the sdk-sent Versioning Behavior for the specific Workflow Execution it is set on.
+            - $ref: '#/components/schemas/VersioningOverride'
+          description: |-
+            If set, takes precedence over the sdk-sent Versioning Behavior for the specific Workflow
+             Execution it is set on.
     WorkflowExecutionOptionsUpdatedEventAttributes:
       type: object
       properties:

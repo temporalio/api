@@ -775,10 +775,19 @@ paths:
             type: string
         - name: deployment.seriesName
           in: query
+          description: |-
+            Different versions of the same worker service/application are related together by having a
+             shared series name.
+             Out of all deployments of a series, one can be designated as the current deployment, which
+             receives new workflow executions and new tasks of workflows with
+             `VERSIONING_BEHAVIOR_AUTO_UPGRADE` versioning behavior.
           schema:
             type: string
         - name: deployment.buildId
           in: query
+          description: |-
+            Build ID changes with each version of the worker when the worker program code and/or config
+             changes.
           schema:
             type: string
       responses:
@@ -825,10 +834,19 @@ paths:
             type: string
         - name: deployment.seriesName
           in: query
+          description: |-
+            Different versions of the same worker service/application are related together by having a
+             shared series name.
+             Out of all deployments of a series, one can be designated as the current deployment, which
+             receives new workflow executions and new tasks of workflows with
+             `VERSIONING_BEHAVIOR_AUTO_UPGRADE` versioning behavior.
           schema:
             type: string
         - name: deployment.buildId
           in: query
+          description: |-
+            Build ID changes with each version of the worker when the worker program code and/or config
+             changes.
           schema:
             type: string
       responses:
@@ -3283,10 +3301,19 @@ paths:
             type: string
         - name: deployment.seriesName
           in: query
+          description: |-
+            Different versions of the same worker service/application are related together by having a
+             shared series name.
+             Out of all deployments of a series, one can be designated as the current deployment, which
+             receives new workflow executions and new tasks of workflows with
+             `VERSIONING_BEHAVIOR_AUTO_UPGRADE` versioning behavior.
           schema:
             type: string
         - name: deployment.buildId
           in: query
+          description: |-
+            Build ID changes with each version of the worker when the worker program code and/or config
+             changes.
           schema:
             type: string
       responses:
@@ -3333,10 +3360,19 @@ paths:
             type: string
         - name: deployment.seriesName
           in: query
+          description: |-
+            Different versions of the same worker service/application are related together by having a
+             shared series name.
+             Out of all deployments of a series, one can be designated as the current deployment, which
+             receives new workflow executions and new tasks of workflows with
+             `VERSIONING_BEHAVIOR_AUTO_UPGRADE` versioning behavior.
           schema:
             type: string
         - name: deployment.buildId
           in: query
+          description: |-
+            Build ID changes with each version of the worker when the worker program code and/or config
+             changes.
           schema:
             type: string
       responses:
@@ -5640,39 +5676,47 @@ components:
       properties:
         seriesName:
           type: string
+          description: |-
+            Different versions of the same worker service/application are related together by having a
+             shared series name.
+             Out of all deployments of a series, one can be designated as the current deployment, which
+             receives new workflow executions and new tasks of workflows with
+             `VERSIONING_BEHAVIOR_AUTO_UPGRADE` versioning behavior.
         buildId:
           type: string
+          description: |-
+            Build ID changes with each version of the worker when the worker program code and/or config
+             changes.
       description: |-
-        Identifies a worker deployment. A worker deployment is identified by the combination of
-         series name + build ID. Both values are required.
+        `Deployment` identifies a deployment of Temporal workers. The combination of deployment series
+         name + build ID serves as the identifier. User can use `WorkerDeploymentOptions` in their worker
+         programs to specify these values.
     DeploymentInfo:
       type: object
       properties:
         deployment:
           $ref: '#/components/schemas/Deployment'
-        status:
-          enum:
-            - DEPLOYMENT_STATUS_UNSPECIFIED
-            - DEPLOYMENT_STATUS_NO_STATUS
-            - DEPLOYMENT_STATUS_RAMPING
-            - DEPLOYMENT_STATUS_CURRENT
-          type: string
-          format: enum
-        lastBecameCurrentTime:
+        createTime:
           type: string
           format: date-time
-        metadata:
-          type: object
-          additionalProperties:
-            type: string
-          description: |-
-            A user-defined set of key-values. Can be updated as part of write operations to the
-             deployment, such as `SetCurrentDeployment`.
         taskQueueInfos:
           type: array
           items:
             $ref: '#/components/schemas/DeploymentInfo_TaskQueueInfo'
-      description: Holds information about a worker deployment.
+        metadata:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Payload'
+          description: |-
+            A user-defined set of key-values. Can be updated as part of write operations to the
+             deployment, such as `SetCurrentDeployment`.
+        isCurrent:
+          type: boolean
+          description: If this deployment is the current deployment of its deployment series.
+      description: |-
+        `DeploymentInfo` holds information about a deployment. Deployment information is tracked
+         automatically by server as soon as the first poll from that deployment reaches the server. There
+         can be multiple task queue workers in a single deployment which are listed in this message.
     DeploymentInfo_TaskQueueInfo:
       type: object
       properties:
@@ -5690,6 +5734,20 @@ components:
           type: string
           description: When server saw the first poller for this task queue in this deployment.
           format: date-time
+    DeploymentListInfo:
+      type: object
+      properties:
+        deployment:
+          $ref: '#/components/schemas/Deployment'
+        createTime:
+          type: string
+          format: date-time
+        isCurrent:
+          type: boolean
+          description: If this deployment is the current deployment of its deployment series.
+      description: |-
+        DeploymentListInfo is an abbreviates set of fields from DeploymentInfo that's returned in
+         ListDeployments.
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -6603,23 +6661,7 @@ components:
         deployments:
           type: array
           items:
-            $ref: '#/components/schemas/ListDeploymentsResponse_DeploymentInfo'
-    ListDeploymentsResponse_DeploymentInfo:
-      type: object
-      properties:
-        deployment:
-          $ref: '#/components/schemas/Deployment'
-        status:
-          enum:
-            - DEPLOYMENT_STATUS_UNSPECIFIED
-            - DEPLOYMENT_STATUS_NO_STATUS
-            - DEPLOYMENT_STATUS_RAMPING
-            - DEPLOYMENT_STATUS_CURRENT
-          type: string
-          format: enum
-        statusChangeTime:
-          type: string
-          format: date-time
+            $ref: '#/components/schemas/DeploymentListInfo'
     ListNamespacesResponse:
       type: object
       properties:
@@ -8444,8 +8486,10 @@ components:
       properties:
         currentDeploymentInfo:
           $ref: '#/components/schemas/DeploymentInfo'
-        previousCurrentDeploymentInfo:
-          $ref: '#/components/schemas/DeploymentInfo'
+        previousDeploymentInfo:
+          allOf:
+            - $ref: '#/components/schemas/DeploymentInfo'
+          description: Info of the deployment that was current before executing this operation.
     SignalExternalWorkflowExecutionFailedEventAttributes:
       type: object
       properties:
@@ -9358,7 +9402,7 @@ components:
         upsertEntries:
           type: object
           additionalProperties:
-            type: string
+            $ref: '#/components/schemas/Payload'
         removeEntries:
           type: array
           items:

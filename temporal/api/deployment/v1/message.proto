@@ -33,25 +33,36 @@ option csharp_namespace = "Temporalio.Api.Deployment.V1";
 
 import "google/protobuf/timestamp.proto";
 
-import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/task_queue.proto";
+import "temporal/api/common/v1/message.proto";
 
-// Identifies a worker deployment. A worker deployment is identified by the combination of
-// series name + build ID. Both values are required.
+// `Deployment` identifies a deployment of Temporal workers. The combination of deployment series
+// name + build ID serves as the identifier. User can use `WorkerDeploymentOptions` in their worker
+// programs to specify these values.
 message Deployment {
+    // Different versions of the same worker service/application are related together by having a
+    // shared series name.
+    // Out of all deployments of a series, one can be designated as the current deployment, which
+    // receives new workflow executions and new tasks of workflows with
+    // `VERSIONING_BEHAVIOR_AUTO_UPGRADE` versioning behavior.
     string series_name = 1;
+    // Build ID changes with each version of the worker when the worker program code and/or config
+    // changes.
     string build_id = 2;
 }
 
-// Holds information about a worker deployment.
+// `DeploymentInfo` holds information about a deployment. Deployment information is tracked
+// automatically by server as soon as the first poll from that deployment reaches the server. There
+// can be multiple task queue workers in a single deployment which are listed in this message.
 message DeploymentInfo {
     Deployment deployment = 1;
-    temporal.api.enums.v1.DeploymentStatus status = 2;
-    google.protobuf.Timestamp last_became_current_time = 3;
+    google.protobuf.Timestamp create_time = 2;
+    repeated TaskQueueInfo task_queue_infos = 3;
     // A user-defined set of key-values. Can be updated as part of write operations to the
     // deployment, such as `SetCurrentDeployment`.
-    map<string, string> metadata = 4;
-    repeated TaskQueueInfo task_queue_infos = 5;
+    map<string, temporal.api.common.v1.Payload> metadata = 4;
+    // If this deployment is the current deployment of its deployment series.
+    bool is_current = 5;
 
     message TaskQueueInfo {
         string name = 1;
@@ -63,7 +74,16 @@ message DeploymentInfo {
 
 // Used as part of Deployment write APIs to update metadata attached to a deployment.
 message UpdateDeploymentMetadata {
-    map<string, string> upsert_entries = 1;
+    map<string, temporal.api.common.v1.Payload> upsert_entries = 1;
     // List of keys to remove from the metadata.
     repeated string remove_entries = 2;
+}
+
+// DeploymentListInfo is an abbreviates set of fields from DeploymentInfo that's returned in
+// ListDeployments.
+message DeploymentListInfo {
+    deployment.v1.Deployment deployment = 1;
+    google.protobuf.Timestamp create_time = 2;
+    // If this deployment is the current deployment of its deployment series.
+    bool is_current = 3;
 }

@@ -5543,36 +5543,6 @@ components:
       description: |-
         Used by the worker versioning APIs, represents an unordered set of one or more versions which are
          considered to be compatible with each other. Currently the versions are always worker build IDs.
-    CompletedDeploymentRedirectInfo:
-      type: object
-      properties:
-        deployment:
-          allOf:
-            - $ref: '#/components/schemas/Deployment'
-          description: |-
-            The target deployment of the redirect. Null means a previously versioned workflow just
-             completed a redirect to unversioned workers.
-        versioningBehavior:
-          enum:
-            - VERSIONING_BEHAVIOR_UNSPECIFIED
-            - VERSIONING_BEHAVIOR_PINNED
-            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-          type: string
-          description: |-
-            Versioning behavior sent by SDK for this workflow execution on the new deployment.
-             Must be present if and only if `deployment` is set.
-          format: enum
-        versioningBehaviorOverride:
-          enum:
-            - VERSIONING_BEHAVIOR_UNSPECIFIED
-            - VERSIONING_BEHAVIOR_PINNED
-            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-          type: string
-          description: |-
-            If present, it means the redirect was initiated by a (safe) manual versioning
-             override. Such override is only applied to the workflow when and if the redirect
-             successfully completes.
-          format: enum
     CountWorkflowExecutionsResponse:
       type: object
       properties:
@@ -6067,15 +6037,6 @@ components:
         control:
           type: string
           description: Deprecated
-    FailedDeploymentRedirectInfo:
-      type: object
-      properties:
-        deployment:
-          allOf:
-            - $ref: '#/components/schemas/Deployment'
-          description: |-
-            The target deployment of the failed redirect attempt. Null means a versioned workflow
-             tried to redirect to unversioned workers.
     FailoverStatus:
       type: object
       properties:
@@ -7289,7 +7250,7 @@ components:
             Next time when activity will be scheduled.
              If activity is currently scheduled or started it will be null.
           format: date-time
-        lastStartedDeployment:
+        lastDeployment:
           allOf:
             - $ref: '#/components/schemas/Deployment'
           description: |-
@@ -9699,26 +9660,24 @@ components:
           type: string
           format: date-time
       description: VersionInfo contains details about current and recommended release versions as well as alerts and upgrade instructions.
-    VersioningInfo_RedirectInfo:
+    VersioningInfo_DeploymentTransition:
       type: object
       properties:
         deployment:
           allOf:
             - $ref: '#/components/schemas/Deployment'
           description: |-
-            The target deployment of the redirect. Null means a so-far-versioned workflow is
-             being redirected to unversioned workers.
-        behaviorOverride:
-          enum:
-            - VERSIONING_BEHAVIOR_UNSPECIFIED
-            - VERSIONING_BEHAVIOR_PINNED
-            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-          type: string
+            The target deployment of the transition. Null means a so-far-versioned workflow is
+             transitioning to unversioned workers.
+        setOverride:
+          allOf:
+            - $ref: '#/components/schemas/VersioningOverride'
           description: |-
-            If present, it means the redirect is initiated by a (safe) manual versioning
-             override. Such override is only applied to the workflow when and if the redirect
-             successfully completes.
-          format: enum
+            Override should be set upon completion of the transition. If this is a PINNED
+             override, transition `deployment` must match `set_override.deployment`.
+        unsetOverride:
+          type: boolean
+          description: Override should be unset upon completion of the transition.
     VersioningOverride:
       type: object
       properties:
@@ -9790,10 +9749,9 @@ components:
           description: |-
             If set, the worker is opting in to worker versioning. Otherwise, this is used only as a
              marker for workflow reset points and the BuildIDs search attribute.
-        deploymentSeriesName:
-          type: string
-          description: Must be sent if user has set a deployment series name (versioning-3).
-      description: Identifies the version of a worker that received or processed a task
+      description: |-
+        Identifies the version of a worker that received or processed a task
+         Deprecated. This message is replaced with `Deployment` and `VersioningBehavior`.
     WorkflowEvent_EventReference:
       type: object
       properties:
@@ -10142,16 +10100,16 @@ components:
           description: |-
             Present if user has set an execution-specific versioning override. This override takes
              precedence over SDK-sent `behavior` and `deployment`.
-        redirectInfo:
+        deploymentTransition:
           allOf:
-            - $ref: '#/components/schemas/VersioningInfo_RedirectInfo'
+            - $ref: '#/components/schemas/VersioningInfo_DeploymentTransition'
           description: |-
-            When present, indicates the workflow is being redirected to a different deployment.
-             A redirect can only exist during the lifetime of a pending workflow task.
+            When present, indicates the workflow is transitioning to a different deployment.
+             A deployment transition can only exist during the lifetime of a pending workflow task.
              If the pending workflow task completes (at the next WorkflowTaskCompleted event), the
-             redirect is considered complete and the workflow's deployment is updated. If the pending
-             workflow task fails or times out, then the redirect is canceled and workflow remains on
-             the previous deployment.
+             transition is considered complete and the workflow's deployment is updated. If the
+             pending workflow task fails or times out, then the transition is canceled and workflow
+             remains on the previous deployment.
     WorkflowExecutionOptions:
       type: object
       properties:
@@ -10516,7 +10474,7 @@ components:
             Version info of the worker who processed this workflow task. If present, the `build_id` field
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
-             Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
+             Deprecated. Use `deployment` and `versioning_behavior` instead.
         sdkMetadata:
           allOf:
             - $ref: '#/components/schemas/WorkflowTaskCompletedMetadata'
@@ -10527,12 +10485,24 @@ components:
           allOf:
             - $ref: '#/components/schemas/MeteringMetadata'
           description: Local usage data sent during workflow task completion and recorded here for posterity
-        completedRedirect:
+        deployment:
           allOf:
-            - $ref: '#/components/schemas/CompletedDeploymentRedirectInfo'
+            - $ref: '#/components/schemas/Deployment'
           description: |-
-            Presence of this value means a deployment redirect completed in this workflow task.
-             completion event.
+            The deployment which completed this task. May or may not be set for unversioned workers,
+             depending if a value is sent by SDK. This value updates workflow execution's
+             `versioning_info.deployment`.
+        versioningBehavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            Versioning behavior sent by worker who completed this task for this particular workflow
+             execution. UNSPECIFIED means the task is completed by and unversioned worker.  This value
+             updates workflow execution's `versioning_info.behavior`.
+          format: enum
     WorkflowTaskCompletedMetadata:
       type: object
       properties:
@@ -10666,10 +10636,6 @@ components:
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
              Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
-        failedRedirect:
-          allOf:
-            - $ref: '#/components/schemas/FailedDeploymentRedirectInfo'
-          description: Presence of this value means a deployment redirect failed with this failed workflow task.
     WorkflowTaskScheduledEventAttributes:
       type: object
       properties:
@@ -10742,10 +10708,6 @@ components:
             - TIMEOUT_TYPE_HEARTBEAT
           type: string
           format: enum
-        failedRedirect:
-          allOf:
-            - $ref: '#/components/schemas/FailedDeploymentRedirectInfo'
-          description: Presence of this value means a deployment redirect failed due to this time out.
     WorkflowType:
       type: object
       properties:

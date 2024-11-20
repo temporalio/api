@@ -5548,16 +5548,20 @@
       },
       "description": "Replaces the routing rule with the given source Build ID."
     },
-    "VersioningInfoRedirectInfo": {
+    "VersioningInfoDeploymentTransition": {
       "type": "object",
       "properties": {
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "The target deployment of the redirect. Null means a so-far-versioned workflow is\nbeing redirected to unversioned workers."
+          "description": "The target deployment of the transition. Null means a so-far-versioned workflow is\ntransitioning to unversioned workers."
         },
-        "behaviorOverride": {
-          "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "If present, it means the redirect is initiated by a (safe) manual versioning\noverride. Such override is only applied to the workflow when and if the redirect\nsuccessfully completes."
+        "setOverride": {
+          "$ref": "#/definitions/v1VersioningOverride",
+          "description": "Override should be set upon completion of the transition. If this is a PINNED\noverride, transition `deployment` must match `set_override.deployment`."
+        },
+        "unsetOverride": {
+          "type": "boolean",
+          "description": "Override should be unset upon completion of the transition."
         }
       }
     },
@@ -5588,9 +5592,9 @@
           "$ref": "#/definitions/v1VersioningOverride",
           "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` and `deployment`."
         },
-        "redirectInfo": {
-          "$ref": "#/definitions/VersioningInfoRedirectInfo",
-          "description": "When present, indicates the workflow is being redirected to a different deployment.\nA redirect can only exist during the lifetime of a pending workflow task.\nIf the pending workflow task completes (at the next WorkflowTaskCompleted event), the\nredirect is considered complete and the workflow's deployment is updated. If the pending\nworkflow task fails or times out, then the redirect is canceled and workflow remains on\nthe previous deployment."
+        "deploymentTransition": {
+          "$ref": "#/definitions/VersioningInfoDeploymentTransition",
+          "description": "When present, indicates the workflow is transitioning to a different deployment.\nA deployment transition can only exist during the lifetime of a pending workflow task.\nIf the pending workflow task completes (at the next WorkflowTaskCompleted event), the\ntransition is considered complete and the workflow's deployment is updated. If the\npending workflow task fails or times out, then the transition is canceled and workflow\nremains on the previous deployment."
         }
       }
     },
@@ -7722,23 +7726,6 @@
         }
       }
     },
-    "v1CompletedDeploymentRedirectInfo": {
-      "type": "object",
-      "properties": {
-        "deployment": {
-          "$ref": "#/definitions/v1Deployment",
-          "description": "The target deployment of the redirect. Null means a previously versioned workflow just\ncompleted a redirect to unversioned workers."
-        },
-        "versioningBehavior": {
-          "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "Versioning behavior sent by SDK for this workflow execution on the new deployment.\nMust be present if and only if `deployment` is set."
-        },
-        "versioningBehaviorOverride": {
-          "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "If present, it means the redirect was initiated by a (safe) manual versioning\noverride. Such override is only applied to the workflow when and if the redirect\nsuccessfully completes."
-        }
-      }
-    },
     "v1ContinueAsNewInitiator": {
       "type": "string",
       "enum": [
@@ -8355,15 +8342,6 @@
       "properties": {
         "failure": {
           "$ref": "#/definitions/apifailurev1Failure"
-        }
-      }
-    },
-    "v1FailedDeploymentRedirectInfo": {
-      "type": "object",
-      "properties": {
-        "deployment": {
-          "$ref": "#/definitions/v1Deployment",
-          "description": "The target deployment of the failed redirect attempt. Null means a versioned workflow\ntried to redirect to unversioned workers."
         }
       }
     },
@@ -9752,7 +9730,7 @@
           "format": "date-time",
           "description": "Next time when activity will be scheduled.\nIf activity is currently scheduled or started it will be null."
         },
-        "lastStartedDeployment": {
+        "lastDeployment": {
           "$ref": "#/definitions/v1Deployment",
           "description": "The deployment this activity was dispatched to most recently. Present only if the activity\nwas dispatched to a versioned worker."
         }
@@ -12389,13 +12367,9 @@
         "useVersioning": {
           "type": "boolean",
           "description": "If set, the worker is opting in to worker versioning. Otherwise, this is used only as a\nmarker for workflow reset points and the BuildIDs search attribute."
-        },
-        "deploymentSeriesName": {
-          "type": "string",
-          "description": "Must be sent if user has set a deployment series name (versioning-3)."
         }
       },
-      "title": "Identifies the version of a worker that received or processed a task"
+      "description": "Identifies the version of a worker that received or processed a task\nDeprecated. This message is replaced with `Deployment` and `VersioningBehavior`."
     },
     "v1WorkflowExecution": {
       "type": "object",
@@ -13083,7 +13057,7 @@
         },
         "workerVersion": {
           "$ref": "#/definitions/v1WorkerVersionStamp",
-          "title": "Version info of the worker who processed this workflow task. If present, the `build_id` field\nwithin is also used as `binary_checksum`, which may be omitted in that case (it may also be\npopulated to preserve compatibility).\nDeprecated. Use the info inside the corresponding WorkflowTaskStartedEvent"
+          "description": "Version info of the worker who processed this workflow task. If present, the `build_id` field\nwithin is also used as `binary_checksum`, which may be omitted in that case (it may also be\npopulated to preserve compatibility).\nDeprecated. Use `deployment` and `versioning_behavior` instead."
         },
         "sdkMetadata": {
           "$ref": "#/definitions/v1WorkflowTaskCompletedMetadata",
@@ -13093,9 +13067,13 @@
           "$ref": "#/definitions/v1MeteringMetadata",
           "title": "Local usage data sent during workflow task completion and recorded here for posterity"
         },
-        "completedRedirect": {
-          "$ref": "#/definitions/v1CompletedDeploymentRedirectInfo",
-          "description": "Presence of this value means a deployment redirect completed in this workflow task.\ncompletion event."
+        "deployment": {
+          "$ref": "#/definitions/v1Deployment",
+          "description": "The deployment which completed this task. May or may not be set for unversioned workers,\ndepending if a value is sent by SDK. This value updates workflow execution's\n`versioning_info.deployment`."
+        },
+        "versioningBehavior": {
+          "$ref": "#/definitions/v1VersioningBehavior",
+          "description": "Versioning behavior sent by worker who completed this task for this particular workflow\nexecution. UNSPECIFIED means the task is completed by and unversioned worker.  This value\nupdates workflow execution's `versioning_info.behavior`."
         }
       }
     },
@@ -13216,10 +13194,6 @@
         "workerVersion": {
           "$ref": "#/definitions/v1WorkerVersionStamp",
           "title": "Version info of the worker who processed this workflow task. If present, the `build_id` field\nwithin is also used as `binary_checksum`, which may be omitted in that case (it may also be\npopulated to preserve compatibility).\nDeprecated. Use the info inside the corresponding WorkflowTaskStartedEvent"
-        },
-        "failedRedirect": {
-          "$ref": "#/definitions/v1FailedDeploymentRedirectInfo",
-          "description": "Presence of this value means a deployment redirect failed with this failed workflow task."
         }
       }
     },
@@ -13292,10 +13266,6 @@
         },
         "timeoutType": {
           "$ref": "#/definitions/v1TimeoutType"
-        },
-        "failedRedirect": {
-          "$ref": "#/definitions/v1FailedDeploymentRedirectInfo",
-          "description": "Presence of this value means a deployment redirect failed due to this time out."
         }
       }
     },

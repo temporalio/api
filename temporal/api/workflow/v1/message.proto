@@ -117,22 +117,28 @@ message WorkflowExecutionInfo {
         // Present if user has set an execution-specific versioning override. This override takes
         // precedence over SDK-sent `behavior` and `deployment`.
         VersioningOverride versioning_override = 3;
-        // When present, indicates the workflow is being redirected to a different deployment.
-        // A redirect can only exist during the lifetime of a pending workflow task.
+        // When present, indicates the workflow is transitioning to a different deployment.
+        // A deployment transition can only exist during the lifetime of a pending workflow task.
         // If the pending workflow task completes (at the next WorkflowTaskCompleted event), the
-        // redirect is considered complete and the workflow's deployment is updated. If the pending
-        // workflow task fails or times out, then the redirect is canceled and workflow remains on
-        // the previous deployment.
-        RedirectInfo redirect_info = 4;
+        // transition is considered complete and the workflow's deployment is updated. If the
+        // pending workflow task fails or times out, then the transition is canceled and workflow
+        // remains on the previous deployment.
+        DeploymentTransition deployment_transition = 4;
 
-        message RedirectInfo {
-            // The target deployment of the redirect. Null means a so-far-versioned workflow is
-            // being redirected to unversioned workers.
+        message DeploymentTransition {
+            // The target deployment of the transition. Null means a so-far-versioned workflow is
+            // transitioning to unversioned workers.
             temporal.api.deployment.v1.Deployment deployment = 1;
-            // If present, it means the redirect is initiated by a (safe) manual versioning
-            // override. Such override is only applied to the workflow when and if the redirect
-            // successfully completes.
-            temporal.api.enums.v1.VersioningBehavior behavior_override = 2;
+            // If present, it means the transition is initiated by a safe versioning override
+            // request. Such override change is only applied to the workflow when and if the
+            // transition successfully completes.
+            oneof apply_override {
+                // Override should be set upon completion of the transition. If this is a PINNED
+                // override, transition `deployment` must match `set_override.deployment`.
+                temporal.api.workflow.v1.VersioningOverride set_override = 2;
+                // Override should be unset upon completion of the transition.
+                bool unset_override = 3;
+            }
         }
     }
 }

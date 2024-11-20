@@ -5543,6 +5543,36 @@ components:
       description: |-
         Used by the worker versioning APIs, represents an unordered set of one or more versions which are
          considered to be compatible with each other. Currently the versions are always worker build IDs.
+    CompletedDeploymentRedirectInfo:
+      type: object
+      properties:
+        deployment:
+          allOf:
+            - $ref: '#/components/schemas/Deployment'
+          description: |-
+            The target deployment of the redirect. Null means a previously versioned workflow just
+             completed a redirect to unversioned workers.
+        versioningBehavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            Versioning behavior sent by SDK for this workflow execution on the new deployment.
+             Must be present if and only if `deployment` is set.
+          format: enum
+        versioningBehaviorOverride:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            If present, it means the redirect was initiated by a (safe) manual versioning
+             override. Such override is only applied to the workflow when and if the redirect
+             successfully completes.
+          format: enum
     CountWorkflowExecutionsResponse:
       type: object
       properties:
@@ -6037,6 +6067,15 @@ components:
         control:
           type: string
           description: Deprecated
+    FailedDeploymentRedirectInfo:
+      type: object
+      properties:
+        deployment:
+          allOf:
+            - $ref: '#/components/schemas/Deployment'
+          description: |-
+            The target deployment of the failed redirect attempt. Null means a versioned workflow
+             tried to redirect to unversioned workers.
     FailoverStatus:
       type: object
       properties:
@@ -6378,6 +6417,7 @@ components:
             - EVENT_TYPE_NEXUS_OPERATION_CANCELED
             - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
           type: string
           format: enum
         version:
@@ -7243,7 +7283,7 @@ components:
             Next time when activity will be scheduled.
              If activity is currently scheduled or started it will be null.
           format: date-time
-        lastDeployment:
+        lastStartedDeployment:
           allOf:
             - $ref: '#/components/schemas/Deployment'
           description: |-
@@ -9679,10 +9719,10 @@ components:
             Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
              Identifies the worker deployment to pin the workflow to.
       description: |-
-        Used to manually override the versioning behavior of a specific workflow execution. If set, takes
-         precedence over the SDK-sent Versioning Behavior.
-         To remove the override, call `UpdateWorkflowExecutionOptions` with a null
-         `VersioningBehaviorOverride`, and use the `update_mask` to indicate that it should be mutated.
+        Used to override the versioning behavior and deployment of a specific workflow execution. If set,
+         takes precedence over the worker-sent values. See `WorkflowExecutionInfo.VersioningInfo` for more
+         information. To remove the override, call `UpdateWorkflowExecutionOptions` with a null
+         `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
     WaitPolicy:
       type: object
       properties:
@@ -9732,9 +9772,10 @@ components:
           description: |-
             If set, the worker is opting in to worker versioning. Otherwise, this is used only as a
              marker for workflow reset points and the BuildIDs search attribute.
-      description: |-
-        Identifies the version of a worker that received or processed a task
-         Deprecated. This message is replaced with `Deployment` and `VersioningBehavior`.
+        deploymentSeriesName:
+          type: string
+          description: Must be sent if user has set a deployment series name (versioning-3).
+      description: Identifies the version of a worker that received or processed a task
     WorkflowEvent_EventReference:
       type: object
       properties:
@@ -9797,6 +9838,7 @@ components:
             - EVENT_TYPE_NEXUS_OPERATION_CANCELED
             - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
           type: string
           format: enum
     WorkflowExecution:
@@ -10104,18 +10146,10 @@ components:
     WorkflowExecutionOptionsUpdatedEventAttributes:
       type: object
       properties:
-        workflowExecutionOptionsUpdate:
+        versioningOverride:
           allOf:
-            - $ref: '#/components/schemas/WorkflowExecutionOptions'
-          description: |-
-            Workflow Execution options that were sent in the UpdateWorkflowExecutionOptions request.
-             Partial updates are accepted and controlled by update_mask.
-        updateMask:
-          type: string
-          description: |-
-            Update mask that was sent in the UpdateWorkflowExecutionOptions request.
-             Indicates which fields from `workflow_execution_options_for_update` were applied.
-          format: field-mask
+            - $ref: '#/components/schemas/VersioningBehaviorOverride'
+          description: Versioning override in the mutable state after event has been applied.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:
@@ -10407,28 +10441,24 @@ components:
       properties:
         newTaskQueue:
           type: string
-          description: |-
-            If set to a nonempty string, future workflow tasks for this workflow shall be dispatched on
-             the provided queue.
+          description: Not used.
         newWorkflowTaskTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: If set, update the workflow task timeout to this value.
+          description: Not used.
         newWorkflowRunTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: If set, update the workflow run timeout to this value. May be set to 0 for no timeout.
+          description: Not used.
         newWorkflowExecutionTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: If set, update the workflow execution timeout to this value. May be set to 0 for no timeout.
+          description: Not used.
         upsertedMemo:
           allOf:
             - $ref: '#/components/schemas/Memo'
-          description: |-
-            If set, update the workflow memo with the provided values. The values will be merged with
-             the existing memo. If the user wants to delete values, a default/empty Payload should be
-             used as the value for the key being deleted.
+          description: Not used.
+      description: Not used anywhere. Use case is replaced by WorkflowExecutionOptionsUpdatedEventAttributes
     WorkflowQuery:
       type: object
       properties:
@@ -10466,7 +10496,7 @@ components:
             Version info of the worker who processed this workflow task. If present, the `build_id` field
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
-             Deprecated. Use `deployment` and `versioning_behavior` instead.
+             Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
         sdkMetadata:
           allOf:
             - $ref: '#/components/schemas/WorkflowTaskCompletedMetadata'
@@ -10477,24 +10507,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/MeteringMetadata'
           description: Local usage data sent during workflow task completion and recorded here for posterity
-        deployment:
+        completedRedirect:
           allOf:
-            - $ref: '#/components/schemas/Deployment'
+            - $ref: '#/components/schemas/CompletedDeploymentRedirectInfo'
           description: |-
-            The deployment which completed this task. May or may not be set for unversioned workers,
-             depending if a value is sent by SDK. This value updates workflow execution's
-             `versioning_info.deployment`.
-        versioningBehavior:
-          enum:
-            - VERSIONING_BEHAVIOR_UNSPECIFIED
-            - VERSIONING_BEHAVIOR_PINNED
-            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-          type: string
-          description: |-
-            Versioning behavior sent by worker who completed this task for this particular workflow
-             execution. UNSPECIFIED means the task is completed by and unversioned worker.  This value
-             updates workflow execution's `versioning_info.behavior`.
-          format: enum
+            Presence of this value means a deployment redirect completed in this workflow task.
+             completion event.
     WorkflowTaskCompletedMetadata:
       type: object
       properties:
@@ -10628,6 +10646,10 @@ components:
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
              Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
+        failedRedirect:
+          allOf:
+            - $ref: '#/components/schemas/FailedDeploymentRedirectInfo'
+          description: Presence of this value means a deployment redirect failed with this failed workflow task.
     WorkflowTaskScheduledEventAttributes:
       type: object
       properties:
@@ -10700,6 +10722,10 @@ components:
             - TIMEOUT_TYPE_HEARTBEAT
           type: string
           format: enum
+        failedRedirect:
+          allOf:
+            - $ref: '#/components/schemas/FailedDeploymentRedirectInfo'
+          description: Presence of this value means a deployment redirect failed due to this time out.
     WorkflowType:
       type: object
       properties:

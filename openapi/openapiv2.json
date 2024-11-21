@@ -5548,15 +5548,6 @@
       },
       "description": "Replaces the routing rule with the given source Build ID."
     },
-    "VersioningInfoDeploymentTransition": {
-      "type": "object",
-      "properties": {
-        "deployment": {
-          "$ref": "#/definitions/v1Deployment",
-          "description": "The target deployment of the transition. Null means a so-far-versioned workflow is\ntransitioning to unversioned workers."
-        }
-      }
-    },
     "WorkflowEventEventReference": {
       "type": "object",
       "properties": {
@@ -5566,27 +5557,6 @@
         },
         "eventType": {
           "$ref": "#/definitions/v1EventType"
-        }
-      }
-    },
-    "WorkflowExecutionInfoVersioningInfo": {
-      "type": "object",
-      "properties": {
-        "behavior": {
-          "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "Determines how server should treat this execution when workers are upgraded.\nWhen present it means that this workflow is versioned. This is set after an execution\ncompletes its first workflow task on a versioned worker."
-        },
-        "deployment": {
-          "$ref": "#/definitions/v1Deployment",
-          "description": "The worker deployment to which this workflow is assigned currently.\nMust be present if and only if `behavior` is set."
-        },
-        "versioningOverride": {
-          "$ref": "#/definitions/v1VersioningOverride",
-          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `deployment` when override is PINNED)."
-        },
-        "deploymentTransition": {
-          "$ref": "#/definitions/VersioningInfoDeploymentTransition",
-          "description": "When present, indicates the workflow is transitioning to a different deployment.\nA deployment transition can only exist when there is a pending/started workflow task.\nOnce the pending workflow task completes on the transition deployment, the transition\ncompletes and the workflow's deployment (or versioning override) is updated."
         }
       }
     },
@@ -7946,6 +7916,16 @@
       ],
       "default": "DEPLOYMENT_REACHABILITY_UNSPECIFIED",
       "description": "Specify the reachability level for a deployment so users can decide if it is time to\ndecommission the deployment.\n\n - DEPLOYMENT_REACHABILITY_UNSPECIFIED: Reachability level is not specified.\n - DEPLOYMENT_REACHABILITY_REACHABLE: The deployment is reachable by new and/or open workflows. The deployment cannot be\ndecommissioned safely.\n - DEPLOYMENT_REACHABILITY_CLOSED_WORKFLOWS_ONLY: The deployment is not reachable by new or open workflows, but might be still needed by\nQueries sent to closed workflows. The deployment can be decommissioned safely if user does\nnot query closed workflows.\n - DEPLOYMENT_REACHABILITY_UNREACHABLE: The deployment is not reachable by any workflow because all the workflows who needed this\ndeployment went out of retention period. The deployment can be decommissioned safely."
+    },
+    "v1DeploymentTransition": {
+      "type": "object",
+      "properties": {
+        "deployment": {
+          "$ref": "#/definitions/v1Deployment",
+          "description": "The target deployment of the transition. Null means a so-far-versioned workflow is\ntransitioning to unversioned workers."
+        }
+      },
+      "description": "Holds information about ongoing transition of a workflow execution from one deployment to another.\nExperimental. Deployment transition is experimental and might change in the future."
     },
     "v1DeprecateNamespaceResponse": {
       "type": "object",
@@ -12630,8 +12610,8 @@
           "title": "The first run ID in the execution chain.\nExecutions created via the following operations are considered to be in the same chain\n- ContinueAsNew\n- Workflow Retry\n- Workflow Reset\n- Cron Schedule"
         },
         "versioningInfo": {
-          "$ref": "#/definitions/WorkflowExecutionInfoVersioningInfo",
-          "description": "Holds all the information about versioning for this particular execution.\nExperimental. Versioning info is experimental and might change in the future."
+          "$ref": "#/definitions/v1WorkflowExecutionVersioningInfo",
+          "description": "When present, it means the workflow execution is versioned, or is transitioning from\nunversioned workers to versioned ones.\nExperimental. Versioning info is experimental and might change in the future."
         }
       }
     },
@@ -12938,6 +12918,28 @@
           "description": "The cause of rejection."
         }
       }
+    },
+    "v1WorkflowExecutionVersioningInfo": {
+      "type": "object",
+      "properties": {
+        "behavior": {
+          "$ref": "#/definitions/v1VersioningBehavior",
+          "description": "Determines how server should treat this execution when workers are upgraded.\nWhen present it means that this workflow is versioned. This is set after an execution\ncompletes its first workflow task on a versioned worker."
+        },
+        "deployment": {
+          "$ref": "#/definitions/v1Deployment",
+          "description": "The worker deployment to which this workflow is assigned currently.\nMust be present if and only if `behavior` is set."
+        },
+        "versioningOverride": {
+          "$ref": "#/definitions/v1VersioningOverride",
+          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `deployment` when override is PINNED)."
+        },
+        "deploymentTransition": {
+          "$ref": "#/definitions/v1DeploymentTransition",
+          "description": "When present, indicates the workflow is transitioning to a different deployment. Can\nindicate one of the following transitions: unversioned -> versioned, versioned -> versioned\non a different deployment, or versioned -> unversioned.\nA deployment transition can only exist when there is a pending/started workflow task.\nOnce the pending workflow task completes on the transition deployment, the transition\ncompletes and the workflow's deployment (or versioning override) is updated."
+        }
+      },
+      "description": "Holds all the information about versioning for a workflow execution.\nExperimental. Versioning info is experimental and might change in the future."
     },
     "v1WorkflowIdConflictPolicy": {
       "type": "string",

@@ -103,35 +103,42 @@ message WorkflowExecutionInfo {
     // - Cron Schedule
     string first_run_id = 21;
 
-    // Holds all the information about versioning for this particular execution.
+    // When present, it means the workflow execution is versioned, or is transitioning from
+    // unversioned workers to versioned ones.
     // Experimental. Versioning info is experimental and might change in the future.
-    VersioningInfo versioning_info = 22;
+    WorkflowExecutionVersioningInfo versioning_info = 22;
+}
 
-    message VersioningInfo {
-        // Determines how server should treat this execution when workers are upgraded.
-        // When present it means that this workflow is versioned. This is set after an execution
-        // completes its first workflow task on a versioned worker.
-        temporal.api.enums.v1.VersioningBehavior behavior = 1;
-        // The worker deployment to which this workflow is assigned currently.
-        // Must be present if and only if `behavior` is set.
-        temporal.api.deployment.v1.Deployment deployment = 2;
-        // Present if user has set an execution-specific versioning override. This override takes
-        // precedence over SDK-sent `behavior` (and `deployment` when override is PINNED).
-        VersioningOverride versioning_override = 3;
-        // When present, indicates the workflow is transitioning to a different deployment.
-        // A deployment transition can only exist when there is a pending/started workflow task.
-        // Once the pending workflow task completes on the transition deployment, the transition
-        // completes and the workflow's deployment (or versioning override) is updated.
-        DeploymentTransition deployment_transition = 4;
+// Holds all the information about versioning for a workflow execution.
+// Experimental. Versioning info is experimental and might change in the future.
+message WorkflowExecutionVersioningInfo {
+    // Determines how server should treat this execution when workers are upgraded.
+    // When present it means that this workflow is versioned. This is set after an execution
+    // completes its first workflow task on a versioned worker.
+    temporal.api.enums.v1.VersioningBehavior behavior = 1;
+    // The worker deployment to which this workflow is assigned currently.
+    // Must be present if and only if `behavior` is set.
+    temporal.api.deployment.v1.Deployment deployment = 2;
+    // Present if user has set an execution-specific versioning override. This override takes
+    // precedence over SDK-sent `behavior` (and `deployment` when override is PINNED).
+    VersioningOverride versioning_override = 3;
+    // When present, indicates the workflow is transitioning to a different deployment. Can
+    // indicate one of the following transitions: unversioned -> versioned, versioned -> versioned
+    // on a different deployment, or versioned -> unversioned.
+    // A deployment transition can only exist when there is a pending/started workflow task.
+    // Once the pending workflow task completes on the transition deployment, the transition
+    // completes and the workflow's deployment (or versioning override) is updated.
+    DeploymentTransition deployment_transition = 4;
+}
 
-        message DeploymentTransition {
-            // The target deployment of the transition. Null means a so-far-versioned workflow is
-            // transitioning to unversioned workers.
-            temporal.api.deployment.v1.Deployment deployment = 1;
+// Holds information about ongoing transition of a workflow execution from one deployment to another.
+// Experimental. Deployment transition is experimental and might change in the future.
+message DeploymentTransition {
+    // The target deployment of the transition. Null means a so-far-versioned workflow is
+    // transitioning to unversioned workers.
+    temporal.api.deployment.v1.Deployment deployment = 1;
 
-            // Later: safe transition info
-        }
-    }
+    // Later: safe transition info
 }
 
 message WorkflowExecutionConfig {

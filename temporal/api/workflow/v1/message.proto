@@ -104,6 +104,7 @@ message WorkflowExecutionInfo {
     string first_run_id = 21;
 
     // Holds all the information about versioning for this particular execution.
+    // Experimental. Versioning info is experimental and might change in the future.
     VersioningInfo versioning_info = 22;
 
     message VersioningInfo {
@@ -115,30 +116,20 @@ message WorkflowExecutionInfo {
         // Must be present if and only if `behavior` is set.
         temporal.api.deployment.v1.Deployment deployment = 2;
         // Present if user has set an execution-specific versioning override. This override takes
-        // precedence over SDK-sent `behavior` and `deployment`.
+        // precedence over SDK-sent `behavior` (and `deployment` when override is PINNED).
         VersioningOverride versioning_override = 3;
         // When present, indicates the workflow is transitioning to a different deployment.
-        // A deployment transition can only exist during the lifetime of a pending workflow task.
-        // If the pending workflow task completes (at the next WorkflowTaskCompleted event), the
-        // transition is considered complete and the workflow's deployment is updated. If the
-        // pending workflow task fails or times out, then the transition is canceled and workflow
-        // remains on the previous deployment.
+        // A deployment transition can only exist when there is a pending/started workflow task.
+        // Once the pending workflow task completes on the transition deployment, the transition
+        // completes and the workflow's deployment (or versioning override) is updated.
         DeploymentTransition deployment_transition = 4;
 
         message DeploymentTransition {
             // The target deployment of the transition. Null means a so-far-versioned workflow is
             // transitioning to unversioned workers.
             temporal.api.deployment.v1.Deployment deployment = 1;
-            // If present, it means the transition is initiated by a safe versioning override
-            // request. Such override change is only applied to the workflow when and if the
-            // transition successfully completes.
-            oneof apply_override {
-                // Override should be set upon completion of the transition. If this is a PINNED
-                // override, transition `deployment` must match `set_override.deployment`.
-                temporal.api.workflow.v1.VersioningOverride set_override = 2;
-                // Override should be unset upon completion of the transition.
-                bool unset_override = 3;
-            }
+
+            // Later: safe transition info
         }
     }
 }

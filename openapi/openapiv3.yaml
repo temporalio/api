@@ -9690,15 +9690,6 @@ components:
           description: |-
             The target deployment of the transition. Null means a so-far-versioned workflow is
              transitioning to unversioned workers.
-        setOverride:
-          allOf:
-            - $ref: '#/components/schemas/VersioningOverride'
-          description: |-
-            Override should be set upon completion of the transition. If this is a PINNED
-             override, transition `deployment` must match `set_override.deployment`.
-        unsetOverride:
-          type: boolean
-          description: Override should be unset upon completion of the transition.
     VersioningOverride:
       type: object
       properties:
@@ -10094,7 +10085,9 @@ components:
         versioningInfo:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionInfo_VersioningInfo'
-          description: Holds all the information about versioning for this particular execution.
+          description: |-
+            Holds all the information about versioning for this particular execution.
+             Experimental. Versioning info is experimental and might change in the future.
     WorkflowExecutionInfo_VersioningInfo:
       type: object
       properties:
@@ -10120,17 +10113,15 @@ components:
             - $ref: '#/components/schemas/VersioningOverride'
           description: |-
             Present if user has set an execution-specific versioning override. This override takes
-             precedence over SDK-sent `behavior` and `deployment`.
+             precedence over SDK-sent `behavior` (and `deployment` when override is PINNED).
         deploymentTransition:
           allOf:
             - $ref: '#/components/schemas/VersioningInfo_DeploymentTransition'
           description: |-
             When present, indicates the workflow is transitioning to a different deployment.
-             A deployment transition can only exist during the lifetime of a pending workflow task.
-             If the pending workflow task completes (at the next WorkflowTaskCompleted event), the
-             transition is considered complete and the workflow's deployment is updated. If the
-             pending workflow task fails or times out, then the transition is canceled and workflow
-             remains on the previous deployment.
+             A deployment transition can only exist when there is a pending/started workflow task.
+             Once the pending workflow task completes on the transition deployment, the transition
+             completes and the workflow's deployment (or versioning override) is updated.
     WorkflowExecutionOptions:
       type: object
       properties:

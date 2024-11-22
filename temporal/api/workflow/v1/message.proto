@@ -103,8 +103,8 @@ message WorkflowExecutionInfo {
     // - Cron Schedule
     string first_run_id = 21;
 
-    // When present, it means the workflow execution is versioned, or is transitioning from
-    // unversioned workers to versioned ones.
+    // Absent value means the workflow execution is not versioned. When present, the execution might
+    // be versioned or unversioned, depending on `versioning_info.behavior`.
     // Experimental. Versioning info is experimental and might change in the future.
     WorkflowExecutionVersioningInfo versioning_info = 22;
 }
@@ -112,22 +112,42 @@ message WorkflowExecutionInfo {
 // Holds all the information about versioning for a workflow execution.
 // Experimental. Versioning info is experimental and might change in the future.
 message WorkflowExecutionVersioningInfo {
-    // Determines how server should treat this execution when workers are upgraded.
-    // When present it means that this workflow is versioned. This is set after an execution
-    // completes its first workflow task on a versioned worker.
+    // Versioning behavior determines how server should treat this execution when workers are
+    // upgraded. When present it means this workflow execution is versioned; UNSPECIFIED means
+    // unversioned. See the comments in `VersioningBehavior` enum for more info about different
+    // behaviors.
+    // This field is set after an execution completes its first workflow task on a versioned
+    // worker, and on completion of every subsequent workflow task.
+    // Note that `behavior` could be overridden by `versioning_override`.
     temporal.api.enums.v1.VersioningBehavior behavior = 1;
-    // The worker deployment to which this workflow is assigned currently.
-    // Must be present if and only if `behavior` is set.
+    // The worker deployment that completed the last workflow task of this workflow execution. Must
+    // be present `behavior` is set. Absent value means no workflow task is completed, or the last
+    // workflow task was completed by an unversioned worker. Unversioned workers may still send a
+    // deployment value in which case it will be populated here, therefore the right way to check
+    // if an execution is versioned or not is via the `behavior` field.
+    // Note that `deployment` could be overridden by `versioning_override`.
     temporal.api.deployment.v1.Deployment deployment = 2;
     // Present if user has set an execution-specific versioning override. This override takes
-    // precedence over SDK-sent `behavior` (and `deployment` when override is PINNED).
+    // precedence over SDK-sent `behavior` (and `deployment` when override is PINNED). An override
+    // can be set when starting a new execution, as well as afterwards by calling the
+    // `UpdateWorkflowExecutionOptions` API.
     VersioningOverride versioning_override = 3;
     // When present, indicates the workflow is transitioning to a different deployment. Can
     // indicate one of the following transitions: unversioned -> versioned, versioned -> versioned
     // on a different deployment, or versioned -> unversioned.
-    // A deployment transition can only exist when there is a pending/started workflow task.
-    // Once the pending workflow task completes on the transition deployment, the transition
-    // completes and the workflow's deployment (or versioning override) is updated.
+    // Not applicable to workflows with PINNED behavior.
+    // A workflow with AUTO_UPGRADE behavior automatically starts a transition to the task queue's
+    // current deployment when the workflow activates again (creates new workflow task), if the task
+    // queue's current deployment is different from the workflow's deployment. Also, if
+    // the AUTO_UPGRADE workflow is stuck due to backlogged activity or workflow tasks, those tasks
+    // will be redirected to the task queue's current deployment and as soon as a poller of that
+    // deployment is available to receive the task, the workflow will automatically start a
+    // transition to that deployment and continue execution there.
+    // A deployment transition can only exist when there is a pending or started workflow task.
+    // Once the pending workflow task completes on the transition target deployment, the transition
+    // completes and the workflow's `deployment` and possible `behavior` fields are updated.
+    // Pending activities will not start new attempts during a transition. Once the transition is
+    // completed, pending activities will start their next attempt on the new deployment.
     DeploymentTransition deployment_transition = 4;
 }
 

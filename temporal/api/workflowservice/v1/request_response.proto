@@ -287,15 +287,15 @@ message PollWorkflowTaskQueueResponse {
     int64 started_event_id = 5;
     // Starting at 1, the number of attempts to complete this task by any worker.
     int32 attempt = 6;
-    // A hint that there are more tasks already present in this task queue 
+    // A hint that there are more tasks already present in this task queue
     // partition. Can be used to prioritize draining a sticky queue.
     //
     // Specifically, the returned number is the number of tasks remaining in
     // the in-memory buffer for this partition, which is currently capped at
-    // 1000. Because sticky queues only have one partition, this number is 
-    // more useful when draining them. Normal queues, typically having more than one 
-    // partition, will return a number representing only some portion of the 
-    // overall backlog. Subsequent RPCs may not hit the same partition as 
+    // 1000. Because sticky queues only have one partition, this number is
+    // more useful when draining them. Normal queues, typically having more than one
+    // partition, will return a number representing only some portion of the
+    // overall backlog. Subsequent RPCs may not hit the same partition as
     // this call.
     int64 backlog_count_hint = 7;
     // The history for this workflow, which will either be complete or partial. Partial histories
@@ -361,14 +361,25 @@ message RespondWorkflowTaskCompletedRequest {
     temporal.api.sdk.v1.WorkflowTaskCompletedMetadata sdk_metadata = 12;
     // Local usage data collected for metering
     temporal.api.common.v1.MeteringMetadata metering_metadata = 13;
-    reserved 14;
-    reserved "capabilities";
+    // All capabilities the SDK supports.
+    Capabilities capabilities = 14;
     // Deployment info of the worker that completed this task. Must be present if user has set
     // `WorkerDeploymentOptions` regardless of versioning being enabled or not.
     temporal.api.deployment.v1.Deployment deployment = 15;
     // Versioning behavior of this workflow execution as set on the worker that completed this task.
     // UNSPECIFIED means versioning is not enabled in the worker.
     temporal.api.enums.v1.VersioningBehavior versioning_behavior = 16;
+
+    // SDK capability details.
+    message Capabilities {
+      // True if the SDK can handle speculative workflow task with command events. If true, the
+      // server may choose, at its discretion, to discard a speculative workflow task even if that
+      // speculative task included command events the SDK had not previously processed.
+      //
+      // (-- api-linter: core::0140::prepositions=disabled
+      //     aip.dev/not-precedent: "with" used to describe the workflow task. --)
+      bool discard_speculative_workflow_task_with_events = 1;
+    }
 }
 
 message RespondWorkflowTaskCompletedResponse {
@@ -484,6 +495,9 @@ message RecordActivityTaskHeartbeatResponse {
     // Will be set to true if the activity has been asked to cancel itself. The SDK should then
     // notify the activity of cancellation if it is still running.
     bool cancel_requested = 1;
+
+    // Will be set to true if the activity is paused.
+    bool activity_paused = 2;
 }
 
 message RecordActivityTaskHeartbeatByIdRequest {
@@ -670,8 +684,7 @@ message SignalWorkflowExecutionRequest {
     // Headers that are passed with the signal to the processing workflow.
     // These can include things like auth or tracing tokens.
     temporal.api.common.v1.Header header = 8;
-    // Indicates that a new workflow task should not be generated when this signal is received.
-    bool skip_generate_workflow_task = 9;
+    reserved 9;
 
     // Links to be associated with the WorkflowExecutionSignaled event.
     repeated temporal.api.common.v1.Link links = 10;
@@ -724,13 +737,11 @@ message SignalWithStartWorkflowExecutionRequest {
     temporal.api.common.v1.Header header = 19;
     // Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
     // Note that the signal will be delivered with the first workflow task. If the workflow gets
-    // another SignalWithStartWorkflow before the delay and `skip_generate_workflow_task` is false
-    // or not set, a workflow task will be dispatched immediately and the rest of the delay period
-    // will be ignored, even if that request also had a delay. Signal via SignalWorkflowExecution
-    // will not unblock the workflow.
+    // another SignalWithStartWorkflow before the delay a workflow task will be dispatched immediately
+    // and the rest of the delay period will be ignored, even if that request also had a delay.
+    // Signal via SignalWorkflowExecution will not unblock the workflow.
     google.protobuf.Duration workflow_start_delay = 20;
-    // Indicates that a new workflow task should not be generated when this signal is received.
-    bool skip_generate_workflow_task = 21;
+    reserved 21;
     // Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo
     // for use by user interfaces to display the fixed as-of-start summary and details of the
     // workflow.
@@ -751,6 +762,9 @@ message SignalWithStartWorkflowExecutionResponse {
 
 message ResetWorkflowExecutionRequest {
     string namespace = 1;
+    // The workflow to reset. If this contains a run ID then the workflow will be reset back to the
+    // provided event ID in that run. Otherwise it will be reset to the provided event ID in the
+    // current run. In all cases the current run will be terminated and a new run started.
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
     string reason = 3;
     // The id of a `WORKFLOW_TASK_COMPLETED`,`WORKFLOW_TASK_TIMED_OUT`, `WORKFLOW_TASK_FAILED`, or
@@ -1718,12 +1732,12 @@ message ExecuteMultiOperationResponse {
 message UpdateActivityOptionsByIdRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
-    // Id of the workflow which scheduled this activity
+    // ID of the workflow which scheduled this activity
     string workflow_id = 2;
-    // Run Id of the workflow which scheduled this activity
+    // Run ID of the workflow which scheduled this activity
     // if empty - latest workflow is used
     string run_id = 3;
-    // Id of the activity we're updating
+    // ID of the activity we're updating
     string activity_id = 4;
 
     // The identity of the client who initiated this request
@@ -1734,11 +1748,104 @@ message UpdateActivityOptionsByIdRequest {
 
     // Controls which fields from `activity_options` will be applied
     google.protobuf.FieldMask update_mask = 7;
+
+    // Used to de-dupe requests
+    string request_id = 8;
 }
 
 message UpdateActivityOptionsByIdResponse {
     // Activity options after an update
     temporal.api.activity.v1.ActivityOptions activity_options = 1;
+}
+
+message PauseActivityByIdRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+    // ID of the activity we're updating.
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Used to de-dupe requests.
+    string request_id = 6;
+}
+
+message PauseActivityByIdResponse {
+}
+
+message UnpauseActivityByIdRequest {
+    message ResumeOperation {
+        // Indicates that if the activity is waiting to retry, it will  be scheduled immediately.
+        bool no_wait = 1;
+    }
+
+    message ResetOperation {
+        // Indicates that the activity should be scheduled immediately.
+        // Note that this may run simultaneously with any existing executions of the activity.
+        bool no_wait = 1;
+        // If set, the Heartbeat Details will be cleared out to make the Activity start over from the beginning
+        bool reset_heartbeat = 2;
+    }
+
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+    // ID of the activity we're updating.
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Used to de-dupe requests.
+    string request_id = 6;
+
+    // There are two options to resume the activity - with 'resume' or with 'reset'.
+    oneof operation{
+        ResumeOperation resume = 7;
+        ResetOperation reset = 8;
+    }
+}
+
+message UnpauseActivityByIdResponse {
+}
+
+message ResetActivityByIdRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+    // ID of the activity we're updating.
+    string activity_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Used to de-dupe requests.
+    string request_id = 6;
+
+    // Indicates that activity should be scheduled immediately.
+    // If this flag doesn't set, and activity currently running - temporal will wait until activity is completed.
+    bool no_wait = 7;
+
+    // Indicates that activity should reset heartbeat details.
+    // This flag will be applied only to the new instance of the activity.
+    bool reset_heartbeat = 8;
+}
+
+message ResetActivityByIdResponse {
 }
 
 message UpdateWorkflowExecutionOptionsRequest {

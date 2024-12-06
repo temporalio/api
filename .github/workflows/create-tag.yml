@@ -1,0 +1,121 @@
+name: "Create a tag"
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to be tagged"
+        required: true
+        default: main
+      tag:
+        description: "Tag for new version (v1.23.4)"
+        required: true
+      create_release:
+        description: "Create release and set as latest"
+        type: boolean
+        default: true
+      base_tag:
+        description: "Base tag to generate commit list for release notes"
+        required: false
+      release_api_go:
+        description: "Create release for api-go"
+        type: boolean
+        default: true
+
+jobs:
+  create-tag:
+    name: "Create a tag"
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
+          private-key: ${{ secrets.TEMPORAL_CICD_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          token: ${{ steps.generate_token.outputs.token }}
+          persist-credentials: true
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Github credentials
+        run: |
+          git config --local user.name 'Temporal Data'
+          git config --local user.email 'commander-data@temporal.io'
+
+      - name: Prepare new version string
+        id: new_version
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [[ "${TAG}" =~ ^v.* ]]; then
+              echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          else
+              echo "tag=v${TAG}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate input
+        env:
+          BRANCH: ${{ inputs.branch }}
+          TAG: ${{ steps.new_version.outputs.tag }}
+          CREATE_RELEASE: ${{ inputs.create_release }}
+          BASE_TAG: ${{ inputs.base_tag }}
+        run: |
+          if [[ -n "$(git tag -l "$TAG")" && "$(git rev-parse "$TAG")" != "$(git rev-parse HEAD)" ]]; then
+            echo "::error::Tag already exists and it doesn't reference current HEAD of branch $BRANCH"
+            exit 1
+          fi
+
+          if [[ "$CREATE_RELEASE" == "true" ]]; then
+            if [[ -z "$BASE_TAG" || -z "$(git tag -l "$BASE_TAG")" ]]; then
+              echo "::error::Base tag not specified or does not exist"
+              exit 1
+            fi
+          fi
+
+      - name: Create and push tag
+        env:
+          BRANCH: ${{ inputs.branch }}
+          TAG: ${{ steps.new_version.outputs.tag }}
+        run: |
+          if [[ -z "$(git tag -l "$TAG")" ]]; then
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
+      - name: Create release
+        if: ${{ inputs.create_release == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+          TAG: ${{ steps.new_version.outputs.tag }}
+          BASE_TAG: ${{ inputs.base_tag }}
+        run: |
+          gh repo set-default ${{ github.repository }}
+          gh release create "$TAG" --verify-tag --latest --generate-notes --notes-start-tag "$BASE_TAG"
+
+      - name: Dispatch call to publish api-go
+        if: ${{ github.events.input.release_api_go == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+          BRANCH: ${{ inputs.branch }}
+          TAG: ${{ steps.new_version.outputs.tag }}
+          CREATE_RELEASE: ${{ inputs.create_release }}
+          BASE_TAG: ${{ inputs.base_tag }}
+        run: |
+          gh workflow run create-tag.yml -R https://github.com/temporalio/api-go \
+            -r master \
+            -f branch="${BRANCH}" \
+            -f tag="${TAG}" \
+            -f create_release="${CREATE_RELEASE}" \
+            -f base_tag="${BASE_TAG}"

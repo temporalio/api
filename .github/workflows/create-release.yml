@@ -1,4 +1,4 @@
-name: "Create a tag"
+name: "Create release"
 
 on:
   workflow_dispatch:
@@ -10,10 +10,6 @@ on:
       tag:
         description: "Tag for new version (v1.23.4)"
         required: true
-      create_release:
-        description: "Create release and set as latest"
-        type: boolean
-        default: true
       base_tag:
         description: "Base tag to generate commit list for release notes"
         required: false
@@ -26,55 +22,61 @@ jobs:
     name: "Prepare inputs"
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.new_version.output.tag }}
-      api_commit_sha: ${{ steps.new_version.output.commit_sha }}
-      api_go_commit_sha: ${{ steps.pin_api_go.output.api_go_commit_sha }}
+      api_commit_sha: ${{ steps.pin_commits.outputs.api_commit_sha }}
+      api_go_commit_sha: ${{ steps.pin_commits.outputs.api_go_commit_sha }}
     steps:
-      - name: Checkout
+      - name: Checkout api
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
           fetch-depth: 0
           fetch-tags: true
+          path: api
 
-      - name: Prepare new version string
-        id: new_version
-        env:
-          TAG: ${{ github.event.inputs.tag }}
-        run: |
-          if [[ "${TAG}" =~ ^v.* ]]; then
-              echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          else
-              echo "tag=v${TAG}" >> "$GITHUB_OUTPUT"
-          fi
-          echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Checkout api-go
+        uses: actions/checkout@v4
+        with:
+          repository: temporalio/api-go
+          ref: ${{ github.event.inputs.branch }}
+          submodules: true
+          path: api-go
 
       - name: Validate inputs
         env:
           BRANCH: ${{ github.event.inputs.branch }}
-          TAG: ${{ steps.new_version.outputs.tag }}
-          CREATE_RELEASE: ${{ github.event.inputs.create_release }}
+          TAG: ${{ github.event.inputs.tag }}
           BASE_TAG: ${{ github.event.inputs.base_tag }}
+        working-directory: ./api
         run: |
-          if [[ -n "$(git tag -l "$TAG")" && "$(git rev-parse "$TAG")" != "$(git rev-parse HEAD)" ]]; then
-            echo "::error::Tag already exists and it doesn't reference current HEAD of branch $BRANCH"
+          if ! [[ "${TAG}" =~ ^v.* ]]; then
+            echo "::error::Tag is not prefixed with 'v'"
             exit 1
           fi
 
-          if [[ "$CREATE_RELEASE" == "true" ]]; then
-            if [[ -z "$BASE_TAG" || -z "$(git tag -l "$BASE_TAG")" ]]; then
-              echo "::error::Base tag not specified or does not exist"
-              exit 1
-            fi
+          if [[ -n "$(git tag -l "$TAG")" ]]; then
+            echo "::error::Tag already exists"
+            exit 1
           fi
 
-      - name: Pin api-go commit sha
-        id: pin_api_go
+          if [[ -z "$BASE_TAG" || -z "$(git tag -l "$BASE_TAG")" ]]; then
+            echo "::error::Base tag not specified or does not exist"
+            exit 1
+          fi
+
+      - name: Pin commits sha
+        id: pin_commits
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: ${{ github.event.inputs.branch }}
         run: |
-          API_GO_COMMIT_SHA=$(gh api /repos/temporalio/api-go/branches/$BRANCH --jq '.commit.sha')
+          API_COMMIT_SHA=$(git -C ./api rev-parse HEAD)
+          API_GO_COMMIT_SHA=$(git -C ./api-go rev-parse HEAD)
+          API_GO_API_COMMIT_SHA=$(git -C ./api-go rev-parse HEAD:proto/api)
+          if [[ "${API_GO_API_COMMIT_SHA}" != "${API_COMMIT_SHA}" ]]; then
+            echo "::error::api-go ref ${API_GO_COMMIT_SHA} does not reference api ref ${API_COMMIT_SHA}, api-go repo might not be up-to-date."
+            exit 1
+          fi
+          echo "api_commit_sha=$API_COMMIT_SHA" >> "$GITHUB_OUTPUT"
           echo "api_go_commit_sha=$API_GO_COMMIT_SHA" >> "$GITHUB_OUTPUT"
 
   check-compatibility-sdk-go:
@@ -82,11 +84,11 @@ jobs:
     if: ${{ github.event.inputs.skip_sdk_check == false || github.event.inputs.skip_sdk_check == 'false' }}
     uses: temporalio/api-go/.github/workflows/check-sdk-compat.yml@master
     with:
-      sdk_commit: latest
-      api_commit: ${{ needs.prepare-inputs.outputs.api_go_commit_sha }}
+      sdk_ref: latest
+      api_ref: ${{ needs.prepare-inputs.outputs.api_go_commit_sha }}
 
-  create-tag:
-    name: "Create a tag"
+  create-release:
+    name: "Create release"
     needs: [prepare-inputs, check-compatibility-sdk-go]
     if: |
       !cancelled() &&
@@ -106,47 +108,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare-inputs.outputs.commit_sha }}
+          ref: ${{ needs.prepare-inputs.outputs.api_commit_sha }}
           token: ${{ steps.generate_token.outputs.token }}
-          persist-credentials: true
-          fetch-depth: 0
-          fetch-tags: true
 
       - name: Set up Github credentials
         run: |
           git config --local user.name 'Temporal Data'
           git config --local user.email 'commander-data@temporal.io'
 
-      - name: Create and push tag
-        env:
-          TAG: ${{ needs.prepare-inputs.outputs.tag }}
-        run: |
-          if [[ -z "$(git tag -l "$TAG")" ]]; then
-            git tag "$TAG"
-            git push origin "$TAG"
-          fi
-
       - name: Create release
-        if: ${{ github.event.inputs.create_release == true || github.event.inputs.create_release == 'true' }}
         env:
           GH_TOKEN: ${{ steps.generate_token.outputs.token }}
-          TAG: ${{ needs.prepare-inputs.outputs.tag }}
+          REF: ${{ needs.prepare-inputs.outputs.api_commit_sha }}
+          TAG: ${{ github.event.inputs.tag }}
           BASE_TAG: ${{ github.event.inputs.base_tag }}
         run: |
           gh repo set-default ${{ github.repository }}
-          gh release create "$TAG" --verify-tag --latest --generate-notes --notes-start-tag "$BASE_TAG"
+          gh release create "$TAG" --target "$REF" --latest --generate-notes --notes-start-tag "$BASE_TAG" --draft
 
   release-api-go:
-    needs: create-tag
+    needs: [prepare-inputs, create-release]
     if: |
       !cancelled() &&
-      (needs.create-tag.result == 'success') &&
-      (github.event.inputs.create_release == true || github.event.inputs.create_release == 'true')
-    uses: temporalio/api-go/.github/workflows/create-tag.yml@master
+      needs.create-release.result == 'success'
+    uses: temporalio/api-go/.github/workflows/create-release.yml@master
     with:
       ref: ${{ needs.prepare-inputs.outputs.api_go_commit_sha }}
-      tag: ${{ needs.prepare-inputs.outputs.tag }}
-      create_release: true
+      tag: ${{ github.event.inputs.tag }}
+      api_commit_sha: ${{ needs.prepare-inputs.outputs.api_commit_sha }}
       base_tag: ${{ github.event.inputs.base_tag }}
-      skip_sdk_check: true
     secrets: inherit

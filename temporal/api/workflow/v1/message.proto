@@ -43,6 +43,9 @@ import "temporal/api/failure/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
 
+
+// Hold basic information about a workflow execution.
+// This structure is a part of visibility, and thus contain a limited subset of information.
 message WorkflowExecutionInfo {
     temporal.api.common.v1.WorkflowExecution execution = 1;
     temporal.api.common.v1.WorkflowType type = 2;
@@ -107,6 +110,25 @@ message WorkflowExecutionInfo {
     // be versioned or unversioned, depending on `versioning_info.behavior` and `versioning_info.versioning_override`.
     // Experimental. Versioning info is experimental and might change in the future.
     WorkflowExecutionVersioningInfo versioning_info = 22;
+}
+
+// Holds all the extra information about workflow execution that is not part of Visibility.
+message WorkflowExecutionExtendedInfo {
+    // Workflow execution expiration time is defined as workflow start time plus expiration timeout.
+    // Workflow start time may change after workflow reset.
+    google.protobuf.Timestamp execution_expiration_time = 1;
+
+    // Workflow run expiration time is defined as current workflow run start time plus workflow run timeout.
+    google.protobuf.Timestamp run_expiration_time = 2;
+
+    // indicates if the workflow received a cancel request
+    bool cancel_requested = 3;
+
+    // Last workflow reset time. Nil if the workflow was never reset.
+    google.protobuf.Timestamp last_reset_time = 4;
+
+    // Original workflow start time.
+    google.protobuf.Timestamp original_start_time = 5;
 }
 
 // Holds all the information about versioning for a workflow execution.

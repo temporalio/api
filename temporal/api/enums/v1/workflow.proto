@@ -140,23 +140,29 @@ enum TimeoutType {
 }
 
 enum VersioningBehavior {
-    // Workflow execution is unversioned. This is the legacy behavior. An unversioned workflow's
-    // task may go to any unversioned worker who is polling for the task queue.
+    // Workflow execution is Unversioned. This is the legacy behavior. An Unversioned workflow's
+    // task may go to any Unversioned worker who is polling for the Task Queue.
+    // Unversioned workflows can become Versioned if the Task Queue is polled from a Versioned
+    // Build that is the Current (or Ramping) Build of its Deployment. In that case, the
+    // Unversioned workflows will be sent to the Versioned Build and become Versioned after
+    // completing their first workflow task there.
     VERSIONING_BEHAVIOR_UNSPECIFIED = 0;
-    // Workflow will be pinned to the current deployment until completion. Can be overridden
-    // explicitly via `UpdateWorkflowExecutionOptions` API.
-    // Activities of `PINNED` workflows are sent to the same deployment. Exception to this would be
-    // when the activity task queue workers are not present in the workflows deployment, in which
-    // case the activity will be sent to the current deployment of its own task queue.
+    // Workflow will be pinned to their current Build (as specified in versioning_info.build_id)
+    // until completion. Can be overridden explicitly via `UpdateWorkflowExecutionOptions` API.
+    // Activities of `PINNED` workflows are sent to the same Build. Exception to this would be
+    // when the activity Task Queue workers are not present in the workflow's current Build, in
+    // which case the activity will be sent to a different Build (or Unversioned workers) according
+    // to the activity's Task Queue situation.
     VERSIONING_BEHAVIOR_PINNED = 1;
-    // Workflow will automatically move to the current deployment of its task queue when the next
+    // Workflow will automatically move to the current Build of its Task Queue when the next
     // workflow task is dispatched.
-    // Activities of `AUTO_UPGRADE` workflows are sent to the current deployment of the workflow
-    // execution based on the last completed workflow task. Exception to this would be when the
-    // activity task queue workers are not present in the workflow's deployment, in which case the
-    // activity will be sent to the current deployment of its own task queue.
-    // Workflows stuck on a backlogged activity will still auto-upgrade if the default deployment
-    // of their task queue changes, without having to wait for the backlogged activity to complete
-    // on the old deployment.
+    // Activities of `AUTO_UPGRADE` workflows are sent to the current Build of the workflow
+    // execution (as specified in versioning_info.build_id based on the last completed workflow
+    // task). Exception to this would be when the activity Task Queue workers are not present in
+    // the workflow's current Build, in which case, the activity will be sent to a different Build
+    // (or Unversioned workers) according to the activity's Task Queue situation.
+    // Workflows stuck on a backlogged activity will still auto-upgrade if the current Build
+    // of their Task Queue changes, without having to wait for the backlogged activity to complete
+    // on the old Build.
     VERSIONING_BEHAVIOR_AUTO_UPGRADE = 2;
 }

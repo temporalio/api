@@ -6004,7 +6004,7 @@ components:
              transitioning to unversioned workers.
       description: |-
         Holds information about ongoing transition of a workflow execution from one deployment to another.
-         Experimental. Deployment transition is experimental and might change in the future.
+         Deprecated. Use WorkerBuildTransition.
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -7589,6 +7589,10 @@ components:
           description: |-
             The deployment this activity was dispatched to most recently. Present only if the activity
              was dispatched to a versioned worker.
+             Deprecated. Use `last_worker_build_id`.
+        lastWorkerBuildId:
+          type: string
+          description: The build this activity was dispatched to most recently.
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -8321,6 +8325,7 @@ components:
           description: |-
             Deployment info of the worker that completed this task. Must be present if user has set
              `WorkerDeploymentOptions` regardless of versioning being enabled or not.
+             Deprecated.
     RespondActivityTaskCanceledResponse:
       type: object
       properties: {}
@@ -8379,6 +8384,7 @@ components:
           description: |-
             Deployment info of the worker that completed this task. Must be present if user has set
              `WorkerDeploymentOptions` regardless of versioning being enabled or not.
+             Deprecated.
     RespondActivityTaskCompletedResponse:
       type: object
       properties: {}
@@ -8452,6 +8458,7 @@ components:
           description: |-
             Deployment info of the worker that completed this task. Must be present if user has set
              `WorkerDeploymentOptions` regardless of versioning being enabled or not.
+             Deprecated.
     RespondActivityTaskFailedResponse:
       type: object
       properties:
@@ -10146,11 +10153,18 @@ components:
           description: |-
             Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
              Identifies the worker deployment to pin the workflow to.
+             Deprecated. Use `build_id`.
+        pinnedBuildId:
+          type: string
+          description: |-
+            Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
+             Identifies the worker build to pin the workflow to.
       description: |-
-        Used to override the versioning behavior and deployment of a specific workflow execution. If set,
-         takes precedence over the worker-sent values. See `WorkflowExecutionInfo.VersioningInfo` for more
-         information. To remove the override, call `UpdateWorkflowExecutionOptions` with a null
-         `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
+        Used to override the versioning behavior (and pinned build, if applicable) of a specific
+         workflow execution. If set, takes precedence over the worker-sent values. See
+         `WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call
+         `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
+         to indicate that it should be mutated.
     WaitPolicy:
       type: object
       properties:
@@ -10169,6 +10183,18 @@ components:
              user specified timeout, API call returns even if specified stage is not reached.
           format: enum
       description: Specifies client's intent to wait for Update results.
+    WorkerBuildTransition:
+      type: object
+      properties:
+        buildId:
+          type: string
+          description: |-
+            The target build of the transition. Absent means a so-far-versioned workflow is
+             transitioning to unversioned workers.
+      description: |-
+        Holds information about ongoing transition of a workflow execution from one worker build to
+         another.
+         Experimental. Worker build transition is experimental and might change in the future.
     WorkerVersionCapabilities:
       type: object
       properties:
@@ -10182,7 +10208,12 @@ components:
              tasks.
         deploymentSeriesName:
           type: string
-          description: Must be sent if user has set a deployment series name (versioning-3).
+          description: |-
+            Must be sent if user has set a deployment series name (versioning-3).
+             Deprecated. Pass `deployment_name` instead.
+        deploymentName:
+          type: string
+          description: Must be sent if user has set a deployment name (versioning-3.1).
       description: |-
         Identifies the version that a worker is compatible with when polling or identifying itself,
          and whether or not this worker is opting into the build-id based versioning feature. This is
@@ -10875,12 +10906,28 @@ components:
              a deployment value which will be stored here, so the right way to check if an execution is
              versioned if an execution is versioned or not is via the `behavior` field.
              Note that `deployment` is overridden by `versioning_override` if the latter is present.
+             Deprecated. Use build_id and deployment_name.
+        buildId:
+          type: string
+          description: |-
+            The build ID of worker that completed the last workflow task of this workflow execution. Must
+             be present if `behavior` is set. Absent value means no workflow task is completed, or the
+             last workflow task was completed by a legacy worker. Unversioned workers may still send
+             a build ID value which will be stored here, so the right way to check if an execution is
+             versioned or not is via the `behavior` field.
+             Note that `build_id` may be overridden by `versioning_override`.
+        deploymentName:
+          type: string
+          description: |-
+            The deployment name of worker that completed the last workflow task of this workflow
+             execution. Absent value means no workflow task is completed, or the last workflow task was
+             completed by a legacy worker.
         versioningOverride:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride'
           description: |-
             Present if user has set an execution-specific versioning override. This override takes
-             precedence over SDK-sent `behavior` (and `deployment` when override is PINNED). An override
+             precedence over SDK-sent `behavior` (and `build_id` when override is PINNED). An override
              can be set when starting a new execution, as well as afterwards by calling the
              `UpdateWorkflowExecutionOptions` API.
         deploymentTransition:
@@ -10904,6 +10951,28 @@ components:
              the worker's task completion response.
              Pending activities will not start new attempts during a transition. Once the transition is
              completed, pending activities will start their next attempt on the new deployment.
+             Deprecated. Use build_transition.
+        buildTransition:
+          allOf:
+            - $ref: '#/components/schemas/WorkerBuildTransition'
+          description: |-
+            When present, indicates the workflow is transitioning to a different worker build. Can
+             indicate one of the following transitions: unversioned -> versioned, versioned -> versioned
+             on a different build, or versioned -> unversioned.
+             Not applicable to workflows with PINNED behavior.
+             When a workflow with AUTO_UPGRADE behavior creates a new workflow task, it will automatically
+             start a transition to the task queue's current build if the task queue's current build is
+             different from the workflow's current build.
+             If the AUTO_UPGRADE workflow is stuck due to backlogged activity or workflow tasks, those
+             tasks will be redirected to the task queue's current build. As soon as a poller from
+             that build is available to receive the task, the workflow will automatically start a
+             transition to that build and continue execution there.
+             A build transition can only exist while there is a pending or started workflow task.
+             Once the pending workflow task completes on the transition's target build, the
+             transition completes and the workflow's `behavior`, `build_id`, and `deployment_name`
+             fields are updated per the worker's task completion response.
+             Pending activities will not start new attempts during a transition. Once the transition is
+             completed, pending activities will start their next attempt on the new build.
       description: |-
         Holds all the information about versioning for a workflow execution.
          Experimental. Versioning info is experimental and might change in the future.
@@ -11000,6 +11069,7 @@ components:
             The deployment that completed this task. May or may not be set for unversioned workers,
              depending on whether a value is sent by the SDK. This value updates workflow execution's
              `versioning_info.deployment`.
+             Deprecated. Use `worker_build_id`.
         versioningBehavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
@@ -11011,6 +11081,17 @@ components:
              execution. UNSPECIFIED means the task was completed by an unversioned worker. This value
              updates workflow execution's `versioning_info.behavior`.
           format: enum
+        workerBuildId:
+          type: string
+          description: |-
+            The build ID of the worker that completed this task. May or may not be set for unversioned
+             workers. Must be set if `worker_deployment_name` is set. This value updates workflow
+             execution's `versioning_info.build_id`.
+        workerDeploymentName:
+          type: string
+          description: |-
+            The deployment name of the worker that completed this task. May or may not be set for
+             unversioned workers. This value updates workflow execution's `versioning_info.deployment_name`.
     WorkflowTaskCompletedMetadata:
       type: object
       properties:

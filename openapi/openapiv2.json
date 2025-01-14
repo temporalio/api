@@ -6119,7 +6119,7 @@
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "Deployment info of the worker that completed this task. Must be present if user has set\n`WorkerDeploymentOptions` regardless of versioning being enabled or not."
+          "description": "Deployment info of the worker that completed this task. Must be present if user has set\n`WorkerDeploymentOptions` regardless of versioning being enabled or not.\nDeprecated."
         }
       }
     },
@@ -6170,7 +6170,7 @@
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "Deployment info of the worker that completed this task. Must be present if user has set\n`WorkerDeploymentOptions` regardless of versioning being enabled or not."
+          "description": "Deployment info of the worker that completed this task. Must be present if user has set\n`WorkerDeploymentOptions` regardless of versioning being enabled or not.\nDeprecated."
         }
       }
     },
@@ -6225,7 +6225,7 @@
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "Deployment info of the worker that completed this task. Must be present if user has set\n`WorkerDeploymentOptions` regardless of versioning being enabled or not."
+          "description": "Deployment info of the worker that completed this task. Must be present if user has set\n`WorkerDeploymentOptions` regardless of versioning being enabled or not.\nDeprecated."
         }
       }
     },
@@ -8284,7 +8284,17 @@
           "description": "The target deployment of the transition. Null means a so-far-versioned workflow is\ntransitioning to unversioned workers."
         }
       },
-      "description": "Holds information about ongoing transition of a workflow execution from one deployment to another.\nExperimental. Deployment transition is experimental and might change in the future."
+      "description": "Holds information about ongoing transition of a workflow execution from one deployment to another.\nDeprecated. Use DeploymentVersionTransition."
+    },
+    "v1DeploymentVersionTransition": {
+      "type": "object",
+      "properties": {
+        "targetVersion": {
+          "type": "string",
+          "description": "The target version of the transition. Absent means a so-far-versioned workflow is\ntransitioning to unversioned workers."
+        }
+      },
+      "description": "Holds information about ongoing transition of a workflow execution from one worker\ndeployment version to another.\nExperimental. Might change in the future."
     },
     "v1DeprecateNamespaceResponse": {
       "type": "object",
@@ -10099,7 +10109,11 @@
         },
         "lastDeployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "The deployment this activity was dispatched to most recently. Present only if the activity\nwas dispatched to a versioned worker."
+          "description": "The deployment this activity was dispatched to most recently. Present only if the activity\nwas dispatched to a versioned worker.\nDeprecated. Use `last_worker_deployment_version`."
+        },
+        "lastWorkerDeploymentVersion": {
+          "type": "string",
+          "description": "The worker deployment version this activity was dispatched to most recently."
         }
       }
     },
@@ -10448,7 +10462,11 @@
         },
         "workerVersionCapabilities": {
           "$ref": "#/definitions/v1WorkerVersionCapabilities",
-          "description": "If a worker has opted into the worker versioning feature while polling, its capabilities will\nappear here."
+          "description": "If a worker has opted into the worker versioning feature while polling, its capabilities will\nappear here.\nDeprecated. Replaced by deployment_options."
+        },
+        "deploymentOptions": {
+          "$ref": "#/definitions/v1WorkerDeploymentOptions",
+          "description": "Worker deployment options that SDK sent to server."
         }
       }
     },
@@ -12710,7 +12728,7 @@
         "VERSIONING_BEHAVIOR_AUTO_UPGRADE"
       ],
       "default": "VERSIONING_BEHAVIOR_UNSPECIFIED",
-      "description": " - VERSIONING_BEHAVIOR_UNSPECIFIED: Workflow execution is unversioned. This is the legacy behavior. An unversioned workflow's\ntask may go to any unversioned worker who is polling for the task queue.\n - VERSIONING_BEHAVIOR_PINNED: Workflow will be pinned to the current deployment until completion. Can be overridden\nexplicitly via `UpdateWorkflowExecutionOptions` API.\nActivities of `PINNED` workflows are sent to the same deployment. Exception to this would be\nwhen the activity task queue workers are not present in the workflows deployment, in which\ncase the activity will be sent to the current deployment of its own task queue.\n - VERSIONING_BEHAVIOR_AUTO_UPGRADE: Workflow will automatically move to the current deployment of its task queue when the next\nworkflow task is dispatched.\nActivities of `AUTO_UPGRADE` workflows are sent to the current deployment of the workflow\nexecution based on the last completed workflow task. Exception to this would be when the\nactivity task queue workers are not present in the workflow's deployment, in which case the\nactivity will be sent to the current deployment of its own task queue.\nWorkflows stuck on a backlogged activity will still auto-upgrade if the default deployment\nof their task queue changes, without having to wait for the backlogged activity to complete\non the old deployment."
+      "description": "Versioning Behavior specifies if and how a workflow execution moves between Worker Deployment\nVersions. The Versioning Behavior of a workflow execution is typically specified by the worker\nwho completes the first task of the execution, but is also overridable manually for new and\nexisting workflows (see VersioningOverride).\n\n - VERSIONING_BEHAVIOR_UNSPECIFIED: Workflow execution does not have a Versioning Behavior and is called Unversioned. This is the\nlegacy behavior. An Unversioned workflow's task may go to any worker who is polling for the\nTask Queue and has WorkflowVersioningMode == UNVERSIONED (or has not specified a\nWorkflowVersioningMode).\n - VERSIONING_BEHAVIOR_PINNED: Workflow will be pinned to their Deployment Version (as specified in versioning_info\n.deployment_version) until completion. Can be overridden explicitly via\n`UpdateWorkflowExecutionOptions` API to move the execution to another Deployment Version.\nActivities of `PINNED` workflows are sent to the same Deployment Version. Exception to this\nwould be when the activity Task Queue workers are not present in the workflow's Deployment\nVersion, in which case the activity will be sent to a different Deployment Version according\nto the activity's Task Queue situation.\n - VERSIONING_BEHAVIOR_AUTO_UPGRADE: Workflow will automatically move to the Current Deployment Version of its Task Queue when the\nnext workflow task is dispatched.\nActivities of `AUTO_UPGRADE` workflows are sent to the Deployment Version of the workflow\nexecution (as specified in versioning_info.deployment_version based on the last completed\nworkflow task). Exception to this would be when the activity Task Queue workers are not\npresent in the workflow's Deployment Version, in which case, the activity will be sent to a\ndifferent Deployment Version according to the activity's Task Queue situation.\nWorkflows stuck on a backlogged activity will still auto-upgrade if the Current Deployment\nVersion of their Task Queue changes, without having to wait for the backlogged activity to\ncomplete on the old Version."
     },
     "v1VersioningOverride": {
       "type": "object",
@@ -12721,10 +12739,14 @@
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.\nIdentifies the worker deployment to pin the workflow to."
+          "description": "Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.\nIdentifies the worker deployment to pin the workflow to.\nDeprecated. Use `pinned_version`."
+        },
+        "pinnedVersion": {
+          "type": "string",
+          "description": "Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.\nIdentifies the worker deployment version to pin the workflow to."
         }
       },
-      "description": "Used to override the versioning behavior and deployment of a specific workflow execution. If set,\ntakes precedence over the worker-sent values. See `WorkflowExecutionInfo.VersioningInfo` for more\ninformation. To remove the override, call `UpdateWorkflowExecutionOptions` with a null\n`VersioningOverride`, and use the `update_mask` to indicate that it should be mutated."
+      "description": "Used to override the versioning behavior (and pinned deployment version, if applicable) of a\nspecific workflow execution. If set, takes precedence over the worker-sent values. See\n`WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call\n`UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`\nto indicate that it should be mutated."
     },
     "v1WaitPolicy": {
       "type": "object",
@@ -12735,6 +12757,24 @@
         }
       },
       "description": "Specifies client's intent to wait for Update results."
+    },
+    "v1WorkerDeploymentOptions": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Required. Worker deployment name."
+        },
+        "version": {
+          "type": "string",
+          "description": "Required. Worker deployment version."
+        },
+        "workflowVersioningMode": {
+          "$ref": "#/definitions/v1WorkflowVersioningMode",
+          "description": "Required. Workflow versioning mode for this deployment version. Must be the same for all\npollers in a given deployment version, across all task queues."
+        }
+      },
+      "description": "Worker Deployment options set in SDK that need to be sent to server in every poll."
     },
     "v1WorkerVersionCapabilities": {
       "type": "object",
@@ -12752,7 +12792,7 @@
           "description": "Must be sent if user has set a deployment series name (versioning-3)."
         }
       },
-      "description": "Identifies the version that a worker is compatible with when polling or identifying itself,\nand whether or not this worker is opting into the build-id based versioning feature. This is\nused by matching to determine which workers ought to receive what tasks."
+      "description": "Identifies the version that a worker is compatible with when polling or identifying itself,\nand whether or not this worker is opting into the build-id based versioning feature. This is\nused by matching to determine which workers ought to receive what tasks.\nDeprecated. Use WorkerDeploymentOptions instead."
     },
     "v1WorkerVersionStamp": {
       "type": "object",
@@ -13372,15 +13412,27 @@
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "The worker deployment that completed the last workflow task of this workflow execution. Must\nbe present if `behavior` is set. Absent value means no workflow task is completed, or the\nlast workflow task was completed by an unversioned worker. Unversioned workers may still send\na deployment value which will be stored here, so the right way to check if an execution is\nversioned if an execution is versioned or not is via the `behavior` field.\nNote that `deployment` is overridden by `versioning_override` if the latter is present."
+          "description": "The worker deployment that completed the last workflow task of this workflow execution. Must\nbe present if `behavior` is set. Absent value means no workflow task is completed, or the\nlast workflow task was completed by an unversioned worker. Unversioned workers may still send\na deployment value which will be stored here, so the right way to check if an execution is\nversioned if an execution is versioned or not is via the `behavior` field.\nNote that `deployment` is overridden by `versioning_override` if the latter is present.\nDeprecated. Use deployment_version and deployment_name."
+        },
+        "deploymentName": {
+          "type": "string",
+          "description": "The deployment name of worker that completed the last workflow task of this workflow\nexecution. Absent value means no workflow task is completed, or the last workflow task was\ncompleted by a legacy worker who does not pass deployment_name."
+        },
+        "deploymentVersion": {
+          "type": "string",
+          "description": "The deployment version of worker that completed the last workflow task of this workflow\nexecution. Must be present if `behavior` is set. Absent value means no workflow task is\ncompleted, or the last workflow task was completed by a legacy worker who does not pass\ndeployment_version.\nNote that if `versioning_override.behavior`."
         },
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
-          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `deployment` when override is PINNED). An override\ncan be set when starting a new execution, as well as afterwards by calling the\n`UpdateWorkflowExecutionOptions` API."
+          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `deployment_version` when override is PINNED). An\noverride can be set when starting a new execution, as well as afterwards by calling the\n`UpdateWorkflowExecutionOptions` API."
         },
         "deploymentTransition": {
           "$ref": "#/definitions/v1DeploymentTransition",
-          "description": "When present, indicates the workflow is transitioning to a different deployment. Can\nindicate one of the following transitions: unversioned -> versioned, versioned -> versioned\non a different deployment, or versioned -> unversioned.\nNot applicable to workflows with PINNED behavior.\nWhen a workflow with AUTO_UPGRADE behavior creates a new workflow task, it will automatically\nstart a transition to the task queue's current deployment if the task queue's current\ndeployment is different from the workflow's deployment.\nIf the AUTO_UPGRADE workflow is stuck due to backlogged activity or workflow tasks, those\ntasks will be redirected to the task queue's current deployment. As soon as a poller from\nthat deployment is available to receive the task, the workflow will automatically start a\ntransition to that deployment and continue execution there.\nA deployment transition can only exist while there is a pending or started workflow task.\nOnce the pending workflow task completes on the transition's target deployment, the\ntransition completes and the workflow's `deployment` and `behavior` fields are updated per\nthe worker's task completion response.\nPending activities will not start new attempts during a transition. Once the transition is\ncompleted, pending activities will start their next attempt on the new deployment."
+          "description": "When present, indicates the workflow is transitioning to a different deployment. Can\nindicate one of the following transitions: unversioned -> versioned, versioned -> versioned\non a different deployment, or versioned -> unversioned.\nNot applicable to workflows with PINNED behavior.\nWhen a workflow with AUTO_UPGRADE behavior creates a new workflow task, it will automatically\nstart a transition to the task queue's current deployment if the task queue's current\ndeployment is different from the workflow's deployment.\nIf the AUTO_UPGRADE workflow is stuck due to backlogged activity or workflow tasks, those\ntasks will be redirected to the task queue's current deployment. As soon as a poller from\nthat deployment is available to receive the task, the workflow will automatically start a\ntransition to that deployment and continue execution there.\nA deployment transition can only exist while there is a pending or started workflow task.\nOnce the pending workflow task completes on the transition's target deployment, the\ntransition completes and the workflow's `deployment` and `behavior` fields are updated per\nthe worker's task completion response.\nPending activities will not start new attempts during a transition. Once the transition is\ncompleted, pending activities will start their next attempt on the new deployment.\nDeprecated. Use version_transition."
+        },
+        "versionTransition": {
+          "$ref": "#/definitions/v1DeploymentVersionTransition",
+          "description": "When present, indicates the workflow is transitioning to a different deployment version\n(which may belong to the same deployment name or another). Can indicate one of the following\ntransitions: unversioned -> versioned, versioned -> versioned\non a different build, or versioned -> unversioned.\nNot applicable to workflows with PINNED behavior.\nWhen a workflow with AUTO_UPGRADE behavior creates a new workflow task, it will automatically\nstart a transition to the task queue's current version if the task queue's current version is\ndifferent from the workflow's current deployment version.\nIf the AUTO_UPGRADE workflow is stuck due to backlogged activity or workflow tasks, those\ntasks will be redirected to the task queue's current version. As soon as a poller from\nthat build is available to receive the task, the workflow will automatically start a\ntransition to that build and continue execution there.\nA version transition can only exist while there is a pending or started workflow task.\nOnce the pending workflow task completes on the transition's target version, the\ntransition completes and the workflow's `behavior`, `deployment_name`, and\n`deployment_version` fields are updated per the worker's task completion response.\nPending activities will not start new attempts during a transition. Once the transition is\ncompleted, pending activities will start their next attempt on the new version."
         }
       },
       "description": "Holds all the information about versioning for a workflow execution.\nExperimental. Versioning info is experimental and might change in the future."
@@ -13523,11 +13575,19 @@
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "The deployment that completed this task. May or may not be set for unversioned workers,\ndepending on whether a value is sent by the SDK. This value updates workflow execution's\n`versioning_info.deployment`."
+          "description": "The deployment that completed this task. May or may not be set for unversioned workers,\ndepending on whether a value is sent by the SDK. This value updates workflow execution's\n`versioning_info.deployment`.\nDeprecated. Replaced with `deployment_name` and `deployment_version`."
         },
         "versioningBehavior": {
           "$ref": "#/definitions/v1VersioningBehavior",
           "description": "Versioning behavior sent by the worker that completed this task for this particular workflow\nexecution. UNSPECIFIED means the task was completed by an unversioned worker. This value\nupdates workflow execution's `versioning_info.behavior`."
+        },
+        "deploymentName": {
+          "type": "string",
+          "description": "The deployment name of the worker that completed this task. Must be set if\n`versioning_behavior` is set. This value updates workflow execution's\n`versioning_info.deployment_name`."
+        },
+        "deploymentVersion": {
+          "type": "string",
+          "description": "The deployment version of the worker that completed this task. Must be set if\n`versioning_behavior` is set. This value updates workflow execution's\n`versioning_info.deployment_version`."
         }
       }
     },
@@ -13739,6 +13799,16 @@
           "type": "string"
         }
       }
+    },
+    "v1WorkflowVersioningMode": {
+      "type": "string",
+      "enum": [
+        "WORKFLOW_VERSIONING_MODE_UNSPECIFIED",
+        "WORKFLOW_VERSIONING_MODE_UNVERSIONED",
+        "WORKFLOW_VERSIONING_MODE_VERSIONING_BEHAVIORS"
+      ],
+      "default": "WORKFLOW_VERSIONING_MODE_UNSPECIFIED",
+      "description": "Workflow Versioning Mode for a particular Worker Deployment Version. This value is\nconfigured by the app developer in the worker code.\n\n - WORKFLOW_VERSIONING_MODE_UNVERSIONED: Workflows processed by this Deployment Version will be unversioned and user\nneeds to use Patching to keep the new code compatible with prior versions.\nThis mode is recommended to be used along with Rolling Upgrade deployment\nstrategies.\nDeployment Versions with this mode can not be set as the Current or Ramping\nVersion of their Deployment, and are not distinguished from each other for\ntask routing.\n - WORKFLOW_VERSIONING_MODE_VERSIONING_BEHAVIORS: Workflow Versioning Behaviors are enabled in this Deployment Version. Each\nworkflow type must choose between the Pinned and AutoUpgrade behaviors.\nDeployment Versions with this mode can be set as the Current or Ramping\nVersion of their Deployment and hence are the best option for Blue/Green\nand Rainbow strategies (but typically not suitable for Rolling upgrades.)"
     }
   }
 }

@@ -7474,6 +7474,17 @@ components:
           type: string
           description: The request ID allocated at schedule time.
       description: Nexus operation timed out.
+    OnConflictOptions:
+      type: object
+      properties:
+        attachCompletionCallbacks:
+          type: boolean
+        attachLinks:
+          type: boolean
+      description: |-
+        When StartWorkflowExecution uses the WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING conflict policy and
+         there is already an existing running workflow, OnConflictOptions defines actions to be taken on
+         the existing running workflow.
     Outcome:
       type: object
       properties:
@@ -9411,6 +9422,14 @@ components:
           description: |-
             If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.
              To unset the override after the workflow is running, use UpdateWorkflowExecutionOptions.
+        onConflictOptions:
+          allOf:
+            - $ref: '#/components/schemas/OnConflictOptions'
+          description: |-
+            It defines behaviors to be executed when the WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+             conflict policy is used. If set to non-nil object, it will attach the RequestID to the
+             existing running workflow (for deduping), and perform actions specified in the object.
+             If not set (ie., nil value), it won't do anything to the existing running workflow.
     StartWorkflowExecutionResponse:
       type: object
       properties:
@@ -10591,6 +10610,16 @@ components:
         unsetVersioningOverride:
           type: boolean
           description: Versioning override removed in this event.
+        attachedRequestId:
+          type: string
+          description: |-
+            Attached request ID to the running workflow execution so that additional requests with same
+             request ID will be deduped.
+        attachedCompletionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: Attached completion callbacks to the running workflow execution.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:

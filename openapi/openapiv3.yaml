@@ -6149,7 +6149,20 @@ components:
              transitioning to unversioned workers.
       description: |-
         Holds information about ongoing transition of a workflow execution from one deployment to another.
-         Experimental. Deployment transition is experimental and might change in the future.
+         Deprecated. Use DeploymentVersionTransition.
+    DeploymentVersionTransition:
+      type: object
+      properties:
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            The target version of the transition. Absent means a so-far-versioned workflow is
+             transitioning to unversioned workers.
+      description: |-
+        Holds information about ongoing transition of a workflow execution from one worker
+         deployment version to another.
+         Experimental. Might change in the future.
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -7743,6 +7756,11 @@ components:
           description: |-
             The deployment this activity was dispatched to most recently. Present only if the activity
              was dispatched to a versioned worker.
+             Deprecated. Use `last_deployment_version`.
+        lastDeploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: The worker deployment version this activity was dispatched to most recently.
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -7961,6 +7979,11 @@ components:
           description: |-
             If a worker has opted into the worker versioning feature while polling, its capabilities will
              appear here.
+             Deprecated. Replaced by deployment_options.
+        deploymentOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentOptions'
+          description: Worker deployment options that SDK sent to server.
     QueryRejected:
       type: object
       properties:
@@ -8475,6 +8498,13 @@ components:
           description: |-
             Deployment info of the worker that completed this task. Must be present if user has set
              `WorkerDeploymentOptions` regardless of versioning being enabled or not.
+             Deprecated. Replaced with `deployment_version`.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            Deployment version of the worker that processed this task. Must be present if user has set
+             `WorkerDeploymentOptions`.
     RespondActivityTaskCanceledResponse:
       type: object
       properties: {}
@@ -8533,6 +8563,13 @@ components:
           description: |-
             Deployment info of the worker that completed this task. Must be present if user has set
              `WorkerDeploymentOptions` regardless of versioning being enabled or not.
+             Deprecated. Replaced with `deployment_version`.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            Deployment version of the worker that completed this task. Must be present if user has set
+             `WorkerDeploymentOptions`.
     RespondActivityTaskCompletedResponse:
       type: object
       properties: {}
@@ -8606,6 +8643,13 @@ components:
           description: |-
             Deployment info of the worker that completed this task. Must be present if user has set
              `WorkerDeploymentOptions` regardless of versioning being enabled or not.
+             Deprecated. Replaced with `deployment_version`.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            Deployment version of the worker that failed this task. Must be present if user has set
+             `WorkerDeploymentOptions`.
     RespondActivityTaskFailedResponse:
       type: object
       properties:
@@ -10323,11 +10367,19 @@ components:
           description: |-
             Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
              Identifies the worker deployment to pin the workflow to.
+             Deprecated. Use `pinned_version`.
+        pinnedVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
+             Identifies the worker deployment version to pin the workflow to.
       description: |-
-        Used to override the versioning behavior and deployment of a specific workflow execution. If set,
-         takes precedence over the worker-sent values. See `WorkflowExecutionInfo.VersioningInfo` for more
-         information. To remove the override, call `UpdateWorkflowExecutionOptions` with a null
-         `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
+        Used to override the versioning behavior (and pinned deployment version, if applicable) of a
+         specific workflow execution. If set, takes precedence over the worker-sent values. See
+         `WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call
+         `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
+         to indicate that it should be mutated.
     WaitPolicy:
       type: object
       properties:
@@ -10346,6 +10398,35 @@ components:
              user specified timeout, API call returns even if specified stage is not reached.
           format: enum
       description: Specifies client's intent to wait for Update results.
+    WorkerDeploymentOptions:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Required. Worker deployment name.
+        version:
+          type: string
+          description: Required. Worker deployment version.
+        workflowVersioningMode:
+          enum:
+            - WORKFLOW_VERSIONING_MODE_UNSPECIFIED
+            - WORKFLOW_VERSIONING_MODE_UNVERSIONED
+            - WORKFLOW_VERSIONING_MODE_VERSIONING_BEHAVIORS
+          type: string
+          description: |-
+            Required. Workflow versioning mode for this deployment version. Must be the same for all
+             pollers in a given deployment version, across all task queues.
+          format: enum
+      description: Worker Deployment options set in SDK that need to be sent to server in every poll.
+    WorkerDeploymentVersion:
+      type: object
+      properties:
+        version:
+          type: string
+          description: Uniquely identifies the worker deployment version.
+        deploymentName:
+          type: string
+          description: The name of the deployment this version belongs too.
     WorkerDeploymentVersionInfo:
       type: object
       properties:
@@ -10399,6 +10480,7 @@ components:
         Identifies the version that a worker is compatible with when polling or identifying itself,
          and whether or not this worker is opting into the build-id based versioning feature. This is
          used by matching to determine which workers ought to receive what tasks.
+         Deprecated. Use WorkerDeploymentOptions instead.
     WorkerVersionStamp:
       type: object
       properties:
@@ -11087,13 +11169,23 @@ components:
              a deployment value which will be stored here, so the right way to check if an execution is
              versioned if an execution is versioned or not is via the `behavior` field.
              Note that `deployment` is overridden by `versioning_override` if the latter is present.
+             Deprecated. Use deployment_version and deployment_name.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            The deployment version of the worker that completed the last workflow task of this workflow
+             execution. Must be present if and only if `behavior` is set. An absent value means no
+             workflow task is completed, or the workflow is unversioned.
+             Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
+             will override this value.
         versioningOverride:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride'
           description: |-
             Present if user has set an execution-specific versioning override. This override takes
-             precedence over SDK-sent `behavior` (and `deployment` when override is PINNED). An override
-             can be set when starting a new execution, as well as afterwards by calling the
+             precedence over SDK-sent `behavior` (and `deployment_version` when override is PINNED). An
+             override can be set when starting a new execution, as well as afterwards by calling the
              `UpdateWorkflowExecutionOptions` API.
         deploymentTransition:
           allOf:
@@ -11116,6 +11208,29 @@ components:
              the worker's task completion response.
              Pending activities will not start new attempts during a transition. Once the transition is
              completed, pending activities will start their next attempt on the new deployment.
+             Deprecated. Use version_transition.
+        versionTransition:
+          allOf:
+            - $ref: '#/components/schemas/DeploymentVersionTransition'
+          description: |-
+            When present, indicates the workflow is transitioning to a different deployment version
+             (which may belong to the same deployment name or another). Can indicate one of the following
+             transitions: unversioned -> versioned, versioned -> versioned
+             on a different deployment version, or versioned -> unversioned.
+             Not applicable to workflows with PINNED behavior.
+             When a workflow with AUTO_UPGRADE behavior creates a new workflow task, it will automatically
+             start a transition to the task queue's current version if the task queue's current version is
+             different from the workflow's current deployment version.
+             If the AUTO_UPGRADE workflow is stuck due to backlogged activity or workflow tasks, those
+             tasks will be redirected to the task queue's current version. As soon as a poller from
+             that deployment version is available to receive the task, the workflow will automatically
+             start a transition to that version and continue execution there.
+             A version transition can only exist while there is a pending or started workflow task.
+             Once the pending workflow task completes on the transition's target version, the
+             transition completes and the workflow's `behavior`, `deployment_name`, and
+             `deployment_version` fields are updated per the worker's task completion response.
+             Pending activities will not start new attempts during a transition. Once the transition is
+             completed, pending activities will start their next attempt on the new version.
       description: |-
         Holds all the information about versioning for a workflow execution.
          Experimental. Versioning info is experimental and might change in the future.
@@ -11212,6 +11327,7 @@ components:
             The deployment that completed this task. May or may not be set for unversioned workers,
              depending on whether a value is sent by the SDK. This value updates workflow execution's
              `versioning_info.deployment`.
+             Deprecated. Replaced with `deployment_version`.
         versioningBehavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
@@ -11223,6 +11339,13 @@ components:
              execution. UNSPECIFIED means the task was completed by an unversioned worker. This value
              updates workflow execution's `versioning_info.behavior`.
           format: enum
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            The deployment version of the worker that completed this task. Must be set if
+             `versioning_behavior` is set. This value updates workflow execution's
+             `versioning_info.deployment_version`.
     WorkflowTaskCompletedMetadata:
       type: object
       properties:

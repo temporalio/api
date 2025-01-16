@@ -7961,21 +7961,6 @@ components:
           description: |-
             If a worker has opted into the worker versioning feature while polling, its capabilities will
              appear here.
-    PollersStatus:
-      type: object
-      properties:
-        hasPollers:
-          type: boolean
-          description: "True if there are active pollers for the relevant Task Queue(s) in the \n relevant Build(s)."
-        pollStartTime:
-          type: string
-          description: "When server saw the first poller for (any of) the relevant Task Queue(s) in \n (any of) the relevant Build(s)."
-          format: date-time
-        pollStopTime:
-          type: string
-          description: "Only present if has_poller is false. This is approximate and can be off by \n a few minutes."
-          format: date-time
-      description: "Pollers' status information. Depending on the context, this may be relevant to \n one or more Task Queues and one or more Builds."
     QueryRejected:
       type: object
       properties:
@@ -10361,14 +10346,6 @@ components:
              user specified timeout, API call returns even if specified stage is not reached.
           format: enum
       description: Specifies client's intent to wait for Update results.
-    WorkerBuildMetadata:
-      type: object
-      properties:
-        entries:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/Payload'
-          description: Arbitrary key-value pairs.
     WorkerDeploymentVersionInfo:
       type: object
       properties:
@@ -10389,15 +10366,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkerDeploymentVersionInfo_WorkerBuildTaskQueueInfo'
-          description: All the Task Queues
-        metadata:
-          allOf:
-            - $ref: '#/components/schemas/WorkerBuildMetadata'
-          description: Arbitrary user-provided metadata attached to this Build.
-        aggregatedPollersStatus:
-          allOf:
-            - $ref: '#/components/schemas/PollersStatus'
-          description: Aggregated status for all Task Queues being polled in this Build.
+          description: All the Task Queues that have ever polled from this Deployment version.
       description: "A Worker Deployment Version (Version, for short) represents all workers of the same \n code and config within a Deployment. Workers of the same Version are expected to \n behave exactly the same so when executions move between them there are no \n non-determinism issues.\n Worker Deployment Versions are created in Temporal server automatically when \n their first poller arrives to the server.\n Each Version has a Workflow Versioning Mode which is chosen by the app\n developer. (see WorkflowVersioningMode enum documentation)"
     WorkerDeploymentVersionInfo_WorkerBuildTaskQueueInfo:
       type: object
@@ -10412,8 +10381,6 @@ components:
             - TASK_QUEUE_TYPE_NEXUS
           type: string
           format: enum
-        pollersStatus:
-          $ref: '#/components/schemas/PollersStatus'
     WorkerVersionCapabilities:
       type: object
       properties:

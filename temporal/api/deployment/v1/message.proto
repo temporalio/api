@@ -39,6 +39,7 @@ import "temporal/api/common/v1/message.proto";
 // `Deployment` identifies a deployment of Temporal workers. The combination of deployment series
 // name + build ID serves as the identifier. User can use `WorkerDeploymentOptions` in their worker
 // programs to specify these values.
+// [cleanup-wv-pre-release]
 message Deployment {
     // Different versions of the same worker service/application are related together by having a
     // shared series name.
@@ -61,6 +62,7 @@ message WorkerDeploymentVersion {
 // `DeploymentInfo` holds information about a deployment. Deployment information is tracked
 // automatically by server as soon as the first poll from that deployment reaches the server. There
 // can be multiple task queue workers in a single deployment which are listed in this message.
+// [cleanup-wv-pre-release] 
 message DeploymentInfo {
     Deployment deployment = 1;
     google.protobuf.Timestamp create_time = 2;
@@ -80,6 +82,7 @@ message DeploymentInfo {
 }
 
 // Used as part of Deployment write APIs to update metadata attached to a deployment.
+// [cleanup-wv-pre-release] 
 message UpdateDeploymentMetadata {
     map<string, temporal.api.common.v1.Payload> upsert_entries = 1;
     // List of keys to remove from the metadata.
@@ -88,9 +91,41 @@ message UpdateDeploymentMetadata {
 
 // DeploymentListInfo is an abbreviated set of fields from DeploymentInfo that's returned in
 // ListDeployments.
+// [cleanup-wv-pre-release] 
 message DeploymentListInfo {
     deployment.v1.Deployment deployment = 1;
     google.protobuf.Timestamp create_time = 2;
     // If this deployment is the current deployment of its deployment series.
     bool is_current = 3;
 }
+
+
+// A Worker Deployment Version (Version, for short) represents all workers of the same 
+// code and config within a Deployment. Workers of the same Version are expected to 
+// behave exactly the same so when executions move between them there are no 
+// non-determinism issues.
+// Worker Deployment Versions are created in Temporal server automatically when 
+// their first poller arrives to the server.
+// Each Version has a Workflow Versioning Mode which is chosen by the app
+// developer. (see WorkflowVersioningMode enum documentation)
+message WorkerDeploymentVersionInfo {
+    // Identifies a Worker Deployment Version. Must be unique within the namespace.
+    // Same ID cannot be used in multiple Deployments.
+    // In some contexts, such as Reset-by-build-id, version might be used
+    // as "Build ID".
+    string version = 1;
+
+    // Each Worker Version belongs to exactly one Deployment.
+    string deployment_name = 2;
+
+    google.protobuf.Timestamp create_time = 3;
+    // All the Task Queues that have ever polled from this Deployment version.
+    repeated WorkerBuildTaskQueueInfo task_queue_infos = 4;
+
+    message WorkerBuildTaskQueueInfo {
+        string name = 1;
+        temporal.api.enums.v1.TaskQueueType type = 2;
+    }
+}
+
+

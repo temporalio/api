@@ -6367,6 +6367,10 @@
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
           "description": "If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.\nTo unset the override after the workflow is running, use UpdateWorkflowExecutionOptions."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
         }
       }
     },
@@ -6552,6 +6556,10 @@
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
           "description": "If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.\nTo unset the override after the workflow is running, use UpdateWorkflowExecutionOptions."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
         }
       }
     },
@@ -7179,6 +7187,10 @@
         "useWorkflowBuildId": {
           "type": "boolean",
           "description": "If this is set, the activity would be assigned to the Build ID of the workflow. Otherwise,\nAssignment rules of the activity's Task Queue will be used to determine the Build ID."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "description": "Priority metadata. If this message is not present, or any fields are not\npresent, they inherit the values from the workflow."
         }
       }
     },
@@ -9729,6 +9741,10 @@
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
           "description": "If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.\nTo unset the override after the workflow is running, use UpdateWorkflowExecutionOptions."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
         }
       },
       "description": "NewWorkflowExecutionInfo is a shared message that encapsulates all the\nrequired arguments to starting a workflow in different contexts."
@@ -10100,6 +10116,10 @@
         "lastDeployment": {
           "$ref": "#/definitions/v1Deployment",
           "description": "The deployment this activity was dispatched to most recently. Present only if the activity\nwas dispatched to a versioned worker."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
         }
       }
     },
@@ -10320,6 +10340,10 @@
         "retryPolicy": {
           "$ref": "#/definitions/v1RetryPolicy",
           "description": "This is the retry policy the service uses which may be different from the one provided\n(or not) during activity scheduling. The service can override the provided one if some\nvalues are not specified or exceed configured system limits."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
         }
       }
     },
@@ -10451,6 +10475,36 @@
           "description": "If a worker has opted into the worker versioning feature while polling, its capabilities will\nappear here."
         }
       }
+    },
+    "v1Priority": {
+      "type": "object",
+      "properties": {
+        "priorityKey": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Priority key is a positive integer from 1 to n, where smaller integers\ncorrespond to higher priorities (tasks run sooner). In general, tasks in\na queue should be processed in close to priority order, although small\ndeviations are possible.\n\nThe maximum priority value (minimum priority) is determined by server\nconfiguration, and defaults to 5.\n\nIf priority is not present (or zero), then the effective priority will be\nthe default priority, which is is calculated by (min+max)/2. With the\ndefault max of 5, and min of 1, that comes out to 3."
+        },
+        "fairnessKey": {
+          "type": "string",
+          "description": "Fairness key is a short string that's used as a key for a fairness\nbalancing mechanism. It may correspond to a tenant id, or to a fixed\nstring like \"high\" or \"low\". The default is the empty string.\n\nThe fairness mechanism attempts to dispatch tasks for a given key in\nproportion to its weight. For example, using a thousand distinct tenant\nids, each with a weight of 1.0 (the default) will result in each tenant\ngetting a roughly equal share of task dispatch throughput.\n\n(Note: this does not imply equal share of worker capacity! Fairness\ndecisions are made only at dispatch time based on queue statistics, not\ncurrent worker load.)\n\nAs another example, using keys \"high\" and \"low\" with weight 9.0 and 1.0\nrespectively will prefer dispatching \"high\" tasks over \"low\" tasks at a\n9:1 ratio, while allowing either key to use all worker capacity if the\nother is not present.\n\nAll fairness mechanisms, including rate limits, are best-effort and\nprobabilistic. The results may not match what a \"perfect\" algorithm with\ninfinite resources would produce. The more unique keys are used, the less\naccurate the results will be.\n\nFairness keys are limited to 64 bytes."
+        },
+        "fairnessWeight": {
+          "type": "number",
+          "format": "float",
+          "description": "Fairness weight for a task can come from multiple sources for\nflexibility. From highest to lowest precedence:\n1. Weights for a small set of keys can be overridden in task queue\n   configuration with an API.\n2. It can be attached to the workflow/activity in this field.\n3. The default weight of 1.0 will be used.\nNote that if the weight for a key is attached in this field, for best\nresults, the same weight should be used for the same key for a reasonable\namount of time (minutes). It may change, but it may take some time for\nthe change to be reflected.\n\nThe recommended range of usable weights is [0.001, 1000]."
+        },
+        "fairnessRateLimit": {
+          "type": "number",
+          "format": "float",
+          "description": "The fairness mechanism can also enforce rate limits per fairness key.\nRate limits are specified in tasks dispatched per second.\nAs with weights, rate limits can come from different sources:\n1. Rate limits for a small set of keys can be overridden in task queue\n   configuration with an API.\n2. It can be attached to the workflow/activity in this field.\n3. The \"default\" rate limit for keys that are not overridden can be set\n   in task queue configuration also.\n4. Otherwise, a very high rate limit will be applied."
+        },
+        "orderingKey": {
+          "type": "string",
+          "format": "int64",
+          "description": "Ordering key is a positive integer from 1 to MaxInt64. After priority and\nfairness mechanisms are applied, tasks will be finally ordered by\nordering_key. Note that fine-grained values are allowed here, as opposed\nto priority.\n\nFor example, applications might use the start time of a workflow (in\nseconds since the unix epoch) as ordering key for the workflow and all\nactivities in it. This will have the effect of prioritizing activities of\nworkflows that were started earlier, encouring completing older workflows\nover making progress in newer ones."
+        }
+      },
+      "description": "Priority contains metadata that controls relative ordering of task processing\nwhen tasks are backed up in a queue. Initially, Priority will be used in\nmatching (workflow and activity) task queues. Later it may be used in history\ntask queues and in rate limiting decisions.\n\nPriority is attached to workflows and activities. By default, activities\ninherit Priority from the workflow that created them, but may override fields\nwhen an activity is started or modified.\n\nDespite being named \"Priority\", this message also contains fields that\ncontrol \"fairness\" mechanisms.\n\nFor all fields, the field not present or equal to zero/empty string means to\ninherit the value from the calling workflow, or if there is no calling\nworkflow, then use the default value.\n\nFor all fields other than fairness_key, the zero value isn't meaningful so\nthere's no confusion between inherit/default and a meaningful value. For\nfairness_key, the empty string will be interpreted as \"inherit\". This means\nthat if a workflow has a non-empty fairness key, you can't override the\nfairness key of its activity to the empty string.\n\nThe overall semantics of Priority are:\n1. First, consider \"priority\": higher priority (lower number) goes first.\n2. Next, consider fairness: try to dispatch tasks for different fairness keys\n   in proportion to their weight.\n3. Finally, tasks may be ordered by an additional ordering key.\n\nApplications may use any subset of mechanisms that are useful to them and\nleave the other fields to use default values.\n\nNot all queues in the system may support the \"full\" semantics of all priority\nfields. (Currently only support in matching task queues is planned.)"
     },
     "v1ProtocolMessageCommandAttributes": {
       "type": "object",
@@ -11158,6 +11212,10 @@
         "useWorkflowBuildId": {
           "type": "boolean",
           "description": "If this is set, the activity would be assigned to the Build ID of the workflow. Otherwise,\nAssignment rules of the activity's Task Queue will be used to determine the Build ID."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "description": "Priority metadata. If this message is not present, or any fields are not\npresent, they inherit the values from the workflow."
         }
       }
     },
@@ -11703,6 +11761,10 @@
         "inheritBuildId": {
           "type": "boolean",
           "description": "If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment\nrules of the child's Task Queue will be used to independently assign a Build ID to it."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "description": "Priority metadata. If this message is not present, or any fields are not\npresent, they inherit the values from the workflow."
         }
       }
     },
@@ -11820,6 +11882,10 @@
         "inheritBuildId": {
           "type": "boolean",
           "description": "If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment\nrules of the child's Task Queue will be used to independently assign a Build ID to it."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
         }
       }
     },
@@ -12008,6 +12074,10 @@
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
           "description": "If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.\nTo unset the override after the workflow is running, use UpdateWorkflowExecutionOptions."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
         }
       }
     },
@@ -13059,6 +13129,10 @@
         "versioningInfo": {
           "$ref": "#/definitions/v1WorkflowExecutionVersioningInfo",
           "description": "Absent value means the workflow execution is not versioned. When present, the execution might\nbe versioned or unversioned, depending on `versioning_info.behavior` and `versioning_info.versioning_override`.\nExperimental. Versioning info is experimental and might change in the future."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
         }
       },
       "description": "Hold basic information about a workflow execution.\nThis structure is a part of visibility, and thus contain a limited subset of information."
@@ -13245,6 +13319,10 @@
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
           "description": "Versioning override applied to this workflow when it was started."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
         }
       },
       "title": "Always the first event in workflow history"

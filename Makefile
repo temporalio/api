@@ -1,4 +1,4 @@
-SHELL=/bin/bash -o pipefail
+SHELL=bash -o pipefail
 
 $(VERBOSE).SILENT:
 ############################# Main targets #############################

@@ -1949,3 +1949,68 @@ message GetDeploymentReachabilityResponse {
     // was actually calculated.
     google.protobuf.Timestamp last_update_time = 3;
 }
+
+message ManageActivityRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // ID of the workflow which scheduled this activity.
+    string workflow_id = 2;
+    // Run ID of the workflow which scheduled this activity.
+    // If empty - latest workflow is used.
+    string run_id = 3;
+
+    // Used to de-dupe requests.
+    string request_id = 4;
+
+    // ID of the activity we're pausing.
+    string activity_id = 5;
+
+    // Type of the activity.
+    string activity_type = 6;
+
+    // Pausing the activity. Either id or type should be provided
+    // If type is provided, all activities of this type will be paused
+    message PauseActivityRequest {
+    }
+
+    // Unpausing the activity. If activity was not paused this will be a no-op.
+    // If activity was waiting for retry - it will be scheduled immediately.
+    message UnpauseActivityRequest {
+        // If set, the activity will start at a random time within the specified jitter
+        // duration, introducing variability to the start time.
+        google.protobuf.Duration jitter = 4;
+    }
+
+    // Resetting the activity. This operation will reset the number of attempts.
+    // If activity is paused - activity will be unpaused.
+    // If activity is currently waiting for retry - it will be scheduled immediately.
+    message ResetActivityRequest {
+        // If this flag is provided and activity is currently paused - it will stay paused.
+        bool keep_paused = 1;
+        // Indicates that activity should reset heartbeat details.
+        // This flag will be applied only to the new instance of the activity.
+        bool reset_heartbeat = 2;
+    }
+
+    message UpdateActivityOptionsRequest {
+        // Activity options. Partial updates are accepted and controlled by update_mask
+        temporal.api.activity.v1.ActivityOptions activity_options = 6;
+
+        // Controls which fields from `activity_options` will be applied
+        google.protobuf.FieldMask update_mask = 7;
+    }
+
+    message Operation {
+        oneof operation_type {
+            PauseActivityRequest pause = 9;
+            UnpauseActivityRequest unpause = 10;
+            ResetActivityRequest reset = 11;
+            UpdateActivityOptionsRequest update_options = 12;
+        }
+    }
+
+    repeated Operation operations = 8;
+}
+
+message ManageActivityResponse {
+}

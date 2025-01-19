@@ -416,6 +416,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/manage:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ManageActivity apply reset/pause/unpause/update operations to an activity specified by its ID and/or type.
+         Either activity id or activity type must be provided.
+         Supported operations:
+         1. Reset operation. Resets the activity to its initial state.
+         Resetting the activity. This operation will reset the number of attempts.
+         If activity is paused - activity will be unpaused. Use 'keep_paused' flag to keep activity paused.
+         If activity is currently waiting for retry - it will be scheduled immediately.
+         Flags:
+         'reset_heartbeats' indicates that activity should reset heartbeat details.
+         2. Pause operation. pauses the activity. if activity was already paused it is no-op.
+         3. Unpause operation - unpauses the activity. If activity was not paused this will be a no-op.
+         If activity was waiting for retry - it will be scheduled immediately.
+         Unpause opeation supports the following flags:
+         * rest_attempts - reset the number of attempts
+         * reset_heartbeat - indicates that activity should reset heartbeat details.
+         * jitter - if set, the activity will start at a random time within the specified jitter duration.
+         4. Update operation - updates the activity options.
+         for details see UnpauseActivityById.
+         Returns a `NotFound` error if there is no pending activity with the provided ID or type.
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: ManageActivity
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManageActivityRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManageActivityResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activities/pause-by-id:
     post:
       tags:
@@ -3073,6 +3126,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RecordActivityTaskHeartbeatByIdResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/manage:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ManageActivity apply reset/pause/unpause/update operations to an activity specified by its ID and/or type.
+         Either activity id or activity type must be provided.
+         Supported operations:
+         1. Reset operation. Resets the activity to its initial state.
+         Resetting the activity. This operation will reset the number of attempts.
+         If activity is paused - activity will be unpaused. Use 'keep_paused' flag to keep activity paused.
+         If activity is currently waiting for retry - it will be scheduled immediately.
+         Flags:
+         'reset_heartbeats' indicates that activity should reset heartbeat details.
+         2. Pause operation. pauses the activity. if activity was already paused it is no-op.
+         3. Unpause operation - unpauses the activity. If activity was not paused this will be a no-op.
+         If activity was waiting for retry - it will be scheduled immediately.
+         Unpause opeation supports the following flags:
+         * rest_attempts - reset the number of attempts
+         * reset_heartbeat - indicates that activity should reset heartbeat details.
+         * jitter - if set, the activity will start at a random time within the specified jitter duration.
+         4. Update operation - updates the activity options.
+         for details see UnpauseActivityById.
+         Returns a `NotFound` error if there is no pending activity with the provided ID or type.
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: "By" is used to indicate request type. --)
+      operationId: ManageActivity
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManageActivityRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManageActivityResponse'
         default:
           description: Default error response
           content:
@@ -7025,6 +7131,99 @@ components:
         nextPageToken:
           type: string
           format: bytes
+    ManageActivityRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace of the workflow which scheduled this activity.
+        workflowId:
+          type: string
+          description: ID of the workflow which scheduled this activity.
+        runId:
+          type: string
+          description: |-
+            Run ID of the workflow which scheduled this activity.
+             If empty - latest workflow is used.
+        requestId:
+          type: string
+          description: Used to de-dupe requests.
+        activityId:
+          type: string
+          description: ID of the activity we're pausing.
+        activityType:
+          type: string
+          description: Type of the activity.
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManageActivityRequest_Operation'
+    ManageActivityRequest_Operation:
+      type: object
+      properties:
+        pause:
+          $ref: '#/components/schemas/ManageActivityRequest_PauseActivityRequest'
+        unpause:
+          $ref: '#/components/schemas/ManageActivityRequest_UnpauseActivityRequest'
+        reset:
+          $ref: '#/components/schemas/ManageActivityRequest_ResetActivityRequest'
+        updateOptions:
+          $ref: '#/components/schemas/ManageActivityRequest_UpdateActivityOptionsRequest'
+    ManageActivityRequest_PauseActivityRequest:
+      type: object
+      properties: {}
+      description: |-
+        Pausing the activity. Either id or type should be provided
+         If type is provided, all activities of this type will be paused
+    ManageActivityRequest_ResetActivityRequest:
+      type: object
+      properties:
+        keepPaused:
+          type: boolean
+          description: If this flag is provided and activity is currently paused - it will stay paused.
+        resetHeartbeat:
+          type: boolean
+          description: |-
+            Indicates that activity should reset heartbeat details.
+             This flag will be applied only to the new instance of the activity.
+      description: |-
+        Resetting the activity. This operation will reset the number of attempts.
+         If activity is paused - activity will be unpaused.
+         If activity is currently waiting for retry - it will be scheduled immediately.
+    ManageActivityRequest_UnpauseActivityRequest:
+      type: object
+      properties:
+        resetAttempts:
+          type: boolean
+          description: reset the number of attempts
+        resetHeartbeat:
+          type: boolean
+          description: |-
+            Indicates that activity should reset heartbeat details.
+             This flag will be applied only to the new instance of the activity.
+        jitter:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            If set, the activity will start at a random time within the specified jitter
+             duration, introducing variability to the start time.
+      description: |-
+        Unpausing the activity. If activity was not paused this will be a no-op.
+         If activity was waiting for retry - it will be scheduled immediately.
+    ManageActivityRequest_UpdateActivityOptionsRequest:
+      type: object
+      properties:
+        activityOptions:
+          allOf:
+            - $ref: '#/components/schemas/ActivityOptions'
+          description: Activity options. Partial updates are accepted and controlled by update_mask
+        updateMask:
+          type: string
+          description: Controls which fields from `activity_options` will be applied
+          format: field-mask
+    ManageActivityResponse:
+      type: object
+      properties: {}
     MarkerRecordedEventAttributes:
       type: object
       properties:

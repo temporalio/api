@@ -61,9 +61,11 @@ import "temporal/api/batch/v1/message.proto";
 import "temporal/api/sdk/v1/task_complete_metadata.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
 import "temporal/api/nexus/v1/message.proto";
+
 import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 
 message RegisterNamespaceRequest {
     string namespace = 1;
@@ -1052,6 +1054,17 @@ message DescribeTaskQueueResponse {
     // This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
     // Only set in `ENHANCED` mode.
     map<string, temporal.api.taskqueue.v1.TaskQueueVersionInfo> versions_info = 3;
+
+    // Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.
+    // When not present, it means the tasks are routed to "unversioned" workers. Unversioned workers
+    // are those with UNVERSIONED (or unspecified) WorkflowVersioningMode.
+    // Task Queue Versioning info is updated indirectly by calling SetWorkerDeploymentCurrentVersion
+    // and SetWorkerDeploymentRampingVersion on Worker Deployments.
+    // Note: This information is not relevant to Pinned workflow executions and their activities as
+    // they are always routed to their Pinned Deployment Version. However, new workflow executions
+    // are typically not Pinned until they complete their first task (unless they are started with
+    // a Pinned VersioningOverride or are Child Workflows of a Pinned parent).
+    temporal.api.taskqueue.v1.TaskQueueVersioningInfo versioning_info = 4;
 }
 
 message GetClusterInfoRequest {
@@ -1964,18 +1977,47 @@ message SetCurrentDeploymentResponse {
     temporal.api.deployment.v1.DeploymentInfo previous_deployment_info = 2;
 }
 
-message SetCurrentDeploymentVersionRequest {
+// Set/unset the Current Version of a Worker Deployment.
+message SetWorkerDeploymentCurrentVersionRequest {
     string namespace = 1;
     string deployment_name = 2;
     // Must be a Versioned Build. Pass empty string to unset.
-    string version = 3;
+    google.protobuf.StringValue version = 3;
     // Optional. The identity of the client who initiated this request.
     string identity = 4;
 }
 
-message SetCurrentDeploymentVersionResponse {
-    // Info of the version that was current before executing this operation.
+message SetWorkerDeploymentCurrentVersionResponse {
+    // The version that was current before executing this operation.
     string previous_version = 1;
+}
+
+// Set/unset the Ramping Version of a Worker Deployment and its ramp percentage.
+// To unset, pass zero `percentage`.
+// To ramp to unversioned workers (from Deployment's Current Version), pass `version=""` with
+// non-zero `percentage`.
+message SetWorkerDeploymentRampingVersionRequest {
+    string namespace = 1;
+    string deployment_name = 2;
+
+    // The Version to be set as the Ramping Version of the Deployment. Optional when `percentage` is
+    // zero (unset case), but if given, it must match the current Ramping Version to be unset.
+    // Can be an empty string and paired with a non-zero `percentage`, in which case it will set the ramp
+    // percentage without a Ramping Version which means unversioned workers are being ramped.
+    // (Useful for migrating to unversioned workers from Deployment's Current Version.)
+    google.protobuf.StringValue version = 3;
+    // Valid range: [0,100]. Zero value will unset the Ramping Version.
+    float percentage = 6;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 7;
+}
+
+message SetWorkerDeploymentRampingVersionResponse {
+    // The ramping version before executing this operation.
+    string previous_version = 1;
+    // The ramping version percentage before executing this operation.
+    float previous_percentage = 2;
 }
 
 // Returns the Current Deployment of a deployment series.

@@ -1537,8 +1537,10 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: Sets a deployment version as the current version for its deployment.
-      operationId: SetCurrentDeploymentVersion
+      description: |-
+        Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping
+         Version if it is the Version being set as Current.
+      operationId: SetWorkerDeploymentCurrentVersion
       parameters:
         - name: namespace
           in: path
@@ -1554,7 +1556,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetCurrentDeploymentVersionRequest'
+              $ref: '#/components/schemas/SetWorkerDeploymentCurrentVersionRequest'
         required: true
       responses:
         "200":
@@ -1562,7 +1564,45 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SetCurrentDeploymentVersionResponse'
+                $ref: '#/components/schemas/SetWorkerDeploymentCurrentVersionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/worker-deployment/{deploymentName}/set-ramping-version:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for
+         gradual ramp to unversioned workers too.
+      operationId: SetWorkerDeploymentRampingVersion
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetWorkerDeploymentRampingVersionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetWorkerDeploymentRampingVersionResponse'
         default:
           description: Default error response
           content:
@@ -4213,8 +4253,10 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: Sets a deployment version as the current version for its deployment.
-      operationId: SetCurrentDeploymentVersion
+      description: |-
+        Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping
+         Version if it is the Version being set as Current.
+      operationId: SetWorkerDeploymentCurrentVersion
       parameters:
         - name: namespace
           in: path
@@ -4230,7 +4272,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetCurrentDeploymentVersionRequest'
+              $ref: '#/components/schemas/SetWorkerDeploymentCurrentVersionRequest'
         required: true
       responses:
         "200":
@@ -4238,7 +4280,45 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SetCurrentDeploymentVersionResponse'
+                $ref: '#/components/schemas/SetWorkerDeploymentCurrentVersionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/worker-deployment/{deploymentName}/set-ramping-version:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for
+         gradual ramp to unversioned workers too.
+      operationId: SetWorkerDeploymentRampingVersion
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetWorkerDeploymentRampingVersionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetWorkerDeploymentRampingVersionResponse'
         default:
           description: Default error response
           content:
@@ -6291,6 +6371,19 @@ components:
           description: |-
             This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
              Only set in `ENHANCED` mode.
+        versioningInfo:
+          allOf:
+            - $ref: '#/components/schemas/TaskQueueVersioningInfo'
+          description: |-
+            Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.
+             When not present, it means the tasks are routed to "unversioned" workers. Unversioned workers
+             are those with UNVERSIONED (or unspecified) WorkflowVersioningMode.
+             Task Queue Versioning info is updated indirectly by calling SetWorkerDeploymentCurrentVersion
+             and SetWorkerDeploymentRampingVersion on Worker Deployments.
+             Note: This information is not relevant to Pinned workflow executions and their activities as
+             they are always routed to their Pinned Deployment Version. However, new workflow executions
+             are typically not Pinned until they complete their first task (unless they are started with
+             a Pinned VersioningOverride or are Child Workflows of a Pinned parent).
     DescribeWorkerDeploymentVersionResponse:
       type: object
       properties:
@@ -9087,7 +9180,7 @@ components:
             - $ref: '#/components/schemas/DeploymentInfo'
           description: Info of the deployment that was current before executing this operation.
       description: '[cleanup-wv-pre-release] Pre-release deployment APIs, clean up later'
-    SetCurrentDeploymentVersionRequest:
+    SetWorkerDeploymentCurrentVersionRequest:
       type: object
       properties:
         namespace:
@@ -9100,12 +9193,50 @@ components:
         identity:
           type: string
           description: Optional. The identity of the client who initiated this request.
-    SetCurrentDeploymentVersionResponse:
+      description: Set/unset the Current Version of a Worker Deployment.
+    SetWorkerDeploymentCurrentVersionResponse:
       type: object
       properties:
         previousVersion:
           type: string
-          description: Info of the version that was current before executing this operation.
+          description: The version that was current before executing this operation.
+    SetWorkerDeploymentRampingVersionRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        deploymentName:
+          type: string
+        version:
+          type: string
+          description: |-
+            The Version to be set as the Ramping Version of the Deployment. Optional when `percentage` is
+             zero (unset case), but if given, it must match the current Ramping Version to be unset.
+             Can be an empty string and paired with a non-zero `percentage`, in which case it will set the ramp
+             percentage without a Ramping Version which means unversioned workers are being ramped.
+             (Useful for migrating to unversioned workers from Deployment's Current Version.)
+        percentage:
+          type: number
+          description: 'Valid range: [0,100]. Zero value will unset the Ramping Version.'
+          format: float
+        identity:
+          type: string
+          description: Optional. The identity of the client who initiated this request.
+      description: |-
+        Set/unset the Ramping Version of a Worker Deployment and its ramp percentage.
+         To unset, pass zero `percentage`.
+         To ramp to unversioned workers (from Deployment's Current Version), pass `version=""` with
+         non-zero `percentage`.
+    SetWorkerDeploymentRampingVersionResponse:
+      type: object
+      properties:
+        previousVersion:
+          type: string
+          description: The ramping version before executing this operation.
+        previousPercentage:
+          type: number
+          description: The ramping version percentage before executing this operation.
+          format: float
     SignalExternalWorkflowExecutionFailedEventAttributes:
       type: object
       properties:
@@ -9863,6 +9994,37 @@ components:
              who inherit the parent/previous workflow's Build ID but not its Task Queue. In those cases, make
              sure to query reachability for the parent/previous workflow's Task Queue as well.
           format: enum
+    TaskQueueVersioningInfo:
+      type: object
+      properties:
+        currentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            Current Version receives all the tasks except the portion that is routed to the Ramping
+             Version according to `ramping_version_percentage`.
+             It is possible that Current Version is not present when user is ramping from unversioned to
+             versioned workers. In that case, remaining tasks after `ramping_version_percentage` go to
+             unversioned workers. (Unversioned workers are those with UNVERSIONED (or unspecified)
+             WorkflowVersioningMode.)
+        rampingVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            Ramping Version is set during gradual rollout of a new Version. It takes a share of tasks
+             according to `ramping_version_percentage`.
+        rampingVersionPercentage:
+          type: number
+          description: |-
+            Percentage of tasks that are routed to the Ramping Version instead of the Current Version.
+             Special case: it is possible that `ramping_version_percentage` is non-zero while
+             `ramping_version` is absent. That case represents gradual migration out of the Current
+             Version to unversioned workers.
+          format: float
+        updateTime:
+          type: string
+          description: Last time versioning information of this Task Queue changed.
+          format: date-time
     TerminateWorkflowExecutionRequest:
       type: object
       properties:

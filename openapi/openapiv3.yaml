@@ -1533,6 +1533,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/worker-deployment/{deploymentName}/describe-worker-deployment:
+    get:
+      tags:
+        - WorkflowService
+      operationId: DescribeWorkerDeployment
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeWorkerDeploymentResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/worker-deployment/{deploymentName}/set-current-version:
     post:
       tags:
@@ -4209,6 +4238,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/worker-deployment/{deploymentName}/describe-worker-deployment:
+    get:
+      tags:
+        - WorkflowService
+      operationId: DescribeWorkerDeployment
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeWorkerDeploymentResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/worker-deployment/{deploymentName}/set-current-version:
     post:
       tags:
@@ -6291,6 +6349,11 @@ components:
           description: |-
             This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
              Only set in `ENHANCED` mode.
+    DescribeWorkerDeploymentResponse:
+      type: object
+      properties:
+        deploymentInfo:
+          $ref: '#/components/schemas/WorkerDeploymentInfo'
     DescribeWorkerDeploymentVersionResponse:
       type: object
       properties:
@@ -10398,6 +10461,38 @@ components:
              user specified timeout, API call returns even if specified stage is not reached.
           format: enum
       description: Specifies client's intent to wait for Update results.
+    WorkerDeploymentInfo:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Identifies a Worker Deployment. Must be unique within the namespace.
+        versionSummaries:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkerDeploymentInfo_WorkerDeploymentVersionSummary'
+          description: "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\n cleaned up automatically if all the following conditions meet:\n  - It does not recieve new executions (see WorkerDeploymentVersionInfo.accepts_new_executions) \n  - It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) \n  - It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
+        lastEditorIdentity:
+          type: string
+          description: Identity of the client that last edited the routing config for this Worker Deployment.
+      description: "A Worker Deployment (Deployment, for short) represents all workers serving \n a shared set of Task Queues. Typically, a Deployment represents one service or \n application.\n A Deployment contains multiple Deployment Versions, each representing a different \n version of workers. (see documentation of WorkerDeploymentVersionInfo)\n Deployment records are created in Temporal server automatically when their \n first poller arrives to the server."
+    WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
+      type: object
+      properties:
+        version:
+          type: string
+        workflowVersioningMode:
+          enum:
+            - WORKFLOW_VERSIONING_MODE_UNSPECIFIED
+            - WORKFLOW_VERSIONING_MODE_UNVERSIONED
+            - WORKFLOW_VERSIONING_MODE_VERSIONING_BEHAVIORS
+          type: string
+          format: enum
+        createTime:
+          type: string
+          format: date-time
+        acceptsNewExecutions:
+          type: boolean
     WorkerDeploymentOptions:
       type: object
       properties:

@@ -138,6 +138,40 @@ message WorkerDeploymentVersionInfo {
         string name = 1;
         temporal.api.enums.v1.TaskQueueType type = 2;
     }
+
+    // TODO (Shivam): Accepts_new_executions + Poller_status + Drainage_status + WorkerBuildMetadata
+}
+
+// A Worker Deployment (Deployment, for short) represents all workers serving 
+// a shared set of Task Queues. Typically, a Deployment represents one service or 
+// application.
+// A Deployment contains multiple Deployment Versions, each representing a different 
+// version of workers. (see documentation of WorkerDeploymentVersionInfo)
+// Deployment records are created in Temporal server automatically when their 
+// first poller arrives to the server.
+message WorkerDeploymentInfo {
+    // Identifies a Worker Deployment. Must be unique within the namespace.
+    string name = 1;
+
+    // Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be
+    // cleaned up automatically if all the following conditions meet:
+	//  - It does not recieve new executions (see WorkerDeploymentVersionInfo.accepts_new_executions) 
+	//  - It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) 
+	//  - It is drained (see WorkerDeploymentVersionInfo.drainage_status) 
+    repeated WorkerDeploymentVersionSummary version_summaries = 2;
+
+    // Identity of the client that last edited the routing config for this Worker Deployment.
+    string last_editor_identity = 3;
+
+    message WorkerDeploymentVersionSummary {
+        string version = 1;
+        temporal.api.enums.v1.WorkflowVersioningMode workflow_versioning_mode = 2;
+        google.protobuf.Timestamp create_time = 3;
+        bool accepts_new_executions = 4;
+    }
+    
+    // TODO (Shivam): WorkerDeploymentVersionSummary.PollerStatus + TaskQueueInfo + RampingInfo +
+    // AggregatedPollerStatus + DrainageStatus 
 }
 
 

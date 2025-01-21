@@ -11487,6 +11487,34 @@
       ],
       "default": "RETRY_STATE_UNSPECIFIED"
     },
+    "v1RoutingInfo": {
+      "type": "object",
+      "properties": {
+        "currentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
+          "title": "Current Version receives all the tasks except the portion that is routed to the Ramping\nVersion according to `ramping_version_percentage`.\nIt is possible that Current Version is not present when user is ramping from unversioned to\nversioned workers. In that case, remaining tasks after `ramping_version_percentage` go to\nunversioned workers. (Unversioned workers are those with UNVERSIONED (or unspecified)\nWorkflowVersioningMode.)"
+        },
+        "rampingVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
+          "description": "Ramping Version is set during gradual rollout of a new Version. It takes a share of tasks\naccording to `ramping_version_percentage`."
+        },
+        "rampingVersionPercentage": {
+          "type": "number",
+          "format": "float",
+          "description": "Percentage of tasks that are routed to the Ramping Version instead of the Current Version.\nSpecial case: it is possible that `ramping_version_percentage` is non-zero while\n`ramping_version` is absent. That case represents gradual migration out of the Current\nVersion to unversioned workers."
+        },
+        "currentVersionUpdateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last time current version was updated."
+        },
+        "rampingVersionUpdateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last time ramping version was updated."
+        }
+      }
+    },
     "v1ScanWorkflowExecutionsResponse": {
       "type": "object",
       "properties": {
@@ -13248,6 +13276,9 @@
         "createTime": {
           "type": "string",
           "format": "date-time"
+        },
+        "routingInfo": {
+          "$ref": "#/definitions/v1RoutingInfo"
         }
       },
       "description": "A Worker Deployment (Deployment, for short) represents all workers serving \na shared set of Task Queues. Typically, a Deployment represents one service or \napplication.\nA Deployment contains multiple Deployment Versions, each representing a different \nversion of workers. (see documentation of WorkerDeploymentVersionInfo)\nDeployment records are created in Temporal server automatically when their \nfirst poller arrives to the server."

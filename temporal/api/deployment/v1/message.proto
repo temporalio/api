@@ -162,6 +162,8 @@ message WorkerDeploymentInfo {
 
     google.protobuf.Timestamp create_time = 3;
 
+    RoutingInfo routing_info = 4;
+
     message WorkerDeploymentVersionSummary {
         string version = 1;
         temporal.api.enums.v1.WorkflowVersioningMode workflow_versioning_mode = 2;
@@ -174,3 +176,24 @@ message WorkerDeploymentInfo {
 }
 
 
+message RoutingInfo {
+    // Current Version receives all the tasks except the portion that is routed to the Ramping
+    // Version according to `ramping_version_percentage`.
+    // It is possible that Current Version is not present when user is ramping from unversioned to
+    // versioned workers. In that case, remaining tasks after `ramping_version_percentage` go to
+    // unversioned workers. (Unversioned workers are those with UNVERSIONED (or unspecified)
+    // WorkflowVersioningMode.)
+    temporal.api.deployment.v1.WorkerDeploymentVersion current_version = 1;
+    // Ramping Version is set during gradual rollout of a new Version. It takes a share of tasks
+    // according to `ramping_version_percentage`.
+    temporal.api.deployment.v1.WorkerDeploymentVersion ramping_version = 2;
+    // Percentage of tasks that are routed to the Ramping Version instead of the Current Version.
+    // Special case: it is possible that `ramping_version_percentage` is non-zero while
+    // `ramping_version` is absent. That case represents gradual migration out of the Current
+    // Version to unversioned workers.
+    float ramping_version_percentage = 3;
+    // Last time current version was updated.
+    google.protobuf.Timestamp current_version_update_time = 4;
+    // Last time ramping version was updated.
+    google.protobuf.Timestamp ramping_version_update_time = 5;
+}

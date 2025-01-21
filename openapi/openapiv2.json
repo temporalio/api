@@ -1812,6 +1812,42 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}": {
+      "get": {
+        "operationId": "DescribeWorkerDeployment2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeWorkerDeploymentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentName",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/worker-task-reachability": {
       "get": {
         "summary": "Deprecated. Use `DescribeTaskQueue`.",
@@ -4824,6 +4860,42 @@
         ]
       }
     },
+    "/namespaces/{namespace}/worker-deployments/{deploymentName}": {
+      "get": {
+        "operationId": "DescribeWorkerDeployment",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeWorkerDeploymentResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentName",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/worker-task-reachability": {
       "get": {
         "summary": "Deprecated. Use `DescribeTaskQueue`.",
@@ -5982,6 +6054,24 @@
         }
       },
       "description": "Replaces the routing rule with the given source Build ID."
+    },
+    "WorkerDeploymentInfoWorkerDeploymentVersionSummary": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "workflowVersioningMode": {
+          "$ref": "#/definitions/v1WorkflowVersioningMode"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "acceptsNewExecutions": {
+          "type": "boolean"
+        }
+      }
     },
     "WorkerDeploymentVersionInfoDeploymentVersionTaskQueueInfo": {
       "type": "object",
@@ -8644,6 +8734,14 @@
             "$ref": "#/definitions/v1TaskQueueVersionInfo"
           },
           "description": "This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.\nOnly set in `ENHANCED` mode."
+        }
+      }
+    },
+    "v1DescribeWorkerDeploymentResponse": {
+      "type": "object",
+      "properties": {
+        "workerDeploymentInfo": {
+          "$ref": "#/definitions/v1WorkerDeploymentInfo"
         }
       }
     },
@@ -12980,6 +13078,28 @@
         }
       },
       "description": "Specifies client's intent to wait for Update results."
+    },
+    "v1WorkerDeploymentInfo": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Identifies a Worker Deployment. Must be unique within the namespace."
+        },
+        "versionSummaries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/WorkerDeploymentInfoWorkerDeploymentVersionSummary"
+          },
+          "title": "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\ncleaned up automatically if all the following conditions meet:\n- It does not receive new executions (see WorkerDeploymentVersionInfo.accepts_new_executions) \n- It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) \n- It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "A Worker Deployment (Deployment, for short) represents all workers serving \na shared set of Task Queues. Typically, a Deployment represents one service or \napplication.\nA Deployment contains multiple Deployment Versions, each representing a different \nversion of workers. (see documentation of WorkerDeploymentVersionInfo)\nDeployment records are created in Temporal server automatically when their \nfirst poller arrives to the server."
     },
     "v1WorkerDeploymentOptions": {
       "type": "object",

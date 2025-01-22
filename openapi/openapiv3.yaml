@@ -10705,6 +10705,31 @@ components:
           items:
             $ref: '#/components/schemas/WorkerDeploymentVersionInfo_DeploymentVersionTaskQueueInfo'
           description: All the Task Queues that have ever polled from this Deployment version.
+        acceptsNewExecutions:
+          type: boolean
+          description: |-
+            True in one of the following conditions:
+              - This is the Current Version of the Deployment.
+              - This is the Ramping Version of the Deployment.
+              - This is Unversioned and the Deployment does not have a Current
+                Deployment.
+        drainageStatus:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersionInfo_DrainageStatus'
+          description: |-
+            Helps user determine when it is safe to decommission the workers of this
+             Version. Not present when accepts_new_executions is true.
+             Current limitations:
+             - Not supported for Unversioned mode.
+             - Periodically refreshed, may have delays up to few minutes (consult the
+               last_checked_time value).
+             - Refreshed only when accepts_new_executions is false AND the status is not
+               "drained" yet.
+             - Once the status is changed to "drained", it is not changed until the Version
+               becomes Current or Ramping again, at which time the drainage info is cleared.
+               This means if the Build is "drained" but new workflows are sent to it via
+               Pinned Versioning Override, the status does not account for those Pinned-override
+               executions and remains "drained".
       description: "A Worker Deployment Version (Version, for short) represents all workers of the same \n code and config within a Deployment. Workers of the same Version are expected to \n behave exactly the same so when executions move between them there are no \n non-determinism issues.\n Worker Deployment Versions are created in Temporal server automatically when \n their first poller arrives to the server.\n Each Version has a Workflow Versioning Mode which is chosen by the app\n developer. (see WorkflowVersioningMode enum documentation)"
     WorkerDeploymentVersionInfo_DeploymentVersionTaskQueueInfo:
       type: object
@@ -10719,6 +10744,23 @@ components:
             - TASK_QUEUE_TYPE_NEXUS
           type: string
           format: enum
+    WorkerDeploymentVersionInfo_DrainageStatus:
+      type: object
+      properties:
+        isDrained:
+          type: boolean
+          description: True means the Build does not have any Pinned OPEN workflows.
+        drainedTime:
+          type: string
+          description: Approximate time when the build drained.
+          format: date-time
+        lastCheckedTime:
+          type: string
+          description: Last time the system checked for drainage of this Build.
+          format: date-time
+      description: |-
+        Information about workflow drainage to help the user determine when it is safe
+         to decommission a Build.
     WorkerVersionCapabilities:
       type: object
       properties:

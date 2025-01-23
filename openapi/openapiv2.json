@@ -13169,14 +13169,14 @@
     "v1VersionDrainageInfo": {
       "type": "object",
       "properties": {
-        "state": {
-          "$ref": "#/definitions/v1VersionDrainageState",
+        "status": {
+          "$ref": "#/definitions/v1VersionDrainageStatus",
           "description": "Set to DRAINING when accepts_new_executions first becomes false.\nSet to DRAINED when no more open pinned workflows exist on this version."
         },
         "lastChangedTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Last time the drainage state changed."
+          "description": "Last time the drainage status changed."
         },
         "lastCheckedTime": {
           "type": "string",
@@ -13186,15 +13186,15 @@
       },
       "description": "Information about workflow drainage to help the user determine when it is safe\nto decommission a Version. Not present while accepts_new_executions is true."
     },
-    "v1VersionDrainageState": {
+    "v1VersionDrainageStatus": {
       "type": "string",
       "enum": [
-        "VERSION_DRAINAGE_STATE_UNSPECIFIED",
-        "VERSION_DRAINAGE_STATE_DRAINING",
-        "VERSION_DRAINAGE_STATE_DRAINED"
+        "VERSION_DRAINAGE_STATUS_UNSPECIFIED",
+        "VERSION_DRAINAGE_STATUS_DRAINING",
+        "VERSION_DRAINAGE_STATUS_DRAINED"
       ],
-      "default": "VERSION_DRAINAGE_STATE_UNSPECIFIED",
-      "description": "Specify the drainage state for a Worker Deployment Version so users can decide whether they\ncan safely decommission the version.\n\n - VERSION_DRAINAGE_STATE_UNSPECIFIED: Drainage Status is not specified.\n - VERSION_DRAINAGE_STATE_DRAINING: The Worker Deployment Version is not used by new workflows but is still used by\nopen pinned workflows. The version cannot be decommissioned safely.\n - VERSION_DRAINAGE_STATE_DRAINED: The Worker Deployment Version is not used by new or open workflows, but might be still needed by\nQueries sent to closed workflows. The version can be decommissioned safely if user does\nnot query closed workflows. If the user does query closed workflows for some time x after\nworkflows are closed, they should decommission the version after it has been drained for that duration."
+      "default": "VERSION_DRAINAGE_STATUS_UNSPECIFIED",
+      "description": "Specify the drainage status for a Worker Deployment Version so users can decide whether they\ncan safely decommission the version.\n\n - VERSION_DRAINAGE_STATUS_UNSPECIFIED: Drainage Status is not specified.\n - VERSION_DRAINAGE_STATUS_DRAINING: The Worker Deployment Version is not used by new workflows but is still used by\nopen pinned workflows. The version cannot be decommissioned safely.\n - VERSION_DRAINAGE_STATUS_DRAINED: The Worker Deployment Version is not used by new or open workflows, but might be still needed by\nQueries sent to closed workflows. The version can be decommissioned safely if user does\nnot query closed workflows. If the user does query closed workflows for some time x after\nworkflows are closed, they should decommission the version after it has been drained for that duration."
     },
     "v1VersionInfo": {
       "type": "object",
@@ -13221,6 +13221,17 @@
         }
       },
       "description": "VersionInfo contains details about current and recommended release versions as well as alerts and upgrade instructions."
+    },
+    "v1VersionRoutingState": {
+      "type": "string",
+      "enum": [
+        "VERSION_ROUTING_STATE_UNSPECIFIED",
+        "VERSION_ROUTING_STATE_NONE",
+        "VERSION_ROUTING_STATE_CURRENT",
+        "VERSION_ROUTING_STATE_RAMPING"
+      ],
+      "default": "VERSION_ROUTING_STATE_UNSPECIFIED",
+      "description": "Describes the routing state that the user has put this version in.\n\n - VERSION_ROUTING_STATE_NONE: No routing status, hence new executions are not routed to this Version (unless they are\nexplicitly pinned to this version).\n - VERSION_ROUTING_STATE_CURRENT: This is the Current Version of the Deployment, hence it receives all new executions that are\nnot sent to the ramping version (if a ramping version exists in this deployment).\n - VERSION_ROUTING_STATE_RAMPING: This is the Ramping Version of the Deployment, hence it receives a share of new executions."
     },
     "v1VersioningBehavior": {
       "type": "string",
@@ -13336,9 +13347,9 @@
           },
           "description": "All the Task Queues that have ever polled from this Deployment version."
         },
-        "acceptsNewExecutions": {
-          "type": "boolean",
-          "description": "True in one of the following conditions:\n - This is the Current Version of the Deployment.\n - This is the Ramping Version of the Deployment.\n - This is Unversioned and the Deployment does not have a Current\n   Deployment."
+        "routingState": {
+          "$ref": "#/definitions/v1VersionRoutingState",
+          "description": "Describes how workflow tasks are or are not routed to this version."
         },
         "drainageInfo": {
           "$ref": "#/definitions/v1VersionDrainageInfo",

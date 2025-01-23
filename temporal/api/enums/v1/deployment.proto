@@ -48,19 +48,34 @@ enum DeploymentReachability {
     DEPLOYMENT_REACHABILITY_UNREACHABLE = 3;
 }
 
-// Specify the drainage state for a Worker Deployment Version so users can decide whether they
+// (-- api-linter: core::0216::synonyms=disabled
+//     aip.dev/not-precedent: Call this status because it is . --)
+// Specify the drainage status for a Worker Deployment Version so users can decide whether they
 // can safely decommission the version.
-enum VersionDrainageState {
+enum VersionDrainageStatus {
     // Drainage Status is not specified.
-    VERSION_DRAINAGE_STATE_UNSPECIFIED = 0;
+    VERSION_DRAINAGE_STATUS_UNSPECIFIED = 0;
     // The Worker Deployment Version is not used by new workflows but is still used by
     // open pinned workflows. The version cannot be decommissioned safely.
-    VERSION_DRAINAGE_STATE_DRAINING = 1;
+    VERSION_DRAINAGE_STATUS_DRAINING = 1;
     // The Worker Deployment Version is not used by new or open workflows, but might be still needed by
     // Queries sent to closed workflows. The version can be decommissioned safely if user does
     // not query closed workflows. If the user does query closed workflows for some time x after
     // workflows are closed, they should decommission the version after it has been drained for that duration.
-    VERSION_DRAINAGE_STATE_DRAINED = 2;
+    VERSION_DRAINAGE_STATUS_DRAINED = 2;
+}
+
+// Describes the routing state that the user has put this version in.
+enum VersionRoutingState {
+    VERSION_ROUTING_STATE_UNSPECIFIED = 0;
+    // No routing status, hence new executions are not routed to this Version (unless they are
+    // explicitly pinned to this version).
+    VERSION_ROUTING_STATE_NONE = 1;
+    // This is the Current Version of the Deployment, hence it receives all new executions that are
+    // not sent to the ramping version (if a ramping version exists in this deployment).
+    VERSION_ROUTING_STATE_CURRENT = 2;
+    // This is the Ramping Version of the Deployment, hence it receives a share of new executions.
+    VERSION_ROUTING_STATE_RAMPING = 3;
 }
 
 // Workflow Versioning Mode for a particular Worker Deployment Version. This value is

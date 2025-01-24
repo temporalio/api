@@ -8850,6 +8850,39 @@ components:
             Non-Retryable errors types. Will stop retrying if the error type matches this list. Note that
              this is not a substring match, the error *type* (not message) must match exactly.
       description: How retries ought to be handled, usable by both workflows and activities
+    RoutingInfo:
+      type: object
+      properties:
+        currentVersion:
+          type: string
+          description: |-
+            Current Version receives all the tasks except the portion that is routed to the Ramping
+             Version according to `ramping_version_percentage`.
+             It is possible that Current Version is not present when user is ramping from unversioned to
+             versioned workers. In that case, remaining tasks after `ramping_version_percentage` go to
+             unversioned workers. (Unversioned workers are those with UNVERSIONED (or unspecified)
+             WorkflowVersioningMode.)
+        rampingVersion:
+          type: string
+          description: |-
+            Ramping Version is set during gradual rollout of a new Version. It takes a share of tasks
+             according to `ramping_version_percentage`.
+        rampingVersionPercentage:
+          type: number
+          description: |-
+            Percentage of tasks that are routed to the Ramping Version instead of the Current Version.
+             Special case: it is possible that `ramping_version_percentage` is non-zero while
+             `ramping_version` is absent. That case represents gradual migration out of the Current
+             Version to unversioned workers.
+          format: float
+        currentVersionUpdateTime:
+          type: string
+          description: Last time current version was updated.
+          format: date-time
+        rampingVersionUpdateTime:
+          type: string
+          description: Last time ramping version was updated.
+          format: date-time
     Schedule:
       type: object
       properties:
@@ -10661,6 +10694,8 @@ components:
         createTime:
           type: string
           format: date-time
+        routingInfo:
+          $ref: '#/components/schemas/RoutingInfo'
       description: "A Worker Deployment (Deployment, for short) represents all workers serving \n a shared set of Task Queues. Typically, a Deployment represents one service or \n application.\n A Deployment contains multiple Deployment Versions, each representing a different \n version of workers. (see documentation of WorkerDeploymentVersionInfo)\n Deployment records are created in Temporal server automatically when their \n first poller arrives to the server."
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object

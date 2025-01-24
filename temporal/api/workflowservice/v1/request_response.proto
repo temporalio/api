@@ -1791,27 +1791,14 @@ message PauseActivityByIdRequest {
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    // Used to de-dupe requests.
-    string request_id = 6;
+    reserved 6;
+    reserved "request_id";
 }
 
 message PauseActivityByIdResponse {
 }
 
 message UnpauseActivityByIdRequest {
-    message ResumeOperation {
-        // Indicates that if the activity is waiting to retry, it will  be scheduled immediately.
-        bool no_wait = 1;
-    }
-
-    message ResetOperation {
-        // Indicates that the activity should be scheduled immediately.
-        // Note that this may run simultaneously with any existing executions of the activity.
-        bool no_wait = 1;
-        // If set, the Heartbeat Details will be cleared out to make the Activity start over from the beginning
-        bool reset_heartbeat = 2;
-    }
-
     // Namespace of the workflow which scheduled this activity.
     string namespace = 1;
     // ID of the workflow which scheduled this activity.
@@ -1825,14 +1812,21 @@ message UnpauseActivityByIdRequest {
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    // Used to de-dupe requests.
-    string request_id = 6;
+    reserved 6;
+    reserved 7; // was resume/reset. Flatten this.
+    reserved 8; // was resume/reset. Flatten this.
+    reserved "request_id";
+    reserved "reset";
+    reserved "resume";
 
-    // There are two options to resume the activity - with 'resume' or with 'reset'.
-    oneof operation{
-        ResumeOperation resume = 7;
-        ResetOperation reset = 8;
-    }
+    // unpause can also reset the number of attempts
+    bool reset_attempts = 9;
+
+    // unpause can also reset the heartbeat details
+    bool reset_heartbeat = 10;
+
+    // If set, the activity will start at a random time within the specified jitter duration.
+    google.protobuf.Duration jitter = 11;
 }
 
 message UnpauseActivityByIdResponse {
@@ -1852,16 +1846,21 @@ message ResetActivityByIdRequest {
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    // Used to de-dupe requests.
-    string request_id = 6;
-
-    // Indicates that activity should be scheduled immediately.
-    // If this flag doesn't set, and activity currently running - temporal will wait until activity is completed.
-    bool no_wait = 7;
+    reserved 6;
+    reserved 7;
+    reserved "request_id";
+    reserved "no_wait";
 
     // Indicates that activity should reset heartbeat details.
     // This flag will be applied only to the new instance of the activity.
     bool reset_heartbeat = 8;
+
+    // if activity is paused, it will remain paused after reset
+    bool keep_paused = 9;
+
+    // If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.
+    // (unless it is paused and keep_paused is set)
+    google.protobuf.Duration jitter = 11;
 }
 
 message ResetActivityByIdResponse {

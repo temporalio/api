@@ -480,7 +480,7 @@
     "/api/v1/namespaces/{namespace}/activities/pause-by-id": {
       "post": {
         "summary": "PauseActivityById pauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
+        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpause.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
         "operationId": "PauseActivityById2",
         "responses": {
           "200": {
@@ -520,7 +520,8 @@
     },
     "/api/v1/namespaces/{namespace}/activities/reset-by-id": {
       "post": {
-        "summary": "ResetActivityById unpauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.\nResetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be resetted.\nIf the activity currently running:\n*  if 'no_wait' flag is provided, a new instance of the activity will be scheduled immediately.\n*  if 'no_wait' flag is not provided, a new instance of the  activity will be scheduled after current instance completes if needed.\nIf 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.",
+        "summary": "ResetActivityById resets the execution of an activity specified by its ID.",
+        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpause, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "operationId": "ResetActivityById2",
         "responses": {
           "200": {
@@ -560,7 +561,8 @@
     },
     "/api/v1/namespaces/{namespace}/activities/unpause-by-id": {
       "post": {
-        "summary": "UnpauseActivityById unpauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.\nThere are two 'modes' of unpausing an activity:\n'resume' - If the activity is paused, it will be resumed and scheduled for execution.\n   * If the activity is currently running Unpause with 'resume' has no effect.\n   * if 'no_wait' flag is set and the activity is waiting, the activity will be scheduled immediately.\n'reset' - If the activity is paused, it will be reset to its initial state and (depending on parameters) scheduled for execution.\n   * If the activity is currently running, Unpause with 'reset' will reset the number of attempts.\n   * if 'no_wait' flag is set, the activity will be scheduled immediately.\n   * if 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.\nIf the activity is in waiting for retry and past it retry timeout, it will be scheduled immediately.\nOnce the activity is unpaused, all timeout timers will be regenerated.",
+        "summary": "UnpauseActivityById unpauses the execution of an activity specified by its ID.",
+        "description": "If activity is not paused, this call will have no effect.\nIf the activity is waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpause, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "operationId": "UnpauseActivityById2",
         "responses": {
           "200": {
@@ -3480,7 +3482,7 @@
     "/namespaces/{namespace}/activities/pause-by-id": {
       "post": {
         "summary": "PauseActivityById pauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
+        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpause.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
         "operationId": "PauseActivityById",
         "responses": {
           "200": {
@@ -3520,7 +3522,8 @@
     },
     "/namespaces/{namespace}/activities/reset-by-id": {
       "post": {
-        "summary": "ResetActivityById unpauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.\nResetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be resetted.\nIf the activity currently running:\n*  if 'no_wait' flag is provided, a new instance of the activity will be scheduled immediately.\n*  if 'no_wait' flag is not provided, a new instance of the  activity will be scheduled after current instance completes if needed.\nIf 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.",
+        "summary": "ResetActivityById resets the execution of an activity specified by its ID.",
+        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpause, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "operationId": "ResetActivityById",
         "responses": {
           "200": {
@@ -3560,7 +3563,8 @@
     },
     "/namespaces/{namespace}/activities/unpause-by-id": {
       "post": {
-        "summary": "UnpauseActivityById unpauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.\nThere are two 'modes' of unpausing an activity:\n'resume' - If the activity is paused, it will be resumed and scheduled for execution.\n   * If the activity is currently running Unpause with 'resume' has no effect.\n   * if 'no_wait' flag is set and the activity is waiting, the activity will be scheduled immediately.\n'reset' - If the activity is paused, it will be reset to its initial state and (depending on parameters) scheduled for execution.\n   * If the activity is currently running, Unpause with 'reset' will reset the number of attempts.\n   * if 'no_wait' flag is set, the activity will be scheduled immediately.\n   * if 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.\nIf the activity is in waiting for retry and past it retry timeout, it will be scheduled immediately.\nOnce the activity is unpaused, all timeout timers will be regenerated.",
+        "summary": "UnpauseActivityById unpauses the execution of an activity specified by its ID.",
+        "description": "If activity is not paused, this call will have no effect.\nIf the activity is waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpause, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "operationId": "UnpauseActivityById",
         "responses": {
           "200": {
@@ -5684,28 +5688,6 @@
       },
       "description": "An operation completed successfully."
     },
-    "UnpauseActivityByIdRequestResetOperation": {
-      "type": "object",
-      "properties": {
-        "noWait": {
-          "type": "boolean",
-          "description": "Indicates that the activity should be scheduled immediately.\nNote that this may run simultaneously with any existing executions of the activity."
-        },
-        "resetHeartbeat": {
-          "type": "boolean",
-          "title": "If set, the Heartbeat Details will be cleared out to make the Activity start over from the beginning"
-        }
-      }
-    },
-    "UnpauseActivityByIdRequestResumeOperation": {
-      "type": "object",
-      "properties": {
-        "noWait": {
-          "type": "boolean",
-          "description": "Indicates that if the activity is waiting to retry, it will  be scheduled immediately."
-        }
-      }
-    },
     "UpdateWorkerBuildIdCompatibilityRequestAddNewCompatibleVersion": {
       "type": "object",
       "properties": {
@@ -5906,10 +5888,6 @@
         "identity": {
           "type": "string",
           "description": "The identity of the client who initiated this request."
-        },
-        "requestId": {
-          "type": "string",
-          "description": "Used to de-dupe requests."
         }
       }
     },
@@ -6045,17 +6023,17 @@
           "type": "string",
           "description": "The identity of the client who initiated this request."
         },
-        "requestId": {
-          "type": "string",
-          "description": "Used to de-dupe requests."
-        },
-        "noWait": {
-          "type": "boolean",
-          "description": "Indicates that activity should be scheduled immediately.\nIf this flag doesn't set, and activity currently running - temporal will wait until activity is completed."
-        },
         "resetHeartbeat": {
           "type": "boolean",
           "description": "Indicates that activity should reset heartbeat details.\nThis flag will be applied only to the new instance of the activity."
+        },
+        "keepPaused": {
+          "type": "boolean",
+          "title": "if activity is paused, it will remain paused after reset"
+        },
+        "jitter": {
+          "type": "string",
+          "title": "If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.\n(unless it is paused and keep_paused is set)"
         }
       }
     },
@@ -6627,15 +6605,17 @@
           "type": "string",
           "description": "The identity of the client who initiated this request."
         },
-        "requestId": {
+        "resetAttempts": {
+          "type": "boolean",
+          "title": "unpause can also reset the number of attempts"
+        },
+        "resetHeartbeat": {
+          "type": "boolean",
+          "title": "unpause can also reset the heartbeat details"
+        },
+        "jitter": {
           "type": "string",
-          "description": "Used to de-dupe requests."
-        },
-        "resume": {
-          "$ref": "#/definitions/UnpauseActivityByIdRequestResumeOperation"
-        },
-        "reset": {
-          "$ref": "#/definitions/UnpauseActivityByIdRequestResetOperation"
+          "description": "If set, the activity will start at a random time within the specified jitter duration."
         }
       }
     },

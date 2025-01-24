@@ -1717,6 +1717,7 @@ message ExecuteMultiOperationRequest {
     // - The list of operations must not be empty.
     // - The workflow ids must match across operations.
     // - The only valid list of operations at this time is [StartWorkflow, UpdateWorkflow], in this order.
+    // Only this order is supported:
     //
     // Note that additional operation-specific restrictions have to be considered.
     repeated Operation operations = 2;
@@ -1726,7 +1727,7 @@ message ExecuteMultiOperationRequest {
             // Additional restrictions:
             // - setting `cron_schedule` is invalid
             // - setting `request_eager_execution` is invalid
-            // - setting `workflow_start_delay` is invalid
+            // - setting `workflow_start_delay` is invalid, but only if UpdateWorkflowExecutionRequest present
             StartWorkflowExecutionRequest start_workflow = 1;
 
             // Additional restrictions:
@@ -1791,27 +1792,14 @@ message PauseActivityByIdRequest {
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    // Used to de-dupe requests.
-    string request_id = 6;
+    reserved 6;
+    reserved "request_id";
 }
 
 message PauseActivityByIdResponse {
 }
 
 message UnpauseActivityByIdRequest {
-    message ResumeOperation {
-        // Indicates that if the activity is waiting to retry, it will  be scheduled immediately.
-        bool no_wait = 1;
-    }
-
-    message ResetOperation {
-        // Indicates that the activity should be scheduled immediately.
-        // Note that this may run simultaneously with any existing executions of the activity.
-        bool no_wait = 1;
-        // If set, the Heartbeat Details will be cleared out to make the Activity start over from the beginning
-        bool reset_heartbeat = 2;
-    }
-
     // Namespace of the workflow which scheduled this activity.
     string namespace = 1;
     // ID of the workflow which scheduled this activity.
@@ -1825,14 +1813,21 @@ message UnpauseActivityByIdRequest {
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    // Used to de-dupe requests.
-    string request_id = 6;
+    reserved 6;
+    reserved 7; // was resume/reset. Flatten this.
+    reserved 8; // was resume/reset. Flatten this.
+    reserved "request_id";
+    reserved "reset";
+    reserved "resume";
 
-    // There are two options to resume the activity - with 'resume' or with 'reset'.
-    oneof operation{
-        ResumeOperation resume = 7;
-        ResetOperation reset = 8;
-    }
+    // unpause can also reset the number of attempts
+    bool reset_attempts = 9;
+
+    // unpause can also reset the heartbeat details
+    bool reset_heartbeat = 10;
+
+    // If set, the activity will start at a random time within the specified jitter duration.
+    google.protobuf.Duration jitter = 11;
 }
 
 message UnpauseActivityByIdResponse {
@@ -1852,16 +1847,21 @@ message ResetActivityByIdRequest {
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    // Used to de-dupe requests.
-    string request_id = 6;
-
-    // Indicates that activity should be scheduled immediately.
-    // If this flag doesn't set, and activity currently running - temporal will wait until activity is completed.
-    bool no_wait = 7;
+    reserved 6;
+    reserved 7;
+    reserved "request_id";
+    reserved "no_wait";
 
     // Indicates that activity should reset heartbeat details.
     // This flag will be applied only to the new instance of the activity.
     bool reset_heartbeat = 8;
+
+    // if activity is paused, it will remain paused after reset
+    bool keep_paused = 9;
+
+    // If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.
+    // (unless it is paused and keep_paused is set)
+    google.protobuf.Duration jitter = 11;
 }
 
 message ResetActivityByIdResponse {
@@ -1948,65 +1948,4 @@ message GetDeploymentReachabilityResponse {
     // Reachability level might come from server cache. This timestamp specifies when the value
     // was actually calculated.
     google.protobuf.Timestamp last_update_time = 3;
-}
-
-message ManageActivityRequest {
-    // Namespace of the workflow which scheduled this activity.
-    string namespace = 1;
-
-    // Execution info of the requesting workflow
-    temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
-
-    oneof activity {
-        // Activity ID of the activity to manage.
-        string id = 4;
-        // Activity type of the activities to manage.
-        temporal.api.common.v1.ActivityType type = 5;
-    }
-
-    // Pausing the activity. Either id or type should be provided
-    // If type is provided, all activities of this type will be paused
-    message PauseActivityRequest {
-    }
-
-    // Unpausing the activity. If activity was not paused this will be a no-op.
-    // If activity was waiting for retry - it will be scheduled immediately.
-    message UnpauseActivityRequest {
-        // If set, the activity will start at a random time within the specified jitter
-        // duration, introducing variability to the start time.
-        google.protobuf.Duration jitter = 4;
-    }
-
-    // Resetting the activity. This operation will reset the number of attempts.
-    // If activity is paused - activity will be unpaused.
-    // If activity is currently waiting for retry - it will be scheduled immediately.
-    message ResetActivityRequest {
-        // If this flag is provided and activity is currently paused - it will stay paused.
-        bool keep_paused = 1;
-        // Indicates that activity should reset heartbeat details.
-        // This flag will be applied only to the new instance of the activity.
-        bool reset_heartbeat = 2;
-    }
-
-    message UpdateActivityOptionsRequest {
-        // Activity options. Partial updates are accepted and controlled by update_mask
-        temporal.api.activity.v1.ActivityOptions activity_options = 6;
-
-        // Controls which fields from `activity_options` will be applied
-        google.protobuf.FieldMask update_mask = 7;
-    }
-
-    message Operation {
-        oneof operation_type {
-            PauseActivityRequest pause = 9;
-            UnpauseActivityRequest unpause = 10;
-            ResetActivityRequest reset = 11;
-            UpdateActivityOptionsRequest update_options = 12;
-        }
-    }
-
-    repeated Operation operations = 8;
-}
-
-message ManageActivityResponse {
 }

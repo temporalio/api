@@ -1756,8 +1756,6 @@ message UpdateActivityOptionsByIdRequest {
     // Run ID of the workflow which scheduled this activity
     // if empty - latest workflow is used
     string run_id = 3;
-    // ID of the activity we're updating
-    string activity_id = 4;
 
     // The identity of the client who initiated this request
     string identity = 5;
@@ -1768,8 +1766,18 @@ message UpdateActivityOptionsByIdRequest {
     // Controls which fields from `activity_options` will be applied
     google.protobuf.FieldMask update_mask = 7;
 
-    // Used to de-dupe requests
-    string request_id = 8;
+    // either activity id or activity type must be provided
+    oneof activity {
+        // ID of the activity we're pausing.
+        string id = 9;
+        // Type of the activity we're pausing.
+        string type = 10;
+    }
+
+    reserved 4;
+    reserved 8;
+    reserved "activity_id";
+    reserved "request_id";
 }
 
 message UpdateActivityOptionsByIdResponse {
@@ -1785,13 +1793,22 @@ message PauseActivityByIdRequest {
     // Run ID of the workflow which scheduled this activity.
     // If empty - latest workflow is used.
     string run_id = 3;
-    // ID of the activity we're updating.
-    string activity_id = 4;
+
 
     // The identity of the client who initiated this request.
     string identity = 5;
 
+    // either activity id or activity type must be provided
+    oneof activity {
+        // ID of the activity we're pausing.
+        string id = 7;
+        // Type of the activity we're pausing.
+        string type = 8;
+    }
+
+    reserved 4;
     reserved 6;
+    reserved "activity_id";
     reserved "request_id";
 }
 
@@ -1806,18 +1823,17 @@ message UnpauseActivityByIdRequest {
     // Run ID of the workflow which scheduled this activity.
     // If empty - latest workflow is used.
     string run_id = 3;
-    // ID of the activity we're updating.
-    string activity_id = 4;
 
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    reserved 6;
-    reserved 7; // was resume/reset. Flatten this.
-    reserved 8; // was resume/reset. Flatten this.
-    reserved "request_id";
-    reserved "reset";
-    reserved "resume";
+    // either activity id or activity type must be provided
+    oneof activity {
+        // ID of the activity we're pausing.
+        string id = 12;
+        // Type of the activity we're pausing.
+        string type = 13;
+    }
 
     // unpause can also reset the number of attempts
     bool reset_attempts = 9;
@@ -1827,6 +1843,16 @@ message UnpauseActivityByIdRequest {
 
     // If set, the activity will start at a random time within the specified jitter duration.
     google.protobuf.Duration jitter = 11;
+
+    reserved 4;
+    reserved 6;
+    reserved 7;
+    reserved 8;
+    reserved "activity_id";
+    reserved "request_id";
+    reserved "reset";
+    reserved "resume";
+
 }
 
 message UnpauseActivityByIdResponse {
@@ -1840,16 +1866,10 @@ message ResetActivityByIdRequest {
     // Run ID of the workflow which scheduled this activity.
     // If empty - latest workflow is used.
     string run_id = 3;
-    // ID of the activity we're updating.
-    string activity_id = 4;
 
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    reserved 6;
-    reserved 7;
-    reserved "request_id";
-    reserved "no_wait";
 
     // Indicates that activity should reset heartbeat details.
     // This flag will be applied only to the new instance of the activity.
@@ -1861,6 +1881,21 @@ message ResetActivityByIdRequest {
     // If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.
     // (unless it is paused and keep_paused is set)
     google.protobuf.Duration jitter = 11;
+
+    // either activity id or activity type must be provided
+    oneof activity {
+        // ID of the activity we're pausing.
+        string id = 12;
+        // Type of the activity we're pausing.
+        string type = 13;
+    }
+
+    reserved 4;
+    reserved 6;
+    reserved 7;
+    reserved "activity_id";
+    reserved "request_id";
+    reserved "no_wait";
 }
 
 message ResetActivityByIdResponse {

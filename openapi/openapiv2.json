@@ -479,7 +479,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/pause-by-id": {
       "post": {
-        "summary": "PauseActivityById pauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
+        "summary": "PauseActivityById pauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be paused\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpause.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
         "operationId": "PauseActivityById2",
         "responses": {
@@ -520,7 +520,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/reset-by-id": {
       "post": {
-        "summary": "ResetActivityById resets the execution of an activity specified by its ID.",
+        "summary": "ResetActivityById resets the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be reset.",
         "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpause, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "operationId": "ResetActivityById2",
         "responses": {
@@ -561,7 +561,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/unpause-by-id": {
       "post": {
-        "summary": "UnpauseActivityById unpauses the execution of an activity specified by its ID.",
+        "summary": "UnpauseActivityById unpauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be unpause.",
         "description": "If activity is not paused, this call will have no effect.\nIf the activity is waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpause, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "operationId": "UnpauseActivityById2",
         "responses": {
@@ -602,7 +602,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/update-options-by-id": {
       "post": {
-        "summary": "UpdateActivityOptionsById is called by the client to update the options of an activity",
+        "summary": "UpdateActivityOptionsById is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.",
         "operationId": "UpdateActivityOptionsById2",
         "responses": {
           "200": {
@@ -3481,7 +3481,7 @@
     },
     "/namespaces/{namespace}/activities/pause-by-id": {
       "post": {
-        "summary": "PauseActivityById pauses the execution of an activity specified by its ID.\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
+        "summary": "PauseActivityById pauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be paused\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpause.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.",
         "operationId": "PauseActivityById",
         "responses": {
@@ -3522,7 +3522,7 @@
     },
     "/namespaces/{namespace}/activities/reset-by-id": {
       "post": {
-        "summary": "ResetActivityById resets the execution of an activity specified by its ID.",
+        "summary": "ResetActivityById resets the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be reset.",
         "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpause, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "operationId": "ResetActivityById",
         "responses": {
@@ -3563,7 +3563,7 @@
     },
     "/namespaces/{namespace}/activities/unpause-by-id": {
       "post": {
-        "summary": "UnpauseActivityById unpauses the execution of an activity specified by its ID.",
+        "summary": "UnpauseActivityById unpauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be unpause.",
         "description": "If activity is not paused, this call will have no effect.\nIf the activity is waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpause, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID.",
         "operationId": "UnpauseActivityById",
         "responses": {
@@ -3604,7 +3604,7 @@
     },
     "/namespaces/{namespace}/activities/update-options-by-id": {
       "post": {
-        "summary": "UpdateActivityOptionsById is called by the client to update the options of an activity",
+        "summary": "UpdateActivityOptionsById is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.",
         "operationId": "UpdateActivityOptionsById",
         "responses": {
           "200": {
@@ -5881,13 +5881,17 @@
           "type": "string",
           "description": "Run ID of the workflow which scheduled this activity.\nIf empty - latest workflow is used."
         },
-        "activityId": {
-          "type": "string",
-          "description": "ID of the activity we're updating."
-        },
         "identity": {
           "type": "string",
           "description": "The identity of the client who initiated this request."
+        },
+        "id": {
+          "type": "string",
+          "description": "ID of the activity we're pausing."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of the activity we're pausing."
         }
       }
     },
@@ -6015,10 +6019,6 @@
           "type": "string",
           "description": "Run ID of the workflow which scheduled this activity.\nIf empty - latest workflow is used."
         },
-        "activityId": {
-          "type": "string",
-          "description": "ID of the activity we're updating."
-        },
         "identity": {
           "type": "string",
           "description": "The identity of the client who initiated this request."
@@ -6034,6 +6034,14 @@
         "jitter": {
           "type": "string",
           "title": "If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.\n(unless it is paused and keep_paused is set)"
+        },
+        "id": {
+          "type": "string",
+          "description": "ID of the activity we're pausing."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of the activity we're pausing."
         }
       }
     },
@@ -6597,13 +6605,17 @@
           "type": "string",
           "description": "Run ID of the workflow which scheduled this activity.\nIf empty - latest workflow is used."
         },
-        "activityId": {
-          "type": "string",
-          "description": "ID of the activity we're updating."
-        },
         "identity": {
           "type": "string",
           "description": "The identity of the client who initiated this request."
+        },
+        "id": {
+          "type": "string",
+          "description": "ID of the activity we're pausing."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of the activity we're pausing."
         },
         "resetAttempts": {
           "type": "boolean",
@@ -6630,10 +6642,6 @@
           "type": "string",
           "title": "Run ID of the workflow which scheduled this activity\nif empty - latest workflow is used"
         },
-        "activityId": {
-          "type": "string",
-          "title": "ID of the activity we're updating"
-        },
         "identity": {
           "type": "string",
           "title": "The identity of the client who initiated this request"
@@ -6646,9 +6654,13 @@
           "type": "string",
           "title": "Controls which fields from `activity_options` will be applied"
         },
-        "requestId": {
+        "id": {
           "type": "string",
-          "title": "Used to de-dupe requests"
+          "description": "ID of the activity we're pausing."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of the activity we're pausing."
         }
       }
     },

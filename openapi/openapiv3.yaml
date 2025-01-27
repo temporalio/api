@@ -421,7 +421,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        PauseActivityById pauses the execution of an activity specified by its ID.
+        PauseActivityById pauses the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be paused
          Returns a `NotFound` error if there is no pending activity with the provided ID.
 
          Pausing an activity means:
@@ -469,7 +470,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        ResetActivityById resets the execution of an activity specified by its ID.
+        ResetActivityById resets the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be reset.
 
          Resetting an activity means:
          * number of attempts will be reset to 0.
@@ -519,7 +521,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        UnpauseActivityById unpauses the execution of an activity specified by its ID.
+        UnpauseActivityById unpauses the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be unpause.
 
          If activity is not paused, this call will have no effect.
          If the activity is waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
@@ -565,7 +568,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        UpdateActivityOptionsById is called by the client to update the options of an activity
+        UpdateActivityOptionsById is called by the client to update the options of an activity by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be updated.
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: UpdateActivityOptionsById
@@ -3091,7 +3095,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        PauseActivityById pauses the execution of an activity specified by its ID.
+        PauseActivityById pauses the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be paused
          Returns a `NotFound` error if there is no pending activity with the provided ID.
 
          Pausing an activity means:
@@ -3139,7 +3144,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        ResetActivityById resets the execution of an activity specified by its ID.
+        ResetActivityById resets the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be reset.
 
          Resetting an activity means:
          * number of attempts will be reset to 0.
@@ -3189,7 +3195,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        UnpauseActivityById unpauses the execution of an activity specified by its ID.
+        UnpauseActivityById unpauses the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be unpause.
 
          If activity is not paused, this call will have no effect.
          If the activity is waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
@@ -3235,7 +3242,8 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        UpdateActivityOptionsById is called by the client to update the options of an activity
+        UpdateActivityOptionsById is called by the client to update the options of an activity by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be updated.
          (-- api-linter: core::0136::prepositions=disabled
              aip.dev/not-precedent: "By" is used to indicate request type. --)
       operationId: UpdateActivityOptionsById
@@ -7521,12 +7529,15 @@ components:
           description: |-
             Run ID of the workflow which scheduled this activity.
              If empty - latest workflow is used.
-        activityId:
-          type: string
-          description: ID of the activity we're updating.
         identity:
           type: string
           description: The identity of the client who initiated this request.
+        id:
+          type: string
+          description: ID of the activity we're pausing.
+        type:
+          type: string
+          description: Type of the activity we're pausing.
     PauseActivityByIdResponse:
       type: object
       properties: {}
@@ -8138,9 +8149,6 @@ components:
           description: |-
             Run ID of the workflow which scheduled this activity.
              If empty - latest workflow is used.
-        activityId:
-          type: string
-          description: ID of the activity we're updating.
         identity:
           type: string
           description: The identity of the client who initiated this request.
@@ -8158,6 +8166,12 @@ components:
           description: |-
             If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.
              (unless it is paused and keep_paused is set)
+        id:
+          type: string
+          description: ID of the activity we're pausing.
+        type:
+          type: string
+          description: Type of the activity we're pausing.
     ResetActivityByIdResponse:
       type: object
       properties: {}
@@ -9816,12 +9830,15 @@ components:
           description: |-
             Run ID of the workflow which scheduled this activity.
              If empty - latest workflow is used.
-        activityId:
-          type: string
-          description: ID of the activity we're updating.
         identity:
           type: string
           description: The identity of the client who initiated this request.
+        id:
+          type: string
+          description: ID of the activity we're pausing.
+        type:
+          type: string
+          description: Type of the activity we're pausing.
         resetAttempts:
           type: boolean
           description: unpause can also reset the number of attempts
@@ -9849,9 +9866,6 @@ components:
           description: |-
             Run ID of the workflow which scheduled this activity
              if empty - latest workflow is used
-        activityId:
-          type: string
-          description: ID of the activity we're updating
         identity:
           type: string
           description: The identity of the client who initiated this request
@@ -9863,9 +9877,12 @@ components:
           type: string
           description: Controls which fields from `activity_options` will be applied
           format: field-mask
-        requestId:
+        id:
           type: string
-          description: Used to de-dupe requests
+          description: ID of the activity we're pausing.
+        type:
+          type: string
+          description: Type of the activity we're pausing.
     UpdateActivityOptionsByIdResponse:
       type: object
       properties:

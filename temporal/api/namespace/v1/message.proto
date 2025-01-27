@@ -34,6 +34,7 @@ option csharp_namespace = "Temporalio.Api.Namespace.V1";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
+import "temporal/api/common/v1/message.proto";
 import "temporal/api/enums/v1/namespace.proto";
 
 
@@ -106,4 +107,43 @@ message NamespaceFilter {
     // Setting include_deleted to true will include deleted namespaces.
     // Note: Namespace is in NAMESPACE_STATE_DELETED state when it was deleted from the system but associated data is not deleted yet.
     bool include_deleted = 1;
+}
+
+message RuleAction {
+    // Type of the rule action.
+    temporal.api.enums.v1.RuleActionType type = 1;
+    // Payload of the rule action.
+    temporal.api.common.v1.Payload payload = 2;
+}
+
+// NamespaceRule describes a rule that can be to any workflow in this namespace.
+message NamespaceRule {
+    // Name of the rule.
+    string name = 1;
+
+    // ID must be unique within the namespace
+    string id = 2;
+
+    // Expiration time of the rule. After this time, the rule will be deleted.
+    // Can be empty if the rule should never expire.
+    google.protobuf.Timestamp expiration_time = 3;
+
+    // Predicate is a query that is used to match against workflow data, based on rule type.
+    string predicate = 4;
+    // Type of the rule. Specifies how the rule should be triggered and evaluated.
+    // Currently, only "activity" type is supported.
+    // Types:
+    // - activity: Rule is triggered when a activity is about to start.
+    // - workflow: TBD.
+    // The following activity attributes are supported as part of the predicate:
+    // - workflowType: The type of the workflow.
+    // - activityType: The type of the activity.
+    // - activityId: The ID of the activity.
+    // - activityAttempt: The number attempts of the activity.
+    // - backoffInterval: The current backoff interval of the activity.
+    // - activityStatus: The status of the activity. Can be one of "scheduled", "started", "paused".
+    // - taskQueue: The name of the task queue of the activity.
+    string type = 5;
+    // Action to be taken when the rule is triggered and predicate is matched.
+    repeated RuleAction action = 6;
 }

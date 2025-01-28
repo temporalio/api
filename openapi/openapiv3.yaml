@@ -8983,7 +8983,7 @@ components:
         currentVersion:
           type: string
           description: |-
-            Always present. Specifies what Deployment Version should should receive new workflow
+            Always present. Specifies which Deployment Version should should receive new workflow
              executions and tasks of existing unversioned or AutoUpgrade workflows.
              Can be one of the following:
              - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
@@ -9419,7 +9419,7 @@ components:
           type: string
         deploymentName:
           type: string
-        version:
+        buildId:
           type: string
           description: |-
             Required. Can be one of the following:
@@ -9457,7 +9457,7 @@ components:
           type: string
         deploymentName:
           type: string
-        version:
+        buildId:
           type: string
           description: |-
             Can be one of the following:
@@ -10769,7 +10769,7 @@ components:
             - VERSION_DRAINAGE_STATUS_DRAINED
           type: string
           description: |-
-            Set to DRAINING when accepts_new_executions first becomes false.
+            Set to DRAINING when the version stops accepting new executions (is no longer current or ramping).
              Set to DRAINED when no more open pinned workflows exist on this version.
           format: enum
         lastChangedTime:
@@ -10782,7 +10782,7 @@ components:
           format: date-time
       description: |-
         Information about workflow drainage to help the user determine when it is safe
-         to decommission a Version. Not present while accepts_new_executions is true.
+         to decommission a Version. Not present while the version is current or ramping.
     VersionInfo:
       type: object
       properties:
@@ -10866,7 +10866,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkerDeploymentInfo_WorkerDeploymentVersionSummary'
-          description: "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\n cleaned up automatically if all the following conditions meet:\n - It does not receive new executions (see WorkerDeploymentVersionInfo.accepts_new_executions) \n - It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) \n - It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
+          description: "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\n cleaned up automatically if all the following conditions meet:\n - It does not receive new executions (is not current or ramping)\n - It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) \n - It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
         createTime:
           type: string
           format: date-time
@@ -10882,7 +10882,7 @@ components:
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object
       properties:
-        version:
+        buildId:
           type: string
         workflowVersioningMode:
           enum:
@@ -10952,6 +10952,10 @@ components:
         createTime:
           type: string
           format: date-time
+        routingUpdateTime:
+          type: string
+          description: Last time `current_since_time`, `ramping_since_time, or `ramp_percentage` of this version changed.
+          format: date-time
         currentSinceTime:
           type: string
           description: |-
@@ -10964,11 +10968,13 @@ components:
           description: |-
             (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: 'Since' captures the field semantics despite being a preposition. --)
-             Nil if not ramping.
+             Nil if not ramping. Updated when the version first starts ramping, not on each ramp change.
           format: date-time
         rampPercentage:
           type: number
-          description: Zero if the version is not ramping (i.e. `ramping_since_time` is nil).
+          description: |-
+            Range: [0, 100]. Must be zero if the version is not ramping (i.e. `ramping_since_time` is nil).
+             Can be in the range [0, 100] if the version is ramping.
           format: float
         taskQueueInfos:
           type: array
@@ -10978,20 +10984,7 @@ components:
         drainageInfo:
           allOf:
             - $ref: '#/components/schemas/VersionDrainageInfo'
-          description: |-
-            Helps user determine when it is safe to decommission the workers of this
-             Version. Not present when accepts_new_executions is true.
-             Current limitations:
-             - Not supported for Unversioned mode.
-             - Periodically refreshed, may have delays up to few minutes (consult the
-               last_checked_time value).
-             - Refreshed only when accepts_new_executions is false AND the status is not
-               "drained" yet.
-             - Once the status is changed to "drained", it is not changed until the Version
-               becomes Current or Ramping again, at which time the drainage info is cleared.
-               This means if the Version is "drained" but new workflows are sent to it via
-               Pinned Versioning Override, the status does not account for those Pinned-override
-               executions and remains "drained".
+          description: "Helps user determine when it is safe to decommission the workers of this\n Version. Not present when the workflow is accepting new workflow executions because it's current or ramping.\n Current limitations:\n - Not supported for Unversioned mode.\n - Periodically refreshed, may have delays up to few minutes (consult the\n   last_checked_time value).\n - Refreshed only when the version is neither current nor ramping AND \n the status is not \"drained\" yet.\n - Once the status is changed to \"drained\", it is not changed until the Version\n   becomes Current or Ramping again, at which time the drainage info is cleared.\n   This means if the Version is \"drained\" but new workflows are sent to it via\n   Pinned Versioning Override, the status does not account for those Pinned-override\n   executions and remains \"drained\"."
         metadata:
           allOf:
             - $ref: '#/components/schemas/VersionMetadata'
@@ -11010,6 +11003,7 @@ components:
             - TASK_QUEUE_TYPE_NEXUS
           type: string
           format: enum
+      description: 'TODO (Shivam): + Poller_status + WorkerDeploymentVersionMetadata'
     WorkerVersionCapabilities:
       type: object
       properties:

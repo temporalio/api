@@ -6262,8 +6262,8 @@
           "type": "string",
           "format": "date-time"
         },
-        "acceptsNewExecutions": {
-          "type": "boolean"
+        "drainageStatus": {
+          "$ref": "#/definitions/v1VersionDrainageStatus"
         }
       }
     },
@@ -13315,6 +13315,36 @@
       },
       "description": "Information a user can set, often for use by user interfaces."
     },
+    "v1VersionDrainageInfo": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/v1VersionDrainageStatus",
+          "description": "Set to DRAINING when the version first stops accepting new executions (via current / ramp).\nSet to DRAINED when no more open pinned workflows exist on this version."
+        },
+        "lastChangedTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last time the drainage status changed."
+        },
+        "lastCheckedTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last time the system checked for drainage of this version."
+        }
+      },
+      "description": "Information about workflow drainage to help the user determine when it is safe\nto decommission a Version. Not present while version is current or ramping."
+    },
+    "v1VersionDrainageStatus": {
+      "type": "string",
+      "enum": [
+        "VERSION_DRAINAGE_STATUS_UNSPECIFIED",
+        "VERSION_DRAINAGE_STATUS_DRAINING",
+        "VERSION_DRAINAGE_STATUS_DRAINED"
+      ],
+      "default": "VERSION_DRAINAGE_STATUS_UNSPECIFIED",
+      "description": "Specify the drainage status for a Worker Deployment Version so users can decide whether they\ncan safely decommission the version.\n\n - VERSION_DRAINAGE_STATUS_UNSPECIFIED: Drainage Status is not specified.\n - VERSION_DRAINAGE_STATUS_DRAINING: The Worker Deployment Version is not used by new workflows but is still used by\nopen pinned workflows. The version cannot be decommissioned safely.\n - VERSION_DRAINAGE_STATUS_DRAINED: The Worker Deployment Version is not used by new or open workflows, but might be still needed by\nQueries sent to closed workflows. The version can be decommissioned safely if user does\nnot query closed workflows. If the user does query closed workflows for some time x after\nworkflows are closed, they should decommission the version after it has been drained for that duration."
+    },
     "v1VersionInfo": {
       "type": "object",
       "properties": {
@@ -13392,7 +13422,7 @@
             "type": "object",
             "$ref": "#/definitions/WorkerDeploymentInfoWorkerDeploymentVersionSummary"
           },
-          "title": "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\ncleaned up automatically if all the following conditions meet:\n- It does not receive new executions (see WorkerDeploymentVersionInfo.accepts_new_executions) \n- It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) \n- It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
+          "title": "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\ncleaned up automatically if all the following conditions meet:\n- It does not receive new executions via being current or ramping\n- It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) \n- It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
         },
         "createTime": {
           "type": "string",
@@ -13450,6 +13480,26 @@
           "type": "string",
           "format": "date-time"
         },
+        "routingUpdateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last time `current_since_time`, `ramping_since_time, or `ramp_percentage` of this version changed."
+        },
+        "currentSinceTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "\nNil if not current."
+        },
+        "rampingSinceTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "\nNil if not ramping. Updated when the version first starts ramping, not on each ramp change."
+        },
+        "rampPercentage": {
+          "type": "number",
+          "format": "float",
+          "description": "Range: [0, 100]. Must be zero if the version is not ramping (i.e. `ramping_since_time` is nil).\nCan be in the range [0, 100] if the version is ramping."
+        },
         "taskQueueInfos": {
           "type": "array",
           "items": {
@@ -13457,6 +13507,10 @@
             "$ref": "#/definitions/WorkerDeploymentVersionInfoDeploymentVersionTaskQueueInfo"
           },
           "description": "All the Task Queues that have ever polled from this Deployment version."
+        },
+        "drainageInfo": {
+          "$ref": "#/definitions/v1VersionDrainageInfo",
+          "description": "Helps user determine when it is safe to decommission the workers of this\nVersion. Not present when version is current or ramping.\nCurrent limitations:\n- Not supported for Unversioned mode.\n- Periodically refreshed, may have delays up to few minutes (consult the\n  last_checked_time value).\n- Refreshed only when version is not current or ramping AND the status is not\n  \"drained\" yet.\n- Once the status is changed to \"drained\", it is not changed until the Version\n  becomes Current or Ramping again, at which time the drainage info is cleared.\n  This means if the Version is \"drained\" but new workflows are sent to it via\n  Pinned Versioning Override, the status does not account for those Pinned-override\n  executions and remains \"drained\"."
         }
       },
       "title": "A Worker Deployment Version (Version, for short) represents all workers of the same \ncode and config within a Deployment. Workers of the same Version are expected to \nbehave exactly the same so when executions move between them there are no \nnon-determinism issues.\nWorker Deployment Versions are created in Temporal server automatically when \ntheir first poller arrives to the server.\nEach Version has a Workflow Versioning Mode which is chosen by the app\ndeveloper. (see WorkflowVersioningMode enum documentation)"

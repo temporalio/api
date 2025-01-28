@@ -1567,36 +1567,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/worker-deployments-version/{version}:
-    get:
-      tags:
-        - WorkflowService
-      description: Describes a worker deployment version.
-      operationId: DescribeWorkerDeploymentVersion
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: version
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DescribeWorkerDeploymentVersionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}:
     get:
       tags:
@@ -1696,6 +1666,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SetWorkerDeploymentRampingVersionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/worker-deployments/{version.deployment_name}/version/{version.build_id}:
+    get:
+      tags:
+        - WorkflowService
+      description: Describes a worker deployment version.
+      operationId: DescribeWorkerDeploymentVersion
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version.deployment_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version.build_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version.deploymentName
+          in: query
+          description: The name of the Deployment this version belongs too.
+          schema:
+            type: string
+        - name: version.buildId
+          in: query
+          description: |-
+            Build ID uniquely identifies the Deployment Version within a Deployment, but the same Build
+             ID can be used in multiple Deployments.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeWorkerDeploymentVersionResponse'
         default:
           description: Default error response
           content:
@@ -4346,36 +4363,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/worker-deployments-version/{version}:
-    get:
-      tags:
-        - WorkflowService
-      description: Describes a worker deployment version.
-      operationId: DescribeWorkerDeploymentVersion
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: version
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DescribeWorkerDeploymentVersionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/worker-deployments/{deploymentName}:
     get:
       tags:
@@ -4475,6 +4462,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SetWorkerDeploymentRampingVersionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/worker-deployments/{version.deployment_name}/version/{version.build_id}:
+    get:
+      tags:
+        - WorkflowService
+      description: Describes a worker deployment version.
+      operationId: DescribeWorkerDeploymentVersion
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version.deployment_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version.build_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version.deploymentName
+          in: query
+          description: The name of the Deployment this version belongs too.
+          schema:
+            type: string
+        - name: version.buildId
+          in: query
+          description: |-
+            Build ID uniquely identifies the Deployment Version within a Deployment, but the same Build
+             ID can be used in multiple Deployments.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeWorkerDeploymentVersionResponse'
         default:
           description: Default error response
           content:
@@ -6513,6 +6547,9 @@ components:
     DescribeWorkerDeploymentResponse:
       type: object
       properties:
+        conflictToken:
+          type: string
+          format: bytes
         workerDeploymentInfo:
           $ref: '#/components/schemas/WorkerDeploymentInfo'
     DescribeWorkerDeploymentVersionResponse:
@@ -8946,24 +8983,33 @@ components:
         currentVersion:
           type: string
           description: |-
-            Current Version receives all the tasks except the portion that is routed to the Ramping
-             Version according to `ramping_version_percentage`.
-             It is possible that Current Version is not present when user is ramping from unversioned to
-             versioned workers. In that case, remaining tasks after `ramping_version_percentage` go to
-             unversioned workers. (Unversioned workers are those with UNVERSIONED (or unspecified)
-             WorkflowVersioningMode.)
+            Always present. Specifies which Deployment Version should should receive new workflow
+             executions and tasks of existing unversioned or AutoUpgrade workflows.
+             Can be one of the following:
+             - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+             - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+             Note: Current Version is overridden by the Ramping Version for a portion of traffic when a ramp
+             is set (see `ramping_version`.)
         rampingVersion:
           type: string
           description: |-
-            Ramping Version is set during gradual rollout of a new Version. It takes a share of tasks
-             according to `ramping_version_percentage`.
+            When present, it means the traffic is being shifted from the Current Version to the Ramping
+             Version.
+             Must always be different from Current Version. Can be one of the following:
+             - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+             - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+             Note that it is possible to ramp from one Version to another Version, or from unversioned
+             workers to a particular Version, or from a particular Version to unversioned workers.
         rampingVersionPercentage:
           type: number
           description: |-
             Percentage of tasks that are routed to the Ramping Version instead of the Current Version.
-             Special case: it is possible that `ramping_version_percentage` is non-zero while
-             `ramping_version` is absent. That case represents gradual migration out of the Current
-             Version to unversioned workers.
+             Valid range: [0, 100]. A 100% value means the Ramping Version is receiving full traffic but
+             not yet "promoted" to be the Current Version, likely due to pending validations.
           format: float
         currentVersionUpdateTime:
           type: string
@@ -9373,9 +9419,22 @@ components:
           type: string
         deploymentName:
           type: string
-        version:
+        buildId:
           type: string
-          description: Must be a Versioned Build. Pass empty string to unset.
+          description: |-
+            Required. Can be one of the following:
+             - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+             - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+        conflictToken:
+          type: string
+          description: |-
+            Optional. This can be the value of conflict_token from a Describe, or another Worker
+             Deployment API. Passing conflict token which will cause this request to fail if the
+             Deployment's configuration has been modified between the previous API call and
+             this one.
+          format: bytes
         identity:
           type: string
           description: Optional. The identity of the client who initiated this request.
@@ -9383,9 +9442,14 @@ components:
     SetWorkerDeploymentCurrentVersionResponse:
       type: object
       properties:
-        previousVersion:
+        conflictToken:
           type: string
-          description: The version that was current before executing this operation.
+          format: bytes
+        previousBuildId:
+          type: string
+          description: |-
+            The Build ID of the version that was current before executing this operation. Can also be the
+             `__unversioned__` special value.
     SetWorkerDeploymentRampingVersionRequest:
       type: object
       properties:
@@ -9393,32 +9457,42 @@ components:
           type: string
         deploymentName:
           type: string
-        version:
+        buildId:
           type: string
           description: |-
-            The Version to be set as the Ramping Version of the Deployment. Optional when `percentage` is
-             zero (unset case), but if given, it must match the current Ramping Version to be unset.
-             Can be an empty string and paired with a non-zero `percentage`, in which case it will set the ramp
-             percentage without a Ramping Version which means unversioned workers are being ramped.
-             (Useful for migrating to unversioned workers from Deployment's Current Version.)
+            Can be one of the following:
+             - Absent/empty value to unset the Ramping Version. Must be paired with `percentage=0`.
+             - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`) to set it as the Ramping Version.
+             - Or, the "__unversioned__" special value, to ramp unversioned workers (those with
+               `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
         percentage:
           type: number
-          description: 'Valid range: [0,100]. Zero value will unset the Ramping Version.'
+          description: 'Ramp percentage to set. Valid range: [0,100].'
           format: float
+        conflictToken:
+          type: string
+          description: |-
+            Optional. This can be the value of conflict_token from a Describe, or another Worker
+             Deployment API. Passing conflict token which will cause this request to fail if the
+             Deployment's configuration has been modified between the previous API call and
+             this one.
+          format: bytes
         identity:
           type: string
           description: Optional. The identity of the client who initiated this request.
-      description: |-
-        Set/unset the Ramping Version of a Worker Deployment and its ramp percentage.
-         To unset, pass zero `percentage`.
-         To ramp to unversioned workers (from Deployment's Current Version), pass `version=""` with
-         non-zero `percentage`.
+      description: Set/unset the Ramping Version of a Worker Deployment and its ramp percentage.
     SetWorkerDeploymentRampingVersionResponse:
       type: object
       properties:
-        previousVersion:
+        conflictToken:
           type: string
-          description: The ramping version before executing this operation.
+          format: bytes
+        previousBuildId:
+          type: string
+          description: |-
+            The Build ID of the version that was ramping before executing this operation. Can also be
+             empty or the `__unversioned__` special value.
         previousPercentage:
           type: number
           description: The ramping version percentage before executing this operation.
@@ -10187,25 +10261,34 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
-            Current Version receives all the tasks except the portion that is routed to the Ramping
-             Version according to `ramping_version_percentage`.
-             It is possible that Current Version is not present when user is ramping from unversioned to
-             versioned workers. In that case, remaining tasks after `ramping_version_percentage` go to
-             unversioned workers. (Unversioned workers are those with UNVERSIONED (or unspecified)
-             WorkflowVersioningMode.)
+            Always present. Specifies which Deployment Version should should receive new workflow
+             executions and tasks of existing unversioned or AutoUpgrade workflows.
+             Can be one of the following:
+             - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+             - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+             Note: Current Version is overridden by the Ramping Version for a portion of traffic when a ramp
+             is set (see `ramping_version`.)
         rampingVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
-            Ramping Version is set during gradual rollout of a new Version. It takes a share of tasks
-             according to `ramping_version_percentage`.
+            When present, it means the traffic is being shifted from the Current Version to the Ramping
+             Version.
+             Must always be different from Current Version. Can be one of the following:
+             - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+             - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+             Note that it is possible to ramp from one Version to another Version, or from unversioned
+             workers to a particular Version, or from a particular Version to unversioned workers.
         rampingVersionPercentage:
           type: number
           description: |-
             Percentage of tasks that are routed to the Ramping Version instead of the Current Version.
-             Special case: it is possible that `ramping_version_percentage` is non-zero while
-             `ramping_version` is absent. That case represents gradual migration out of the Current
-             Version to unversioned workers.
+             Valid range: [0, 100]. A 100% value means the Ramping Version is receiving full traffic but
+             not yet "promoted" to be the Current Version, likely due to pending validations.
           format: float
         updateTime:
           type: string
@@ -10691,7 +10774,7 @@ components:
             - VERSION_DRAINAGE_STATUS_DRAINED
           type: string
           description: |-
-            Set to DRAINING when the version first stops accepting new executions (via current / ramp).
+            Set to DRAINING when the version first stops accepting new executions (is no longer current or ramping).
              Set to DRAINED when no more open pinned workflows exist on this version.
           format: enum
         lastChangedTime:
@@ -10722,6 +10805,14 @@ components:
           type: string
           format: date-time
       description: VersionInfo contains details about current and recommended release versions as well as alerts and upgrade instructions.
+    VersionMetadata:
+      type: object
+      properties:
+        entries:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Payload'
+          description: Arbitrary key-values.
     VersioningOverride:
       type: object
       properties:
@@ -10780,17 +10871,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkerDeploymentInfo_WorkerDeploymentVersionSummary'
-          description: "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\n cleaned up automatically if all the following conditions meet:\n - It does not receive new executions via being current or ramping\n - It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) \n - It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
+          description: "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\n cleaned up automatically if all the following conditions meet:\n - It does not receive new executions (is not current or ramping)\n - It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) \n - It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
         createTime:
           type: string
           format: date-time
         routingInfo:
           $ref: '#/components/schemas/RoutingInfo'
+        lastModifierIdentity:
+          type: string
+          description: |-
+            Identity of the last client who modified the configuration of this Deployment. Set to the
+             `identity` value sent by APIs such as `SetWorkerDeploymentCurrentVersion` and
+             `SetWorkerDeploymentRampingVersion`.
       description: "A Worker Deployment (Deployment, for short) represents all workers serving \n a shared set of Task Queues. Typically, a Deployment represents one service or \n application.\n A Deployment contains multiple Deployment Versions, each representing a different \n version of workers. (see documentation of WorkerDeploymentVersionInfo)\n Deployment records are created in Temporal server automatically when their \n first poller arrives to the server."
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object
       properties:
-        version:
+        buildId:
           type: string
         workflowVersioningMode:
           enum:
@@ -10812,12 +10909,14 @@ components:
     WorkerDeploymentOptions:
       type: object
       properties:
-        name:
+        deploymentName:
           type: string
-          description: Required. Worker deployment name.
-        version:
+          description: Required. Worker Deployment name.
+        buildId:
           type: string
-          description: Required. Worker deployment version.
+          description: |-
+            Required. Build ID of the worker. `deployment_name` and `build_id` together identify this
+             Worker Deployment Version.
         workflowVersioningMode:
           enum:
             - WORKFLOW_VERSIONING_MODE_UNSPECIFIED
@@ -10825,32 +10924,36 @@ components:
             - WORKFLOW_VERSIONING_MODE_VERSIONING_BEHAVIORS
           type: string
           description: |-
-            Required. Workflow versioning mode for this deployment version. Must be the same for all
-             pollers in a given deployment version, across all task queues.
+            Required. Workflow versioning mode for this Deployment Version. Must be the same for all
+             pollers in a given Deployment Version, across all Task Queues.
           format: enum
       description: Worker Deployment options set in SDK that need to be sent to server in every poll.
     WorkerDeploymentVersion:
       type: object
       properties:
-        version:
-          type: string
-          description: Uniquely identifies the worker deployment version.
         deploymentName:
           type: string
-          description: The name of the deployment this version belongs too.
+          description: The name of the Deployment this version belongs too.
+        buildId:
+          type: string
+          description: |-
+            Build ID uniquely identifies the Deployment Version within a Deployment, but the same Build
+             ID can be used in multiple Deployments.
+      description: |-
+        Identifies a Worker Deployment Version. The combination of `deployment_name` and `build_id`
+         serve as the identifier.
     WorkerDeploymentVersionInfo:
       type: object
       properties:
         version:
+          $ref: '#/components/schemas/WorkerDeploymentVersion'
+        workflowVersioningMode:
+          enum:
+            - WORKFLOW_VERSIONING_MODE_UNSPECIFIED
+            - WORKFLOW_VERSIONING_MODE_UNVERSIONED
+            - WORKFLOW_VERSIONING_MODE_VERSIONING_BEHAVIORS
           type: string
-          description: |-
-            Identifies a Worker Deployment Version. Must be unique within the namespace.
-             Same ID cannot be used in multiple Deployments.
-             In some contexts, such as Reset-by-build-id, version might be used
-             as "Build ID".
-        deploymentName:
-          type: string
-          description: Each Worker Version belongs to exactly one Deployment.
+          format: enum
         createTime:
           type: string
           format: date-time
@@ -10881,7 +10984,7 @@ components:
         taskQueueInfos:
           type: array
           items:
-            $ref: '#/components/schemas/WorkerDeploymentVersionInfo_DeploymentVersionTaskQueueInfo'
+            $ref: '#/components/schemas/WorkerDeploymentVersionInfo_VersionTaskQueueInfo'
           description: All the Task Queues that have ever polled from this Deployment version.
         drainageInfo:
           allOf:
@@ -10900,8 +11003,12 @@ components:
                This means if the Version is "drained" but new workflows are sent to it via
                Pinned Versioning Override, the status does not account for those Pinned-override
                executions and remains "drained".
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/VersionMetadata'
+          description: Arbitrary user-provided metadata attached to this version.
       description: "A Worker Deployment Version (Version, for short) represents all workers of the same \n code and config within a Deployment. Workers of the same Version are expected to \n behave exactly the same so when executions move between them there are no \n non-determinism issues.\n Worker Deployment Versions are created in Temporal server automatically when \n their first poller arrives to the server.\n Each Version has a Workflow Versioning Mode which is chosen by the app\n developer. (see WorkflowVersioningMode enum documentation)"
-    WorkerDeploymentVersionInfo_DeploymentVersionTaskQueueInfo:
+    WorkerDeploymentVersionInfo_VersionTaskQueueInfo:
       type: object
       properties:
         name:

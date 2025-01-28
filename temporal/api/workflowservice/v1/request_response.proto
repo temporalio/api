@@ -65,7 +65,6 @@ import "temporal/api/nexus/v1/message.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
-import "google/protobuf/wrappers.proto";
 
 message RegisterNamespaceRequest {
     string namespace = 1;
@@ -1937,7 +1936,7 @@ message DescribeDeploymentResponse {
 
 message DescribeWorkerDeploymentVersionRequest {
 	string namespace = 1;
-	string version = 2;
+  temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
 }
 
 message DescribeWorkerDeploymentVersionResponse {
@@ -1950,7 +1949,8 @@ message DescribeWorkerDeploymentRequest {
 }
 
 message DescribeWorkerDeploymentResponse {
-    temporal.api.deployment.v1.WorkerDeploymentInfo worker_deployment_info = 1;
+    bytes conflict_token = 1;
+    temporal.api.deployment.v1.WorkerDeploymentInfo worker_deployment_info = 2;
 }
 
 // [cleanup-wv-pre-release] Pre-release deployment APIs, clean up later
@@ -1990,43 +1990,58 @@ message SetCurrentDeploymentResponse {
 message SetWorkerDeploymentCurrentVersionRequest {
     string namespace = 1;
     string deployment_name = 2;
-    // Must be a Versioned Build. Pass empty string to unset.
-    google.protobuf.StringValue version = 3;
+    // Required. Can be one of the following:
+    // - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+    //   `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+    // - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
+    //   with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+    string build_id = 3;
+    // Optional. This can be the value of conflict_token from a Describe, or another Worker
+    // Deployment API. Passing conflict token which will cause this request to fail if the
+    // Deployment's configuration has been modified between the previous API call and
+    // this one.
+    bytes conflict_token = 4;
     // Optional. The identity of the client who initiated this request.
-    string identity = 4;
+    string identity = 5;
 }
 
 message SetWorkerDeploymentCurrentVersionResponse {
-    // The version that was current before executing this operation.
-    string previous_version = 1;
+    bytes conflict_token = 1;
+    // The Build ID of the version that was current before executing this operation. Can also be the
+    // `__unversioned__` special value.
+    string previous_build_id = 2;
 }
 
 // Set/unset the Ramping Version of a Worker Deployment and its ramp percentage.
-// To unset, pass zero `percentage`.
-// To ramp to unversioned workers (from Deployment's Current Version), pass `version=""` with
-// non-zero `percentage`.
 message SetWorkerDeploymentRampingVersionRequest {
     string namespace = 1;
     string deployment_name = 2;
+    // Can be one of the following:
+    // - Absent/empty value to unset the Ramping Version. Must be paired with `percentage=0`.
+    // - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+    //   `WorkflowVersioningMode==VERSIONING_BEHAVIORS`) to set it as the Ramping Version.
+    // - Or, the "__unversioned__" special value, to ramp unversioned workers (those with
+    //   `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+    string build_id = 3;
+    // Ramp percentage to set. Valid range: [0,100].
+    float percentage = 4;
 
-    // The Version to be set as the Ramping Version of the Deployment. Optional when `percentage` is
-    // zero (unset case), but if given, it must match the current Ramping Version to be unset.
-    // Can be an empty string and paired with a non-zero `percentage`, in which case it will set the ramp
-    // percentage without a Ramping Version which means unversioned workers are being ramped.
-    // (Useful for migrating to unversioned workers from Deployment's Current Version.)
-    google.protobuf.StringValue version = 3;
-    // Valid range: [0,100]. Zero value will unset the Ramping Version.
-    float percentage = 6;
-
+    // Optional. This can be the value of conflict_token from a Describe, or another Worker
+    // Deployment API. Passing conflict token which will cause this request to fail if the
+    // Deployment's configuration has been modified between the previous API call and
+    // this one.
+    bytes conflict_token = 5;
     // Optional. The identity of the client who initiated this request.
-    string identity = 7;
+    string identity = 6;
 }
 
 message SetWorkerDeploymentRampingVersionResponse {
-    // The ramping version before executing this operation.
-    string previous_version = 1;
+    bytes conflict_token = 1;
+    // The Build ID of the version that was ramping before executing this operation. Can also be
+    // empty or the `__unversioned__` special value.
+    string previous_build_id = 2;
     // The ramping version percentage before executing this operation.
-    float previous_percentage = 2;
+    float previous_percentage = 3;
 }
 
 message ListWorkerDeploymentsRequest {
@@ -2048,7 +2063,6 @@ message ListWorkerDeploymentsResponse {
         temporal.api.deployment.v1.RoutingInfo routing_info = 3;
     }
 }
-
 
 // Returns the Current Deployment of a deployment series.
 // [cleanup-wv-pre-release] Pre-release deployment APIs, clean up later

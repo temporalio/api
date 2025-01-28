@@ -1215,12 +1215,12 @@
     },
     "/api/v1/namespaces/{namespace}/rules/{ruleId}": {
       "get": {
-        "operationId": "ReadNamespaceRule2",
+        "operationId": "DescribeNamespaceRule2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ReadNamespaceRuleResponse"
+              "$ref": "#/definitions/v1DescribeNamespaceRuleResponse"
             }
           },
           "default": {
@@ -4405,12 +4405,12 @@
     },
     "/namespaces/{namespace}/rules/{ruleId}": {
       "get": {
-        "operationId": "ReadNamespaceRule",
+        "operationId": "DescribeNamespaceRule",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ReadNamespaceRuleResponse"
+              "$ref": "#/definitions/v1DescribeNamespaceRuleResponse"
             }
           },
           "default": {
@@ -6224,18 +6224,17 @@
               "type": "string",
               "title": "ID must be unique within the namespace"
             },
-            "expirationTime": {
-              "type": "string",
-              "format": "date-time",
-              "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
+            "triggerType": {
+              "$ref": "#/definitions/v1RuleTriggerType",
+              "description": "Type of the rule trigger. Right now only activity is supported.\nTrigger type defines when the rule should be evaluated.\nIt also defines the columns available in the predicate.\n- activity: Rule will be triggered when an activity is about to start."
             },
             "predicate": {
               "type": "string",
-              "description": "Predicate is a query that is used to match against workflow data, based on rule type."
+              "description": "Predicate is a query that is used to match against workflow data, based on rule type.\nThe following activity attributes are supported as part of the predicate:\n- activityType: The type of the activity.\n- activityId: The ID of the activity.\n- activityAttempt: The number attempts of the activity.\n- backoffInterval: The current backoff interval of the activity.\n- activityStatus: The status of the activity. Can be one of \"scheduled\", \"started\", \"paused\".\n- taskQueue: The name of the task queue of the activity."
             },
-            "type": {
+            "workflowQuery": {
               "type": "string",
-              "description": "Type of the rule. Specifies how the rule should be triggered and evaluated.\nCurrently, only \"activity\" type is supported.\nTypes:\n- activity: Rule is triggered when a activity is about to start.\n- workflow: TBD.\nThe following activity attributes are supported as part of the predicate:\n- workflowType: The type of the workflow.\n- activityType: The type of the activity.\n- activityId: The ID of the activity.\n- activityAttempt: The number attempts of the activity.\n- backoffInterval: The current backoff interval of the activity.\n- activityStatus: The status of the activity. Can be one of \"scheduled\", \"started\", \"paused\".\n- taskQueue: The name of the task queue of the activity."
+              "description": "Workflow query. It will be used to filter workflows to be evaluated by the rule.\nIf empty - only predicate will be used."
             },
             "action": {
               "type": "array",
@@ -6244,6 +6243,11 @@
                 "$ref": "#/definitions/v1RuleAction"
               },
               "description": "Action to be taken when the rule is triggered and predicate is matched."
+            },
+            "expirationTime": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
             }
           },
           "description": "The rule to create as a part of namespace config.\nRule name must be unique namespace-wide.",
@@ -8837,6 +8841,15 @@
         }
       }
     },
+    "v1DescribeNamespaceRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1NamespaceRule",
+          "description": "The rule that was read."
+        }
+      }
+    },
     "v1DescribeScheduleResponse": {
       "type": "object",
       "properties": {
@@ -10146,18 +10159,17 @@
           "type": "string",
           "title": "ID must be unique within the namespace"
         },
-        "expirationTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
+        "triggerType": {
+          "$ref": "#/definitions/v1RuleTriggerType",
+          "description": "Type of the rule trigger. Right now only activity is supported.\nTrigger type defines when the rule should be evaluated.\nIt also defines the columns available in the predicate.\n- activity: Rule will be triggered when an activity is about to start."
         },
         "predicate": {
           "type": "string",
-          "description": "Predicate is a query that is used to match against workflow data, based on rule type."
+          "description": "Predicate is a query that is used to match against workflow data, based on rule type.\nThe following activity attributes are supported as part of the predicate:\n- activityType: The type of the activity.\n- activityId: The ID of the activity.\n- activityAttempt: The number attempts of the activity.\n- backoffInterval: The current backoff interval of the activity.\n- activityStatus: The status of the activity. Can be one of \"scheduled\", \"started\", \"paused\".\n- taskQueue: The name of the task queue of the activity."
         },
-        "type": {
+        "workflowQuery": {
           "type": "string",
-          "description": "Type of the rule. Specifies how the rule should be triggered and evaluated.\nCurrently, only \"activity\" type is supported.\nTypes:\n- activity: Rule is triggered when a activity is about to start.\n- workflow: TBD.\nThe following activity attributes are supported as part of the predicate:\n- workflowType: The type of the workflow.\n- activityType: The type of the activity.\n- activityId: The ID of the activity.\n- activityAttempt: The number attempts of the activity.\n- backoffInterval: The current backoff interval of the activity.\n- activityStatus: The status of the activity. Can be one of \"scheduled\", \"started\", \"paused\".\n- taskQueue: The name of the task queue of the activity."
+          "description": "Workflow query. It will be used to filter workflows to be evaluated by the rule.\nIf empty - only predicate will be used."
         },
         "action": {
           "type": "array",
@@ -10166,6 +10178,11 @@
             "$ref": "#/definitions/v1RuleAction"
           },
           "description": "Action to be taken when the rule is triggered and predicate is matched."
+        },
+        "expirationTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
         }
       },
       "description": "NamespaceRule describes a rule that can be to any workflow in this namespace."
@@ -11038,15 +11055,6 @@
       },
       "description": "Range represents a set of integer values, used to match fields of a calendar\ntime in StructuredCalendarSpec. If end < start, then end is interpreted as\nequal to start. This means you can use a Range with start set to a value, and\nend and step unset (defaulting to 0) to represent a single value."
     },
-    "v1ReadNamespaceRuleResponse": {
-      "type": "object",
-      "properties": {
-        "rule": {
-          "$ref": "#/definitions/v1NamespaceRule",
-          "description": "The rule that was read."
-        }
-      }
-    },
     "v1RecordActivityTaskHeartbeatByIdResponse": {
       "type": "object",
       "properties": {
@@ -11570,10 +11578,6 @@
         "type": {
           "$ref": "#/definitions/v1RuleActionType",
           "description": "Type of the rule action."
-        },
-        "payload": {
-          "$ref": "#/definitions/v1Payload",
-          "description": "Payload of the rule action."
         }
       }
     },
@@ -11582,11 +11586,19 @@
       "enum": [
         "RULE_ACTION_TYPE_UNSPECIFIED",
         "RULE_ACTION_TYPE_PAUSE_ACTIVITY",
-        "RULE_ACTION_TYPE_EMIT_METRIC",
-        "RULE_ACTION_TYPE_EMIT_VISIBILITY",
-        "RULE_ACTION_TYPE_PAUSE_WORKFLOW"
+        "RULE_ACTION_TYPE_EMIT_METRIC"
       ],
-      "default": "RULE_ACTION_TYPE_UNSPECIFIED"
+      "default": "RULE_ACTION_TYPE_UNSPECIFIED",
+      "title": "I will remove it once we agree on the overall design\nRULE_ACTION_TYPE_EMIT_VISIBILITY = 3;\nRULE_ACTION_TYPE_PAUSE_WORKFLOW = 4;\nRULE_ACTION_TYPE_SIGNAL = 5;"
+    },
+    "v1RuleTriggerType": {
+      "type": "string",
+      "enum": [
+        "RULE_TRIGGER_TYPE_UNSPECIFIED",
+        "RULE_TRIGGER_TYPE_ACTIVITY",
+        "RULE_TRIGGER_TYPE_WORKFLOW"
+      ],
+      "default": "RULE_TRIGGER_TYPE_UNSPECIFIED"
     },
     "v1ScanWorkflowExecutionsResponse": {
       "type": "object",

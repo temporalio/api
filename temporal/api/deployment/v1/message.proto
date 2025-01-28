@@ -132,18 +132,17 @@ message WorkerDeploymentVersionInfo {
 
     google.protobuf.Timestamp create_time = 3;
 
-    // (-- api-linter: core::0140::prepositions=disabled
-    //     aip.dev/not-precedent: 'Since' captures the field semantics despite being a preposition. --)
-    // Nil if not current.
-    google.protobuf.Timestamp current_since_time = 4;
+    // Last time `is_current` or `ramp_percentage` of this version changed.
+    google.protobuf.Timestamp routing_update_time = 4;
 
-    // (-- api-linter: core::0140::prepositions=disabled
-    //     aip.dev/not-precedent: 'Since' captures the field semantics despite being a preposition. --)
-    // Nil if not ramping.
-    google.protobuf.Timestamp ramping_since_time = 5;
+    // If this version is the current version of its deployment.
+    bool is_current = 5;
+
+    // Range: [0, 100]. Must be zero if is_current is true. Must be non-zero if version is ramping.
+    float ramp_percentage = 6;
 
     // All the Task Queues that have ever polled from this Deployment version.
-    repeated DeploymentVersionTaskQueueInfo task_queue_infos = 6;
+    repeated DeploymentVersionTaskQueueInfo task_queue_infos = 7;
 
     message DeploymentVersionTaskQueueInfo {
         string name = 1;
@@ -163,7 +162,7 @@ message WorkerDeploymentVersionInfo {
     //   This means if the Version is "drained" but new workflows are sent to it via
     //   Pinned Versioning Override, the status does not account for those Pinned-override
     //   executions and remains "drained".
-    VersionDrainageInfo drainage_info = 7;
+    VersionDrainageInfo drainage_info = 8;
 
     // TODO (Shivam): + Poller_status + WorkerDeploymentVersionMetadata
 }

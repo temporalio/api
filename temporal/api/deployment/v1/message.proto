@@ -148,15 +148,19 @@ message WorkerDeploymentVersionInfo {
 
     // All the Task Queues that have ever polled from this Deployment version.
     repeated VersionTaskQueueInfo task_queue_infos = 8;
+    message VersionTaskQueueInfo {
+        string name = 1;
+        temporal.api.enums.v1.TaskQueueType type = 2;
+    }
 
     // Helps user determine when it is safe to decommission the workers of this
-    // Version. Not present when the workflow is accepting new workflow executions because it's current or ramping.
+    // Version. Not present when version is current or ramping.
     // Current limitations:
     // - Not supported for Unversioned mode.
     // - Periodically refreshed, may have delays up to few minutes (consult the
     //   last_checked_time value).
-    // - Refreshed only when the version is neither current nor ramping AND 
-    // the status is not "drained" yet.
+    // - Refreshed only when version is not current or ramping AND the status is not
+    //   "drained" yet.
     // - Once the status is changed to "drained", it is not changed until the Version
     //   becomes Current or Ramping again, at which time the drainage info is cleared.
     //   This means if the Version is "drained" but new workflows are sent to it via
@@ -168,16 +172,12 @@ message WorkerDeploymentVersionInfo {
     VersionMetadata metadata = 10;
 
     // TODO (Shivam): + Poller_status + WorkerDeploymentVersionMetadata
-    message VersionTaskQueueInfo {
-        string name = 1;
-        temporal.api.enums.v1.TaskQueueType type = 2;
-    }
 }
 
 // Information about workflow drainage to help the user determine when it is safe
-// to decommission a Version. Not present while the version is current or ramping.
+// to decommission a Version. Not present while version is current or ramping.
 message VersionDrainageInfo {
-    // Set to DRAINING when the version stops accepting new executions (is no longer current or ramping).
+    // Set to DRAINING when the version first stops accepting new executions (is no longer current or ramping).
     // Set to DRAINED when no more open pinned workflows exist on this version.
     enums.v1.VersionDrainageStatus status = 1;
     // Last time the drainage status changed.
@@ -231,9 +231,9 @@ message RoutingInfo {
     // executions and tasks of existing unversioned or AutoUpgrade workflows.
     // Can be one of the following:
     // - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
-    // `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+    //   `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
     // - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
-    // with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+    //   with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
     // Note: Current Version is overridden by the Ramping Version for a portion of traffic when a ramp
     // is set (see `ramping_version`.)
     string current_version = 1;
@@ -241,9 +241,9 @@ message RoutingInfo {
     // Version.
     // Must always be different from Current Version. Can be one of the following:
     // - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
-    // `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+    //   `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
     // - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
-    // with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+    //   with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
     // Note that it is possible to ramp from one Version to another Version, or from unversioned
     // workers to a particular Version, or from a particular Version to unversioned workers.
     string ramping_version = 2;

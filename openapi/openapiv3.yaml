@@ -8987,9 +8987,9 @@ components:
              executions and tasks of existing unversioned or AutoUpgrade workflows.
              Can be one of the following:
              - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
-             `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
              - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
-             with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
              Note: Current Version is overridden by the Ramping Version for a portion of traffic when a ramp
              is set (see `ramping_version`.)
         rampingVersion:
@@ -8999,9 +8999,9 @@ components:
              Version.
              Must always be different from Current Version. Can be one of the following:
              - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
-             `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
              - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
-             with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
              Note that it is possible to ramp from one Version to another Version, or from unversioned
              workers to a particular Version, or from a particular Version to unversioned workers.
         rampingVersionPercentage:
@@ -9424,9 +9424,9 @@ components:
           description: |-
             Required. Can be one of the following:
              - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
-             `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
              - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
-             with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
         conflictToken:
           type: string
           description: |-
@@ -9463,9 +9463,9 @@ components:
             Can be one of the following:
              - Absent/empty value to unset the Ramping Version. Must be paired with `percentage=0`.
              - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
-             `WorkflowVersioningMode==VERSIONING_BEHAVIORS`) to set it as the Ramping Version.
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`) to set it as the Ramping Version.
              - Or, the "__unversioned__" special value, to ramp unversioned workers (those with
-             `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+               `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
         percentage:
           type: number
           description: 'Ramp percentage to set. Valid range: [0,100].'
@@ -10261,29 +10261,34 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
-            Current Version receives all the tasks except the portion that is routed to the Ramping
-             Version according to `ramping_version_percentage`.
-             It is possible that Current Version is not present when user is ramping from unversioned to
-             versioned workers. In that case, remaining tasks after `ramping_version_percentage` go to
-             unversioned workers. (Unversioned workers are those with UNVERSIONED (or unspecified)
-             WorkflowVersioningMode.)
+            Always present. Specifies which Deployment Version should should receive new workflow
+             executions and tasks of existing unversioned or AutoUpgrade workflows.
+             Can be one of the following:
+             - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+             - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+             Note: Current Version is overridden by the Ramping Version for a portion of traffic when a ramp
+             is set (see `ramping_version`.)
         rampingVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
-            Ramping Version is set during gradual rollout of a new Version. It takes a share of tasks
-             according to `ramping_version_percentage`.
-             It is possible that Ramping Version belong to a Deployment other than that of the Current
-             Version. This happens when a Task Queue is being moved from one Deployment to another.
+            When present, it means the traffic is being shifted from the Current Version to the Ramping
+             Version.
+             Must always be different from Current Version. Can be one of the following:
+             - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
+               `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
+             - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
+               with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+             Note that it is possible to ramp from one Version to another Version, or from unversioned
+             workers to a particular Version, or from a particular Version to unversioned workers.
         rampingVersionPercentage:
           type: number
           description: |-
             Percentage of tasks that are routed to the Ramping Version instead of the Current Version.
              Valid range: [0, 100]. A 100% value means the Ramping Version is receiving full traffic but
              not yet "promoted" to be the Current Version, likely due to pending validations.
-             Special case: it is possible that `ramping_version_percentage` is non-zero while
-             `ramping_version` is absent. That case represents gradual migration out of the Current
-             Version to unversioned workers.
           format: float
         updateTime:
           type: string
@@ -10769,7 +10774,7 @@ components:
             - VERSION_DRAINAGE_STATUS_DRAINED
           type: string
           description: |-
-            Set to DRAINING when the version stops accepting new executions (is no longer current or ramping).
+            Set to DRAINING when the version first stops accepting new executions (is no longer current or ramping).
              Set to DRAINED when no more open pinned workflows exist on this version.
           format: enum
         lastChangedTime:
@@ -10782,7 +10787,7 @@ components:
           format: date-time
       description: |-
         Information about workflow drainage to help the user determine when it is safe
-         to decommission a Version. Not present while the version is current or ramping.
+         to decommission a Version. Not present while version is current or ramping.
     VersionInfo:
       type: object
       properties:
@@ -10984,7 +10989,20 @@ components:
         drainageInfo:
           allOf:
             - $ref: '#/components/schemas/VersionDrainageInfo'
-          description: "Helps user determine when it is safe to decommission the workers of this\n Version. Not present when the workflow is accepting new workflow executions because it's current or ramping.\n Current limitations:\n - Not supported for Unversioned mode.\n - Periodically refreshed, may have delays up to few minutes (consult the\n   last_checked_time value).\n - Refreshed only when the version is neither current nor ramping AND \n the status is not \"drained\" yet.\n - Once the status is changed to \"drained\", it is not changed until the Version\n   becomes Current or Ramping again, at which time the drainage info is cleared.\n   This means if the Version is \"drained\" but new workflows are sent to it via\n   Pinned Versioning Override, the status does not account for those Pinned-override\n   executions and remains \"drained\"."
+          description: |-
+            Helps user determine when it is safe to decommission the workers of this
+             Version. Not present when version is current or ramping.
+             Current limitations:
+             - Not supported for Unversioned mode.
+             - Periodically refreshed, may have delays up to few minutes (consult the
+               last_checked_time value).
+             - Refreshed only when version is not current or ramping AND the status is not
+               "drained" yet.
+             - Once the status is changed to "drained", it is not changed until the Version
+               becomes Current or Ramping again, at which time the drainage info is cleared.
+               This means if the Version is "drained" but new workflows are sent to it via
+               Pinned Versioning Override, the status does not account for those Pinned-override
+               executions and remains "drained".
         metadata:
           allOf:
             - $ref: '#/components/schemas/VersionMetadata'
@@ -11003,7 +11021,6 @@ components:
             - TASK_QUEUE_TYPE_NEXUS
           type: string
           format: enum
-      description: 'TODO (Shivam): + Poller_status + WorkerDeploymentVersionMetadata'
     WorkerVersionCapabilities:
       type: object
       properties:

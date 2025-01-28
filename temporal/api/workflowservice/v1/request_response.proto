@@ -1756,8 +1756,6 @@ message UpdateActivityOptionsByIdRequest {
     // Run ID of the workflow which scheduled this activity
     // if empty - latest workflow is used
     string run_id = 3;
-    // ID of the activity we're updating
-    string activity_id = 4;
 
     // The identity of the client who initiated this request
     string identity = 5;
@@ -1768,8 +1766,18 @@ message UpdateActivityOptionsByIdRequest {
     // Controls which fields from `activity_options` will be applied
     google.protobuf.FieldMask update_mask = 7;
 
-    // Used to de-dupe requests
-    string request_id = 8;
+    // either activity id or activity type must be provided
+    oneof activity {
+        // ID of the activity we're pausing.
+        string id = 9;
+        // Type of the activity we're pausing.
+        string type = 10;
+    }
+
+    reserved 4;
+    reserved 8;
+    reserved "activity_id";
+    reserved "request_id";
 }
 
 message UpdateActivityOptionsByIdResponse {
@@ -1785,33 +1793,29 @@ message PauseActivityByIdRequest {
     // Run ID of the workflow which scheduled this activity.
     // If empty - latest workflow is used.
     string run_id = 3;
-    // ID of the activity we're updating.
-    string activity_id = 4;
+
 
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    // Used to de-dupe requests.
-    string request_id = 6;
+    // either activity id or activity type must be provided
+    oneof activity {
+        // ID of the activity we're pausing.
+        string id = 7;
+        // Type of the activity we're pausing.
+        string type = 8;
+    }
+
+    reserved 4;
+    reserved 6;
+    reserved "activity_id";
+    reserved "request_id";
 }
 
 message PauseActivityByIdResponse {
 }
 
 message UnpauseActivityByIdRequest {
-    message ResumeOperation {
-        // Indicates that if the activity is waiting to retry, it will  be scheduled immediately.
-        bool no_wait = 1;
-    }
-
-    message ResetOperation {
-        // Indicates that the activity should be scheduled immediately.
-        // Note that this may run simultaneously with any existing executions of the activity.
-        bool no_wait = 1;
-        // If set, the Heartbeat Details will be cleared out to make the Activity start over from the beginning
-        bool reset_heartbeat = 2;
-    }
-
     // Namespace of the workflow which scheduled this activity.
     string namespace = 1;
     // ID of the workflow which scheduled this activity.
@@ -1819,20 +1823,36 @@ message UnpauseActivityByIdRequest {
     // Run ID of the workflow which scheduled this activity.
     // If empty - latest workflow is used.
     string run_id = 3;
-    // ID of the activity we're updating.
-    string activity_id = 4;
 
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    // Used to de-dupe requests.
-    string request_id = 6;
-
-    // There are two options to resume the activity - with 'resume' or with 'reset'.
-    oneof operation{
-        ResumeOperation resume = 7;
-        ResetOperation reset = 8;
+    // either activity id or activity type must be provided
+    oneof activity {
+        // ID of the activity we're pausing.
+        string id = 12;
+        // Type of the activity we're pausing.
+        string type = 13;
     }
+
+    // unpause can also reset the number of attempts
+    bool reset_attempts = 9;
+
+    // unpause can also reset the heartbeat details
+    bool reset_heartbeat = 10;
+
+    // If set, the activity will start at a random time within the specified jitter duration.
+    google.protobuf.Duration jitter = 11;
+
+    reserved 4;
+    reserved 6;
+    reserved 7;
+    reserved 8;
+    reserved "activity_id";
+    reserved "request_id";
+    reserved "reset";
+    reserved "resume";
+
 }
 
 message UnpauseActivityByIdResponse {
@@ -1846,22 +1866,36 @@ message ResetActivityByIdRequest {
     // Run ID of the workflow which scheduled this activity.
     // If empty - latest workflow is used.
     string run_id = 3;
-    // ID of the activity we're updating.
-    string activity_id = 4;
 
     // The identity of the client who initiated this request.
     string identity = 5;
 
-    // Used to de-dupe requests.
-    string request_id = 6;
-
-    // Indicates that activity should be scheduled immediately.
-    // If this flag doesn't set, and activity currently running - temporal will wait until activity is completed.
-    bool no_wait = 7;
 
     // Indicates that activity should reset heartbeat details.
     // This flag will be applied only to the new instance of the activity.
     bool reset_heartbeat = 8;
+
+    // if activity is paused, it will remain paused after reset
+    bool keep_paused = 9;
+
+    // If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.
+    // (unless it is paused and keep_paused is set)
+    google.protobuf.Duration jitter = 11;
+
+    // either activity id or activity type must be provided
+    oneof activity {
+        // ID of the activity we're pausing.
+        string id = 12;
+        // Type of the activity we're pausing.
+        string type = 13;
+    }
+
+    reserved 4;
+    reserved 6;
+    reserved 7;
+    reserved "activity_id";
+    reserved "request_id";
+    reserved "no_wait";
 }
 
 message ResetActivityByIdResponse {

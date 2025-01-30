@@ -416,13 +416,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/pause-by-id:
+  /api/v1/namespaces/{namespace}/activities/pause:
     post:
       tags:
         - WorkflowService
       description: |-
-        PauseActivityById pauses the execution of an activity specified by its ID.
-         Returns a `NotFound` error if there is no pending activity with the provided ID.
+        PauseActivity pauses the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be paused
 
          Pausing an activity means:
          - If the activity is currently waiting for a retry or is running and subsequently fails,
@@ -435,9 +435,9 @@ paths:
          For long-running activities:
          - activities in paused state will send a cancellation with "activity_paused" set to 'true' in response to 'RecordActivityTaskHeartbeat'.
          - The activity should respond to the cancellation accordingly.
-         (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: PauseActivityById
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID or type
+      operationId: PauseActivity
       parameters:
         - name: namespace
           in: path
@@ -449,7 +449,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PauseActivityByIdRequest'
+              $ref: '#/components/schemas/PauseActivityRequest'
         required: true
       responses:
         "200":
@@ -457,30 +457,36 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PauseActivityByIdResponse'
+                $ref: '#/components/schemas/PauseActivityResponse'
         default:
           description: Default error response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/reset-by-id:
+  /api/v1/namespaces/{namespace}/activities/reset:
     post:
       tags:
         - WorkflowService
       description: |-
-        ResetActivityById unpauses the execution of an activity specified by its ID.
-         Returns a `NotFound` error if there is no pending activity with the provided ID.
+        ResetActivity resets the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be reset.
+
          Resetting an activity means:
          * number of attempts will be reset to 0.
-         * activity timeouts will be resetted.
-         If the activity currently running:
-         *  if 'no_wait' flag is provided, a new instance of the activity will be scheduled immediately.
-         *  if 'no_wait' flag is not provided, a new instance of the  activity will be scheduled after current instance completes if needed.
-         If 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.
-         (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: ResetActivityById
+         * activity timeouts will be reset.
+         * if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:
+            it will be scheduled immediately (* see 'jitter' flag),
+
+         Flags:
+
+         'jitter': the activity will be scheduled at a random time within the jitter duration.
+         If the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.
+         'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.
+         'keep_paused': if the activity is paused, it will remain paused.
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID or type.
+      operationId: ResetActivity
       parameters:
         - name: namespace
           in: path
@@ -492,7 +498,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ResetActivityByIdRequest'
+              $ref: '#/components/schemas/ResetActivityRequest'
         required: true
       responses:
         "200":
@@ -500,33 +506,32 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResetActivityByIdResponse'
+                $ref: '#/components/schemas/ResetActivityResponse'
         default:
           description: Default error response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/unpause-by-id:
+  /api/v1/namespaces/{namespace}/activities/unpause:
     post:
       tags:
         - WorkflowService
       description: |-
-        UnpauseActivityById unpauses the execution of an activity specified by its ID.
-         Returns a `NotFound` error if there is no pending activity with the provided ID.
-         There are two 'modes' of unpausing an activity:
-         'resume' - If the activity is paused, it will be resumed and scheduled for execution.
-            * If the activity is currently running Unpause with 'resume' has no effect.
-            * if 'no_wait' flag is set and the activity is waiting, the activity will be scheduled immediately.
-         'reset' - If the activity is paused, it will be reset to its initial state and (depending on parameters) scheduled for execution.
-            * If the activity is currently running, Unpause with 'reset' will reset the number of attempts.
-            * if 'no_wait' flag is set, the activity will be scheduled immediately.
-            * if 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.
-         If the activity is in waiting for retry and past it retry timeout, it will be scheduled immediately.
+        UnpauseActivity unpauses the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be unpaused.
+
+         If activity is not paused, this call will have no effect.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
          Once the activity is unpaused, all timeout timers will be regenerated.
-         (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: UnpauseActivityById
+
+         Flags:
+         'jitter': the activity will be scheduled at a random time within the jitter duration.
+         'reset_attempts': the number of attempts will be reset.
+         'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID or type
+      operationId: UnpauseActivity
       parameters:
         - name: namespace
           in: path
@@ -538,7 +543,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UnpauseActivityByIdRequest'
+              $ref: '#/components/schemas/UnpauseActivityRequest'
         required: true
       responses:
         "200":
@@ -546,22 +551,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnpauseActivityByIdResponse'
+                $ref: '#/components/schemas/UnpauseActivityResponse'
         default:
           description: Default error response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/update-options-by-id:
+  /api/v1/namespaces/{namespace}/activities/update-options:
     post:
       tags:
         - WorkflowService
       description: |-
-        UpdateActivityOptionsById is called by the client to update the options of an activity
-         (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: UpdateActivityOptionsById
+        UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be updated.
+      operationId: UpdateActivityOptions
       parameters:
         - name: namespace
           in: path
@@ -573,7 +577,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateActivityOptionsByIdRequest'
+              $ref: '#/components/schemas/UpdateActivityOptionsRequest'
         required: true
       responses:
         "200":
@@ -581,7 +585,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateActivityOptionsByIdResponse'
+                $ref: '#/components/schemas/UpdateActivityOptionsResponse'
         default:
           description: Default error response
           content:
@@ -3357,13 +3361,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/pause-by-id:
+  /namespaces/{namespace}/activities/pause:
     post:
       tags:
         - WorkflowService
       description: |-
-        PauseActivityById pauses the execution of an activity specified by its ID.
-         Returns a `NotFound` error if there is no pending activity with the provided ID.
+        PauseActivity pauses the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be paused
 
          Pausing an activity means:
          - If the activity is currently waiting for a retry or is running and subsequently fails,
@@ -3376,9 +3380,9 @@ paths:
          For long-running activities:
          - activities in paused state will send a cancellation with "activity_paused" set to 'true' in response to 'RecordActivityTaskHeartbeat'.
          - The activity should respond to the cancellation accordingly.
-         (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: PauseActivityById
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID or type
+      operationId: PauseActivity
       parameters:
         - name: namespace
           in: path
@@ -3390,7 +3394,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PauseActivityByIdRequest'
+              $ref: '#/components/schemas/PauseActivityRequest'
         required: true
       responses:
         "200":
@@ -3398,30 +3402,36 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PauseActivityByIdResponse'
+                $ref: '#/components/schemas/PauseActivityResponse'
         default:
           description: Default error response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/reset-by-id:
+  /namespaces/{namespace}/activities/reset:
     post:
       tags:
         - WorkflowService
       description: |-
-        ResetActivityById unpauses the execution of an activity specified by its ID.
-         Returns a `NotFound` error if there is no pending activity with the provided ID.
+        ResetActivity resets the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be reset.
+
          Resetting an activity means:
          * number of attempts will be reset to 0.
-         * activity timeouts will be resetted.
-         If the activity currently running:
-         *  if 'no_wait' flag is provided, a new instance of the activity will be scheduled immediately.
-         *  if 'no_wait' flag is not provided, a new instance of the  activity will be scheduled after current instance completes if needed.
-         If 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.
-         (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: ResetActivityById
+         * activity timeouts will be reset.
+         * if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:
+            it will be scheduled immediately (* see 'jitter' flag),
+
+         Flags:
+
+         'jitter': the activity will be scheduled at a random time within the jitter duration.
+         If the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.
+         'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.
+         'keep_paused': if the activity is paused, it will remain paused.
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID or type.
+      operationId: ResetActivity
       parameters:
         - name: namespace
           in: path
@@ -3433,7 +3443,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ResetActivityByIdRequest'
+              $ref: '#/components/schemas/ResetActivityRequest'
         required: true
       responses:
         "200":
@@ -3441,33 +3451,32 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResetActivityByIdResponse'
+                $ref: '#/components/schemas/ResetActivityResponse'
         default:
           description: Default error response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/unpause-by-id:
+  /namespaces/{namespace}/activities/unpause:
     post:
       tags:
         - WorkflowService
       description: |-
-        UnpauseActivityById unpauses the execution of an activity specified by its ID.
-         Returns a `NotFound` error if there is no pending activity with the provided ID.
-         There are two 'modes' of unpausing an activity:
-         'resume' - If the activity is paused, it will be resumed and scheduled for execution.
-            * If the activity is currently running Unpause with 'resume' has no effect.
-            * if 'no_wait' flag is set and the activity is waiting, the activity will be scheduled immediately.
-         'reset' - If the activity is paused, it will be reset to its initial state and (depending on parameters) scheduled for execution.
-            * If the activity is currently running, Unpause with 'reset' will reset the number of attempts.
-            * if 'no_wait' flag is set, the activity will be scheduled immediately.
-            * if 'reset_heartbeats' flag is set, the activity heartbeat timer and heartbeats will be reset.
-         If the activity is in waiting for retry and past it retry timeout, it will be scheduled immediately.
+        UnpauseActivity unpauses the execution of an activity specified by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be unpaused.
+
+         If activity is not paused, this call will have no effect.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
          Once the activity is unpaused, all timeout timers will be regenerated.
-         (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: UnpauseActivityById
+
+         Flags:
+         'jitter': the activity will be scheduled at a random time within the jitter duration.
+         'reset_attempts': the number of attempts will be reset.
+         'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID or type
+      operationId: UnpauseActivity
       parameters:
         - name: namespace
           in: path
@@ -3479,7 +3488,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UnpauseActivityByIdRequest'
+              $ref: '#/components/schemas/UnpauseActivityRequest'
         required: true
       responses:
         "200":
@@ -3487,22 +3496,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UnpauseActivityByIdResponse'
+                $ref: '#/components/schemas/UnpauseActivityResponse'
         default:
           description: Default error response
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/update-options-by-id:
+  /namespaces/{namespace}/activities/update-options:
     post:
       tags:
         - WorkflowService
       description: |-
-        UpdateActivityOptionsById is called by the client to update the options of an activity
-         (-- api-linter: core::0136::prepositions=disabled
-             aip.dev/not-precedent: "By" is used to indicate request type. --)
-      operationId: UpdateActivityOptionsById
+        UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.
+         If there are multiple pending activities of the provided type - all of them will be updated.
+      operationId: UpdateActivityOptions
       parameters:
         - name: namespace
           in: path
@@ -3514,7 +3522,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateActivityOptionsByIdRequest'
+              $ref: '#/components/schemas/UpdateActivityOptionsRequest'
         required: true
       responses:
         "200":
@@ -3522,7 +3530,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateActivityOptionsByIdResponse'
+                $ref: '#/components/schemas/UpdateActivityOptionsResponse'
         default:
           description: Default error response
           content:
@@ -5928,6 +5936,29 @@ components:
         BatchOperationTermination sends terminate requests to batch workflows.
          Keep the parameter in sync with temporal.api.workflowservice.v1.TerminateWorkflowExecutionRequest.
          Ignore first_execution_run_id because this is used for single workflow operation.
+    BatchOperationUnpauseActivities:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        type:
+          type: string
+        matchAll:
+          type: boolean
+        resetAttempts:
+          type: boolean
+          description: Providing this flag will also reset the number of attempts.
+        resetHeartbeat:
+          type: boolean
+          description: Providing this flag will also reset the heartbeat details.
+        jitter:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            If set, the activity will start at a random time within the specified jitter
+             duration, introducing variability to the start time.
+      description: BatchOperationUnpauseActivities sends unpause requests to batch workflows.
     BatchOperationUpdateWorkflowExecutionOptions:
       type: object
       properties:
@@ -8116,30 +8147,26 @@ components:
     PatchScheduleResponse:
       type: object
       properties: {}
-    PauseActivityByIdRequest:
+    PauseActivityRequest:
       type: object
       properties:
         namespace:
           type: string
           description: Namespace of the workflow which scheduled this activity.
-        workflowId:
-          type: string
-          description: ID of the workflow which scheduled this activity.
-        runId:
-          type: string
-          description: |-
-            Run ID of the workflow which scheduled this activity.
-             If empty - latest workflow is used.
-        activityId:
-          type: string
-          description: ID of the activity we're updating.
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: Execution info of the workflow which scheduled this activity
         identity:
           type: string
           description: The identity of the client who initiated this request.
-        requestId:
+        id:
           type: string
-          description: Used to de-dupe requests.
-    PauseActivityByIdResponse:
+          description: Only the activity with this ID will be paused.
+        type:
+          type: string
+          description: Pause all running activities of this type.
+    PauseActivityResponse:
       type: object
       properties: {}
     Payload:
@@ -8561,6 +8588,9 @@ components:
           description: |-
             Will be set to true if the activity has been asked to cancel itself. The SDK should then
              notify the activity of cancellation if it is still running.
+        activityPaused:
+          type: boolean
+          description: Will be set to true if the activity is paused.
     RecordActivityTaskHeartbeatRequest:
       type: object
       properties:
@@ -8743,40 +8773,40 @@ components:
     RequestCancelWorkflowExecutionResponse:
       type: object
       properties: {}
-    ResetActivityByIdRequest:
+    ResetActivityRequest:
       type: object
       properties:
         namespace:
           type: string
           description: Namespace of the workflow which scheduled this activity.
-        workflowId:
-          type: string
-          description: ID of the workflow which scheduled this activity.
-        runId:
-          type: string
-          description: |-
-            Run ID of the workflow which scheduled this activity.
-             If empty - latest workflow is used.
-        activityId:
-          type: string
-          description: ID of the activity we're updating.
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: Execution info of the workflow which scheduled this activity
         identity:
           type: string
           description: The identity of the client who initiated this request.
-        requestId:
+        id:
           type: string
-          description: Used to de-dupe requests.
-        noWait:
-          type: boolean
-          description: |-
-            Indicates that activity should be scheduled immediately.
-             If this flag doesn't set, and activity currently running - temporal will wait until activity is completed.
+          description: Only activity with this ID will be reset.
+        type:
+          type: string
+          description: Reset all running activities with of this type.
         resetHeartbeat:
           type: boolean
           description: |-
             Indicates that activity should reset heartbeat details.
              This flag will be applied only to the new instance of the activity.
-    ResetActivityByIdResponse:
+        keepPaused:
+          type: boolean
+          description: if activity is paused, it will remain paused after reset
+        jitter:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.
+             (unless it is paused and keep_paused is set)
+    ResetActivityResponse:
       type: object
       properties: {}
     ResetOptions:
@@ -9971,6 +10001,8 @@ components:
           $ref: '#/components/schemas/BatchOperationReset'
         updateWorkflowOptionsOperation:
           $ref: '#/components/schemas/BatchOperationUpdateWorkflowExecutionOptions'
+        unpauseActivitiesOperation:
+          $ref: '#/components/schemas/BatchOperationUnpauseActivities'
     StartBatchOperationResponse:
       type: object
       properties: {}
@@ -10622,70 +10654,51 @@ components:
           type: string
           description: If set, override overlap policy for this one request.
           format: enum
-    UnpauseActivityByIdRequest:
+    UnpauseActivityRequest:
       type: object
       properties:
         namespace:
           type: string
           description: Namespace of the workflow which scheduled this activity.
-        workflowId:
-          type: string
-          description: ID of the workflow which scheduled this activity.
-        runId:
-          type: string
-          description: |-
-            Run ID of the workflow which scheduled this activity.
-             If empty - latest workflow is used.
-        activityId:
-          type: string
-          description: ID of the activity we're updating.
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: Execution info of the workflow which scheduled this activity
         identity:
           type: string
           description: The identity of the client who initiated this request.
-        requestId:
+        id:
           type: string
-          description: Used to de-dupe requests.
-        resume:
-          $ref: '#/components/schemas/UnpauseActivityByIdRequest_ResumeOperation'
-        reset:
-          $ref: '#/components/schemas/UnpauseActivityByIdRequest_ResetOperation'
-    UnpauseActivityByIdRequest_ResetOperation:
-      type: object
-      properties:
-        noWait:
+          description: Only the activity with this ID will be unpaused.
+        type:
+          type: string
+          description: Unpause all running activities with of this type.
+        unpauseAll:
           type: boolean
-          description: |-
-            Indicates that the activity should be scheduled immediately.
-             Note that this may run simultaneously with any existing executions of the activity.
+          description: Unpause all running activities.
+        resetAttempts:
+          type: boolean
+          description: Providing this flag will also reset the number of attempts.
         resetHeartbeat:
           type: boolean
-          description: If set, the Heartbeat Details will be cleared out to make the Activity start over from the beginning
-    UnpauseActivityByIdRequest_ResumeOperation:
-      type: object
-      properties:
-        noWait:
-          type: boolean
-          description: Indicates that if the activity is waiting to retry, it will  be scheduled immediately.
-    UnpauseActivityByIdResponse:
+          description: Providing this flag will also reset the heartbeat details.
+        jitter:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: If set, the activity will start at a random time within the specified jitter duration.
+    UnpauseActivityResponse:
       type: object
       properties: {}
-    UpdateActivityOptionsByIdRequest:
+    UpdateActivityOptionsRequest:
       type: object
       properties:
         namespace:
           type: string
           description: Namespace of the workflow which scheduled this activity
-        workflowId:
-          type: string
-          description: ID of the workflow which scheduled this activity
-        runId:
-          type: string
-          description: |-
-            Run ID of the workflow which scheduled this activity
-             if empty - latest workflow is used
-        activityId:
-          type: string
-          description: ID of the activity we're updating
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: Execution info of the workflow which scheduled this activity
         identity:
           type: string
           description: The identity of the client who initiated this request
@@ -10697,10 +10710,13 @@ components:
           type: string
           description: Controls which fields from `activity_options` will be applied
           format: field-mask
-        requestId:
+        id:
           type: string
-          description: Used to de-dupe requests
-    UpdateActivityOptionsByIdResponse:
+          description: Only activity with this ID will be updated.
+        type:
+          type: string
+          description: Update all running activities of this type.
+    UpdateActivityOptionsResponse:
       type: object
       properties:
         activityOptions:
@@ -11631,7 +11647,12 @@ components:
         versioningOverride:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride'
-          description: Versioning override in the mutable state after event has been applied.
+          description: |-
+            Versioning override upserted in this event.
+             Ignored if nil or if unset_versioning_override is true.
+        unsetVersioningOverride:
+          type: boolean
+          description: Versioning override removed in this event.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:

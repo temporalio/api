@@ -2016,6 +2016,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "conflictToken",
+            "description": "Optional. This can be the value of conflict_token from a Describe, or another Worker\nDeployment API. Passing a non-nil conflict token will cause this request to fail if the\nDeployment's configuration has been modified between the API call that generated the\ntoken and this one.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
           }
         ],
         "tags": [
@@ -5239,6 +5247,14 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "conflictToken",
+            "description": "Optional. This can be the value of conflict_token from a Describe, or another Worker\nDeployment API. Passing a non-nil conflict token will cause this request to fail if the\nDeployment's configuration has been modified between the API call that generated the\ntoken and this one.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
           }
         ],
         "tags": [
@@ -6935,7 +6951,7 @@
         "conflictToken": {
           "type": "string",
           "format": "byte",
-          "description": "Optional. This can be the value of conflict_token from a Describe, or another Worker\nDeployment API. Passing conflict token which will cause this request to fail if the\nDeployment's configuration has been modified between the previous API call and\nthis one."
+          "description": "Optional. This can be the value of conflict_token from a Describe, or another Worker\nDeployment API. Passing a non-nil conflict token will cause this request to fail if the\nDeployment's configuration has been modified between the API call that generated the\ntoken and this one."
         },
         "identity": {
           "type": "string",
@@ -6959,7 +6975,7 @@
         "conflictToken": {
           "type": "string",
           "format": "byte",
-          "description": "Optional. This can be the value of conflict_token from a Describe, or another Worker\nDeployment API. Passing conflict token which will cause this request to fail if the\nDeployment's configuration has been modified between the previous API call and\nthis one."
+          "description": "Optional. This can be the value of conflict_token from a Describe, or another Worker\nDeployment API. Passing a non-nil conflict token will cause this request to fail if the\nDeployment's configuration has been modified between the API call that generated the\ntoken and this one."
         },
         "identity": {
           "type": "string",
@@ -8891,7 +8907,14 @@
       "type": "object"
     },
     "v1DeleteWorkerDeploymentVersionResponse": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "conflictToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "This value is returned so that it can be optionally passed to APIs\nthat write to the Worker Deployment state to ensure that the state\ndid not change between this API call and a future write."
+        }
+      }
     },
     "v1DeleteWorkflowExecutionResponse": {
       "type": "object"
@@ -9148,7 +9171,8 @@
       "properties": {
         "conflictToken": {
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "description": "This value is returned so that it can be optionally passed to APIs\nthat write to the Worker Deployment state to ensure that the state\ndid not change between this read and a future write."
         },
         "workerDeploymentInfo": {
           "$ref": "#/definitions/v1WorkerDeploymentInfo"
@@ -9588,7 +9612,8 @@
           },
           "description": "Major version sets, in order from oldest to newest. The last element of the list will always\nbe the current default major version. IE: New workflows will target the most recent version\nin that version set.\n\nThere may be fewer sets returned than exist, if the request chose to limit this response."
         }
-      }
+      },
+      "title": "[cleanup-wv-pre-release]"
     },
     "v1GetWorkerTaskReachabilityResponse": {
       "type": "object",
@@ -9602,7 +9627,7 @@
           "description": "Task reachability, broken down by build id and then task queue.\nWhen requesting a large number of task queues or all task queues associated with the given build ids in a\nnamespace, all task queues will be listed in the response but some of them may not contain reachability\ninformation due to a server enforced limit. When reaching the limit, task queues that reachability information\ncould not be retrieved for will be marked with a single TASK_REACHABILITY_UNSPECIFIED entry. The caller may issue\nanother call to get the reachability for those task queues.\n\nOpen source users can adjust this limit by setting the server's dynamic config value for\n`limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store."
         }
       },
-      "description": "Deprecated. Use `DescribeTaskQueue`."
+      "description": "[cleanup-wv-pre-release]\nDeprecated. Use `DescribeTaskQueue`."
     },
     "v1GetWorkerVersioningRulesResponse": {
       "type": "object",
@@ -9626,7 +9651,8 @@
           "format": "byte",
           "description": "This value can be passed back to UpdateWorkerVersioningRulesRequest to\nensure that the rules were not modified between this List and the Update,\nwhich could lead to lost updates and other confusion."
         }
-      }
+      },
+      "title": "[cleanup-wv-pre-release]"
     },
     "v1GetWorkflowExecutionHistoryResponse": {
       "type": "object",
@@ -11816,15 +11842,20 @@
           "format": "float",
           "description": "Percentage of tasks that are routed to the Ramping Version instead of the Current Version.\nValid range: [0, 100]. A 100% value means the Ramping Version is receiving full traffic but\nnot yet \"promoted\" to be the Current Version, likely due to pending validations."
         },
-        "currentVersionUpdateTime": {
+        "currentVersionChangedTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Last time current version was updated."
+          "description": "Last time current version was changed."
         },
-        "rampingVersionUpdateTime": {
+        "rampingVersionChangedTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Last time ramping version was updated."
+          "description": "Last time ramping version was changed. Not updated if only the ramp percentage changes."
+        },
+        "rampingVersionPercentageChangedTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last time ramping version percentage was changed.\nIf ramping version is changed, this is also updated, even if the percentage stays the same."
         }
       }
     },
@@ -12285,7 +12316,8 @@
       "properties": {
         "conflictToken": {
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "description": "This value is returned so that it can be optionally passed to APIs\nthat write to the Worker Deployment state to ensure that the state\ndid not change between this API call and a future write."
         },
         "previousBuildId": {
           "type": "string",
@@ -12298,7 +12330,8 @@
       "properties": {
         "conflictToken": {
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "description": "This value is returned so that it can be optionally passed to APIs\nthat write to the Worker Deployment state to ensure that the state\ndid not change between this API call and a future write."
         },
         "previousBuildId": {
           "type": "string",
@@ -13392,7 +13425,8 @@
       "type": "object"
     },
     "v1UpdateWorkerBuildIdCompatibilityResponse": {
-      "type": "object"
+      "type": "object",
+      "title": "[cleanup-wv-pre-release]"
     },
     "v1UpdateWorkerVersioningRulesResponse": {
       "type": "object",
@@ -13416,7 +13450,8 @@
           "format": "byte",
           "description": "This value can be passed back to UpdateWorkerVersioningRulesRequest to\nensure that the rules were not modified between the two updates, which\ncould lead to lost updates and other confusion."
         }
-      }
+      },
+      "title": "[cleanup-wv-pre-release]"
     },
     "v1UpdateWorkflowExecutionLifecycleStage": {
       "type": "string",

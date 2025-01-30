@@ -1286,6 +1286,7 @@ message ListSchedulesResponse {
     bytes next_page_token = 2;
 }
 
+// [cleanup-wv-pre-release]
 message UpdateWorkerBuildIdCompatibilityRequest {
     message AddNewCompatibleVersion {
         // A new id to be added to an existing compatible set.
@@ -1341,11 +1342,13 @@ message UpdateWorkerBuildIdCompatibilityRequest {
         MergeSets merge_sets = 7;
     }
 }
+// [cleanup-wv-pre-release]
 message UpdateWorkerBuildIdCompatibilityResponse {
     reserved 1;
     reserved "version_set_id";
 }
 
+// [cleanup-wv-pre-release]
 message GetWorkerBuildIdCompatibilityRequest {
     string namespace = 1;
     // Must be set, the task queue to interrogate about worker id compatibility.
@@ -1354,6 +1357,7 @@ message GetWorkerBuildIdCompatibilityRequest {
     // default major version set. 0 returns all sets.
     int32 max_sets = 3;
 }
+// [cleanup-wv-pre-release]
 message GetWorkerBuildIdCompatibilityResponse {
     // Major version sets, in order from oldest to newest. The last element of the list will always
     // be the current default major version. IE: New workflows will target the most recent version
@@ -1367,6 +1371,7 @@ message GetWorkerBuildIdCompatibilityResponse {
 //     aip.dev/not-precedent: UpdateNamespace RPC doesn't follow Google API format. --)
 // (-- api-linter: core::0134::request-resource-required=disabled
 //     aip.dev/not-precedent: GetWorkerBuildIdCompatibilityRequest RPC doesn't follow Google API format. --)
+// [cleanup-wv-pre-release]
 message UpdateWorkerVersioningRulesRequest {
     // Inserts the rule to the list of assignment rules for this Task Queue.
     // The rules are evaluated in order, starting from index 0. The first
@@ -1458,6 +1463,7 @@ message UpdateWorkerVersioningRulesRequest {
     }
 }
 
+// [cleanup-wv-pre-release]
 message UpdateWorkerVersioningRulesResponse {
     repeated temporal.api.taskqueue.v1.TimestampedBuildIdAssignmentRule assignment_rules = 1;
     repeated temporal.api.taskqueue.v1.TimestampedCompatibleBuildIdRedirectRule compatible_redirect_rules = 2;
@@ -1468,11 +1474,13 @@ message UpdateWorkerVersioningRulesResponse {
     bytes conflict_token = 3;
 }
 
+// [cleanup-wv-pre-release]
 message GetWorkerVersioningRulesRequest {
     string namespace = 1;
     string task_queue = 2;
 }
 
+// [cleanup-wv-pre-release]
 message GetWorkerVersioningRulesResponse {
     repeated temporal.api.taskqueue.v1.TimestampedBuildIdAssignmentRule assignment_rules = 1;
     repeated temporal.api.taskqueue.v1.TimestampedCompatibleBuildIdRedirectRule compatible_redirect_rules = 2;
@@ -1483,6 +1491,7 @@ message GetWorkerVersioningRulesResponse {
     bytes conflict_token = 3;
 }
 
+// [cleanup-wv-pre-release]
 // Deprecated. Use `DescribeTaskQueue`.
 message GetWorkerTaskReachabilityRequest {
     string namespace = 1;
@@ -1508,6 +1517,7 @@ message GetWorkerTaskReachabilityRequest {
     temporal.api.enums.v1.TaskReachability reachability = 4;
 }
 
+// [cleanup-wv-pre-release]
 // Deprecated. Use `DescribeTaskQueue`.
 message GetWorkerTaskReachabilityResponse {
     // Task reachability, broken down by build id and then task queue.
@@ -1949,6 +1959,9 @@ message DescribeWorkerDeploymentRequest {
 }
 
 message DescribeWorkerDeploymentResponse {
+    // This value is returned so that it can be optionally passed to APIs
+    // that write to the Worker Deployment state to ensure that the state
+    // did not change between this read and a future write.
     bytes conflict_token = 1;
     temporal.api.deployment.v1.WorkerDeploymentInfo worker_deployment_info = 2;
 }
@@ -1997,15 +2010,18 @@ message SetWorkerDeploymentCurrentVersionRequest {
     //   with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
     string build_id = 3;
     // Optional. This can be the value of conflict_token from a Describe, or another Worker
-    // Deployment API. Passing conflict token which will cause this request to fail if the
-    // Deployment's configuration has been modified between the previous API call and
-    // this one.
+    // Deployment API. Passing a non-nil conflict token will cause this request to fail if the
+    // Deployment's configuration has been modified between the API call that generated the
+    // token and this one.
     bytes conflict_token = 4;
     // Optional. The identity of the client who initiated this request.
     string identity = 5;
 }
 
 message SetWorkerDeploymentCurrentVersionResponse {
+    // This value is returned so that it can be optionally passed to APIs
+    // that write to the Worker Deployment state to ensure that the state
+    // did not change between this API call and a future write.
     bytes conflict_token = 1;
     // The Build ID of the version that was current before executing this operation. Can also be the
     // `__unversioned__` special value.
@@ -2027,15 +2043,18 @@ message SetWorkerDeploymentRampingVersionRequest {
     float percentage = 4;
 
     // Optional. This can be the value of conflict_token from a Describe, or another Worker
-    // Deployment API. Passing conflict token which will cause this request to fail if the
-    // Deployment's configuration has been modified between the previous API call and
-    // this one.
+    // Deployment API. Passing a non-nil conflict token will cause this request to fail if the
+    // Deployment's configuration has been modified between the API call that generated the
+    // token and this one.
     bytes conflict_token = 5;
     // Optional. The identity of the client who initiated this request.
     string identity = 6;
 }
 
 message SetWorkerDeploymentRampingVersionResponse {
+    // This value is returned so that it can be optionally passed to APIs
+    // that write to the Worker Deployment state to ensure that the state
+    // did not change between this API call and a future write.
     bytes conflict_token = 1;
     // The Build ID of the version that was ramping before executing this operation. Can also be
     // empty or the `__unversioned__` special value.
@@ -2069,11 +2088,20 @@ message ListWorkerDeploymentsResponse {
 //  - It has no active pollers (none of the task queues in the Version have pollers)
 //  - It is drained (see WorkerDeploymentVersionInfo.drainage_info)
 message DeleteWorkerDeploymentVersionRequest {
-    string namespace = 1;
-    temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+    // Optional. This can be the value of conflict_token from a Describe, or another Worker
+    // Deployment API. Passing a non-nil conflict token will cause this request to fail if the
+    // Deployment's configuration has been modified between the API call that generated the
+    // token and this one.
+    bytes conflict_token = 1;
+    string namespace = 2;
+    temporal.api.deployment.v1.WorkerDeploymentVersion version = 3;
 }
 
 message DeleteWorkerDeploymentVersionResponse {
+    // This value is returned so that it can be optionally passed to APIs
+    // that write to the Worker Deployment state to ensure that the state
+    // did not change between this API call and a future write.
+    bytes conflict_token = 1;
 }
 
 // Deletes records of (an old) Deployment. A deployment can only be deleted if

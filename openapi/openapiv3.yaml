@@ -1771,6 +1771,16 @@ paths:
           required: true
           schema:
             type: string
+        - name: conflictToken
+          in: query
+          description: |-
+            Optional. This can be the value of conflict_token from a Describe, or another Worker
+             Deployment API. Passing a non-nil conflict token will cause this request to fail if the
+             Deployment's configuration has been modified between the API call that generated the
+             token and this one.
+          schema:
+            type: string
+            format: bytes
         - name: version.deploymentName
           in: query
           description: The name of the Deployment this version belongs too.
@@ -4644,6 +4654,16 @@ paths:
           required: true
           schema:
             type: string
+        - name: conflictToken
+          in: query
+          description: |-
+            Optional. This can be the value of conflict_token from a Describe, or another Worker
+             Deployment API. Passing a non-nil conflict token will cause this request to fail if the
+             Deployment's configuration has been modified between the API call that generated the
+             token and this one.
+          schema:
+            type: string
+            format: bytes
         - name: version.deploymentName
           in: query
           description: The name of the Deployment this version belongs too.
@@ -6457,7 +6477,14 @@ components:
       properties: {}
     DeleteWorkerDeploymentVersionResponse:
       type: object
-      properties: {}
+      properties:
+        conflictToken:
+          type: string
+          description: |-
+            This value is returned so that it can be optionally passed to APIs
+             that write to the Worker Deployment state to ensure that the state
+             did not change between this API call and a future write.
+          format: bytes
     Deployment:
       type: object
       properties:
@@ -6709,6 +6736,10 @@ components:
       properties:
         conflictToken:
           type: string
+          description: |-
+            This value is returned so that it can be optionally passed to APIs
+             that write to the Worker Deployment state to ensure that the state
+             did not change between this read and a future write.
           format: bytes
         workerDeploymentInfo:
           $ref: '#/components/schemas/WorkerDeploymentInfo'
@@ -7103,6 +7134,7 @@ components:
              in that version set.
 
              There may be fewer sets returned than exist, if the request chose to limit this response.
+      description: '[cleanup-wv-pre-release]'
     GetWorkerTaskReachabilityResponse:
       type: object
       properties:
@@ -7120,7 +7152,9 @@ components:
 
              Open source users can adjust this limit by setting the server's dynamic config value for
              `limit.reachabilityTaskQueueScan` with the caveat that this call can strain the visibility store.
-      description: Deprecated. Use `DescribeTaskQueue`.
+      description: |-
+        [cleanup-wv-pre-release]
+         Deprecated. Use `DescribeTaskQueue`.
     GetWorkerVersioningRulesResponse:
       type: object
       properties:
@@ -7139,6 +7173,7 @@ components:
              ensure that the rules were not modified between this List and the Update,
              which could lead to lost updates and other confusion.
           format: bytes
+      description: '[cleanup-wv-pre-release]'
     GetWorkflowExecutionHistoryResponse:
       type: object
       properties:
@@ -9171,13 +9206,19 @@ components:
              Valid range: [0, 100]. A 100% value means the Ramping Version is receiving full traffic but
              not yet "promoted" to be the Current Version, likely due to pending validations.
           format: float
-        currentVersionUpdateTime:
+        currentVersionChangedTime:
           type: string
-          description: Last time current version was updated.
+          description: Last time current version was changed.
           format: date-time
-        rampingVersionUpdateTime:
+        rampingVersionChangedTime:
           type: string
-          description: Last time ramping version was updated.
+          description: Last time ramping version was changed. Not updated if only the ramp percentage changes.
+          format: date-time
+        rampingVersionPercentageChangedTime:
+          type: string
+          description: |-
+            Last time ramping version percentage was changed.
+             If ramping version is changed, this is also updated, even if the percentage stays the same.
           format: date-time
     Schedule:
       type: object
@@ -9591,9 +9632,9 @@ components:
           type: string
           description: |-
             Optional. This can be the value of conflict_token from a Describe, or another Worker
-             Deployment API. Passing conflict token which will cause this request to fail if the
-             Deployment's configuration has been modified between the previous API call and
-             this one.
+             Deployment API. Passing a non-nil conflict token will cause this request to fail if the
+             Deployment's configuration has been modified between the API call that generated the
+             token and this one.
           format: bytes
         identity:
           type: string
@@ -9604,6 +9645,10 @@ components:
       properties:
         conflictToken:
           type: string
+          description: |-
+            This value is returned so that it can be optionally passed to APIs
+             that write to the Worker Deployment state to ensure that the state
+             did not change between this API call and a future write.
           format: bytes
         previousBuildId:
           type: string
@@ -9634,9 +9679,9 @@ components:
           type: string
           description: |-
             Optional. This can be the value of conflict_token from a Describe, or another Worker
-             Deployment API. Passing conflict token which will cause this request to fail if the
-             Deployment's configuration has been modified between the previous API call and
-             this one.
+             Deployment API. Passing a non-nil conflict token will cause this request to fail if the
+             Deployment's configuration has been modified between the API call that generated the
+             token and this one.
           format: bytes
         identity:
           type: string
@@ -9647,6 +9692,10 @@ components:
       properties:
         conflictToken:
           type: string
+          description: |-
+            This value is returned so that it can be optionally passed to APIs
+             that write to the Worker Deployment state to ensure that the state
+             did not change between this API call and a future write.
           format: bytes
         previousBuildId:
           type: string

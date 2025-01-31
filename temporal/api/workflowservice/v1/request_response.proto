@@ -2016,6 +2016,17 @@ message SetWorkerDeploymentCurrentVersionRequest {
     bytes conflict_token = 4;
     // Optional. The identity of the client who initiated this request.
     string identity = 5;
+    // Optional. By default this protects against accidentally removing a task queue from the current deployment version.
+    // If false, one of the following conditions must hold true for the new version to be set as current:
+    // - The new current version must have all the task-queues that are present in the existing current version.
+    // or
+    // - If the new current version is missing task queues that are present in the existing current version, 
+    //   each missing task queue should have either:
+    //     - A current deployment version set, signifying that the task queue has been added to another deployment.
+    //     - An add_rate of 0, signifying that there are no backlogged tasks being added in these queues. (see TaskQueueStats.tasks_add_rate)
+    // If true, this operation will succeed even if the new current version does not have all the task-queues that were
+    // present in the existing current version.
+    bool ignore_missing_task_queues = 6;
 }
 
 message SetWorkerDeploymentCurrentVersionResponse {

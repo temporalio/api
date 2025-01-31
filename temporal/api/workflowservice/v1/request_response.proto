@@ -2060,6 +2060,19 @@ message SetWorkerDeploymentRampingVersionRequest {
     bytes conflict_token = 5;
     // Optional. The identity of the client who initiated this request.
     string identity = 6;
+    // Optional. By default this protects against accidentally removing a task queue from the current ramping version.
+    // If false, one of the following conditions must hold true for the new version to be set as ramping version:
+    // - The new ramping version must have all the task-queues that are present in the existing ramping version.
+    // or
+    // - If the new ramping version is missing task queues that are present in the existing ramping version, 
+    //   each missing task queue should have either:
+    //     - A current deployment version set, signifying that the task queue has been added to another deployment.
+    //     - An add_rate of 0, signifying that there are no backlogged tasks being added in these queues. (see TaskQueueStats.tasks_add_rate)
+    // If true, this operation will succeed even if the new ramping version does not have all the task-queues that were
+    // present in the existing ramping version.
+    // Note: This flag will only be applicable if the version is being set as the ramping version for the first time, signifying
+    // that these checks will be ignored when the ramping version is being unset or on just a percentage change.
+    bool ignore_missing_task_queues = 7;
 }
 
 message SetWorkerDeploymentRampingVersionResponse {

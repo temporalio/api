@@ -58,22 +58,26 @@ message TaskQueueMetadata {
 message TaskQueueVersioningInfo {
     // Always present. Specifies which Deployment Version should should receive new workflow
     // executions and tasks of existing unversioned or AutoUpgrade workflows.
-    // Can be one of the following:
+    // `current_version.build_id` can be one of the following:
     // - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
     //   `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
     // - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
-    //   with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+    //   with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`).
+    // If `current_version.build_id == "__unversioned__", then `current_version.deployment_name` will
+    // be empty, because unversioned task queues send tasks to all unversioned workers regardless of deployment.
     // Note: Current Version is overridden by the Ramping Version for a portion of traffic when a ramp
     // is set (see `ramping_version`.)
     temporal.api.deployment.v1.WorkerDeploymentVersion current_version = 1;
     // When present, it means the traffic is being shifted from the Current Version to the Ramping
-    // Version.
-    // Must always be different from Current Version. Can be one of the following:
+    // Version. Must always be different from Current Version.
+    // `ramping_version.build_id` can be one of the following:
     // - The Build ID of a Version of this Deployment that supports Versioning Behaviors (i.e. has
     //   `WorkflowVersioningMode==VERSIONING_BEHAVIORS`.)
     // - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
     //   with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
-    // Note that it is possible to ramp from one Version to another Version, or from unversioned
+    // If `current_version.build_id == "__unversioned__", then `current_version.deployment_name` will
+    // be empty, because unversioned task queues send tasks to all unversioned workers regardless of deployment.
+    // Note: It is possible to ramp from one Version to another Version, or from unversioned
     // workers to a particular Version, or from a particular Version to unversioned workers.
     temporal.api.deployment.v1.WorkerDeploymentVersion ramping_version = 2;
     // Percentage of tasks that are routed to the Ramping Version instead of the Current Version.

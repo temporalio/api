@@ -110,6 +110,9 @@ message WorkflowExecutionInfo {
     // be versioned or unversioned, depending on `versioning_info.behavior` and `versioning_info.versioning_override`.
     // Experimental. Versioning info is experimental and might change in the future.
     WorkflowExecutionVersioningInfo versioning_info = 22;
+
+    // The name of Worker Deployment that completed the most recent workflow task.
+    string worker_deployment = 23;
 }
 
 // Holds all the extra information about workflow execution that is not part of Visibility.
@@ -150,13 +153,13 @@ message WorkflowExecutionVersioningInfo {
     // Note that `deployment` is overridden by `versioning_override` if the latter is present.
     // Deprecated. Use deployment_version and deployment_name.
     temporal.api.deployment.v1.Deployment deployment = 2 [deprecated = true];
-    // TODO (Shahab): Confirm the right way to specify Deployment Version here (ie. should it be a string)
-    // The deployment version of the worker that completed the last workflow task of this workflow
-    // execution. Must be present if and only if `behavior` is set. An absent value means no
-    // workflow task is completed, or the workflow is unversioned.
+    // The Worker Deployment Version that completed the last workflow task of this workflow
+    // execution, in the form "<deployment_name>/<build_id>".
+    // Must be present if and only if `behavior` is set. An absent value means no workflow task is
+    // completed, or the workflow is unversioned.
     // Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
     // will override this value.
-    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 5;
+    string deployment_version = 5;
     // Present if user has set an execution-specific versioning override. This override takes
     // precedence over SDK-sent `behavior` (and `deployment_version` when override is PINNED). An
     // override can be set when starting a new execution, as well as afterwards by calling the
@@ -216,9 +219,9 @@ message DeploymentTransition {
 // deployment version to another.
 // Experimental. Might change in the future.
 message DeploymentVersionTransition {
-    // The target version of the transition. Absent means a so-far-versioned workflow is
-    // transitioning to unversioned workers.
-    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 1;
+    // Required. The target version of the transition. May be `__unversioned__` which means a
+    // so-far-versioned workflow is transitioning to unversioned workers.
+    string deployment_version = 1;
 
     // Later: safe transition info
 }
@@ -283,7 +286,7 @@ message PendingActivityInfo {
     // Deprecated. Use `last_deployment_version`.
     temporal.api.deployment.v1.Deployment last_deployment = 20 [deprecated = true];
     // The worker deployment version this activity was dispatched to most recently.
-    temporal.api.deployment.v1.WorkerDeploymentVersion last_deployment_version = 21;
+    string last_deployment_version = 21;
 }
 
 message PendingChildExecutionInfo {
@@ -486,5 +489,5 @@ message VersioningOverride {
 
     // Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
     // Identifies the worker deployment version to pin the workflow to.
-    temporal.api.deployment.v1.WorkerDeploymentVersion pinned_version = 9;
+    string pinned_version = 9;
 }

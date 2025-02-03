@@ -367,14 +367,13 @@ message RespondWorkflowTaskCompletedRequest {
     Capabilities capabilities = 14;
     // Deployment info of the worker that completed this task. Must be present if user has set
     // `WorkerDeploymentOptions` regardless of versioning being enabled or not.
-    // Deprecated. Replaced with `deployment_version`.
+    // Deprecated. Replaced with `deployment_options`.
     temporal.api.deployment.v1.Deployment deployment = 15 [deprecated = true];
     // Versioning behavior of this workflow execution as set on the worker that completed this task.
     // UNSPECIFIED means versioning is not enabled in the worker.
     temporal.api.enums.v1.VersioningBehavior versioning_behavior = 16;
-    // Deployment name of the worker that completed this task. Must be present if user has set
-    // `WorkerDeploymentOptions` regardless of versioning behavior being specified or not.
-    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 17;
+    // Worker deployment options that user has set in the worker.
+    temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 17;
 
     // SDK capability details.
     message Capabilities {
@@ -422,11 +421,10 @@ message RespondWorkflowTaskFailedRequest {
     temporal.api.common.v1.WorkerVersionStamp worker_version = 8 [deprecated = true];
     // Deployment info of the worker that completed this task. Must be present if user has set
     // `WorkerDeploymentOptions` regardless of versioning being enabled or not.
-    // Deprecated. Replaced with `deployment_version`.
+    // Deprecated. Replaced with `deployment_options`.
     temporal.api.deployment.v1.Deployment deployment = 9;
-    // Deployment version of the worker that failed this task. Must be present if user has set
-    // `WorkerDeploymentOptions`.
-    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 10;
+    // Worker deployment options that user has set in the worker.
+    temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 10;
 }
 
 message RespondWorkflowTaskFailedResponse {
@@ -552,11 +550,10 @@ message RespondActivityTaskCompletedRequest {
     temporal.api.common.v1.WorkerVersionStamp worker_version = 5 [deprecated = true];
     // Deployment info of the worker that completed this task. Must be present if user has set
     // `WorkerDeploymentOptions` regardless of versioning being enabled or not.
-    // Deprecated. Replaced with `deployment_version`.
+    // Deprecated. Replaced with `deployment_options`.
     temporal.api.deployment.v1.Deployment deployment = 6 [deprecated = true];
-    // Deployment version of the worker that completed this task. Must be present if user has set
-    // `WorkerDeploymentOptions`.
-    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 7;
+    // Worker deployment options that user has set in the worker.
+    temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 7;
 }
 
 message RespondActivityTaskCompletedResponse {
@@ -597,11 +594,10 @@ message RespondActivityTaskFailedRequest {
     temporal.api.common.v1.WorkerVersionStamp worker_version = 6 [deprecated = true];
     // Deployment info of the worker that completed this task. Must be present if user has set
     // `WorkerDeploymentOptions` regardless of versioning being enabled or not.
-    // Deprecated. Replaced with `deployment_version`.
+    // Deprecated. Replaced with `deployment_options`.
     temporal.api.deployment.v1.Deployment deployment = 7 [deprecated = true];
-    // Deployment version of the worker that failed this task. Must be present if user has set
-    // `WorkerDeploymentOptions`.
-    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 8;
+    // Worker deployment options that user has set in the worker.
+    temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 8;
 }
 
 message RespondActivityTaskFailedResponse {
@@ -648,11 +644,10 @@ message RespondActivityTaskCanceledRequest {
     temporal.api.common.v1.WorkerVersionStamp worker_version = 5 [deprecated = true];
     // Deployment info of the worker that completed this task. Must be present if user has set
     // `WorkerDeploymentOptions` regardless of versioning being enabled or not.
-    // Deprecated. Replaced with `deployment_version`.
+    // Deprecated. Replaced with `deployment_options`.
     temporal.api.deployment.v1.Deployment deployment = 6 [deprecated = true];
-    // Deployment version of the worker that processed this task. Must be present if user has set
-    // `WorkerDeploymentOptions`.
-    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 7;
+    // Worker deployment options that user has set in the worker.
+    temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 7;
 }
 
 message RespondActivityTaskCanceledResponse {
@@ -1058,8 +1053,8 @@ message DescribeTaskQueueResponse {
     map<string, temporal.api.taskqueue.v1.TaskQueueVersionInfo> versions_info = 3;
 
     // Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.
-    // When not present, it means the tasks are routed to "unversioned" workers. Unversioned workers
-    // are those with UNVERSIONED (or unspecified) WorkflowVersioningMode.
+    // When not present, it means the tasks are routed to Unversioned workers (workers with
+    // UNVERSIONED or unspecified WorkerVersioningMode.)
     // Task Queue Versioning info is updated indirectly by calling SetWorkerDeploymentCurrentVersion
     // and SetWorkerDeploymentRampingVersion on Worker Deployments.
     // Note: This information is not relevant to Pinned workflow executions and their activities as
@@ -1946,7 +1941,8 @@ message DescribeDeploymentResponse {
 
 message DescribeWorkerDeploymentVersionRequest {
 	string namespace = 1;
-  temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+  // Deployment Version identifier in the form "<deployment_name>/<build_id>".
+  string version = 2;
 }
 
 message DescribeWorkerDeploymentVersionResponse {
@@ -2004,11 +2000,9 @@ message SetWorkerDeploymentCurrentVersionRequest {
     string namespace = 1;
     string deployment_name = 2;
     // Required. Can be one of the following:
-    // - The fully-qualified string representation of a Version of this Deployment that supports
-    //   Versioning Behaviors (i.e. has `WorkflowVersioningMode==VERSIONING_BEHAVIORS`). In the
-    //   format "<deployment_name>/<build_id>".
+    // - A Deployment Version identifier in the form "<deployment_name>/<build_id>".
     // - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
-    //   with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+    //   with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)
     string version = 3;
     // Optional. This can be the value of conflict_token from a Describe, or another Worker
     // Deployment API. Passing a non-nil conflict token will cause this request to fail if the
@@ -2017,16 +2011,19 @@ message SetWorkerDeploymentCurrentVersionRequest {
     bytes conflict_token = 4;
     // Optional. The identity of the client who initiated this request.
     string identity = 5;
-    // Optional. By default this protects against accidentally removing a task queue from the current deployment version.
-    // If false, one of the following conditions must hold true for the new version to be set as current:
-    // - The new current version must have all the task-queues that are present in the existing current version.
-    // or
-    // - If the new current version is missing task queues that are present in the existing current version, 
-    //   each missing task queue should have either:
-    //     - A current deployment version set, signifying that the task queue has been added to another deployment.
-    //     - An add_rate of 0, signifying that there are no backlogged tasks being added in these queues. (see TaskQueueStats.tasks_add_rate)
-    // If true, this operation will succeed even if the new current version does not have all the task-queues that were
-    // present in the existing current version.
+    // Optional. By default this request would be rejected if not all the expected Task Queues are
+    // being polled by the new Version, to protects against accidental removal of Task Queues, or
+    // worker health issues. Pass `true` here to bypass this protection.
+    // The set of expected Task Queues is the set of all the Task Queues that were ever poller by
+    // the existing Current Version of the Deployment, with the following exclusions:
+    //   - Task Queues that are not used anymore (inferred by having empty backlog and a task
+    //     add_rate of 0.)
+    //   - Task Queues that are moved to another Worker Deployment (inferred by the Task Queue
+    //     having a different Current Version than the Current Version of this deployment.)
+    // WARNING: Do not set this flag unless you are sure that the missing task queue pollers are not
+    // needed. If the request is unexpectedly rejected due to missing pollers, then that means the
+    // pollers have not reached to the server yet. Only set this if you expect those pollers to
+    // never arrive.
     bool ignore_missing_task_queues = 6;
 }
 
@@ -2035,8 +2032,8 @@ message SetWorkerDeploymentCurrentVersionResponse {
     // that write to the Worker Deployment state to ensure that the state
     // did not change between this API call and a future write.
     bytes conflict_token = 1;
-    // The version that was current before executing this operation, in the form "<deployment_name>/<build_id>".
-    // Can also be the `__unversioned__` special value.
+    // The version that was current before executing this operation, in the form
+    // "<deployment_name>/<build_id>". Can also be the `__unversioned__` special value.
     string previous_version = 2;
 }
 
@@ -2046,11 +2043,9 @@ message SetWorkerDeploymentRampingVersionRequest {
     string deployment_name = 2;
     // Can be one of the following:
     // - Absent/empty value to unset the Ramping Version. Must be paired with `percentage=0`.
-    // - The fully-qualified string representation of a Version of this Deployment that supports
-    //   Versioning Behaviors (i.e. has `WorkflowVersioningMode==VERSIONING_BEHAVIORS`). In the
-    //   format "<deployment_name>/<build_id>".
+    // - A Deployment Version identifier in the form "<deployment_name>/<build_id>".
     // - Or, the "__unversioned__" special value, to represent all the unversioned workers (those
-    //   with `UNVERSIONED` (or unspecified) `WorkflowVersioningMode`.)
+    //   with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)
     string version = 3;
     // Ramp percentage to set. Valid range: [0,100].
     float percentage = 4;
@@ -2062,18 +2057,22 @@ message SetWorkerDeploymentRampingVersionRequest {
     bytes conflict_token = 5;
     // Optional. The identity of the client who initiated this request.
     string identity = 6;
-    // Optional. By default this protects against accidentally removing a task queue from the current ramping version.
-    // If false, one of the following conditions must hold true for the new version to be set as ramping version:
-    // - The new ramping version must have all the task-queues that are present in the existing ramping version.
-    // or
-    // - If the new ramping version is missing task queues that are present in the existing ramping version, 
-    //   each missing task queue should have either:
-    //     - A current deployment version set, signifying that the task queue has been added to another deployment.
-    //     - An add_rate of 0, signifying that there are no backlogged tasks being added in these queues. (see TaskQueueStats.tasks_add_rate)
-    // If true, this operation will succeed even if the new ramping version does not have all the task-queues that were
-    // present in the existing ramping version.
-    // Note: This flag will only be applicable if the version is being set as the ramping version for the first time, signifying
-    // that these checks will be ignored when the ramping version is being unset or on just a percentage change.
+    // Optional. By default this request would be rejected if not all the expected Task Queues are
+    // being polled by the new Version, to protects against accidental removal of Task Queues, or
+    // worker health issues. Pass `true` here to bypass this protection.
+    // The set of expected Task Queues equals to all the Task Queues ever polled from the existing
+    // Current Version of the Deployment, with the following exclusions:
+    //   - Task Queues that are not used anymore (inferred by having empty backlog and a task
+    //     add_rate of 0.)
+    //   - Task Queues that are moved to another Worker Deployment (inferred by the Task Queue
+    //     having a different Current Version than the Current Version of this deployment.)
+    // WARNING: Do not set this flag unless you are sure that the missing task queue poller are not
+    // needed. If the request is unexpectedly rejected due to missing pollers, then that means the
+    // pollers have not reached to the server yet. Only set this if you expect those pollers to
+    // never arrive.
+    // Note: this check only happens when the ramping version is about to change, not every time
+    // that the percentage changes. Also note that the check is against the deployment's Current
+    // Version, not the previous Ramping Version.
     bool ignore_missing_task_queues = 7;
 }
 
@@ -2082,8 +2081,8 @@ message SetWorkerDeploymentRampingVersionResponse {
     // that write to the Worker Deployment state to ensure that the state
     // did not change between this API call and a future write.
     bytes conflict_token = 1;
-    // The version that was ramping before executing this operation, in the form "<deployment_name>/<build_id>".
-    // Can also be the `__unversioned__` special value.
+    // The version that was ramping before executing this operation, in the form
+    // "<deployment_name>/<build_id>". Can also be the `__unversioned__` special value.
     string previous_version = 2;
     // The ramping version percentage before executing this operation.
     float previous_percentage = 3;
@@ -2105,17 +2104,23 @@ message ListWorkerDeploymentsResponse {
     message WorkerDeploymentSummary {
         string name = 1;
         google.protobuf.Timestamp create_time = 2;
-        temporal.api.deployment.v1.RoutingInfo routing_info = 3;
+        temporal.api.deployment.v1.RoutingConfig routing_config = 3;
     }
 }
 
 // Used for manual deletion of Versions. User can delete a Version only when all the
 // following conditions are met:
+//  - It is not the Current or Ramping Version of its Deployment.
 //  - It has no active pollers (none of the task queues in the Version have pollers)
-//  - It is drained (see WorkerDeploymentVersionInfo.drainage_info)
+//  - It is not draining (see WorkerDeploymentVersionInfo.drainage_info). This condition
+//    can be skipped by passing `skip-drainage=true`.
 message DeleteWorkerDeploymentVersionRequest {
-    string namespace = 2;
-    temporal.api.deployment.v1.WorkerDeploymentVersion version = 3;
+    string namespace = 1;
+    // Deployment Version identifier in the form "<deployment_name>/<build_id>".
+    string version = 2;
+    // Pass to force deletion even if the Version is draining. In this case the open pinned
+    // workflows will be stuck until manually moved to another version by UpdateWorkflowExecutionOptions.
+    bool skip_drainage = 3;
     // Optional. The identity of the client who initiated this request.
     string identity = 4;
 }
@@ -2138,7 +2143,8 @@ message DeleteWorkerDeploymentResponse {
 // Used to update the user-defined metadata of a Worker Deployment Version.
 message UpdateWorkerVersionMetadataRequest {
     string namespace = 1;
-    temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+    // Deployment Version identifier in the form "<deployment_name>/<build_id>".
+    string version = 2;
     map<string, temporal.api.common.v1.Payload> upsert_entries = 3;
     // List of keys to remove from the metadata.
     repeated string remove_entries = 4;

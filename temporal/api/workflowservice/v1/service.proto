@@ -787,9 +787,9 @@ service WorkflowService {
     // Describes a worker deployment version.
     rpc DescribeWorkerDeploymentVersion (DescribeWorkerDeploymentVersionRequest) returns (DescribeWorkerDeploymentVersionResponse) {
         option (google.api.http) = {
-            get: "/namespaces/{namespace}/worker-deployments/{version.deployment_name}/version/{version.build_id}"
+            get: "/namespaces/{namespace}/worker-deployment-versions/{version}"
             additional_bindings {
-                get: "/api/v1/namespaces/{namespace}/worker-deployments/{version.deployment_name}/version/{version.build_id}"
+                get: "/api/v1/namespaces/{namespace}/worker-deployment-versions/{version}"
             }
         };
     }
@@ -885,12 +885,17 @@ service WorkflowService {
     }
 
 
-    // Deletes records of (an old) Version.
+    // Used for manual deletion of Versions. User can delete a Version only when all the
+    // following conditions are met:
+    //  - It is not the Current or Ramping Version of its Deployment.
+    //  - It has no active pollers (none of the task queues in the Version have pollers)
+    //  - It is not draining (see WorkerDeploymentVersionInfo.drainage_info). This condition
+    //    can be skipped by passing `skip-drainage=true`.
     rpc DeleteWorkerDeploymentVersion (DeleteWorkerDeploymentVersionRequest) returns (DeleteWorkerDeploymentVersionResponse) {
         option (google.api.http) = {
-            delete: "/namespaces/{namespace}/worker-deployments/{version.deployment_name}/version/{version.build_id}"
+            delete: "/namespaces/{namespace}/worker-deployment-versions/{version}"
             additional_bindings {
-                delete: "/api/v1/namespaces/{namespace}/worker-deployments/{version.deployment_name}/version/{version.build_id}"
+                delete: "/api/v1/namespaces/{namespace}/worker-deployment-versions/{version}"
             }
         };
     }
@@ -919,10 +924,10 @@ service WorkflowService {
 
     rpc UpdateWorkerVersionMetadata (UpdateWorkerVersionMetadataRequest) returns (UpdateWorkerVersionMetadataResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/worker-deployments/{version.deployment_name}/version/{version.build_id}/update-metadata"
+            post: "/namespaces/{namespace}/worker-deployment-versions/{version}/update-metadata"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/worker-deployments/{version.deployment_name}/version/{version.build_id}/update-metadata"
+                post: "/api/v1/namespaces/{namespace}/worker-deployment-versions/{version}/update-metadata"
                 body: "*"
             }
         };

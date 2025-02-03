@@ -8145,6 +8145,23 @@ components:
           type: string
           description: The request ID allocated at schedule time.
       description: Nexus operation timed out.
+    OnConflictOptions:
+      type: object
+      properties:
+        attachRequestId:
+          type: boolean
+          description: Attaches the request ID to the running workflow.
+        attachCompletionCallbacks:
+          type: boolean
+          description: Attaches the completion callbacks to the running workflow.
+        attachLinks:
+          type: boolean
+          description: Attaches the links to the WorkflowExecutionOptionsUpdatedEvent history event.
+      description: |-
+        When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and
+         there is already an existing running workflow, OnConflictOptions defines actions to be taken on
+         the existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent
+         history event in the running workflow with the changes requested in this object.
     Outcome:
       type: object
       properties:
@@ -10280,6 +10297,14 @@ components:
           description: |-
             If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.
              To unset the override after the workflow is running, use UpdateWorkflowExecutionOptions.
+        onConflictOptions:
+          allOf:
+            - $ref: '#/components/schemas/OnConflictOptions'
+          description: |-
+            Defines actions to be done to the existing running workflow when the conflict policy
+             WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING is used. If not set (ie., nil value) or set to a
+             empty object (ie., all options with default value), it won't do anything to the existing
+             running workflow. If set, it will add a history event to the running workflow.
     StartWorkflowExecutionResponse:
       type: object
       properties:
@@ -11705,6 +11730,16 @@ components:
         unsetVersioningOverride:
           type: boolean
           description: Versioning override removed in this event.
+        attachedRequestId:
+          type: string
+          description: |-
+            Request ID attachedto the running workflow execution so that subsequent requests with same
+             request ID will be deduped.
+        attachedCompletionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: Completion callbacks attached to the running workflow execution.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:

@@ -2108,14 +2108,19 @@ message ListWorkerDeploymentsResponse {
 
 // Used for manual deletion of Versions. User can delete a Version only when all the
 // following conditions are met:
+//  - It is not the Current or Ramping Version of its Deployment.
 //  - It has no active pollers (none of the task queues in the Version have pollers)
-//  - It is drained (see WorkerDeploymentVersionInfo.drainage_info)
+//  - It is drained (see WorkerDeploymentVersionInfo.drainage_info). This condition can be skipped
+//    by passing `skip-drainage=true`.
 message DeleteWorkerDeploymentVersionRequest {
     string namespace = 1;
     // Deployment Version identifier in the form "<deployment_name>/<build_id>".
     string version = 2;
+    // Pass to force deletion even if the Version is not drained. In this case the open pinned
+    // workflows will be stuck until manually moved to another version by UpdateWorkflowExecutionOptions.
+    bool skip_drainage = 3;
     // Optional. The identity of the client who initiated this request.
-    string identity = 3;
+    string identity = 4;
 }
 
 message DeleteWorkerDeploymentVersionResponse {

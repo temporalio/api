@@ -1571,7 +1571,13 @@ paths:
     delete:
       tags:
         - WorkflowService
-      description: Deletes records of (an old) Version.
+      description: |-
+        Used for manual deletion of Versions. User can delete a Version only when all the
+         following conditions are met:
+          - It is not the Current or Ramping Version of its Deployment.
+          - It has no active pollers (none of the task queues in the Version have pollers)
+          - It is not draining (see WorkerDeploymentVersionInfo.drainage_info). This condition
+            can be skipped by passing `skip-drainage=true`.
       operationId: DeleteWorkerDeploymentVersion
       parameters:
         - name: namespace
@@ -1588,7 +1594,7 @@ paths:
         - name: skipDrainage
           in: query
           description: |-
-            Pass to force deletion even if the Version is not drained. In this case the open pinned
+            Pass to force deletion even if the Version is draining. In this case the open pinned
              workflows will be stuck until manually moved to another version by UpdateWorkflowExecutionOptions.
           schema:
             type: boolean
@@ -4469,7 +4475,13 @@ paths:
     delete:
       tags:
         - WorkflowService
-      description: Deletes records of (an old) Version.
+      description: |-
+        Used for manual deletion of Versions. User can delete a Version only when all the
+         following conditions are met:
+          - It is not the Current or Ramping Version of its Deployment.
+          - It has no active pollers (none of the task queues in the Version have pollers)
+          - It is not draining (see WorkerDeploymentVersionInfo.drainage_info). This condition
+            can be skipped by passing `skip-drainage=true`.
       operationId: DeleteWorkerDeploymentVersion
       parameters:
         - name: namespace
@@ -4486,7 +4498,7 @@ paths:
         - name: skipDrainage
           in: query
           description: |-
-            Pass to force deletion even if the Version is not drained. In this case the open pinned
+            Pass to force deletion even if the Version is draining. In this case the open pinned
              workflows will be stuck until manually moved to another version by UpdateWorkflowExecutionOptions.
           schema:
             type: boolean
@@ -9019,7 +9031,7 @@ components:
           description: |-
             Deployment info of the worker that completed this task. Must be present if user has set
              `WorkerDeploymentOptions` regardless of versioning being enabled or not.
-             Deprecated. Replaced with `deployment_version`.
+             Deprecated. Replaced with `deployment_options`.
         deploymentOptions:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentOptions'
@@ -9082,7 +9094,7 @@ components:
           description: |-
             Deployment info of the worker that completed this task. Must be present if user has set
              `WorkerDeploymentOptions` regardless of versioning being enabled or not.
-             Deprecated. Replaced with `deployment_version`.
+             Deprecated. Replaced with `deployment_options`.
         deploymentOptions:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentOptions'
@@ -9160,7 +9172,7 @@ components:
           description: |-
             Deployment info of the worker that completed this task. Must be present if user has set
              `WorkerDeploymentOptions` regardless of versioning being enabled or not.
-             Deprecated. Replaced with `deployment_version`.
+             Deprecated. Replaced with `deployment_options`.
         deploymentOptions:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentOptions'
@@ -9679,15 +9691,16 @@ components:
             Optional. By default this request would be rejected if not all the expected Task Queues are
              being polled by the new Version, to protects against accidental removal of Task Queues, or
              worker health issues. Pass `true` here to bypass this protection.
-             The set of expected Task Queues equals to all the Task Queues ever polled from the existing
-             Current Version of the Deployment, with the following exclusions:
+             The set of expected Task Queues is the set of all the Task Queues that were ever poller by
+             the existing Current Version of the Deployment, with the following exclusions:
                - Task Queues that are not used anymore (inferred by having empty backlog and a task
                  add_rate of 0.)
                - Task Queues that are moved to another Worker Deployment (inferred by the Task Queue
                  having a different Current Version than the Current Version of this deployment.)
-             WARNING: Do not set this flag unless you are sure that the missing task queue poller are not
+             WARNING: Do not set this flag unless you are sure that the missing task queue pollers are not
              needed. If the request is unexpectedly rejected due to missing pollers, then that means the
-             pollers have not reached to server yet.
+             pollers have not reached to the server yet. Only set this if you expect those pollers to
+             never arrive.
       description: Set/unset the Current Version of a Worker Deployment.
     SetWorkerDeploymentCurrentVersionResponse:
       type: object
@@ -9748,7 +9761,8 @@ components:
                  having a different Current Version than the Current Version of this deployment.)
              WARNING: Do not set this flag unless you are sure that the missing task queue poller are not
              needed. If the request is unexpectedly rejected due to missing pollers, then that means the
-             pollers have not reached to server yet.
+             pollers have not reached to the server yet. Only set this if you expect those pollers to
+             never arrive.
              Note: this check only happens when the ramping version is about to change, not every time
              that the percentage changes. Also note that the check is against the deployment's Current
              Version, not the previous Ramping Version.
@@ -11200,8 +11214,8 @@ components:
             - WORKER_VERSIONING_MODE_VERSIONED
           type: string
           description: |-
-            Required. Versioning Mode for this worker. Must be the same for all pollers workers of the
-             same `deployment_name` and `build_id`, across all Task Queues.
+            Required. Versioning Mode for this worker. Must be the same for all workers with the
+             same `deployment_name` and `build_id` combination, across all Task Queues.
              When `worker_versioning_mode==VERSIONED`, the worker will be part of a Deployment Version
              identified by "<deployment_name>/<build_id>".
           format: enum
@@ -11996,7 +12010,7 @@ components:
              a deployment value which will be stored here, so the right way to check if an execution is
              versioned if an execution is versioned or not is via the `behavior` field.
              Note that `deployment` is overridden by `versioning_override` if the latter is present.
-             Deprecated. Use deployment_version and deployment_name.
+             Deprecated. Use `version`.
         version:
           type: string
           description: |-
@@ -12054,8 +12068,8 @@ components:
              start a transition to that version and continue execution there.
              A version transition can only exist while there is a pending or started workflow task.
              Once the pending workflow task completes on the transition's target version, the
-             transition completes and the workflow's `behavior`, `deployment_name`, and
-             `deployment_version` fields are updated per the worker's task completion response.
+             transition completes and the workflow's `behavior`, and `version` fields are updated per the
+             worker's task completion response.
              Pending activities will not start new attempts during a transition. Once the transition is
              completed, pending activities will start their next attempt on the new version.
       description: |-
@@ -12154,7 +12168,7 @@ components:
             The deployment that completed this task. May or may not be set for unversioned workers,
              depending on whether a value is sent by the SDK. This value updates workflow execution's
              `versioning_info.deployment`.
-             Deprecated. Replaced with `deployment_version`.
+             Deprecated. Replaced with `worker_deployment_version`.
         versioningBehavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED

@@ -885,7 +885,12 @@ service WorkflowService {
     }
 
 
-    // Deletes records of (an old) Version.
+    // Used for manual deletion of Versions. User can delete a Version only when all the
+    // following conditions are met:
+    //  - It is not the Current or Ramping Version of its Deployment.
+    //  - It has no active pollers (none of the task queues in the Version have pollers)
+    //  - It is not draining (see WorkerDeploymentVersionInfo.drainage_info). This condition
+    //    can be skipped by passing `skip-drainage=true`.
     rpc DeleteWorkerDeploymentVersion (DeleteWorkerDeploymentVersionRequest) returns (DeleteWorkerDeploymentVersionResponse) {
         option (google.api.http) = {
             delete: "/namespaces/{namespace}/worker-deployment-versions/{version}"

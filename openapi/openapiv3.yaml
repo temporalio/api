@@ -6626,10 +6626,10 @@ components:
     DeploymentVersionTransition:
       type: object
       properties:
-        deploymentVersion:
+        version:
           type: string
           description: |-
-            Required. The target version of the transition. May be `__unversioned__` which means a
+            Required. The target Version of the transition. May be `__unversioned__` which means a
              so-far-versioned workflow is transitioning to unversioned workers.
       description: |-
         Holds information about ongoing transition of a workflow execution from one worker
@@ -8275,10 +8275,10 @@ components:
           description: |-
             The deployment this activity was dispatched to most recently. Present only if the activity
              was dispatched to a versioned worker.
-             Deprecated. Use `last_deployment_version`.
-        lastDeploymentVersion:
+             Deprecated. Use `last_worker_deployment_version`.
+        lastWorkerDeploymentVersion:
           type: string
-          description: The worker deployment version this activity was dispatched to most recently.
+          description: The Worker Deployment Version this activity was dispatched to most recently.
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -11117,7 +11117,8 @@ components:
           type: string
           description: |-
             Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
-             Identifies the worker deployment version to pin the workflow to.
+             Identifies the worker deployment version to pin the workflow to, in the format
+             "<deployment_name>/<build_id>".
       description: |-
         Used to override the versioning behavior (and pinned deployment version, if applicable) of a
          specific workflow execution. If set, takes precedence over the worker-sent values. See
@@ -11190,9 +11191,9 @@ components:
         buildId:
           type: string
           description: |-
-            The Build ID of the worker. Required when `versioning_mode==VERSIONED`, in which case, the
-             worker will be part of a Deployment Version identified by "<deployment_name>/<build_id>".
-        versioningMode:
+            The Build ID of the worker. Required when `worker_versioning_mode==VERSIONED`, in which case,
+             the worker will be part of a Deployment Version identified by "<deployment_name>/<build_id>".
+        workerVersioningMode:
           enum:
             - WORKER_VERSIONING_MODE_UNSPECIFIED
             - WORKER_VERSIONING_MODE_UNVERSIONED
@@ -11201,8 +11202,8 @@ components:
           description: |-
             Required. Versioning Mode for this worker. Must be the same for all pollers workers of the
              same `deployment_name` and `build_id`, across all Task Queues.
-             When `versioning_mode==VERSIONED`, the worker will be part of a Deployment Version identified
-             by "<deployment_name>/<build_id>".
+             When `worker_versioning_mode==VERSIONED`, the worker will be part of a Deployment Version
+             identified by "<deployment_name>/<build_id>".
           format: enum
       description: Worker Deployment options set in SDK that need to be sent to server in every poll.
     WorkerDeploymentVersionInfo:
@@ -11210,6 +11211,7 @@ components:
       properties:
         version:
           type: string
+          description: The fully-qualified string representation of the version, in the form "<deployment_name>/<build_id>".
         deploymentName:
           type: string
         createTime:
@@ -11664,7 +11666,7 @@ components:
             Absent value means the workflow execution is not versioned. When present, the execution might
              be versioned or unversioned, depending on `versioning_info.behavior` and `versioning_info.versioning_override`.
              Experimental. Versioning info is experimental and might change in the future.
-        workerDeployment:
+        workerDeploymentName:
           type: string
           description: The name of Worker Deployment that completed the most recent workflow task.
       description: |-
@@ -11995,7 +11997,7 @@ components:
              versioned if an execution is versioned or not is via the `behavior` field.
              Note that `deployment` is overridden by `versioning_override` if the latter is present.
              Deprecated. Use deployment_version and deployment_name.
-        deploymentVersion:
+        version:
           type: string
           description: |-
             The Worker Deployment Version that completed the last workflow task of this workflow
@@ -12009,7 +12011,7 @@ components:
             - $ref: '#/components/schemas/VersioningOverride'
           description: |-
             Present if user has set an execution-specific versioning override. This override takes
-             precedence over SDK-sent `behavior` (and `deployment_version` when override is PINNED). An
+             precedence over SDK-sent `behavior` (and `version` when override is PINNED). An
              override can be set when starting a new execution, as well as afterwards by calling the
              `UpdateWorkflowExecutionOptions` API.
         deploymentTransition:
@@ -12057,7 +12059,7 @@ components:
              Pending activities will not start new attempts during a transition. Once the transition is
              completed, pending activities will start their next attempt on the new version.
       description: |-
-        Holds all the information about versioning for a workflow execution.
+        Holds all the information about worker versioning for a particular workflow execution.
          Experimental. Versioning info is experimental and might change in the future.
     WorkflowPropertiesModifiedEventAttributes:
       type: object
@@ -12164,12 +12166,16 @@ components:
              execution. UNSPECIFIED means the task was completed by an unversioned worker. This value
              updates workflow execution's `versioning_info.behavior`.
           format: enum
-        deploymentVersion:
+        workerDeploymentVersion:
           type: string
           description: |-
-            The deployment version of the worker that completed this task. Must be set if
-             `versioning_behavior` is set. This value updates workflow execution's
-             `versioning_info.deployment_version`.
+            The Worker Deployment Version that completed this task. Must be set if `versioning_behavior`
+             is set. This value updates workflow execution's `versioning_info.version`.
+        workerDeploymentName:
+          type: string
+          description: |-
+            The name of Worker Deployment that completed this task. Must be set if `versioning_behavior`
+             is set. This value updates workflow execution's `worker_deployment_name`.
     WorkflowTaskCompletedMetadata:
       type: object
       properties:

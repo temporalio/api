@@ -45,6 +45,7 @@ message HandlerError {
     // See https://github.com/nexus-rpc/api/blob/main/SPEC.md#predefined-handler-errors.
     string error_type = 1;
     Failure failure = 2;
+    HandlerErrorRetryBehavior retry_behavior = 3;
 }
 
 message UnsuccessfulOperationError {
@@ -211,3 +212,15 @@ message EndpointTarget {
         External external = 2;
     }
 }
+
+// HandlerErrorRetryBehavior allows handlers to explicity set the retry behavior of a HandlerError. If not specified,
+// retry behavior is determined from the error type. For example internal errors are not retryable by default unless
+// specified otherwise.
+enum HandlerErrorRetryBehavior {
+    HANDLER_ERROR_RETRY_BEHAVIOR_UNSPECIFIED = 0;
+    // A handler error is explicitly marked as retryable.
+    HANDLER_ERROR_RETRY_BEHAVIOR_RETRYABLE = 1;
+    // A handler error is explicitly marked as non-retryable.
+    HANDLER_ERROR_RETRY_BEHAVIOR_NON_RETRYABLE = 2;
+}
+

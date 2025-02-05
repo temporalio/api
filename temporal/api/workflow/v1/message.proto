@@ -144,6 +144,10 @@ message WorkflowExecutionVersioningInfo {
     // behaviors.
     // This field is first set after an execution completes its first workflow task on a versioned
     // worker, and set again on completion of every subsequent workflow task.
+    // For child workflows of Pinned parents, this will be set to Pinned (along with `version`) when
+    // the the child starts so that child's first workflow task goes to the same Version as the
+    // parent. After the first workflow task, it depends on the child workflow itself if it wants
+    // to stay pinned or become unpinned (according to Versioning Behavior set in the worker).
     // Note that `behavior` is overridden by `versioning_override` if the latter is present.
     temporal.api.enums.v1.VersioningBehavior behavior = 1;
     // The worker deployment that completed the last workflow task of this workflow execution. Must
@@ -158,6 +162,8 @@ message WorkflowExecutionVersioningInfo {
     // execution, in the form "<deployment_name>.<build_id>".
     // Must be present if and only if `behavior` is set. An absent value means no workflow task is
     // completed, or the workflow is unversioned.
+    // For child workflows of Pinned parents, this will be set to parent's Pinned Version when the
+    // the child starts so that child's first workflow task goes to the same Version as the parent.
     // Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
     // will override this value.
     string version = 5;
@@ -165,6 +171,7 @@ message WorkflowExecutionVersioningInfo {
     // precedence over SDK-sent `behavior` (and `version` when override is PINNED). An
     // override can be set when starting a new execution, as well as afterwards by calling the
     // `UpdateWorkflowExecutionOptions` API.
+    // Pinned overrides are automatically inherited by child workflows.
     VersioningOverride versioning_override = 3;
     // When present, indicates the workflow is transitioning to a different deployment. Can
     // indicate one of the following transitions: unversioned -> versioned, versioned -> versioned

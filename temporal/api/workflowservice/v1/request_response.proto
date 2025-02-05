@@ -1615,6 +1615,7 @@ message StartBatchOperationRequest {
         temporal.api.batch.v1.BatchOperationReset reset_operation = 14;
         temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions update_workflow_options_operation = 15;
         temporal.api.batch.v1.BatchOperationUnpauseActivities unpause_activities_operation = 16;
+        temporal.api.batch.v1.BatchOperationApplyNamespaceRule apply_namespace_rule_operation = 17;
     }
 }
 
@@ -2188,4 +2189,72 @@ message GetDeploymentReachabilityResponse {
     // Reachability level might come from server cache. This timestamp specifies when the value
     // was actually calculated.
     google.protobuf.Timestamp last_update_time = 3;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// "CR_D" operations for namespace rules (there is no 'update')
+message CreateNamespaceRuleRequest {
+    string namespace = 1;
+
+    // The rule to create as a part of namespace config.
+    // Rule name must be unique namespace-wide.
+    temporal.api.namespace.v1.NamespaceRuleSpec rule = 2;
+
+    // If true, the rule will be applied immediately via batch job.
+    // Visibility query in the rule will be used to select the workflows to apply the rule to.
+    bool force_scan = 3;
+}
+
+message CreateNamespaceRuleResponse {
+    // id of the created rule. Unique within the namespace.
+    string rule_id = 1;
+
+    // Job ID if force-scan flag was provided. Otherwise empty.
+    string job_id = 2;
+}
+
+message DescribeNamespaceRuleRequest {
+    string namespace = 1;
+    // ID of the rule to read. Unique within the namespace.
+    string rule_id = 2;
+}
+
+message DescribeNamespaceRuleResponse {
+    // The rule that was read.
+    temporal.api.namespace.v1.NamespaceRule rule = 1;
+}
+
+message DeleteNamespaceRuleRequest {
+    string namespace = 1;
+
+    // ID of the rule to delete. Unique within the namespace.
+    string rule_id = 2;
+}
+
+message DeleteNamespaceRuleResponse {
+}
+
+message ListNamespaceRulesRequest {
+    string namespace = 1;
+}
+
+message ListNamespaceRulesResponse {
+    repeated temporal.api.namespace.v1.NamespaceRule rules = 1;
+}
+
+message ApplyNamespaceRuleRequest {
+    string namespace = 1;
+
+    // Execution info of the workflow which scheduled this activity
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+
+	  // either provide name/id of existing rule, or rule specification
+	  oneof rule {
+	      string id = 4;
+	      string name = 5;
+	      temporal.api.namespace.v1.NamespaceRuleSpec definition = 6;
+    }
+}
+
+message ApplyNamespaceRuleResponse {
 }

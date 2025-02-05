@@ -14470,6 +14470,10 @@
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
           "description": "Versioning override applied to this workflow when it was started."
+        },
+        "parentPinnedWorkerDeploymentVersion": {
+          "type": "string",
+          "description": "When present, it means this is a child workflow of a parent that is Pinned to this Worker\nDeployment Version. In this case, child workflow will start as Pinned to this Version instead\nof starting on the Current Version of its Task Queue.\nThis is set only if the child workflow is starting on a Task Queue belonging to the same\nWorker Deployment Version."
         }
       },
       "title": "Always the first event in workflow history"
@@ -14601,7 +14605,7 @@
       "properties": {
         "behavior": {
           "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "Versioning behavior determines how the server should treat this execution when workers are\nupgraded. When present it means this workflow execution is versioned; UNSPECIFIED means\nunversioned. See the comments in `VersioningBehavior` enum for more info about different\nbehaviors.\nThis field is first set after an execution completes its first workflow task on a versioned\nworker, and set again on completion of every subsequent workflow task.\nNote that `behavior` is overridden by `versioning_override` if the latter is present."
+          "description": "Versioning behavior determines how the server should treat this execution when workers are\nupgraded. When present it means this workflow execution is versioned; UNSPECIFIED means\nunversioned. See the comments in `VersioningBehavior` enum for more info about different\nbehaviors.\nThis field is first set after an execution completes its first workflow task on a versioned\nworker, and set again on completion of every subsequent workflow task.\nFor child workflows of Pinned parents, this will be set to Pinned (along with `version`) when\nthe the child starts so that child's first workflow task goes to the same Version as the\nparent. After the first workflow task, it depends on the child workflow itself if it wants\nto stay pinned or become unpinned (according to Versioning Behavior set in the worker).\nNote that `behavior` is overridden by `versioning_override` if the latter is present."
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
@@ -14609,11 +14613,11 @@
         },
         "version": {
           "type": "string",
-          "description": "The Worker Deployment Version that completed the last workflow task of this workflow\nexecution, in the form \"<deployment_name>.<build_id>\".\nMust be present if and only if `behavior` is set. An absent value means no workflow task is\ncompleted, or the workflow is unversioned.\nNote that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`\nwill override this value."
+          "description": "The Worker Deployment Version that completed the last workflow task of this workflow\nexecution, in the form \"<deployment_name>.<build_id>\".\nMust be present if and only if `behavior` is set. An absent value means no workflow task is\ncompleted, or the workflow is unversioned.\nFor child workflows of Pinned parents, this will be set to parent's Pinned Version when the\nthe child starts so that child's first workflow task goes to the same Version as the parent.\nNote that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`\nwill override this value."
         },
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
-          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `version` when override is PINNED). An\noverride can be set when starting a new execution, as well as afterwards by calling the\n`UpdateWorkflowExecutionOptions` API."
+          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `version` when override is PINNED). An\noverride can be set when starting a new execution, as well as afterwards by calling the\n`UpdateWorkflowExecutionOptions` API.\nPinned overrides are automatically inherited by child workflows."
         },
         "deploymentTransition": {
           "$ref": "#/definitions/v1DeploymentTransition",

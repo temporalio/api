@@ -11968,6 +11968,14 @@ components:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride'
           description: Versioning override applied to this workflow when it was started.
+        parentPinnedWorkerDeploymentVersion:
+          type: string
+          description: |-
+            When present, it means this is a child workflow of a parent that is Pinned to this Worker
+             Deployment Version. In this case, child workflow will start as Pinned to this Version instead
+             of starting on the Current Version of its Task Queue.
+             This is set only if the child workflow is starting on a Task Queue belonging to the same
+             Worker Deployment Version.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -12088,6 +12096,10 @@ components:
              behaviors.
              This field is first set after an execution completes its first workflow task on a versioned
              worker, and set again on completion of every subsequent workflow task.
+             For child workflows of Pinned parents, this will be set to Pinned (along with `version`) when
+             the the child starts so that child's first workflow task goes to the same Version as the
+             parent. After the first workflow task, it depends on the child workflow itself if it wants
+             to stay pinned or become unpinned (according to Versioning Behavior set in the worker).
              Note that `behavior` is overridden by `versioning_override` if the latter is present.
           format: enum
         deployment:
@@ -12108,6 +12120,8 @@ components:
              execution, in the form "<deployment_name>.<build_id>".
              Must be present if and only if `behavior` is set. An absent value means no workflow task is
              completed, or the workflow is unversioned.
+             For child workflows of Pinned parents, this will be set to parent's Pinned Version when the
+             the child starts so that child's first workflow task goes to the same Version as the parent.
              Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
              will override this value.
         versioningOverride:
@@ -12118,6 +12132,7 @@ components:
              precedence over SDK-sent `behavior` (and `version` when override is PINNED). An
              override can be set when starting a new execution, as well as afterwards by calling the
              `UpdateWorkflowExecutionOptions` API.
+             Pinned overrides are automatically inherited by child workflows.
         deploymentTransition:
           allOf:
             - $ref: '#/components/schemas/DeploymentTransition'

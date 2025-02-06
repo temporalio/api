@@ -1570,6 +1570,7 @@ message StartBatchOperationRequest {
         temporal.api.batch.v1.BatchOperationReset reset_operation = 14;
         temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions update_workflow_options_operation = 15;
         temporal.api.batch.v1.BatchOperationUnpauseActivities unpause_activities_operation = 16;
+        temporal.api.batch.v1.BatchOperationApplyWorkflowRule apply_workflow_rule_operation = 17;
     }
 }
 
@@ -1949,4 +1950,69 @@ message GetDeploymentReachabilityResponse {
     // Reachability level might come from server cache. This timestamp specifies when the value
     // was actually calculated.
     google.protobuf.Timestamp last_update_time = 3;
+}
+
+message CreateWorkflowRuleRequest {
+    string namespace = 1;
+
+    // The rule specification .
+    temporal.api.workflow.v1.WorkflowRuleSpec spec = 2;
+
+    // If true, the rule will be applied immediately via batch job.
+    // Visibility query in the rule will be used to select the workflows to apply the rule to.
+    bool force_scan = 3;
+}
+
+message CreateWorkflowRuleResponse {
+    // Created rule.
+    temporal.api.workflow.v1.WorkflowRule  rule = 1;
+
+    // Job ID if force-scan flag was provided. Otherwise empty.
+    string job_id = 2;
+}
+
+message DescribeWorkflowRuleRequest {
+    string namespace = 1;
+    // ID of the rule to read. Unique within the namespace.
+    string rule_id = 2;
+}
+
+message DescribeWorkflowRuleResponse {
+    // The rule that was read.
+    temporal.api.workflow.v1.WorkflowRule rule = 1;
+}
+
+message DeleteWorkflowRuleRequest {
+    string namespace = 1;
+
+    // ID of the rule to delete. Unique within the namespace.
+    string rule_id = 2;
+}
+
+message DeleteWorkflowRuleResponse {
+}
+
+message ListWorkflowRulesRequest {
+    string namespace = 1;
+}
+
+message ListWorkflowRulesResponse {
+    repeated temporal.api.workflow.v1.WorkflowRule rules = 1;
+    bytes next_page_token = 2;
+}
+
+message ApplyWorkflowRuleRequest {
+    string namespace = 1;
+
+    // Execution info of the workflow which scheduled this activity
+    temporal.api.common.v1.WorkflowExecution execution = 2;
+
+    // either provide id of existing rule, or rule specification
+    oneof rule {
+        string id = 4;
+        temporal.api.workflow.v1.WorkflowRuleSpec spec = 6;
+    }
+}
+
+message ApplyWorkflowRuleResponse {
 }

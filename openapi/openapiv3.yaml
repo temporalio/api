@@ -1003,41 +1003,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/rules:
-    get:
+  /api/v1/namespaces/{namespace}/rules/{spec.id}:
+    post:
       tags:
         - WorkflowService
-      description: Return all namespace rules
-      operationId: ListNamespaceRules
+      description: |-
+        Create a new workflow rule.
+         If the rule with such ID already exist this call will fail.
+      operationId: CreateWorkflowRule
       parameters:
         - name: namespace
           in: path
           required: true
           schema:
             type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListNamespaceRulesResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/rules/apply:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        ApplyNamespaceRule allows to apply rule to a certain workflow instance without creating a rule.
-         This is useful for one-off operations.
-      operationId: ApplyNamespaceRule
-      parameters:
-        - name: namespace
+        - name: spec.id
           in: path
           required: true
           schema:
@@ -1046,7 +1026,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ApplyNamespaceRuleRequest'
+              $ref: '#/components/schemas/CreateWorkflowRuleRequest'
         required: true
       responses:
         "200":
@@ -1054,109 +1034,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApplyNamespaceRuleResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/rules/{rule.name}:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        Create a new namespace rule.
-         Returns the unique ID of the new rule.
-         Note: if the rule with such name and spec exist this call will fail.
-      operationId: CreateNamespaceRule
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: rule.name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateNamespaceRuleRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateNamespaceRuleResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/rules/{ruleId}:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        DescribeNamespaceRule return the rule spaciication for existing rule id.
-         If there is no rule with such id - NO FOUND error will be returned.
-      operationId: DescribeNamespaceRule
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: ruleId
-          in: path
-          description: ID of the rule to read. Unique within the namespace.
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DescribeNamespaceRuleResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-    delete:
-      tags:
-        - WorkflowService
-      description: Delete rule by rule id
-      operationId: DeleteNamespaceRule
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: ruleId
-          in: path
-          description: ID of the rule to delete. Unique within the namespace.
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteNamespaceRuleResponse'
+                $ref: '#/components/schemas/CreateWorkflowRuleResponse'
         default:
           description: Default error response
           content:
@@ -1880,6 +1758,94 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/rules:
+    get:
+      tags:
+        - WorkflowService
+      description: Return all namespace rules
+      operationId: ListWorkflowRules
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWorkflowRulesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/rules/{ruleId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeWorkflowRule return the rule specification for existing rule id.
+         If there is no rule with such id - NO FOUND error will be returned.
+      operationId: DescribeWorkflowRule
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: ruleId
+          in: path
+          description: ID of the rule to read. Unique within the namespace.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeWorkflowRuleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      tags:
+        - WorkflowService
+      description: Delete rule by rule id
+      operationId: DeleteWorkflowRule
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: ruleId
+          in: path
+          description: ID of the rule to delete. Unique within the namespace.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteWorkflowRuleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}:
     get:
       tags:
@@ -1912,6 +1878,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DescribeWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/apply-rule:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ApplyWorkflowRule allows to:
+          * apply existing rule to a specific workflow execution;
+          * apply rule to a specific workflow execution without creating a rule;
+         This is useful for one-off operations.
+      operationId: ApplyWorkflowRule
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyWorkflowRuleRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplyWorkflowRuleResponse'
         default:
           description: Default error response
           content:
@@ -3830,166 +3836,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/rules:
-    get:
-      tags:
-        - WorkflowService
-      description: Return all namespace rules
-      operationId: ListNamespaceRules
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListNamespaceRulesResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/rules/apply:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        ApplyNamespaceRule allows to apply rule to a certain workflow instance without creating a rule.
-         This is useful for one-off operations.
-      operationId: ApplyNamespaceRule
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ApplyNamespaceRuleRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplyNamespaceRuleResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/rules/{rule.name}:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        Create a new namespace rule.
-         Returns the unique ID of the new rule.
-         Note: if the rule with such name and spec exist this call will fail.
-      operationId: CreateNamespaceRule
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: rule.name
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateNamespaceRuleRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateNamespaceRuleResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/rules/{ruleId}:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        DescribeNamespaceRule return the rule spaciication for existing rule id.
-         If there is no rule with such id - NO FOUND error will be returned.
-      operationId: DescribeNamespaceRule
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: ruleId
-          in: path
-          description: ID of the rule to read. Unique within the namespace.
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DescribeNamespaceRuleResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-    delete:
-      tags:
-        - WorkflowService
-      description: Delete rule by rule id
-      operationId: DeleteNamespaceRule
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: ruleId
-          in: path
-          description: ID of the rule to delete. Unique within the namespace.
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeleteNamespaceRuleResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/schedules:
     get:
       tags:
@@ -4649,6 +4495,132 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/rules:
+    get:
+      tags:
+        - WorkflowService
+      description: Return all namespace rules
+      operationId: ListWorkflowRules
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWorkflowRulesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/rules/{ruleId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeWorkflowRule return the rule specification for existing rule id.
+         If there is no rule with such id - NO FOUND error will be returned.
+      operationId: DescribeWorkflowRule
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: ruleId
+          in: path
+          description: ID of the rule to read. Unique within the namespace.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeWorkflowRuleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      tags:
+        - WorkflowService
+      description: Delete rule by rule id
+      operationId: DeleteWorkflowRule
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: ruleId
+          in: path
+          description: ID of the rule to delete. Unique within the namespace.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteWorkflowRuleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/rules/{spec.id}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Create a new workflow rule.
+         If the rule with such ID already exist this call will fail.
+      operationId: CreateWorkflowRule
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: spec.id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRuleRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWorkflowRuleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{execution.workflow_id}:
     get:
       tags:
@@ -4681,6 +4653,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DescribeWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{execution.workflow_id}/apply-rule:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        ApplyWorkflowRule allows to:
+          * apply existing rule to a specific workflow execution;
+          * apply rule to a specific workflow execution without creating a rule;
+         This is useful for one-off operations.
+      operationId: ApplyWorkflowRule
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyWorkflowRuleRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplyWorkflowRuleResponse'
         default:
           description: Default error response
           content:
@@ -5547,22 +5559,20 @@ components:
              retry interval calculated by the retry policy. Retry attempts will
              still be subject to the maximum retries limit and total time limit
              defined by the policy.
-    ApplyNamespaceRuleRequest:
+    ApplyWorkflowRuleRequest:
       type: object
       properties:
         namespace:
           type: string
-        workflowExecution:
+        execution:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecution'
           description: Execution info of the workflow which scheduled this activity
         id:
           type: string
-        name:
-          type: string
-        definition:
-          $ref: '#/components/schemas/NamespaceRuleSpec'
-    ApplyNamespaceRuleResponse:
+        spec:
+          $ref: '#/components/schemas/WorkflowRuleSpec'
+    ApplyWorkflowRuleResponse:
       type: object
       properties: {}
     BackfillRequest:
@@ -5610,7 +5620,7 @@ components:
         createTime:
           type: string
           format: date-time
-    BatchOperationApplyNamespaceRule:
+    BatchOperationApplyWorkflowRule:
       type: object
       properties:
         identity:
@@ -5618,11 +5628,12 @@ components:
           description: The identity of the worker/client.
         id:
           type: string
-        name:
-          type: string
-        definition:
-          $ref: '#/components/schemas/NamespaceRuleSpec'
-      description: BatchOperationApplyNamespaceRule sends ApplyNamespaceRule requests to batch workflows.
+          description: ID of existing rule.
+        spec:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowRuleSpec'
+          description: Rule specification to be applied to the workflow without creating a new rule.
+      description: BatchOperationApplyWorkflowRule sends ApplyWorkflowRule requests to batch workflows.
     BatchOperationCancellation:
       type: object
       properties:
@@ -6227,34 +6238,6 @@ components:
             $ref: '#/components/schemas/Payload'
         count:
           type: string
-    CreateNamespaceRuleRequest:
-      type: object
-      properties:
-        namespace:
-          type: string
-        rule:
-          allOf:
-            - $ref: '#/components/schemas/NamespaceRuleSpec'
-          description: |-
-            The rule to create as a part of namespace config.
-             Rule name must be unique namespace-wide.
-        forceScan:
-          type: boolean
-          description: |-
-            If true, the rule will be applied immediately via batch job.
-             Visibility query in the rule will be used to select the workflows to apply the rule to.
-      description: |-
-        ///////////////////////////////////////////////////////////////////////////
-         "CR_D" operations for namespace rules (there is no 'update')
-    CreateNamespaceRuleResponse:
-      type: object
-      properties:
-        ruleId:
-          type: string
-          description: id of the created rule. Unique within the namespace.
-        jobId:
-          type: string
-          description: Job ID if force-scan flag was provided. Otherwise empty.
     CreateNexusEndpointRequest:
       type: object
       properties:
@@ -6307,6 +6290,29 @@ components:
         conflictToken:
           type: string
           format: bytes
+    CreateWorkflowRuleRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        spec:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowRuleSpec'
+          description: The rule specification .
+        forceScan:
+          type: boolean
+          description: |-
+            If true, the rule will be applied immediately via batch job.
+             Visibility query in the rule will be used to select the workflows to apply the rule to.
+    CreateWorkflowRuleResponse:
+      type: object
+      properties:
+        ruleId:
+          type: string
+          description: ID of the created rule. Unique within the namespace.
+        jobId:
+          type: string
+          description: Job ID if force-scan flag was provided. Otherwise empty.
     DataBlob:
       type: object
       properties:
@@ -6320,13 +6326,13 @@ components:
         data:
           type: string
           format: bytes
-    DeleteNamespaceRuleResponse:
-      type: object
-      properties: {}
     DeleteNexusEndpointResponse:
       type: object
       properties: {}
     DeleteScheduleResponse:
+      type: object
+      properties: {}
+    DeleteWorkflowRuleResponse:
       type: object
       properties: {}
     Deployment:
@@ -6493,13 +6499,6 @@ components:
           description: |-
             Contains the historical state of failover_versions for the cluster, truncated to contain only the last N
              states to ensure that the list does not grow unbounded.
-    DescribeNamespaceRuleResponse:
-      type: object
-      properties:
-        rule:
-          allOf:
-            - $ref: '#/components/schemas/NamespaceRule'
-          description: The rule that was read.
     DescribeScheduleResponse:
       type: object
       properties:
@@ -6579,6 +6578,13 @@ components:
             $ref: '#/components/schemas/PendingNexusOperationInfo'
         workflowExtendedInfo:
           $ref: '#/components/schemas/WorkflowExecutionExtendedInfo'
+    DescribeWorkflowRuleResponse:
+      type: object
+      properties:
+        rule:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowRule'
+          description: The rule that was read.
     Endpoint:
       type: object
       properties:
@@ -7336,13 +7342,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeploymentListInfo'
-    ListNamespaceRulesResponse:
-      type: object
-      properties:
-        rules:
-          type: array
-          items:
-            $ref: '#/components/schemas/NamespaceRule'
     ListNamespacesResponse:
       type: object
       properties:
@@ -7427,6 +7426,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkflowExecutionInfo'
+        nextPageToken:
+          type: string
+          format: bytes
+    ListWorkflowRulesResponse:
+      type: object
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowRule'
         nextPageToken:
           type: string
           format: bytes
@@ -7601,86 +7610,6 @@ components:
             - REPLICATION_STATE_HANDOVER
           type: string
           format: enum
-    NamespaceRule:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Name of the rule.
-        id:
-          type: string
-          description: ID must be unique within the namespace
-        identity:
-          type: string
-          description: The identity of the worker/client.
-        createTime:
-          type: string
-          description: Rule creation date.
-          format: date-time
-        ruleSpec:
-          allOf:
-            - $ref: '#/components/schemas/NamespaceRuleSpec'
-          description: Rule specification
-      description: NamespaceRule describes a rule that can be applied to any workflow in this namespace.
-    NamespaceRuleAction:
-      type: object
-      properties:
-        activityPause:
-          $ref: '#/components/schemas/NamespaceRuleActionActivityPause'
-        emitMetric:
-          $ref: '#/components/schemas/NamespaceRuleActionMetric'
-    NamespaceRuleActionActivityPause:
-      type: object
-      properties: {}
-      description: |-
-        //////////////////////////////////////////
-         namespace rule actions
-    NamespaceRuleActionMetric:
-      type: object
-      properties: {}
-    NamespaceRuleSpec:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Name of the rule.
-        type:
-          enum:
-            - NAMESPACE_RULE_TRIGGER_TYPE_UNSPECIFIED
-            - NAMESPACE_RULE_TRIGGER_TYPE_START_ACTIVITY
-          type: string
-          description: |-
-            Specifies how the rule should be triggered and evaluated.
-             Currently, only "activity start" type is supported.
-             Types:
-             - "activity start": Rule is triggered when a activity is about to start.
-             - "workflow task start": Rule is triggered when the new workflow task is about to start
-          format: enum
-        predicate:
-          type: string
-          description: |-
-            Predicate is used to match against workflow data, based on rule trigger type.
-             The following activity attributes are supported as part of the predicate:
-             - activityType: The type of the activity.
-             - activityId: The ID of the activity.
-             - activityAttempt: The number attempts of the activity.
-             - backoffInterval: The current backoff interval of the activity.
-             - activityStatus: The status of the activity. Can be one of "scheduled", "started", "paused".
-             - taskQueue: The name of the task queue of the activity.
-        visibilityQuery:
-          type: string
-          description: Restricted Visibility query, supports "WorkflowType", "StartTime" and few more workflow properties
-        action:
-          type: array
-          items:
-            $ref: '#/components/schemas/NamespaceRuleAction'
-          description: Action to be taken when the rule is triggered and predicate is matched.
-        expirationTime:
-          type: string
-          description: |-
-            Expiration time of the rule. After this time, the rule will be deleted.
-             Can be empty if the rule should never expire.
-          format: date-time
     NewWorkflowExecutionInfo:
       type: object
       properties:
@@ -9704,8 +9633,8 @@ components:
           $ref: '#/components/schemas/BatchOperationUpdateWorkflowExecutionOptions'
         unpauseActivitiesOperation:
           $ref: '#/components/schemas/BatchOperationUnpauseActivities'
-        applyNamespaceRuleOperation:
-          $ref: '#/components/schemas/BatchOperationApplyNamespaceRule'
+        applyWorkflowRuleOperation:
+          $ref: '#/components/schemas/BatchOperationApplyWorkflowRule'
     StartBatchOperationResponse:
       type: object
       properties: {}
@@ -11521,6 +11450,70 @@ components:
             Headers that were passed by the caller of the query and copied by temporal
              server into the workflow task.
       description: See https://docs.temporal.io/docs/concepts/queries/
+    WorkflowRule:
+      type: object
+      properties:
+        createTime:
+          type: string
+          description: Rule creation date.
+          format: date-time
+        spec:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowRuleSpec'
+          description: Rule specification
+      description: WorkflowRule describes a rule that can be applied to any workflow in this namespace.
+    WorkflowRuleAction:
+      type: object
+      properties:
+        activityPause:
+          $ref: '#/components/schemas/WorkflowRuleAction_WorkflowRuleActionActivityPause'
+        emitMetric:
+          $ref: '#/components/schemas/WorkflowRuleAction_WorkflowRuleActionMetric'
+    WorkflowRuleAction_WorkflowRuleActionActivityPause:
+      type: object
+      properties: {}
+      description: Pause the activity.
+    WorkflowRuleAction_WorkflowRuleActionMetric:
+      type: object
+      properties: {}
+      description: Emit a metric.
+    WorkflowRuleSpec:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The id of the new schedule. Must be unique within the namespace.
+        activityStart:
+          $ref: '#/components/schemas/WorkflowRuleSpec_ActivityStartTrigger'
+        visibilityQuery:
+          type: string
+          description: Restricted Visibility query, supports "WorkflowType", "StartTime" and few more workflow properties
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowRuleAction'
+          description: Action to be taken when the rule is triggered and predicate is matched.
+        expirationTime:
+          type: string
+          description: |-
+            Expiration time of the rule. After this time, the rule will be deleted.
+             Can be empty if the rule should never expire.
+          format: date-time
+    WorkflowRuleSpec_ActivityStartTrigger:
+      type: object
+      properties:
+        predicate:
+          type: string
+          description: |-
+            Activity predicate is used to match against workflow data, based on rule trigger type.
+             The following activity attributes are supported as part of the predicate:
+             - ActivityType: The type of the activity.
+             - ActivityId: The ID of the activity.
+             - ActivityAttempt: The number attempts of the activity.
+             - BackoffInterval: The current backoff interval of the activity.
+             - ActivityStatus: The status of the activity. Can be one of "scheduled", "started", "paused".
+             - TaskQueue: The name of the task queue of the activity.
+      description: Activity trigger will be triggered when an activity is about to start.
     WorkflowTaskCompletedEventAttributes:
       type: object
       properties:

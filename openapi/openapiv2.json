@@ -1095,15 +1095,15 @@
         ]
       }
     },
-    "/api/v1/namespaces/{namespace}/rules": {
-      "get": {
-        "summary": "Return all namespace rules",
-        "operationId": "ListNamespaceRules2",
+    "/api/v1/namespaces/{namespace}/rules/{spec.id}": {
+      "post": {
+        "summary": "Create a new workflow rule.\nIf the rule with such ID already exist this call will fail.",
+        "operationId": "CreateWorkflowRule2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListNamespaceRulesResponse"
+              "$ref": "#/definitions/v1CreateWorkflowRuleResponse"
             }
           },
           "default": {
@@ -1119,34 +1119,10 @@
             "in": "path",
             "required": true,
             "type": "string"
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/{namespace}/rules/apply": {
-      "post": {
-        "summary": "ApplyNamespaceRule allows to apply rule to a certain workflow instance without creating a rule.\nThis is useful for one-off operations.",
-        "operationId": "ApplyNamespaceRule2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ApplyNamespaceRuleResponse"
-            }
           },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
           {
-            "name": "namespace",
+            "name": "spec.id",
+            "description": "The id of the new schedule. Must be unique within the namespace.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1156,128 +1132,8 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowServiceApplyNamespaceRuleBody"
+              "$ref": "#/definitions/WorkflowServiceCreateWorkflowRuleBody"
             }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/{namespace}/rules/{rule.name}": {
-      "post": {
-        "summary": "Create a new namespace rule.\nReturns the unique ID of the new rule.\nNote: if the rule with such name and spec exist this call will fail.",
-        "operationId": "CreateNamespaceRule2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CreateNamespaceRuleResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "rule.name",
-            "description": "Name of the rule.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceCreateNamespaceRuleBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/{namespace}/rules/{ruleId}": {
-      "get": {
-        "summary": "DescribeNamespaceRule return the rule spaciication for existing rule id.\nIf there is no rule with such id - NO FOUND error will be returned.",
-        "operationId": "DescribeNamespaceRule2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DescribeNamespaceRuleResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "ruleId",
-            "description": "ID of the rule to read. Unique within the namespace.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      },
-      "delete": {
-        "summary": "Delete rule by rule id",
-        "operationId": "DeleteNamespaceRule2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteNamespaceRuleResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "ruleId",
-            "description": "ID of the rule to delete. Unique within the namespace.",
-            "in": "path",
-            "required": true,
-            "type": "string"
           }
         ],
         "tags": [
@@ -2119,6 +1975,111 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/workflows/rules": {
+      "get": {
+        "summary": "Return all namespace rules",
+        "operationId": "ListWorkflowRules2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWorkflowRulesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/workflows/rules/{ruleId}": {
+      "get": {
+        "summary": "DescribeWorkflowRule return the rule specification for existing rule id.\nIf there is no rule with such id - NO FOUND error will be returned.",
+        "operationId": "DescribeWorkflowRule2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeWorkflowRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "ruleId",
+            "description": "ID of the rule to read. Unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "delete": {
+        "summary": "Delete rule by rule id",
+        "operationId": "DeleteWorkflowRule2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteWorkflowRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "ruleId",
+            "description": "ID of the rule to delete. Unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/workflows/{execution.workflowId}": {
       "get": {
         "summary": "DescribeWorkflowExecution returns information about the specified workflow execution.",
@@ -2155,6 +2116,51 @@
             "in": "query",
             "required": false,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/workflows/{execution.workflowId}/apply-rule": {
+      "post": {
+        "summary": "ApplyWorkflowRule allows to:\n * apply existing rule to a specific workflow execution;\n * apply rule to a specific workflow execution without creating a rule;\nThis is useful for one-off operations.",
+        "operationId": "ApplyWorkflowRule2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ApplyWorkflowRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "execution.workflowId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceApplyWorkflowRuleBody"
+            }
           }
         ],
         "tags": [
@@ -4287,196 +4293,6 @@
         ]
       }
     },
-    "/namespaces/{namespace}/rules": {
-      "get": {
-        "summary": "Return all namespace rules",
-        "operationId": "ListNamespaceRules",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ListNamespaceRulesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/{namespace}/rules/apply": {
-      "post": {
-        "summary": "ApplyNamespaceRule allows to apply rule to a certain workflow instance without creating a rule.\nThis is useful for one-off operations.",
-        "operationId": "ApplyNamespaceRule",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ApplyNamespaceRuleResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceApplyNamespaceRuleBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/{namespace}/rules/{rule.name}": {
-      "post": {
-        "summary": "Create a new namespace rule.\nReturns the unique ID of the new rule.\nNote: if the rule with such name and spec exist this call will fail.",
-        "operationId": "CreateNamespaceRule",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1CreateNamespaceRuleResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "rule.name",
-            "description": "Name of the rule.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceCreateNamespaceRuleBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/{namespace}/rules/{ruleId}": {
-      "get": {
-        "summary": "DescribeNamespaceRule return the rule spaciication for existing rule id.\nIf there is no rule with such id - NO FOUND error will be returned.",
-        "operationId": "DescribeNamespaceRule",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DescribeNamespaceRuleResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "ruleId",
-            "description": "ID of the rule to read. Unique within the namespace.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      },
-      "delete": {
-        "summary": "Delete rule by rule id",
-        "operationId": "DeleteNamespaceRule",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteNamespaceRuleResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "ruleId",
-            "description": "ID of the rule to delete. Unique within the namespace.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/namespaces/{namespace}/schedules": {
       "get": {
         "summary": "List all schedules in a namespace.",
@@ -5241,6 +5057,157 @@
         ]
       }
     },
+    "/namespaces/{namespace}/workflows/rules": {
+      "get": {
+        "summary": "Return all namespace rules",
+        "operationId": "ListWorkflowRules",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListWorkflowRulesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/workflows/rules/{ruleId}": {
+      "get": {
+        "summary": "DescribeWorkflowRule return the rule specification for existing rule id.\nIf there is no rule with such id - NO FOUND error will be returned.",
+        "operationId": "DescribeWorkflowRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeWorkflowRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "ruleId",
+            "description": "ID of the rule to read. Unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "delete": {
+        "summary": "Delete rule by rule id",
+        "operationId": "DeleteWorkflowRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteWorkflowRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "ruleId",
+            "description": "ID of the rule to delete. Unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/workflows/rules/{spec.id}": {
+      "post": {
+        "summary": "Create a new workflow rule.\nIf the rule with such ID already exist this call will fail.",
+        "operationId": "CreateWorkflowRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateWorkflowRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "spec.id",
+            "description": "The id of the new schedule. Must be unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCreateWorkflowRuleBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/workflows/{execution.workflowId}": {
       "get": {
         "summary": "DescribeWorkflowExecution returns information about the specified workflow execution.",
@@ -5277,6 +5244,51 @@
             "in": "query",
             "required": false,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/workflows/{execution.workflowId}/apply-rule": {
+      "post": {
+        "summary": "ApplyWorkflowRule allows to:\n * apply existing rule to a specific workflow execution;\n * apply rule to a specific workflow execution without creating a rule;\nThis is useful for one-off operations.",
+        "operationId": "ApplyWorkflowRule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ApplyWorkflowRuleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "execution.workflowId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceApplyWorkflowRuleBody"
+            }
           }
         ],
         "tags": [
@@ -6197,65 +6209,43 @@
         }
       }
     },
-    "WorkflowServiceApplyNamespaceRuleBody": {
+    "WorkflowRuleActionWorkflowRuleActionActivityPause": {
+      "type": "object",
+      "description": "Pause the activity."
+    },
+    "WorkflowRuleActionWorkflowRuleActionMetric": {
+      "type": "object",
+      "description": "Emit a metric."
+    },
+    "WorkflowRuleSpecActivityStartTrigger": {
       "type": "object",
       "properties": {
-        "workflowExecution": {
-          "$ref": "#/definitions/v1WorkflowExecution",
+        "predicate": {
+          "type": "string",
+          "description": "Activity predicate is used to match against workflow data, based on rule trigger type.\nThe following activity attributes are supported as part of the predicate:\n- ActivityType: The type of the activity.\n- ActivityId: The ID of the activity.\n- ActivityAttempt: The number attempts of the activity.\n- BackoffInterval: The current backoff interval of the activity.\n- ActivityStatus: The status of the activity. Can be one of \"scheduled\", \"started\", \"paused\".\n- TaskQueue: The name of the task queue of the activity."
+        }
+      },
+      "description": "Activity trigger will be triggered when an activity is about to start."
+    },
+    "WorkflowServiceApplyWorkflowRuleBody": {
+      "type": "object",
+      "properties": {
+        "execution": {
+          "type": "object",
+          "properties": {
+            "runId": {
+              "type": "string"
+            }
+          },
           "title": "Execution info of the workflow which scheduled this activity"
         },
         "id": {
           "type": "string"
         },
-        "name": {
-          "type": "string"
-        },
-        "definition": {
-          "$ref": "#/definitions/v1NamespaceRuleSpec"
+        "spec": {
+          "$ref": "#/definitions/v1WorkflowRuleSpec"
         }
       }
-    },
-    "WorkflowServiceCreateNamespaceRuleBody": {
-      "type": "object",
-      "properties": {
-        "rule": {
-          "type": "object",
-          "properties": {
-            "type": {
-              "$ref": "#/definitions/v1NamespaceRuleTriggerType",
-              "title": "Specifies how the rule should be triggered and evaluated.\nCurrently, only \"activity start\" type is supported.\nTypes:\n- \"activity start\": Rule is triggered when a activity is about to start.\n- \"workflow task start\": Rule is triggered when the new workflow task is about to start"
-            },
-            "predicate": {
-              "type": "string",
-              "description": "Predicate is used to match against workflow data, based on rule trigger type.\nThe following activity attributes are supported as part of the predicate:\n- activityType: The type of the activity.\n- activityId: The ID of the activity.\n- activityAttempt: The number attempts of the activity.\n- backoffInterval: The current backoff interval of the activity.\n- activityStatus: The status of the activity. Can be one of \"scheduled\", \"started\", \"paused\".\n- taskQueue: The name of the task queue of the activity."
-            },
-            "visibilityQuery": {
-              "type": "string",
-              "title": "Restricted Visibility query, supports \"WorkflowType\", \"StartTime\" and few more workflow properties"
-            },
-            "action": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "$ref": "#/definitions/v1NamespaceRuleAction"
-              },
-              "description": "Action to be taken when the rule is triggered and predicate is matched."
-            },
-            "expirationTime": {
-              "type": "string",
-              "format": "date-time",
-              "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
-            }
-          },
-          "description": "The rule to create as a part of namespace config.\nRule name must be unique namespace-wide.",
-          "title": "The rule to create as a part of namespace config.\nRule name must be unique namespace-wide."
-        },
-        "forceScan": {
-          "type": "boolean",
-          "description": "If true, the rule will be applied immediately via batch job.\nVisibility query in the rule will be used to select the workflows to apply the rule to."
-        }
-      },
-      "title": "///////////////////////////////////////////////////////////////////////////\n\"CR_D\" operations for namespace rules (there is no 'update')"
     },
     "WorkflowServiceCreateScheduleBody": {
       "type": "object",
@@ -6282,6 +6272,42 @@
         },
         "searchAttributes": {
           "$ref": "#/definitions/v1SearchAttributes"
+        }
+      }
+    },
+    "WorkflowServiceCreateWorkflowRuleBody": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "type": "object",
+          "properties": {
+            "activityStart": {
+              "$ref": "#/definitions/WorkflowRuleSpecActivityStartTrigger"
+            },
+            "visibilityQuery": {
+              "type": "string",
+              "title": "Restricted Visibility query, supports \"WorkflowType\", \"StartTime\" and few more workflow properties"
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "$ref": "#/definitions/v1WorkflowRuleAction"
+              },
+              "description": "Action to be taken when the rule is triggered and predicate is matched."
+            },
+            "expirationTime": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
+            }
+          },
+          "description": "The rule specification .",
+          "title": "The rule specification ."
+        },
+        "forceScan": {
+          "type": "boolean",
+          "description": "If true, the rule will be applied immediately via batch job.\nVisibility query in the rule will be used to select the workflows to apply the rule to."
         }
       }
     },
@@ -6879,8 +6905,8 @@
         "unpauseActivitiesOperation": {
           "$ref": "#/definitions/v1BatchOperationUnpauseActivities"
         },
-        "applyNamespaceRuleOperation": {
-          "$ref": "#/definitions/v1BatchOperationApplyNamespaceRule"
+        "applyWorkflowRuleOperation": {
+          "$ref": "#/definitions/v1BatchOperationApplyWorkflowRule"
         }
       }
     },
@@ -7719,7 +7745,7 @@
         }
       }
     },
-    "v1ApplyNamespaceRuleResponse": {
+    "v1ApplyWorkflowRuleResponse": {
       "type": "object"
     },
     "v1ArchivalState": {
@@ -7775,7 +7801,7 @@
         }
       }
     },
-    "v1BatchOperationApplyNamespaceRule": {
+    "v1BatchOperationApplyWorkflowRule": {
       "type": "object",
       "properties": {
         "identity": {
@@ -7783,16 +7809,15 @@
           "description": "The identity of the worker/client."
         },
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "ID of existing rule."
         },
-        "name": {
-          "type": "string"
-        },
-        "definition": {
-          "$ref": "#/definitions/v1NamespaceRuleSpec"
+        "spec": {
+          "$ref": "#/definitions/v1WorkflowRuleSpec",
+          "description": "Rule specification to be applied to the workflow without creating a new rule."
         }
       },
-      "description": "BatchOperationApplyNamespaceRule sends ApplyNamespaceRule requests to batch workflows."
+      "description": "BatchOperationApplyWorkflowRule sends ApplyWorkflowRule requests to batch workflows."
     },
     "v1BatchOperationCancellation": {
       "type": "object",
@@ -8634,19 +8659,6 @@
         }
       }
     },
-    "v1CreateNamespaceRuleResponse": {
-      "type": "object",
-      "properties": {
-        "ruleId": {
-          "type": "string",
-          "description": "id of the created rule. Unique within the namespace."
-        },
-        "jobId": {
-          "type": "string",
-          "description": "Job ID if force-scan flag was provided. Otherwise empty."
-        }
-      }
-    },
     "v1CreateNexusEndpointRequest": {
       "type": "object",
       "properties": {
@@ -8674,6 +8686,19 @@
         }
       }
     },
+    "v1CreateWorkflowRuleResponse": {
+      "type": "object",
+      "properties": {
+        "ruleId": {
+          "type": "string",
+          "description": "ID of the created rule. Unique within the namespace."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "Job ID if force-scan flag was provided. Otherwise empty."
+        }
+      }
+    },
     "v1DataBlob": {
       "type": "object",
       "properties": {
@@ -8695,9 +8720,6 @@
         }
       }
     },
-    "v1DeleteNamespaceRuleResponse": {
-      "type": "object"
-    },
     "v1DeleteNexusEndpointResponse": {
       "type": "object"
     },
@@ -8705,6 +8727,9 @@
       "type": "object"
     },
     "v1DeleteWorkflowExecutionResponse": {
+      "type": "object"
+    },
+    "v1DeleteWorkflowRuleResponse": {
       "type": "object"
     },
     "v1Deployment": {
@@ -8881,15 +8906,6 @@
         }
       }
     },
-    "v1DescribeNamespaceRuleResponse": {
-      "type": "object",
-      "properties": {
-        "rule": {
-          "$ref": "#/definitions/v1NamespaceRule",
-          "description": "The rule that was read."
-        }
-      }
-    },
     "v1DescribeScheduleResponse": {
       "type": "object",
       "properties": {
@@ -8990,6 +9006,15 @@
         },
         "workflowExtendedInfo": {
           "$ref": "#/definitions/v1WorkflowExecutionExtendedInfo"
+        }
+      }
+    },
+    "v1DescribeWorkflowRuleResponse": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "$ref": "#/definitions/v1WorkflowRule",
+          "description": "The rule that was read."
         }
       }
     },
@@ -9831,18 +9856,6 @@
         }
       }
     },
-    "v1ListNamespaceRulesResponse": {
-      "type": "object",
-      "properties": {
-        "rules": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1NamespaceRule"
-          }
-        }
-      }
-    },
     "v1ListNamespacesResponse": {
       "type": "object",
       "properties": {
@@ -9973,6 +9986,22 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1WorkflowExecutionInfo"
+          }
+        },
+        "nextPageToken": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1ListWorkflowRulesResponse": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowRule"
           }
         },
         "nextPageToken": {
@@ -10191,93 +10220,6 @@
           "$ref": "#/definitions/v1ReplicationState"
         }
       }
-    },
-    "v1NamespaceRule": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Name of the rule."
-        },
-        "id": {
-          "type": "string",
-          "title": "ID must be unique within the namespace"
-        },
-        "identity": {
-          "type": "string",
-          "description": "The identity of the worker/client."
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Rule creation date."
-        },
-        "ruleSpec": {
-          "$ref": "#/definitions/v1NamespaceRuleSpec",
-          "title": "Rule specification"
-        }
-      },
-      "description": "NamespaceRule describes a rule that can be applied to any workflow in this namespace."
-    },
-    "v1NamespaceRuleAction": {
-      "type": "object",
-      "properties": {
-        "activityPause": {
-          "$ref": "#/definitions/v1NamespaceRuleActionActivityPause"
-        },
-        "emitMetric": {
-          "$ref": "#/definitions/v1NamespaceRuleActionMetric"
-        }
-      }
-    },
-    "v1NamespaceRuleActionActivityPause": {
-      "type": "object",
-      "title": "//////////////////////////////////////////\nnamespace rule actions"
-    },
-    "v1NamespaceRuleActionMetric": {
-      "type": "object"
-    },
-    "v1NamespaceRuleSpec": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Name of the rule."
-        },
-        "type": {
-          "$ref": "#/definitions/v1NamespaceRuleTriggerType",
-          "title": "Specifies how the rule should be triggered and evaluated.\nCurrently, only \"activity start\" type is supported.\nTypes:\n- \"activity start\": Rule is triggered when a activity is about to start.\n- \"workflow task start\": Rule is triggered when the new workflow task is about to start"
-        },
-        "predicate": {
-          "type": "string",
-          "description": "Predicate is used to match against workflow data, based on rule trigger type.\nThe following activity attributes are supported as part of the predicate:\n- activityType: The type of the activity.\n- activityId: The ID of the activity.\n- activityAttempt: The number attempts of the activity.\n- backoffInterval: The current backoff interval of the activity.\n- activityStatus: The status of the activity. Can be one of \"scheduled\", \"started\", \"paused\".\n- taskQueue: The name of the task queue of the activity."
-        },
-        "visibilityQuery": {
-          "type": "string",
-          "title": "Restricted Visibility query, supports \"WorkflowType\", \"StartTime\" and few more workflow properties"
-        },
-        "action": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1NamespaceRuleAction"
-          },
-          "description": "Action to be taken when the rule is triggered and predicate is matched."
-        },
-        "expirationTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
-        }
-      }
-    },
-    "v1NamespaceRuleTriggerType": {
-      "type": "string",
-      "enum": [
-        "NAMESPACE_RULE_TRIGGER_TYPE_UNSPECIFIED",
-        "NAMESPACE_RULE_TRIGGER_TYPE_START_ACTIVITY"
-      ],
-      "default": "NAMESPACE_RULE_TRIGGER_TYPE_UNSPECIFIED"
     },
     "v1NamespaceState": {
       "type": "string",
@@ -14171,6 +14113,61 @@
         }
       },
       "title": "Answer to a `WorkflowQuery`"
+    },
+    "v1WorkflowRule": {
+      "type": "object",
+      "properties": {
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Rule creation date."
+        },
+        "spec": {
+          "$ref": "#/definitions/v1WorkflowRuleSpec",
+          "title": "Rule specification"
+        }
+      },
+      "description": "WorkflowRule describes a rule that can be applied to any workflow in this namespace."
+    },
+    "v1WorkflowRuleAction": {
+      "type": "object",
+      "properties": {
+        "activityPause": {
+          "$ref": "#/definitions/WorkflowRuleActionWorkflowRuleActionActivityPause"
+        },
+        "emitMetric": {
+          "$ref": "#/definitions/WorkflowRuleActionWorkflowRuleActionMetric"
+        }
+      }
+    },
+    "v1WorkflowRuleSpec": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The id of the new schedule. Must be unique within the namespace."
+        },
+        "activityStart": {
+          "$ref": "#/definitions/WorkflowRuleSpecActivityStartTrigger"
+        },
+        "visibilityQuery": {
+          "type": "string",
+          "title": "Restricted Visibility query, supports \"WorkflowType\", \"StartTime\" and few more workflow properties"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowRuleAction"
+          },
+          "description": "Action to be taken when the rule is triggered and predicate is matched."
+        },
+        "expirationTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
+        }
+      }
     },
     "v1WorkflowTaskCompletedEventAttributes": {
       "type": "object",

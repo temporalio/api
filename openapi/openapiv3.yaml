@@ -5846,6 +5846,37 @@ paths:
                 $ref: '#/components/schemas/Status'
 components:
   schemas:
+    Action:
+      type: object
+      properties:
+        pause:
+          $ref: '#/components/schemas/Action_ActionPause'
+        emitMetric:
+          $ref: '#/components/schemas/Action_ActionEmitMetric'
+    Action_ActionEmitMetric:
+      type: object
+      properties:
+        scope:
+          enum:
+            - SCOPE_UNSPECIFIED
+            - SCOPE_NAMESPACE
+            - SCOPE_WORKFLOW
+            - SCOPE_ACTIVITY
+          type: string
+          format: enum
+      description: Emit a metric.
+    Action_ActionPause:
+      type: object
+      properties:
+        scope:
+          enum:
+            - SCOPE_UNSPECIFIED
+            - SCOPE_NAMESPACE
+            - SCOPE_WORKFLOW
+            - SCOPE_ACTIVITY
+          type: string
+          format: enum
+      description: Pause action.
     ActivityFailureInfo:
       type: object
       properties:
@@ -12661,21 +12692,6 @@ components:
             - $ref: '#/components/schemas/WorkflowRuleSpec'
           description: Rule specification
       description: WorkflowRule describes a rule that can be applied to any workflow in this namespace.
-    WorkflowRuleAction:
-      type: object
-      properties:
-        activityPause:
-          $ref: '#/components/schemas/WorkflowRuleAction_ActionActivityPause'
-        emitMetric:
-          $ref: '#/components/schemas/WorkflowRuleAction_ActionEmitMetric'
-    WorkflowRuleAction_ActionActivityPause:
-      type: object
-      properties: {}
-      description: Pause the activity.
-    WorkflowRuleAction_ActionEmitMetric:
-      type: object
-      properties: {}
-      description: Emit a metric.
     WorkflowRuleSpec:
       type: object
       properties:
@@ -12686,11 +12702,17 @@ components:
           $ref: '#/components/schemas/WorkflowRuleSpec_ActivityStartTrigger'
         visibilityQuery:
           type: string
-          description: Restricted Visibility query, supports "WorkflowType", "StartTime" and few more workflow properties
+          description: |-
+            Restricted Visibility query.
+             The following activity attributes are supported as part of the predicate:
+             - WorkflowType
+             - WorkflowId
+             - StartTime
+             - ExecutionStatus
         actions:
           type: array
           items:
-            $ref: '#/components/schemas/WorkflowRuleAction'
+            $ref: '#/components/schemas/Action'
           description: Action to be taken when the rule is triggered and predicate is matched.
         expirationTime:
           type: string

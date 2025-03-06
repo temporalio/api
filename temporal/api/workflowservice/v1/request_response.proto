@@ -53,6 +53,7 @@ import "temporal/api/protocol/v1/message.proto";
 import "temporal/api/namespace/v1/message.proto";
 import "temporal/api/query/v1/message.proto";
 import "temporal/api/replication/v1/message.proto";
+import "temporal/api/rules/v1/message.proto";
 import "temporal/api/schedule/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
@@ -2200,4 +2201,53 @@ message GetDeploymentReachabilityResponse {
     // Reachability level might come from server cache. This timestamp specifies when the value
     // was actually calculated.
     google.protobuf.Timestamp last_update_time = 3;
+}
+
+message CreateWorkflowRuleRequest {
+    string namespace = 1;
+
+    // The rule specification .
+    temporal.api.rules.v1.WorkflowRuleSpec spec = 2;
+
+    // If true, the rule will be applied immediately via batch job.
+    // Visibility query in the rule will be used to select the workflows to apply the rule to.
+    bool force_scan = 3;
+}
+
+message CreateWorkflowRuleResponse {
+    // Created rule.
+    temporal.api.rules.v1.WorkflowRule  rule = 1;
+
+    // Job ID if force-scan flag was provided. Otherwise empty.
+    string job_id = 2;
+}
+
+message DescribeWorkflowRuleRequest {
+    string namespace = 1;
+    // ID of the rule to read. Unique within the namespace.
+    string rule_id = 2;
+}
+
+message DescribeWorkflowRuleResponse {
+    // The rule that was read.
+    temporal.api.rules.v1.WorkflowRule rule = 1;
+}
+
+message DeleteWorkflowRuleRequest {
+    string namespace = 1;
+
+    // ID of the rule to delete. Unique within the namespace.
+    string rule_id = 2;
+}
+
+message DeleteWorkflowRuleResponse {
+}
+
+message ListWorkflowRulesRequest {
+    string namespace = 1;
+}
+
+message ListWorkflowRulesResponse {
+    repeated temporal.api.rules.v1.WorkflowRule rules = 1;
+    bytes next_page_token = 2;
 }

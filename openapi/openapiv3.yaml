@@ -1963,6 +1963,11 @@ paths:
           required: true
           schema:
             type: string
+        - name: nextPageToken
+          in: query
+          schema:
+            type: string
+            format: bytes
       responses:
         "200":
           description: OK
@@ -1970,6 +1975,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListWorkflowRulesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Create a new workflow rule.
+         If the rule with such ID already exist this call will fail.
+      operationId: CreateWorkflowRule
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRuleRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWorkflowRuleResponse'
         default:
           description: Default error response
           content:
@@ -2033,44 +2070,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeleteWorkflowRuleResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/workflow-rules/{spec.id}:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        Create a new workflow rule.
-         If the rule with such ID already exist this call will fail.
-      operationId: CreateWorkflowRule
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: spec.id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateWorkflowRuleRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateWorkflowRuleResponse'
         default:
           description: Default error response
           content:
@@ -5008,6 +5007,11 @@ paths:
           required: true
           schema:
             type: string
+        - name: nextPageToken
+          in: query
+          schema:
+            type: string
+            format: bytes
       responses:
         "200":
           description: OK
@@ -5015,6 +5019,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListWorkflowRulesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Create a new workflow rule.
+         If the rule with such ID already exist this call will fail.
+      operationId: CreateWorkflowRule
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRuleRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWorkflowRuleResponse'
         default:
           description: Default error response
           content:
@@ -5078,44 +5114,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeleteWorkflowRuleResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/workflow-rules/{spec.id}:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        Create a new workflow rule.
-         If the rule with such ID already exist this call will fail.
-      operationId: CreateWorkflowRule
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: spec.id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateWorkflowRuleRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateWorkflowRuleResponse'
         default:
           description: Default error response
           content:
@@ -5766,26 +5764,6 @@ paths:
                 $ref: '#/components/schemas/Status'
 components:
   schemas:
-    Action:
-      type: object
-      properties:
-        pause:
-          $ref: '#/components/schemas/Action_ActionPause'
-    Action_ActionPause:
-      type: object
-      properties:
-        scope:
-          enum:
-            - RULE_ACTION_SCOPE_UNSPECIFIED
-            - RULE_ACTION_SCOPE_WORKFLOW
-            - RULE_ACTION_SCOPE_ACTIVITY
-          type: string
-          description: |-
-            Indicates what should be paused. Depending on the scope value, the action
-             will pause the entire workflow or a specific activity (additional entities
-             may be supported in the future).
-          format: enum
-      description: Pause action.
     ActivityFailureInfo:
       type: object
       properties:
@@ -6840,6 +6818,9 @@ components:
           description: |-
             If true, the rule will be applied immediately via batch job.
              Visibility query in the rule will be used to select the workflows to apply the rule to.
+        requestId:
+          type: string
+          description: Used to de-dupe requests. Typically should be UUID.
     CreateWorkflowRuleResponse:
       type: object
       properties:
@@ -12660,6 +12641,26 @@ components:
             - $ref: '#/components/schemas/WorkflowRuleSpec'
           description: Rule specification
       description: WorkflowRule describes a rule that can be applied to any workflow in this namespace.
+    WorkflowRuleAction:
+      type: object
+      properties:
+        pause:
+          $ref: '#/components/schemas/WorkflowRuleAction_ActionPause'
+    WorkflowRuleAction_ActionPause:
+      type: object
+      properties:
+        scope:
+          enum:
+            - RULE_ACTION_SCOPE_UNSPECIFIED
+            - RULE_ACTION_SCOPE_WORKFLOW
+            - RULE_ACTION_SCOPE_ACTIVITY
+          type: string
+          description: |-
+            Indicates what should be paused. Depending on the scope value, the action
+             will pause the entire workflow or a specific activity (additional entities
+             may be supported in the future).
+          format: enum
+      description: Pause action.
     WorkflowRuleSpec:
       type: object
       properties:
@@ -12672,7 +12673,7 @@ components:
           type: string
           description: |-
             Restricted Visibility query.
-             The following activity attributes are supported as part of the predicate:
+             The following workflow attributes are supported:
              - WorkflowType
              - WorkflowId
              - StartTime
@@ -12680,8 +12681,8 @@ components:
         actions:
           type: array
           items:
-            $ref: '#/components/schemas/Action'
-          description: Action to be taken when the rule is triggered and predicate is matched.
+            $ref: '#/components/schemas/WorkflowRuleAction'
+          description: WorkflowRuleAction to be taken when the rule is triggered and predicate is matched.
         expirationTime:
           type: string
           description: |-
@@ -12694,14 +12695,20 @@ components:
         predicate:
           type: string
           description: |-
-            Activity predicate is used to match against workflow data, based on rule trigger type.
+            Activity predicate is an SQL-like string filter parameter.
+             It is used to match against workflow data.
              The following activity attributes are supported as part of the predicate:
              - ActivityType: The type of the activity.
              - ActivityId: The ID of the activity.
              - ActivityAttempt: The number attempts of the activity.
              - BackoffInterval: The current backoff interval of the activity.
-             - ActivityStatus: The status of the activity. Can be one of "scheduled", "started", "paused".
+             - ActivityStatus: The status of the activity. Can be one of "Scheduled", "Started", "Paused".
              - TaskQueue: The name of the task queue of the activity.
+             Activity predicate support the following operators:
+              * =, !=, >, >=, <, <=
+              * AND, OR, ()
+              * BETWEEN ... AND
+                STARTS_WITH
       description: Activity trigger will be triggered when an activity is about to start.
     WorkflowTaskCompletedEventAttributes:
       type: object

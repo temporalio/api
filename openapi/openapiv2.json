@@ -2263,7 +2263,7 @@
     },
     "/api/v1/namespaces/{namespace}/workflow-rules/{ruleId}": {
       "get": {
-        "summary": "DescribeWorkflowRule return the rule specification for existing rule id.\nIf there is no rule with such id - NO FOUND error will be returned.",
+        "summary": "DescribeWorkflowRule return the rule specification for existing rule id.\nIf there is no rule with such id - NOT FOUND error will be returned.",
         "operationId": "DescribeWorkflowRule2",
         "responses": {
           "200": {
@@ -2288,7 +2288,7 @@
           },
           {
             "name": "ruleId",
-            "description": "ID of the rule to read. Unique within the namespace.",
+            "description": "User-specified ID of the rule to read. Unique within the namespace.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -5692,7 +5692,7 @@
     },
     "/namespaces/{namespace}/workflow-rules/{ruleId}": {
       "get": {
-        "summary": "DescribeWorkflowRule return the rule specification for existing rule id.\nIf there is no rule with such id - NO FOUND error will be returned.",
+        "summary": "DescribeWorkflowRule return the rule specification for existing rule id.\nIf there is no rule with such id - NOT FOUND error will be returned.",
         "operationId": "DescribeWorkflowRule",
         "responses": {
           "200": {
@@ -5717,7 +5717,7 @@
           },
           {
             "name": "ruleId",
-            "description": "ID of the rule to read. Unique within the namespace.",
+            "description": "User-specified ID of the rule to read. Unique within the namespace.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -6869,7 +6869,7 @@
       "properties": {
         "predicate": {
           "type": "string",
-          "title": "Activity predicate is an SQL-like string filter parameter.\nIt is used to match against workflow data.\nThe following activity attributes are supported as part of the predicate:\n- ActivityType: The type of the activity.\n- ActivityId: The ID of the activity.\n- ActivityAttempt: The number attempts of the activity.\n- BackoffInterval: The current backoff interval of the activity.\n- ActivityStatus: The status of the activity. Can be one of \"Scheduled\", \"Started\", \"Paused\".\n- TaskQueue: The name of the task queue of the activity.\nActivity predicate support the following operators:\n * =, !=, >, >=, <, <=\n * AND, OR, ()\n * BETWEEN ... AND\n   STARTS_WITH"
+          "title": "Activity predicate is a SQL-like string filter parameter.\nIt is used to match against workflow data.\nThe following activity attributes are supported as part of the predicate:\n- ActivityType: The type of the activity.\n- ActivityId: The ID of the activity.\n- ActivityAttempt: The number attempts of the activity.\n- BackoffInterval: The current amount of time between scheduled attempts of the activity.\n- ActivityStatus: The status of the activity. Can be one of \"Scheduled\", \"Started\", \"Paused\".\n- TaskQueue: The name of the task queue the workflow specified that the activity should run on.\nActivity predicate support the following operators:\n * =, !=, >, >=, <, <=\n * AND, OR, ()\n * BETWEEN ... AND\n   STARTS_WITH"
         }
       },
       "description": "Activity trigger will be triggered when an activity is about to start."
@@ -6911,7 +6911,7 @@
         },
         "forceScan": {
           "type": "boolean",
-          "description": "If true, the rule will be applied immediately via batch job.\nVisibility query in the rule will be used to select the workflows to apply the rule to."
+          "description": "If true, the rule will be applied to the currently running workflows via batch job.\nIf not set , the rule will only be applied when triggering condition is satisfied.\nvisibility_query in the rule will be used to select the workflows to apply the rule to."
         },
         "requestId": {
           "type": "string",
@@ -9374,7 +9374,7 @@
         },
         "jobId": {
           "type": "string",
-          "description": "Job ID if force-scan flag was provided. Otherwise empty."
+          "description": "Batch Job ID if force-scan flag was provided. Otherwise empty."
         }
       }
     },
@@ -15226,7 +15226,7 @@
         "createTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Rule creation date."
+          "description": "Rule creation time."
         },
         "spec": {
           "$ref": "#/definitions/v1WorkflowRuleSpec",
@@ -15255,7 +15255,7 @@
         },
         "visibilityQuery": {
           "type": "string",
-          "title": "Restricted Visibility query.\nThis query will be applied to the currently running workflow for every triggering event.\nThis query will be applied before trigger predicate is evaluated.\nThe following workflow attributes are supported:\n- WorkflowType\n- WorkflowId\n- StartTime\n- ExecutionStatus"
+          "title": "Restricted Visibility query.\nThis query is used to filter workflows in this namespace to which this rule should apply.\nIt is applied to any running workflow each time a triggering event occurs, before the trigger predicate is evaluated.\nThe following workflow attributes are supported:\n- WorkflowType\n- WorkflowId\n- StartTime\n- ExecutionStatus"
         },
         "actions": {
           "type": "array",

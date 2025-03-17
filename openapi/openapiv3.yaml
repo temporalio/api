@@ -2022,7 +2022,7 @@ paths:
         - WorkflowService
       description: |-
         DescribeWorkflowRule return the rule specification for existing rule id.
-         If there is no rule with such id - NO FOUND error will be returned.
+         If there is no rule with such id - NOT FOUND error will be returned.
       operationId: DescribeWorkflowRule
       parameters:
         - name: namespace
@@ -2032,7 +2032,7 @@ paths:
             type: string
         - name: ruleId
           in: path
-          description: ID of the rule to read. Unique within the namespace.
+          description: User-specified ID of the rule to read. Unique within the namespace.
           required: true
           schema:
             type: string
@@ -5069,7 +5069,7 @@ paths:
         - WorkflowService
       description: |-
         DescribeWorkflowRule return the rule specification for existing rule id.
-         If there is no rule with such id - NO FOUND error will be returned.
+         If there is no rule with such id - NOT FOUND error will be returned.
       operationId: DescribeWorkflowRule
       parameters:
         - name: namespace
@@ -5079,7 +5079,7 @@ paths:
             type: string
         - name: ruleId
           in: path
-          description: ID of the rule to read. Unique within the namespace.
+          description: User-specified ID of the rule to read. Unique within the namespace.
           required: true
           schema:
             type: string
@@ -6822,8 +6822,9 @@ components:
         forceScan:
           type: boolean
           description: |-
-            If true, the rule will be applied immediately via batch job.
-             Visibility query in the rule will be used to select the workflows to apply the rule to.
+            If true, the rule will be applied to the currently running workflows via batch job.
+             If not set , the rule will only be applied when triggering condition is satisfied.
+             visibility_query in the rule will be used to select the workflows to apply the rule to.
         requestId:
           type: string
           description: Used to de-dupe requests. Typically should be UUID.
@@ -6836,7 +6837,7 @@ components:
           description: Created rule.
         jobId:
           type: string
-          description: Job ID if force-scan flag was provided. Otherwise empty.
+          description: Batch Job ID if force-scan flag was provided. Otherwise empty.
     DataBlob:
       type: object
       properties:
@@ -12640,7 +12641,7 @@ components:
       properties:
         createTime:
           type: string
-          description: Rule creation date.
+          description: Rule creation time.
           format: date-time
         spec:
           allOf:
@@ -12679,8 +12680,8 @@ components:
           type: string
           description: |-
             Restricted Visibility query.
-             This query will be applied to the currently running workflow for every triggering event.
-             This query will be applied before trigger predicate is evaluated.
+             This query is used to filter workflows in this namespace to which this rule should apply.
+             It is applied to any running workflow each time a triggering event occurs, before the trigger predicate is evaluated.
              The following workflow attributes are supported:
              - WorkflowType
              - WorkflowId
@@ -12703,15 +12704,15 @@ components:
         predicate:
           type: string
           description: |-
-            Activity predicate is an SQL-like string filter parameter.
+            Activity predicate is a SQL-like string filter parameter.
              It is used to match against workflow data.
              The following activity attributes are supported as part of the predicate:
              - ActivityType: The type of the activity.
              - ActivityId: The ID of the activity.
              - ActivityAttempt: The number attempts of the activity.
-             - BackoffInterval: The current backoff interval of the activity.
+             - BackoffInterval: The current amount of time between scheduled attempts of the activity.
              - ActivityStatus: The status of the activity. Can be one of "Scheduled", "Started", "Paused".
-             - TaskQueue: The name of the task queue of the activity.
+             - TaskQueue: The name of the task queue the workflow specified that the activity should run on.
              Activity predicate support the following operators:
               * =, !=, >, >=, <, <=
               * AND, OR, ()

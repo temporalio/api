@@ -254,23 +254,19 @@ message Link {
 // Other queues in the server (such as transfer and timer queues) and rate
 // limiting decisions do not use Priority, but may in the future.
 //
-// Priority is attached to workflows and activities. By default, activities and
-// child workflows inherit Priority from the workflow that created them, but may
-// override fields when they are started or modified.
+// Priority is attached to workflows and activities. Activities and child
+// workflows inherit Priority from the workflow that created them, but may
+// override fields when they are started or modified. For each field of a
+// Priority on an activity/workflow, not present or equal to zero/empty string
+// means to inherit the value from the calling workflow, or if there is no
+// calling workflow, then use the default (documented below).
 //
 // Despite being named "Priority", this message will also contains fields that
 // control "fairness" mechanisms.
 //
-// For all fields, the field not present or equal to zero/empty string means to
-// inherit the value from the calling workflow, or if there is no calling
-// workflow, then use the default value.
-//
 // The overall semantics of Priority are:
 // 1. First, consider "priority_key": lower number goes first.
 // (more will be added here later)
-//
-// Not all queues in the system may support the "full" semantics of all priority
-// fields. (Currently only support in matching task queues is planned.)
 message Priority {
     // Priority key is a positive integer from 1 to n, where smaller integers
     // correspond to higher priorities (tasks run sooner). In general, tasks in
@@ -280,8 +276,7 @@ message Priority {
     // The maximum priority value (minimum priority) is determined by server
     // configuration, and defaults to 5.
     //
-    // If priority is not present (or zero), then the effective priority will be
-    // the default priority, which is is calculated by (min+max)/2. With the
-    // default max of 5, and min of 1, that comes out to 3.
+    // The default priority is (min+max)/2. With the default max of 5 and min of
+    // 1, that comes out to 3.
     int32 priority_key = 1;
 }

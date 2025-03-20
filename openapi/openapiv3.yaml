@@ -5747,6 +5747,12 @@ components:
           description: |-
             If this is set, the activity would be assigned to the Build ID of the workflow. Otherwise,
              Assignment rules of the activity's Task Queue will be used to determine the Build ID.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: |-
+            Priority metadata. If this message is not present, or any fields are not
+             present, they inherit the values from the workflow.
     ActivityTaskStartedEventAttributes:
       type: object
       properties:
@@ -7967,6 +7973,10 @@ components:
           description: |-
             If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.
              To unset the override after the workflow is running, use UpdateWorkflowExecutionOptions.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: Priority metadata
       description: |-
         NewWorkflowExecutionInfo is a shared message that encapsulates all the
          required arguments to starting a workflow in different contexts.
@@ -8359,6 +8369,10 @@ components:
         lastWorkerDeploymentVersion:
           type: string
           description: The Worker Deployment Version this activity was dispatched to most recently.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: Priority metadata
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -8608,6 +8622,43 @@ components:
       description: |-
         Attached to task responses to give hints to the SDK about how it may adjust its number of
          pollers.
+    Priority:
+      type: object
+      properties:
+        priorityKey:
+          type: integer
+          description: |-
+            Priority key is a positive integer from 1 to n, where smaller integers
+             correspond to higher priorities (tasks run sooner). In general, tasks in
+             a queue should be processed in close to priority order, although small
+             deviations are possible.
+
+             The maximum priority value (minimum priority) is determined by server
+             configuration, and defaults to 5.
+
+             The default priority is (min+max)/2. With the default max of 5 and min of
+             1, that comes out to 3.
+          format: int32
+      description: |-
+        Priority contains metadata that controls relative ordering of task processing
+         when tasks are backlogged in a queue. Initially, Priority will be used in
+         activity and workflow task queues, which are typically where backlogs exist.
+         Other queues in the server (such as transfer and timer queues) and rate
+         limiting decisions do not use Priority, but may in the future.
+
+         Priority is attached to workflows and activities. Activities and child
+         workflows inherit Priority from the workflow that created them, but may
+         override fields when they are started or modified. For each field of a
+         Priority on an activity/workflow, not present or equal to zero/empty string
+         means to inherit the value from the calling workflow, or if there is no
+         calling workflow, then use the default (documented below).
+
+         Despite being named "Priority", this message will also contains fields that
+         control "fairness" mechanisms.
+
+         The overall semantics of Priority are:
+         1. First, consider "priority_key": lower number goes first.
+         (more will be added here later)
     QueryRejected:
       type: object
       properties:
@@ -10053,6 +10104,10 @@ components:
           description: |-
             If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.
              To unset the override after the workflow is running, use UpdateWorkflowExecutionOptions.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: Priority metadata
     SignalWithStartWorkflowExecutionResponse:
       type: object
       properties:
@@ -10251,6 +10306,10 @@ components:
           description: |-
             If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment
              rules of the child's Task Queue will be used to independently assign a Build ID to it.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: Priority metadata
     StartWorkflowExecutionRequest:
       type: object
       properties:
@@ -10382,6 +10441,10 @@ components:
              WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING is used. If not set (ie., nil value) or set to a
              empty object (ie., all options with default value), it won't do anything to the existing
              running workflow. If set, it will add a history event to the running workflow.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: Priority metadata
     StartWorkflowExecutionResponse:
       type: object
       properties:
@@ -11791,6 +11854,10 @@ components:
           description: |-
             The name of Worker Deployment that completed the most recent workflow task.
              Experimental. Worker Deployments are experimental and might change in the future.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: Priority metadata
       description: |-
         Hold basic information about a workflow execution.
          This structure is a part of visibility, and thus contain a limited subset of information.
@@ -12004,6 +12071,10 @@ components:
              of starting on the Current Version of its Task Queue.
              This is set only if the child workflow is starting on a Task Queue belonging to the same
              Worker Deployment Version.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: Priority metadata
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object

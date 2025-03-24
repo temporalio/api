@@ -33,15 +33,26 @@ option csharp_namespace = "Temporalio.Api.Rules.V1";
 
 
 import "google/protobuf/timestamp.proto";
-import "temporal/api/enums/v1/common.proto";
 
 message WorkflowRuleAction {
   // Pause action.
   message ActionPause {
+
+    message ActivityPause {
+    }
+
+//    message WorkflowPause {
+//        bool pause_child_workflow = 1;
+//    }
+
     // Indicates what should be paused. Depending on the scope value, the action
     // will pause the entire workflow or a specific activity (additional entities
     // may be supported in the future).
-    temporal.api.enums.v1.WorkflowRuleActionScope scope = 1;
+    oneof scope  {
+        ActivityPause activity = 2;
+        //WorkflowPause workflow = 3
+    }
+
   }
 
 
@@ -60,7 +71,7 @@ message WorkflowRuleSpec {
     // Activity predicate is a SQL-like string filter parameter.
     // It is used to match against workflow data.
     // The following activity attributes are supported as part of the predicate:
-    // - ActivityType: The type of the activity.
+    // - ActivityType: An Activity Type is the mapping of a name to an Activity Definition..
     // - ActivityId: The ID of the activity.
     // - ActivityAttempt: The number attempts of the activity.
     // - BackoffInterval: The current amount of time between scheduled attempts of the activity.

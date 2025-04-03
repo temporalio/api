@@ -7760,6 +7760,8 @@ components:
             - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
+            - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
+            - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
           type: string
           format: enum
         version:
@@ -7902,6 +7904,10 @@ components:
           $ref: '#/components/schemas/NexusOperationCancelRequestedEventAttributes'
         workflowExecutionOptionsUpdatedEventAttributes:
           $ref: '#/components/schemas/WorkflowExecutionOptionsUpdatedEventAttributes'
+        nexusOperationCancelRequestCompletedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCancelRequestCompletedEventAttributes'
+        nexusOperationCancelRequestFailedEventAttributes:
+          $ref: '#/components/schemas/NexusOperationCancelRequestFailedEventAttributes'
       description: |-
         History events are the method by which Temporal SDKs advance (or recreate) workflow state.
          See the `EventType` enum for more info about what each event is for.
@@ -8380,6 +8386,32 @@ components:
           type: string
           description: Retry behavior, defaults to the retry behavior of the error type as defined in the spec.
           format: enum
+    NexusOperationCancelRequestCompletedEventAttributes:
+      type: object
+      properties:
+        requestedEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_CANCEL_REQUESTED` event.
+        workflowTaskCompletedEventId:
+          type: string
+          description: |-
+            The `WORKFLOW_TASK_COMPLETED` event that the corresponding RequestCancelNexusOperation command was reported
+             with.
+    NexusOperationCancelRequestFailedEventAttributes:
+      type: object
+      properties:
+        requestedEventId:
+          type: string
+          description: The ID of the `NEXUS_OPERATION_CANCEL_REQUESTED` event.
+        workflowTaskCompletedEventId:
+          type: string
+          description: |-
+            The `WORKFLOW_TASK_COMPLETED` event that the corresponding RequestCancelNexusOperation command was reported
+             with.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: Failure details. A NexusOperationFailureInfo wrapping a CanceledFailureInfo.
     NexusOperationCancelRequestedEventAttributes:
       type: object
       properties:
@@ -11967,6 +11999,8 @@ components:
             - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
+            - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
+            - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
           type: string
           format: enum
     WorkflowExecution:

@@ -2908,6 +2908,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/nexus/services/{namespace}:
+    get:
+      tags:
+        - OperatorService
+      operationId: GetNexusServices
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetNexusServicesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/nexus/services/{namespace}/publish:
+    post:
+      tags:
+        - OperatorService
+      operationId: PublishNexusServices
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishNexusServicesRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishNexusServicesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/system-info:
     get:
       tags:
@@ -3261,6 +3315,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UpdateNexusEndpointResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /cluster/nexus/services/{namespace}:
+    get:
+      tags:
+        - OperatorService
+      operationId: GetNexusServices
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetNexusServicesResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /cluster/nexus/services/{namespace}/publish:
+    post:
+      tags:
+        - OperatorService
+      operationId: PublishNexusServices
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishNexusServicesRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishNexusServicesResponse'
         default:
           description: Default error response
           content:
@@ -7563,6 +7671,13 @@ components:
       properties:
         endpoint:
           $ref: '#/components/schemas/Endpoint'
+    GetNexusServicesResponse:
+      type: object
+      properties:
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/NexusServiceSpec'
     GetSystemInfoResponse:
       type: object
       properties:
@@ -8624,6 +8739,17 @@ components:
              This is stored on the event and used internally by the server in case the endpoint is renamed from the time the
              event was originally scheduled.
       description: Event marking that an operation was scheduled by a workflow via the ScheduleNexusOperation command.
+    NexusOperationSpec:
+      type: object
+      properties:
+        name:
+          type: string
+        inputSchema:
+          type: string
+          format: bytes
+        outputSchema:
+          type: string
+          format: bytes
     NexusOperationStartedEventAttributes:
       type: object
       properties:
@@ -8664,6 +8790,15 @@ components:
           type: string
           description: The request ID allocated at schedule time.
       description: Nexus operation timed out.
+    NexusServiceSpec:
+      type: object
+      properties:
+        name:
+          type: string
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/NexusOperationSpec'
     OnConflictOptions:
       type: object
       properties:
@@ -9210,6 +9345,18 @@ components:
          The overall semantics of Priority are:
          1. First, consider "priority_key": lower number goes first.
          (more will be added here later)
+    PublishNexusServicesRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/NexusServiceSpec'
+    PublishNexusServicesResponse:
+      type: object
+      properties: {}
     QueryRejected:
       type: object
       properties:

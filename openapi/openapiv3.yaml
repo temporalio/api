@@ -8403,6 +8403,9 @@ components:
           description: |-
             The `WORKFLOW_TASK_COMPLETED` event that the corresponding RequestCancelNexusOperation command was reported
              with.
+        scheduledEventId:
+          type: string
+          description: The id of the `NEXUS_OPERATION_SCHEDULED` event this cancel request corresponds to.
     NexusOperationCancelRequestFailedEventAttributes:
       type: object
       properties:
@@ -8418,6 +8421,9 @@ components:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: Failure details. A NexusOperationFailureInfo wrapping a CanceledFailureInfo.
+        scheduledEventId:
+          type: string
+          description: The id of the `NEXUS_OPERATION_SCHEDULED` event this cancel request corresponds to.
     NexusOperationCancelRequestedEventAttributes:
       type: object
       properties:
@@ -8698,6 +8704,15 @@ components:
     PauseActivityResponse:
       type: object
       properties: {}
+    PauseInfo_Manual:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the actor that paused the activity.
+        reason:
+          type: string
+          description: Reason for pausing the activity.
     Payload:
       description: |-
         Represents some binary (byte array) data (ex: activity input parameters or workflow result) with
@@ -8800,6 +8815,22 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata
+        pauseInfo:
+          $ref: '#/components/schemas/PendingActivityInfo_PauseInfo'
+    PendingActivityInfo_PauseInfo:
+      type: object
+      properties:
+        pauseTime:
+          type: string
+          description: The time when the activity was paused.
+          format: date-time
+        manual:
+          allOf:
+            - $ref: '#/components/schemas/PauseInfo_Manual'
+          description: activity was paused by the manual intervention
+        ruleId:
+          type: string
+          description: Id of the rule that paused the activity.
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -11308,6 +11339,9 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowRuleSpec'
           description: 'Note: Rule ID and expiration date are not used in the trigger request.'
+        identity:
+          type: string
+          description: The identity of the client who initiated this request
     TriggerWorkflowRuleResponse:
       type: object
       properties:
@@ -12492,21 +12526,30 @@ components:
           description: |-
             Contains information about the root workflow execution.
              The root workflow execution is defined as follows:
-             1. A workflow without parent workflow is its own root workflow.
-             2. A workflow that has a parent workflow has the same root workflow as its parent workflow.
+               1. A workflow without parent workflow is its own root workflow.
+               2. A workflow that has a parent workflow has the same root workflow as its parent workflow.
+             When the workflow is its own root workflow, then root_workflow_execution is nil.
              Note: workflows continued as new or reseted may or may not have parents, check examples below.
 
              Examples:
                Scenario 1: Workflow W1 starts child workflow W2, and W2 starts child workflow W3.
                  - The root workflow of all three workflows is W1.
+                 - W1 has root_workflow_execution set to nil.
+                 - W2 and W3 have root_workflow_execution set to W1.
                Scenario 2: Workflow W1 starts child workflow W2, and W2 continued as new W3.
                  - The root workflow of all three workflows is W1.
+                 - W1 has root_workflow_execution set to nil.
+                 - W2 and W3 have root_workflow_execution set to W1.
                Scenario 3: Workflow W1 continued as new W2.
                  - The root workflow of W1 is W1 and the root workflow of W2 is W2.
+                 - W1 and W2 have root_workflow_execution set to nil.
                Scenario 4: Workflow W1 starts child workflow W2, and W2 is reseted, creating W3
                  - The root workflow of all three workflows is W1.
+                 - W1 has root_workflow_execution set to nil.
+                 - W2 and W3 have root_workflow_execution set to W1.
                Scenario 5: Workflow W1 is reseted, creating W2.
                  - The root workflow of W1 is W1 and the root workflow of W2 is W2.
+                 - W1 and W2 have root_workflow_execution set to nil.
         inheritedBuildId:
           type: string
           description: |-

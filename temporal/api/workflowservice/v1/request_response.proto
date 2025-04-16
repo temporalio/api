@@ -1083,6 +1083,19 @@ message DescribeTaskQueueResponse {
     temporal.api.taskqueue.v1.TaskQueueVersioningInfo versioning_info = 4;
 }
 
+message GetTaskQueueStatsRequest {
+    string namespace = 1;
+
+    // Provide a list of task queues to request stats from. There is a maximum limit of
+    // 100 task queue × task queue type per request.
+    repeated temporal.api.taskqueue.v1.TaskQueueSelector task_queues = 2;
+}
+
+message GetTaskQueueStatsResponse {
+    // An unsorted list of stats for each requested task queue.
+    repeated temporal.api.taskqueue.v1.TaskQueueStatDetails task_queue_stats = 1;
+}
+
 message GetClusterInfoRequest {
 }
 
@@ -2203,6 +2216,29 @@ message GetDeploymentReachabilityResponse {
     // Reachability level might come from server cache. This timestamp specifies when the value
     // was actually calculated.
     google.protobuf.Timestamp last_update_time = 3;
+}
+
+message GetWorkerDeploymentStatsRequest {
+    string namespace = 1;
+
+    // Name of the deployment to return stats for.
+    //
+    // (-- api-linter: core::0122::name-suffix=disabled
+    string deployment_name = 2;
+
+    // Optional. Deployment version to return stats for.
+    // If empty, current version will be queried.
+    //
+    // (-- api-linter: core::0122::name-suffix=disabled
+    string deployment_version = 3;
+}
+
+message GetWorkerDeploymentStatsResponse {
+    // Collection of stats for all task queues in this deployment version.
+    repeated temporal.api.taskqueue.v1.TaskQueueStatDetails per_queue_stats = 1;
+
+    // Aggregated backlog count across all task queues in this deployment version.
+    int64 approximate_total_backlog_count = 2;
 }
 
 message CreateWorkflowRuleRequest {

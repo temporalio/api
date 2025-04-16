@@ -1300,6 +1300,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/task-queues/get-stats:
+    post:
+      tags:
+        - WorkflowService
+      description: GetTaskQueueStats returns stats for one or multiple task queues.
+      operationId: GetTaskQueueStats
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTaskQueueStatsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/worker-build-id-compatibility:
     get:
       tags:
@@ -1836,6 +1861,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SetWorkerDeploymentRampingVersionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/{deploymentVersion}/stats:
+    get:
+      tags:
+        - WorkflowService
+      description: GetWorkerDeploymentStats returns the stats for all task queues in a deployment version.
+      operationId: GetWorkerDeploymentStats
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          description: |-
+            Name of the deployment to return stats for.
+
+             (-- api-linter: core::0122::name-suffix=disabled
+          required: true
+          schema:
+            type: string
+        - name: deploymentVersion
+          in: path
+          description: |-
+            Optional. Deployment version to return stats for.
+             If empty, current version will be queried.
+
+             (-- api-linter: core::0122::name-suffix=disabled
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkerDeploymentStatsResponse'
         default:
           description: Default error response
           content:
@@ -4420,6 +4489,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/task-queues/get-stats:
+    post:
+      tags:
+        - WorkflowService
+      description: GetTaskQueueStats returns stats for one or multiple task queues.
+      operationId: GetTaskQueueStats
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTaskQueueStatsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/task-queues/{taskQueue}/worker-build-id-compatibility:
     get:
       tags:
@@ -4923,6 +5017,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SetWorkerDeploymentRampingVersionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/worker-deployments/{deploymentName}/{deploymentVersion}/stats:
+    get:
+      tags:
+        - WorkflowService
+      description: GetWorkerDeploymentStats returns the stats for all task queues in a deployment version.
+      operationId: GetWorkerDeploymentStats
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          description: |-
+            Name of the deployment to return stats for.
+
+             (-- api-linter: core::0122::name-suffix=disabled
+          required: true
+          schema:
+            type: string
+        - name: deploymentVersion
+          in: path
+          description: |-
+            Optional. Deployment version to return stats for.
+             If empty, current version will be queried.
+
+             (-- api-linter: core::0122::name-suffix=disabled
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkerDeploymentStatsResponse'
         default:
           description: Default error response
           content:
@@ -7594,6 +7732,14 @@ components:
             True if the server supports Nexus operations.
              This flag is dependent both on server version and for Nexus to be enabled via server configuration.
       description: System capability details.
+    GetTaskQueueStatsResponse:
+      type: object
+      properties:
+        taskQueueStats:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskQueueStatDetails'
+          description: An unsorted list of stats for each requested task queue.
     GetWorkerBuildIdCompatibilityResponse:
       type: object
       properties:
@@ -7608,6 +7754,17 @@ components:
 
              There may be fewer sets returned than exist, if the request chose to limit this response.
       description: '[cleanup-wv-pre-release]'
+    GetWorkerDeploymentStatsResponse:
+      type: object
+      properties:
+        perQueueStats:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskQueueStatDetails'
+          description: Collection of stats for all task queues in this deployment version.
+        approximateTotalBacklogCount:
+          type: string
+          description: Aggregated backlog count across all task queues in this deployment version.
     GetWorkerTaskReachabilityResponse:
       type: object
       properties:
@@ -11054,6 +11211,21 @@ components:
              See the TaskReachability docstring for information about each enum variant.
              If reachability is empty, this worker is considered unreachable in this task queue.
       description: Reachability of tasks for a worker on a single task queue.
+    TaskQueueStatDetails:
+      type: object
+      properties:
+        taskQueue:
+          $ref: '#/components/schemas/TaskQueue'
+        taskQueueType:
+          enum:
+            - TASK_QUEUE_TYPE_UNSPECIFIED
+            - TASK_QUEUE_TYPE_WORKFLOW
+            - TASK_QUEUE_TYPE_ACTIVITY
+            - TASK_QUEUE_TYPE_NEXUS
+          type: string
+          format: enum
+        taskQueueStats:
+          $ref: '#/components/schemas/TaskQueueStats'
     TaskQueueStats:
       type: object
       properties:

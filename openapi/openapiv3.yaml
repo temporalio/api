@@ -1771,6 +1771,10 @@ paths:
       description: |-
         Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping
          Version if it is the Version being set as Current.
+         This API is eventually consistent. When it returns success, we guarantee that the new
+         RoutingConfig has been committed durably to the Worker Deployment Manager. The relevant
+         task queues will receive the new configuration in the background. To check whether all
+         task queue partitions have the latest config, see `RoutingConfig.fully_propagated`.
          Experimental. This API might significantly change or be removed in a future release.
       operationId: SetWorkerDeploymentCurrentVersion
       parameters:
@@ -1810,6 +1814,10 @@ paths:
       description: |-
         Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for
          gradual ramp to unversioned workers too.
+         This API is eventually consistent. When it returns success, we guarantee that the new
+         RoutingConfig has been committed durably to the Worker Deployment Manager. The relevant
+         task queues will receive the new configuration in the background. To check whether all
+         task queue partitions have the latest config, see `RoutingConfig.fully_propagated`.
          Experimental. This API might significantly change or be removed in a future release.
       operationId: SetWorkerDeploymentRampingVersion
       parameters:
@@ -4858,6 +4866,10 @@ paths:
       description: |-
         Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping
          Version if it is the Version being set as Current.
+         This API is eventually consistent. When it returns success, we guarantee that the new
+         RoutingConfig has been committed durably to the Worker Deployment Manager. The relevant
+         task queues will receive the new configuration in the background. To check whether all
+         task queue partitions have the latest config, see `RoutingConfig.fully_propagated`.
          Experimental. This API might significantly change or be removed in a future release.
       operationId: SetWorkerDeploymentCurrentVersion
       parameters:
@@ -4897,6 +4909,10 @@ paths:
       description: |-
         Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for
          gradual ramp to unversioned workers too.
+         This API is eventually consistent. When it returns success, we guarantee that the new
+         RoutingConfig has been committed durably to the Worker Deployment Manager. The relevant
+         task queues will receive the new configuration in the background. To check whether all
+         task queue partitions have the latest config, see `RoutingConfig.fully_propagated`.
          Experimental. This API might significantly change or be removed in a future release.
       operationId: SetWorkerDeploymentRampingVersion
       parameters:
@@ -9950,11 +9966,6 @@ components:
             Last time ramping version percentage was changed.
              If ramping version is changed, this is also updated, even if the percentage stays the same.
           format: date-time
-        fullyPropagated:
-          type: boolean
-          description: |-
-            True if the most recent change to this routing config has been fully propagated to all
-             necessary task queues.
     Schedule:
       type: object
       properties:
@@ -11911,6 +11922,16 @@ components:
           format: date-time
         routingConfig:
           $ref: '#/components/schemas/RoutingConfig'
+        routingConfigPropagationState:
+          enum:
+            - TASK_QUEUE_PROPAGATION_UNSPECIFIED
+            - TASK_QUEUE_PROPAGATION_IN_PROGRESS
+            - TASK_QUEUE_PROPAGATION_COMPLETED
+          type: string
+          description: |-
+            Indicates whether the routing_config has been fully propagated to all
+             relevant task queues and partitions.
+          format: enum
         lastModifierIdentity:
           type: string
           description: |-

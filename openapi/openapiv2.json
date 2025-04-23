@@ -1992,7 +1992,7 @@
     },
     "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-current-version": {
       "post": {
-        "summary": "Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping\nVersion if it is the Version being set as Current.\nExperimental. This API might significantly change or be removed in a future release.",
+        "summary": "Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping\nVersion if it is the Version being set as Current.\nThis API is eventually consistent. When it returns success, we guarantee that the new\nRoutingConfig has been committed durably to the Worker Deployment Manager. The relevant\ntask queues will receive the new configuration in the background. To check whether all\ntask queue partitions have the latest config, see `RoutingConfig.fully_propagated`.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "SetWorkerDeploymentCurrentVersion2",
         "responses": {
           "200": {
@@ -2037,7 +2037,7 @@
     },
     "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-ramping-version": {
       "post": {
-        "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nExperimental. This API might significantly change or be removed in a future release.",
+        "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nThis API is eventually consistent. When it returns success, we guarantee that the new\nRoutingConfig has been committed durably to the Worker Deployment Manager. The relevant\ntask queues will receive the new configuration in the background. To check whether all\ntask queue partitions have the latest config, see `RoutingConfig.fully_propagated`.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "SetWorkerDeploymentRampingVersion2",
         "responses": {
           "200": {
@@ -5466,7 +5466,7 @@
     },
     "/namespaces/{namespace}/worker-deployments/{deploymentName}/set-current-version": {
       "post": {
-        "summary": "Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping\nVersion if it is the Version being set as Current.\nExperimental. This API might significantly change or be removed in a future release.",
+        "summary": "Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping\nVersion if it is the Version being set as Current.\nThis API is eventually consistent. When it returns success, we guarantee that the new\nRoutingConfig has been committed durably to the Worker Deployment Manager. The relevant\ntask queues will receive the new configuration in the background. To check whether all\ntask queue partitions have the latest config, see `RoutingConfig.fully_propagated`.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "SetWorkerDeploymentCurrentVersion",
         "responses": {
           "200": {
@@ -5511,7 +5511,7 @@
     },
     "/namespaces/{namespace}/worker-deployments/{deploymentName}/set-ramping-version": {
       "post": {
-        "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nExperimental. This API might significantly change or be removed in a future release.",
+        "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nThis API is eventually consistent. When it returns success, we guarantee that the new\nRoutingConfig has been committed durably to the Worker Deployment Manager. The relevant\ntask queues will receive the new configuration in the background. To check whether all\ntask queue partitions have the latest config, see `RoutingConfig.fully_propagated`.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "SetWorkerDeploymentRampingVersion",
         "responses": {
           "200": {
@@ -12725,10 +12725,6 @@
           "type": "string",
           "format": "date-time",
           "description": "Last time ramping version percentage was changed.\nIf ramping version is changed, this is also updated, even if the percentage stays the same."
-        },
-        "fullyPropagated": {
-          "type": "boolean",
-          "description": "True if the most recent change to this routing config has been fully propagated to all\nnecessary task queues."
         }
       }
     },
@@ -13922,6 +13918,16 @@
         }
       }
     },
+    "v1TaskQueuePropagation": {
+      "type": "string",
+      "enum": [
+        "TASK_QUEUE_PROPAGATION_UNSPECIFIED",
+        "TASK_QUEUE_PROPAGATION_IN_PROGRESS",
+        "TASK_QUEUE_PROPAGATION_COMPLETED"
+      ],
+      "default": "TASK_QUEUE_PROPAGATION_UNSPECIFIED",
+      "description": "Indicates whether a change to the Task Queue User Data has been\npropagated to all relevant Task Queues and their partitions.\n\n - TASK_QUEUE_PROPAGATION_UNSPECIFIED: Task Queue Propagation unspecified.\n - TASK_QUEUE_PROPAGATION_IN_PROGRESS: Task Queue Propagation is currently in progress.\n - TASK_QUEUE_PROPAGATION_COMPLETED: Task Queue Propagation has completed successfully."
+    },
     "v1TaskQueueReachability": {
       "type": "object",
       "properties": {
@@ -14594,6 +14600,10 @@
         },
         "routingConfig": {
           "$ref": "#/definitions/v1RoutingConfig"
+        },
+        "routingConfigPropagationState": {
+          "$ref": "#/definitions/v1TaskQueuePropagation",
+          "description": "Indicates whether the routing_config has been fully propagated to all\nrelevant task queues and partitions."
         },
         "lastModifierIdentity": {
           "type": "string",

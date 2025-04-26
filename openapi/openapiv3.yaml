@@ -6914,6 +6914,12 @@ components:
         requestId:
           type: string
           description: Used to de-dupe requests. Typically should be UUID.
+        identity:
+          type: string
+          description: Identity of the actor who created the rule. Will be stored with the rule.
+        description:
+          type: string
+          description: Rule description.Will be stored with the rule.
     CreateWorkflowRuleResponse:
       type: object
       properties:
@@ -8715,6 +8721,18 @@ components:
         reason:
           type: string
           description: Reason for pausing the activity.
+    PauseInfo_Rule:
+      type: object
+      properties:
+        ruleId:
+          type: string
+          description: The rule that paused the activity.
+        identity:
+          type: string
+          description: The identity of the actor that created the rule.
+        reason:
+          type: string
+          description: Reason why rule was created. Populated from rule description.
     Payload:
       description: |-
         Represents some binary (byte array) data (ex: activity input parameters or workflow result) with
@@ -8830,9 +8848,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/PauseInfo_Manual'
           description: activity was paused by the manual intervention
-        ruleId:
-          type: string
-          description: Id of the rule that paused the activity.
+        rule:
+          allOf:
+            - $ref: '#/components/schemas/PauseInfo_Rule'
+          description: activity was paused by the rule
     PendingChildExecutionInfo:
       type: object
       properties:
@@ -13001,6 +13020,17 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowRuleSpec'
           description: Rule specification
+        createdByIdentity:
+          type: string
+          description: |-
+            Identity of the actor that created the rule
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: It is better reflect the intent this way, we will also have updated_by. --)
+             (-- api-linter: core::0142::time-field-names=disabled
+                 aip.dev/not-precedent: Same as above. All other options sounds clumsy --)
+        description:
+          type: string
+          description: Rule description.
       description: WorkflowRule describes a rule that can be applied to any workflow in this namespace.
     WorkflowRuleAction:
       type: object

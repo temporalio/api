@@ -8953,6 +8953,18 @@ components:
         attempt:
           type: integer
           format: int32
+    PinnedOverrideBehavior:
+      type: object
+      properties:
+        type:
+          enum:
+            - PINNED_BEHAVIOR_OVERRIDE_UNSPECIFIED
+            - PINNED_BEHAVIOR_OVERRIDE_PIN_RUN
+            - PINNED_BEHAVIOR_OVERRIDE_PIN_EXECUTION
+          type: string
+          format: enum
+        version:
+          type: string
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -11845,13 +11857,19 @@ components:
     VersioningOverride:
       type: object
       properties:
+        pinned:
+          $ref: '#/components/schemas/PinnedOverrideBehavior'
+        autoUpgrade:
+          type: boolean
         behavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
           type: string
-          description: Required.
+          description: |-
+            Required.
+             Deprecated. Use `type`.
           format: enum
         deployment:
           allOf:
@@ -11859,13 +11877,14 @@ components:
           description: |-
             Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
              Identifies the worker deployment to pin the workflow to.
-             Deprecated. Use `pinned_version`.
+             Deprecated. Use `type.pinned.version`.
         pinnedVersion:
           type: string
           description: |-
             Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
              Identifies the worker deployment version to pin the workflow to, in the format
              "<deployment_name>.<build_id>".
+             Deprecated. Use `type.pinned.version`.
       description: |-
         Used to override the versioning behavior (and pinned deployment version, if applicable) of a
          specific workflow execution. If set, takes precedence over the worker-sent values. See

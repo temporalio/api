@@ -11832,6 +11832,27 @@
       ],
       "default": "PENDING_WORKFLOW_TASK_STATE_UNSPECIFIED"
     },
+    "v1PinnedBehaviorOverride": {
+      "type": "string",
+      "enum": [
+        "PINNED_BEHAVIOR_OVERRIDE_UNSPECIFIED",
+        "PINNED_BEHAVIOR_OVERRIDE_PIN_RUN",
+        "PINNED_BEHAVIOR_OVERRIDE_PIN_EXECUTION"
+      ],
+      "default": "PINNED_BEHAVIOR_OVERRIDE_UNSPECIFIED",
+      "title": "- PINNED_BEHAVIOR_OVERRIDE_UNSPECIFIED: Keep original pinned behavior which might be pin run or execution\n - PINNED_BEHAVIOR_OVERRIDE_PIN_RUN: Pin run to specific version\n - PINNED_BEHAVIOR_OVERRIDE_PIN_EXECUTION: Pin execution to specific version"
+    },
+    "v1PinnedOverrideBehavior": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1PinnedBehaviorOverride"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
     "v1PollActivityTaskQueueResponse": {
       "type": "object",
       "properties": {
@@ -14544,17 +14565,23 @@
     "v1VersioningOverride": {
       "type": "object",
       "properties": {
+        "pinned": {
+          "$ref": "#/definitions/v1PinnedOverrideBehavior"
+        },
+        "autoUpgrade": {
+          "type": "boolean"
+        },
         "behavior": {
           "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "Required."
+          "description": "Required.\nDeprecated. Use `type`."
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.\nIdentifies the worker deployment to pin the workflow to.\nDeprecated. Use `pinned_version`."
+          "description": "Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.\nIdentifies the worker deployment to pin the workflow to.\nDeprecated. Use `type.pinned.version`."
         },
         "pinnedVersion": {
           "type": "string",
-          "description": "Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.\nIdentifies the worker deployment version to pin the workflow to, in the format\n\"<deployment_name>.<build_id>\"."
+          "description": "Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.\nIdentifies the worker deployment version to pin the workflow to, in the format\n\"<deployment_name>.<build_id>\".\nDeprecated. Use `type.pinned.version`."
         }
       },
       "description": "Used to override the versioning behavior (and pinned deployment version, if applicable) of a\nspecific workflow execution. If set, takes precedence over the worker-sent values. See\n`WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call\n`UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`\nto indicate that it should be mutated."

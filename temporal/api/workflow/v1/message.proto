@@ -531,18 +531,29 @@ message WorkflowExecutionOptions {
 // `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
 // to indicate that it should be mutated.
 message VersioningOverride {
+    oneof type {
+        PinnedOverrideBehavior pinned = 3;
+        bool auto_upgrade = 4;
+    }
     // Required.
+    // Deprecated. Use `type`.
     temporal.api.enums.v1.VersioningBehavior behavior = 1;
 
     // Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
     // Identifies the worker deployment to pin the workflow to.
-    // Deprecated. Use `pinned_version`.
+    // Deprecated. Use `type.pinned.version`.
     temporal.api.deployment.v1.Deployment deployment = 2 [deprecated = true];
 
     // Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
     // Identifies the worker deployment version to pin the workflow to, in the format
     // "<deployment_name>.<build_id>".
+    // Deprecated. Use `type.pinned.version`.
     string pinned_version = 9;
+}
+
+message PinnedOverrideBehavior {
+    temporal.api.enums.v1.PinnedBehaviorOverride type = 1;
+    string version = 2;
 }
 
 // When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and

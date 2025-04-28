@@ -221,6 +221,8 @@ message StartWorkflowExecutionResponse {
     string run_id = 1;
     // If true, a new workflow was started.
     bool started = 3;
+    // If true, the workflow is running.
+    bool running = 5;
     // When `request_eager_execution` is set on the `StartWorkflowExecutionRequest`, the server - if supported - will
     // return the first workflow task to be eagerly executed.
     // The caller is expected to have a worker available to process the task.
@@ -1810,6 +1812,9 @@ message ExecuteMultiOperationResponse {
 
     message Response {
         oneof response {
+            // Note that for the combination [StartWorkflow, UpdateWorkflow], aka Update-with-Start, when the Update's
+            // outcome for the requested Update ID is available but the workflow has already been closed, the
+            // StartWorkflowExecutionResponse will set `running` to `false`.
             StartWorkflowExecutionResponse start_workflow = 1;
             UpdateWorkflowExecutionResponse update_workflow = 2;
         }

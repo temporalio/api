@@ -171,15 +171,14 @@ message WorkflowExecutionVersioningInfo {
     // Note that `deployment` is overridden by `versioning_override` if the latter is present.
     // Deprecated. Use `version`.
     temporal.api.deployment.v1.Deployment deployment = 2 [deprecated = true];
-    // The Worker Deployment Version that completed the last workflow task of this workflow
-    // execution, in the form "<deployment_name>.<build_id>".
+    // The Worker Deployment Version that completed the last workflow task of this workflow execution.
     // Must be present if and only if `behavior` is set. An absent value means no workflow task is
     // completed, or the workflow is unversioned.
     // For child workflows of Pinned parents, this will be set to parent's Pinned Version when the
     // the child starts so that child's first workflow task goes to the same Version as the parent.
     // Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
     // will override this value.
-    string version = 5;
+    temporal.api.deployment.v1.WorkerDeploymentVersion version = 5;
     // Present if user has set an execution-specific versioning override. This override takes
     // precedence over SDK-sent `behavior` (and `version` when override is PINNED). An
     // override can be set when starting a new execution, as well as afterwards by calling the
@@ -242,7 +241,7 @@ message DeploymentTransition {
 message DeploymentVersionTransition {
     // Required. The target Version of the transition. May be `__unversioned__` which means a
     // so-far-versioned workflow is transitioning to unversioned workers.
-    string version = 1;
+    temporal.api.deployment.v1.WorkerDeploymentVersion version = 1;
 
     // Later: safe transition info
 }
@@ -531,29 +530,43 @@ message WorkflowExecutionOptions {
 // `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
 // to indicate that it should be mutated.
 message VersioningOverride {
-    oneof type {
-        PinnedOverrideBehavior pinned = 3;
+    // Indicates whether to override the workflow to be AutoUpgrade or Pinned.
+    oneof override {
+        // Send the next workflow task to the Version specified in the override.
+        PinnedOverride pinned = 3;
+        // Send the next workflow task to the Current Deployment Version
+        // of its Task Queue when the next workflow task is dispatched.
         bool auto_upgrade = 4;
     }
     // Required.
-    // Deprecated. Use `type`.
+    // Deprecated. Use `override`.
     temporal.api.enums.v1.VersioningBehavior behavior = 1;
 
     // Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
     // Identifies the worker deployment to pin the workflow to.
-    // Deprecated. Use `type.pinned.version`.
+    // Deprecated. Use `override.pinned.version`.
     temporal.api.deployment.v1.Deployment deployment = 2 [deprecated = true];
 
     // Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
     // Identifies the worker deployment version to pin the workflow to, in the format
     // "<deployment_name>.<build_id>".
-    // Deprecated. Use `type.pinned.version`.
+    // Deprecated. Use `override.pinned.version`.
     string pinned_version = 9;
-}
 
-message PinnedOverrideBehavior {
-    temporal.api.enums.v1.PinnedBehaviorOverride type = 1;
-    string version = 2;
+    message PinnedOverride {
+        PinnedOverrideBehavior type = 1;
+        temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+    }
+
+    enum PinnedOverrideBehavior {
+        // If original behavior is Pinned or PinnedUntilContinueAsNew, keep that behavior.
+        // If original behavior is AutoUpgrade, override behavior to Pinned.
+        PINNED_BEHAVIOR_OVERRIDE_UNSPECIFIED = 0;
+        // Override workflow behavior to be Pinned.
+        PINNED_BEHAVIOR_OVERRIDE_PINNED = 1;
+        // Override workflow behavior to be PinnedUntilContinueAsNew.
+        PINNED_BEHAVIOR_OVERRIDE_PINNED_UNTIL_CONTINUE_AS_NEW = 2;
+    }
 }
 
 // When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and

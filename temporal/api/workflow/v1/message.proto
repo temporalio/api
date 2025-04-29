@@ -171,6 +171,8 @@ message WorkflowExecutionVersioningInfo {
     // Note that `deployment` is overridden by `versioning_override` if the latter is present.
     // Deprecated. Use `version`.
     temporal.api.deployment.v1.Deployment deployment = 2 [deprecated = true];
+    // Deprecated. Use `deployment_version`.
+    temporal.api.deployment.v1.WorkerDeploymentVersion version = 5 [deprecated = true];
     // The Worker Deployment Version that completed the last workflow task of this workflow execution.
     // Must be present if and only if `behavior` is set. An absent value means no workflow task is
     // completed, or the workflow is unversioned.
@@ -178,7 +180,7 @@ message WorkflowExecutionVersioningInfo {
     // the child starts so that child's first workflow task goes to the same Version as the parent.
     // Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
     // will override this value.
-    temporal.api.deployment.v1.WorkerDeploymentVersion version = 5;
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 7;
     // Present if user has set an execution-specific versioning override. This override takes
     // precedence over SDK-sent `behavior` (and `version` when override is PINNED). An
     // override can be set when starting a new execution, as well as afterwards by calling the
@@ -239,9 +241,15 @@ message DeploymentTransition {
 // deployment version to another.
 // Experimental. Might change in the future.
 message DeploymentVersionTransition {
-    // Required. The target Version of the transition. May be `__unversioned__` which means a
+    // Deprecated. Use `target`.
+    string version = 1 [deprecated = true];
+
+    // Required. The target Version of the transition. If `unversioned`, a
     // so-far-versioned workflow is transitioning to unversioned workers.
-    temporal.api.deployment.v1.WorkerDeploymentVersion version = 1;
+    oneof target {
+        temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+        bool unversioned = 3;
+    }
 
     // Later: safe transition info
 }
@@ -551,7 +559,7 @@ message VersioningOverride {
     }
     // Required.
     // Deprecated. Use `override`.
-    temporal.api.enums.v1.VersioningBehavior behavior = 1;
+    temporal.api.enums.v1.VersioningBehavior behavior = 1 [deprecated = true];
 
     // Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
     // Identifies the worker deployment to pin the workflow to.
@@ -562,7 +570,7 @@ message VersioningOverride {
     // Identifies the worker deployment version to pin the workflow to, in the format
     // "<deployment_name>.<build_id>".
     // Deprecated. Use `override.pinned.version`.
-    string pinned_version = 9;
+    string pinned_version = 9 [deprecated = true];
 
     message PinnedOverride {
         PinnedOverrideBehavior type = 1;

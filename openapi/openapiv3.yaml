@@ -7380,16 +7380,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ExecuteMultiOperationResponse_Response'
+      description: |-
+        IMPORTANT: For [StartWorkflow, UpdateWorkflow] combination ("Update-with-Start") when both
+           1. the workflow update for the requested update ID has already completed, and
+           2. the workflow for the requested workflow ID has already been closed,
+         then you'll receive
+           - a successful update response containing the update's outcome, and
+           - a start response with a `status` field that reflects the workflow's current state.
     ExecuteMultiOperationResponse_Response:
       type: object
       properties:
         startWorkflow:
-          allOf:
-            - $ref: '#/components/schemas/StartWorkflowExecutionResponse'
-          description: |-
-            Note that for the combination [StartWorkflow, UpdateWorkflow], aka Update-with-Start, when the Update's
-             outcome for the requested Update ID is available but the workflow has already been closed, the
-             StartWorkflowExecutionResponse will set `running` to `false`.
+          $ref: '#/components/schemas/StartWorkflowExecutionResponse'
         updateWorkflow:
           $ref: '#/components/schemas/UpdateWorkflowExecutionResponse'
     ExternalWorkflowExecutionCancelRequestedEventAttributes:
@@ -11016,9 +11018,21 @@ components:
         started:
           type: boolean
           description: If true, a new workflow was started.
-        running:
-          type: boolean
-          description: If true, the workflow is running.
+        status:
+          enum:
+            - WORKFLOW_EXECUTION_STATUS_UNSPECIFIED
+            - WORKFLOW_EXECUTION_STATUS_RUNNING
+            - WORKFLOW_EXECUTION_STATUS_COMPLETED
+            - WORKFLOW_EXECUTION_STATUS_FAILED
+            - WORKFLOW_EXECUTION_STATUS_CANCELED
+            - WORKFLOW_EXECUTION_STATUS_TERMINATED
+            - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
+            - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+          type: string
+          description: |-
+            Status of the workflow. Note that it will be WORKFLOW_EXECUTION_STATUS_RUNNING unless used within an
+             `ExecuteMultiOperation` (see more details there).
+          format: enum
         eagerWorkflowTask:
           allOf:
             - $ref: '#/components/schemas/PollWorkflowTaskQueueResponse'

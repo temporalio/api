@@ -9101,6 +9101,43 @@ components:
       description: |-
         Attached to task responses to give hints to the SDK about how it may adjust its number of
          pollers.
+    PostResetOperation:
+      type: object
+      properties:
+        signalOperation:
+          $ref: '#/components/schemas/PostResetSignalOperation'
+        updateWorkflowOptionsOperation:
+          $ref: '#/components/schemas/PostResetUpdateWorkflowOptionsOperation'
+      description: Represents an operation to be performed after a workflow reset.
+    PostResetSignalOperation:
+      type: object
+      properties:
+        signalName:
+          type: string
+          description: The workflow author-defined name of the signal to send to the workflow.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: Serialized value(s) to provide with the signal.
+        header:
+          allOf:
+            - $ref: '#/components/schemas/Header'
+          description: Headers that are passed with the signal to the processing workflow.
+      description: Represents sending a signal after a workflow reset.
+    PostResetUpdateWorkflowOptionsOperation:
+      type: object
+      properties:
+        workflowExecutionOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+        updateMask:
+          type: string
+          description: |-
+            Controls which fields from `workflow_execution_options` will be applied.
+             To unset a field, set it to null and use the update mask to indicate that it should be mutated.
+          format: field-mask
+      description: Represents updating workflow execution options after a workflow reset.
     Priority:
       type: object
       properties:
@@ -9668,6 +9705,13 @@ components:
             type: string
             format: enum
           description: Event types not to be reapplied
+        postResetOperations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostResetOperation'
+          description: |-
+            Operations to perform after the workflow has been reset. These operations will be applied
+             to the *new* run of the workflow execution in the order they are provided.
     ResetWorkflowExecutionResponse:
       type: object
       properties:

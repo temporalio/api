@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package temporal.api.reset.v1;
+
+import "temporal/api/common/v1/message.proto";
+import "temporal/api/workflow/v1/message.proto";
+import "google/protobuf/field_mask.proto";
+
+option go_package = "go.temporal.io/api/reset/v1;reset";
+option java_package = "io.temporal.api.reset.v1";
+option java_multiple_files = true;
+option java_outer_classname = "PostResetOperationsProto";
+option ruby_package = "Temporalio::Api::Reset::V1";
+option csharp_namespace = "Temporalio.Api.Reset.V1";
+
+// PostResetOperation represents an operation to be performed on the new workflow execution after a workflow reset.
+message PostResetOperation {
+    oneof operation {
+        temporal.api.reset.v1.PostResetSignalOperation signal_operation = 1;
+        temporal.api.reset.v1.PostResetUpdateWorkflowOptionsOperation update_workflow_options_operation = 2;
+    }
+}
+
+// PostResetSignalOperation represents sending a signal after a workflow reset.
+message PostResetSignalOperation {
+    // The workflow author-defined name of the signal to send to the workflow.
+    string signal_name = 1;
+    // Serialized value(s) to provide with the signal.
+    temporal.api.common.v1.Payloads input = 2;
+    // Headers that are passed with the signal to the processing workflow.
+    temporal.api.common.v1.Header header = 3;
+}
+
+// PostResetUpdateWorkflowOptionsOperation represents updating workflow execution options after a workflow reset.
+message PostResetUpdateWorkflowOptionsOperation {
+    // Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+    temporal.api.workflow.v1.WorkflowExecutionOptions workflow_execution_options = 1;
+    // Controls which fields from `workflow_execution_options` will be applied.
+    // To unset a field, set it to null and use the update mask to indicate that it should be mutated.
+    google.protobuf.FieldMask update_mask = 2;
+}

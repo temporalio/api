@@ -1732,7 +1732,7 @@
         ]
       }
     },
-    "/api/v1/namespaces/{namespace}/worker-deployment-versions/{version}": {
+    "/api/v1/namespaces/{namespace}/worker-deployment-versions/{deploymentVersion.deploymentName}/{deploymentVersion.buildId}": {
       "get": {
         "summary": "Describes a worker deployment version.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "DescribeWorkerDeploymentVersion2",
@@ -1758,8 +1758,15 @@
             "type": "string"
           },
           {
-            "name": "version",
-            "description": "Deployment Version identifier in the form \"<deployment_name>.<build_id>\".",
+            "name": "deploymentVersion.deploymentName",
+            "description": "Identifies the Worker Deployment this Version is part of.\nMust be unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentVersion.buildId",
+            "description": "A unique identifier for this Version within the Deployment it is a part of.\nNot necessarily unique within the namespace.\nThe combination of `deployment_name` and `build_id` uniquely identifies\nthis Version within the namespace.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1794,8 +1801,15 @@
             "type": "string"
           },
           {
-            "name": "version",
-            "description": "Deployment Version identifier in the form \"<deployment_name>.<build_id>\".",
+            "name": "deploymentVersion.deploymentName",
+            "description": "Identifies the Worker Deployment this Version is part of.\nMust be unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentVersion.buildId",
+            "description": "A unique identifier for this Version within the Deployment it is a part of.\nNot necessarily unique within the namespace.\nThe combination of `deployment_name` and `build_id` uniquely identifies\nthis Version within the namespace.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1820,7 +1834,7 @@
         ]
       }
     },
-    "/api/v1/namespaces/{namespace}/worker-deployment-versions/{version}/update-metadata": {
+    "/api/v1/namespaces/{namespace}/worker-deployment-versions/{deploymentVersion.deploymentName}/{deploymentVersion.buildId}/update-metadata": {
       "post": {
         "summary": "Updates the user-given metadata attached to a Worker Deployment Version.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "UpdateWorkerDeploymentVersionMetadata2",
@@ -1846,8 +1860,15 @@
             "type": "string"
           },
           {
-            "name": "version",
-            "description": "Deployment Version identifier in the form \"<deployment_name>.<build_id>\".",
+            "name": "deploymentVersion.deploymentName",
+            "description": "Identifies the Worker Deployment this Version is part of.\nMust be unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentVersion.buildId",
+            "description": "A unique identifier for this Version within the Deployment it is a part of.\nNot necessarily unique within the namespace.\nThe combination of `deployment_name` and `build_id` uniquely identifies\nthis Version within the namespace.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1904,6 +1925,84 @@
             "required": false,
             "type": "string",
             "format": "byte"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/worker-deployments/set-current-version": {
+      "post": {
+        "summary": "Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping\nVersion if it is the Version being set as Current.\nExperimental. This API might significantly change or be removed in a future release.",
+        "operationId": "SetWorkerDeploymentCurrentVersion2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetWorkerDeploymentCurrentVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentCurrentVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/worker-deployments/set-ramping-version": {
+      "post": {
+        "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nExperimental. This API might significantly change or be removed in a future release.",
+        "operationId": "SetWorkerDeploymentRampingVersion2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetWorkerDeploymentRampingVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentRampingVersionBody"
+            }
           }
         ],
         "tags": [
@@ -1983,96 +2082,6 @@
             "in": "query",
             "required": false,
             "type": "string"
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-current-version": {
-      "post": {
-        "summary": "Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping\nVersion if it is the Version being set as Current.\nExperimental. This API might significantly change or be removed in a future release.",
-        "operationId": "SetWorkerDeploymentCurrentVersion2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SetWorkerDeploymentCurrentVersionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "deploymentName",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentCurrentVersionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-ramping-version": {
-      "post": {
-        "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nExperimental. This API might significantly change or be removed in a future release.",
-        "operationId": "SetWorkerDeploymentRampingVersion2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SetWorkerDeploymentRampingVersionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "deploymentName",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentRampingVersionBody"
-            }
           }
         ],
         "tags": [
@@ -5206,7 +5215,7 @@
         ]
       }
     },
-    "/namespaces/{namespace}/worker-deployment-versions/{version}": {
+    "/namespaces/{namespace}/worker-deployment-versions/{deploymentVersion.deploymentName}/{deploymentVersion.buildId}": {
       "get": {
         "summary": "Describes a worker deployment version.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "DescribeWorkerDeploymentVersion",
@@ -5232,8 +5241,15 @@
             "type": "string"
           },
           {
-            "name": "version",
-            "description": "Deployment Version identifier in the form \"<deployment_name>.<build_id>\".",
+            "name": "deploymentVersion.deploymentName",
+            "description": "Identifies the Worker Deployment this Version is part of.\nMust be unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentVersion.buildId",
+            "description": "A unique identifier for this Version within the Deployment it is a part of.\nNot necessarily unique within the namespace.\nThe combination of `deployment_name` and `build_id` uniquely identifies\nthis Version within the namespace.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -5268,8 +5284,15 @@
             "type": "string"
           },
           {
-            "name": "version",
-            "description": "Deployment Version identifier in the form \"<deployment_name>.<build_id>\".",
+            "name": "deploymentVersion.deploymentName",
+            "description": "Identifies the Worker Deployment this Version is part of.\nMust be unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentVersion.buildId",
+            "description": "A unique identifier for this Version within the Deployment it is a part of.\nNot necessarily unique within the namespace.\nThe combination of `deployment_name` and `build_id` uniquely identifies\nthis Version within the namespace.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -5294,7 +5317,7 @@
         ]
       }
     },
-    "/namespaces/{namespace}/worker-deployment-versions/{version}/update-metadata": {
+    "/namespaces/{namespace}/worker-deployment-versions/{deploymentVersion.deploymentName}/{deploymentVersion.buildId}/update-metadata": {
       "post": {
         "summary": "Updates the user-given metadata attached to a Worker Deployment Version.\nExperimental. This API might significantly change or be removed in a future release.",
         "operationId": "UpdateWorkerDeploymentVersionMetadata",
@@ -5320,8 +5343,15 @@
             "type": "string"
           },
           {
-            "name": "version",
-            "description": "Deployment Version identifier in the form \"<deployment_name>.<build_id>\".",
+            "name": "deploymentVersion.deploymentName",
+            "description": "Identifies the Worker Deployment this Version is part of.\nMust be unique within the namespace.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentVersion.buildId",
+            "description": "A unique identifier for this Version within the Deployment it is a part of.\nNot necessarily unique within the namespace.\nThe combination of `deployment_name` and `build_id` uniquely identifies\nthis Version within the namespace.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -5378,6 +5408,84 @@
             "required": false,
             "type": "string",
             "format": "byte"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/worker-deployments/set-current-version": {
+      "post": {
+        "summary": "Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping\nVersion if it is the Version being set as Current.\nExperimental. This API might significantly change or be removed in a future release.",
+        "operationId": "SetWorkerDeploymentCurrentVersion",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetWorkerDeploymentCurrentVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentCurrentVersionBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/worker-deployments/set-ramping-version": {
+      "post": {
+        "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nExperimental. This API might significantly change or be removed in a future release.",
+        "operationId": "SetWorkerDeploymentRampingVersion",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetWorkerDeploymentRampingVersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentRampingVersionBody"
+            }
           }
         ],
         "tags": [
@@ -5457,96 +5565,6 @@
             "in": "query",
             "required": false,
             "type": "string"
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/{namespace}/worker-deployments/{deploymentName}/set-current-version": {
-      "post": {
-        "summary": "Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping\nVersion if it is the Version being set as Current.\nExperimental. This API might significantly change or be removed in a future release.",
-        "operationId": "SetWorkerDeploymentCurrentVersion",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SetWorkerDeploymentCurrentVersionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "deploymentName",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentCurrentVersionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/{namespace}/worker-deployments/{deploymentName}/set-ramping-version": {
-      "post": {
-        "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nExperimental. This API might significantly change or be removed in a future release.",
-        "operationId": "SetWorkerDeploymentRampingVersion",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1SetWorkerDeploymentRampingVersionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "deploymentName",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentRampingVersionBody"
-            }
           }
         ],
         "tags": [
@@ -6956,12 +6974,32 @@
       },
       "description": "Replaces the routing rule with the given source Build ID."
     },
+    "VersioningOverridePinnedOverride": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/VersioningOverridePinnedOverrideBehavior"
+        },
+        "version": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
+        }
+      }
+    },
+    "VersioningOverridePinnedOverrideBehavior": {
+      "type": "string",
+      "enum": [
+        "PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED",
+        "PINNED_OVERRIDE_BEHAVIOR_PINNED",
+        "PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW"
+      ],
+      "default": "PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED",
+      "description": " - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED: If original behavior is Pinned or PinnedUntilContinueAsNew, keep that behavior.\nIf original behavior is AutoUpgrade, override behavior to Pinned.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED: Override workflow behavior to be Pinned.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW: Override workflow behavior to be PinnedUntilContinueAsNew."
+    },
     "WorkerDeploymentInfoWorkerDeploymentVersionSummary": {
       "type": "object",
       "properties": {
-        "version": {
-          "type": "string",
-          "description": "The fully-qualified string representation of the version, in the form \"<deployment_name>.<build_id>\"."
+        "deploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
         },
         "createTime": {
           "type": "string",
@@ -7512,9 +7550,11 @@
     "WorkflowServiceSetWorkerDeploymentCurrentVersionBody": {
       "type": "object",
       "properties": {
-        "version": {
-          "type": "string",
-          "title": "Required. Can be one of the following:\n- A Deployment Version identifier in the form \"<deployment_name>.<build_id>\".\n- Or, the \"__unversioned__\" special value, to represent all the unversioned workers (those\n  with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)"
+        "deploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
+        },
+        "unversionedDeploymentName": {
+          "type": "string"
         },
         "conflictToken": {
           "type": "string",
@@ -7535,9 +7575,11 @@
     "WorkflowServiceSetWorkerDeploymentRampingVersionBody": {
       "type": "object",
       "properties": {
-        "version": {
-          "type": "string",
-          "title": "Can be one of the following:\n- Absent/empty value to unset the Ramping Version. Must be paired with `percentage=0`.\n- A Deployment Version identifier in the form \"<deployment_name>.<build_id>\".\n- Or, the \"__unversioned__\" special value, to represent all the unversioned workers (those\n  with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)"
+        "deploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
+        },
+        "unversionedDeploymentName": {
+          "type": "string"
         },
         "percentage": {
           "type": "number",
@@ -8043,6 +8085,10 @@
     "WorkflowServiceUpdateWorkerDeploymentVersionMetadataBody": {
       "type": "object",
       "properties": {
+        "deploymentVersion": {
+          "type": "object",
+          "description": "A Worker Deployment Version (Version, for short) represents a different\nversion of workers within a Worker Deployment. (see documentation of WorkerDeploymentVersionInfo)\nVersion records are created in Temporal server automatically when their\nfirst poller arrives to the server.\nExperimental. Worker Deployment Versions are experimental and might significantly change in the future."
+        },
         "upsertEntries": {
           "type": "object",
           "additionalProperties": {
@@ -9700,7 +9746,7 @@
       "type": "object",
       "properties": {
         "version": {
-          "type": "string",
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
           "description": "Required. The target Version of the transition. May be `__unversioned__` which means a\nso-far-versioned workflow is transitioning to unversioned workers."
         }
       },
@@ -11857,27 +11903,6 @@
       ],
       "default": "PENDING_WORKFLOW_TASK_STATE_UNSPECIFIED"
     },
-    "v1PinnedBehaviorOverride": {
-      "type": "string",
-      "enum": [
-        "PINNED_BEHAVIOR_OVERRIDE_UNSPECIFIED",
-        "PINNED_BEHAVIOR_OVERRIDE_PIN_RUN",
-        "PINNED_BEHAVIOR_OVERRIDE_PIN_EXECUTION"
-      ],
-      "default": "PINNED_BEHAVIOR_OVERRIDE_UNSPECIFIED",
-      "title": "- PINNED_BEHAVIOR_OVERRIDE_UNSPECIFIED: Keep original pinned behavior which might be pin run or execution\n - PINNED_BEHAVIOR_OVERRIDE_PIN_RUN: Pin run to specific version\n - PINNED_BEHAVIOR_OVERRIDE_PIN_EXECUTION: Pin execution to specific version"
-    },
-    "v1PinnedOverrideBehavior": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "$ref": "#/definitions/v1PinnedBehaviorOverride"
-        },
-        "version": {
-          "type": "string"
-        }
-      }
-    },
     "v1PollActivityTaskQueueResponse": {
       "type": "object",
       "properties": {
@@ -12744,13 +12769,19 @@
     "v1RoutingConfig": {
       "type": "object",
       "properties": {
-        "currentVersion": {
-          "type": "string",
-          "title": "Always present. Specifies which Deployment Version should should receive new workflow\nexecutions and tasks of existing unversioned or AutoUpgrade workflows.\nCan be one of the following:\n- A Deployment Version identifier in the form \"<deployment_name>.<build_id>\".\n- Or, the \"__unversioned__\" special value, to represent all the unversioned workers (those\n  with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)\nNote: Current Version is overridden by the Ramping Version for a portion of traffic when a ramp\nis set (see `ramping_version`.)"
+        "currentDeploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
         },
-        "rampingVersion": {
-          "type": "string",
-          "description": "When present, it means the traffic is being shifted from the Current Version to the Ramping\nVersion.\nMust always be different from Current Version. Can be one of the following:\n- A Deployment Version identifier in the form \"<deployment_name>.<build_id>\".\n- Or, the \"__unversioned__\" special value, to represent all the unversioned workers (those\n  with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)\nNote that it is possible to ramp from one Version to another Version, or from unversioned\nworkers to a particular Version, or from a particular Version to unversioned workers."
+        "currentUnversioned": {
+          "type": "boolean",
+          "title": "Represents all the unversioned workers (those with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)"
+        },
+        "rampingDeploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
+        },
+        "rampingUnversioned": {
+          "type": "boolean",
+          "title": "Represents all the unversioned workers (those with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)"
         },
         "rampingVersionPercentage": {
           "type": "number",
@@ -13239,9 +13270,11 @@
           "format": "byte",
           "description": "This value is returned so that it can be optionally passed to APIs\nthat write to the Worker Deployment state to ensure that the state\ndid not change between this API call and a future write."
         },
-        "previousVersion": {
-          "type": "string",
-          "description": "The version that was current before executing this operation, in the form\n\"<deployment_name>.<build_id>\". Can also be the `__unversioned__` special value."
+        "deploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
+        },
+        "unversioned": {
+          "type": "boolean"
         }
       }
     },
@@ -13253,9 +13286,11 @@
           "format": "byte",
           "description": "This value is returned so that it can be optionally passed to APIs\nthat write to the Worker Deployment state to ensure that the state\ndid not change between this API call and a future write."
         },
-        "previousVersion": {
-          "type": "string",
-          "description": "The version that was ramping before executing this operation, in the form\n\"<deployment_name>.<build_id>\". Can also be the `__unversioned__` special value."
+        "deploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
+        },
+        "unversioned": {
+          "type": "boolean"
         },
         "previousPercentage": {
           "type": "number",
@@ -14097,13 +14132,19 @@
     "v1TaskQueueVersioningInfo": {
       "type": "object",
       "properties": {
-        "currentVersion": {
-          "type": "string",
-          "title": "Always present. Specifies which Deployment Version should receive new workflow\nexecutions and tasks of existing unversioned or AutoUpgrade workflows.\nCan be one of the following:\n- A Deployment Version identifier in the form \"<deployment_name>.<build_id>\".\n- Or, the \"__unversioned__\" special value, to represent all the unversioned workers (those\n  with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)\nNote: Current Version is overridden by the Ramping Version for a portion of traffic when a ramp\nis set (see `ramping_version`.)"
+        "currentDeploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
         },
-        "rampingVersion": {
-          "type": "string",
-          "description": "When present, it means the traffic is being shifted from the Current Version to the Ramping\nVersion.\nMust always be different from `current_version`. Can be one of the following:\n- A Deployment Version identifier in the form \"<deployment_name>.<build_id>\".\n- Or, the \"__unversioned__\" special value, to represent all the unversioned workers (those\n  with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)\nNote that it is possible to ramp from one Version to another Version, or from unversioned\nworkers to a particular Version, or from a particular Version to unversioned workers."
+        "currentUnversioned": {
+          "type": "boolean",
+          "title": "Represents all the unversioned workers (those with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)"
+        },
+        "rampingDeploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
+        },
+        "rampingUnversioned": {
+          "type": "boolean",
+          "title": "Represents all the unversioned workers (those with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.)"
         },
         "rampingVersionPercentage": {
           "type": "number",
@@ -14591,22 +14632,24 @@
       "type": "object",
       "properties": {
         "pinned": {
-          "$ref": "#/definitions/v1PinnedOverrideBehavior"
+          "$ref": "#/definitions/VersioningOverridePinnedOverride",
+          "description": "Send the next workflow task to the Version specified in the override."
         },
         "autoUpgrade": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Send the next workflow task to the Current Deployment Version\nof its Task Queue when the next workflow task is dispatched."
         },
         "behavior": {
           "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "Required.\nDeprecated. Use `type`."
+          "description": "Required.\nDeprecated. Use `override`."
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
-          "description": "Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.\nIdentifies the worker deployment to pin the workflow to.\nDeprecated. Use `type.pinned.version`."
+          "description": "Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.\nIdentifies the worker deployment to pin the workflow to.\nDeprecated. Use `override.pinned.version`."
         },
         "pinnedVersion": {
           "type": "string",
-          "description": "Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.\nIdentifies the worker deployment version to pin the workflow to, in the format\n\"<deployment_name>.<build_id>\".\nDeprecated. Use `type.pinned.version`."
+          "description": "Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.\nIdentifies the worker deployment version to pin the workflow to, in the format\n\"<deployment_name>.<build_id>\".\nDeprecated. Use `override.pinned.version`."
         }
       },
       "description": "Used to override the versioning behavior (and pinned deployment version, if applicable) of a\nspecific workflow execution. If set, takes precedence over the worker-sent values. See\n`WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call\n`UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`\nto indicate that it should be mutated."
@@ -14668,12 +14711,25 @@
       },
       "description": "Worker Deployment options set in SDK that need to be sent to server in every poll.\nExperimental. Worker Deployments are experimental and might significantly change in the future."
     },
+    "v1WorkerDeploymentVersion": {
+      "type": "object",
+      "properties": {
+        "buildId": {
+          "type": "string",
+          "description": "A unique identifier for this Version within the Deployment it is a part of.\nNot necessarily unique within the namespace.\nThe combination of `deployment_name` and `build_id` uniquely identifies\nthis Version within the namespace."
+        },
+        "deploymentName": {
+          "type": "string",
+          "description": "Identifies the Worker Deployment this Version is part of.\nMust be unique within the namespace."
+        }
+      },
+      "description": "A Worker Deployment Version (Version, for short) represents a different\nversion of workers within a Worker Deployment. (see documentation of WorkerDeploymentVersionInfo)\nVersion records are created in Temporal server automatically when their\nfirst poller arrives to the server.\nExperimental. Worker Deployment Versions are experimental and might significantly change in the future."
+    },
     "v1WorkerDeploymentVersionInfo": {
       "type": "object",
       "properties": {
-        "version": {
-          "type": "string",
-          "description": "The fully-qualified string representation of the version, in the form \"<deployment_name>.<build_id>\"."
+        "deploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
         },
         "deploymentName": {
           "type": "string"
@@ -15413,8 +15469,8 @@
           "description": "The worker deployment that completed the last workflow task of this workflow execution. Must\nbe present if `behavior` is set. Absent value means no workflow task is completed, or the\nlast workflow task was completed by an unversioned worker. Unversioned workers may still send\na deployment value which will be stored here, so the right way to check if an execution is\nversioned if an execution is versioned or not is via the `behavior` field.\nNote that `deployment` is overridden by `versioning_override` if the latter is present.\nDeprecated. Use `version`."
         },
         "version": {
-          "type": "string",
-          "description": "The Worker Deployment Version that completed the last workflow task of this workflow\nexecution, in the form \"<deployment_name>.<build_id>\".\nMust be present if and only if `behavior` is set. An absent value means no workflow task is\ncompleted, or the workflow is unversioned.\nFor child workflows of Pinned parents, this will be set to parent's Pinned Version when the\nthe child starts so that child's first workflow task goes to the same Version as the parent.\nNote that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`\nwill override this value."
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
+          "description": "The Worker Deployment Version that completed the last workflow task of this workflow execution.\nMust be present if and only if `behavior` is set. An absent value means no workflow task is\ncompleted, or the workflow is unversioned.\nFor child workflows of Pinned parents, this will be set to parent's Pinned Version when the\nthe child starts so that child's first workflow task goes to the same Version as the parent.\nNote that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`\nwill override this value."
         },
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",

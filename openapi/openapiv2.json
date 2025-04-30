@@ -8863,7 +8863,7 @@
         },
         "workflowExecutionOptions": {
           "$ref": "#/definitions/v1WorkflowExecutionOptions",
-          "description": "Update Workflow options that were originally specified via StartWorkflowExecution. Partial updates are accepted and controlled by update_mask."
+          "description": "Workflow Execution options. Partial updates are accepted and controlled by update_mask."
         },
         "updateMask": {
           "type": "string",
@@ -12105,14 +12105,46 @@
     "v1PostResetOperation": {
       "type": "object",
       "properties": {
-        "signal": {
-          "$ref": "#/definitions/v1SignalWorkflowExecutionRequest"
+        "signalOperation": {
+          "$ref": "#/definitions/v1PostResetSignalOperation"
         },
-        "updateWorkflowOptions": {
-          "$ref": "#/definitions/v1UpdateWorkflowExecutionOptionsRequest"
+        "updateWorkflowOptionsOperation": {
+          "$ref": "#/definitions/v1PostResetUpdateWorkflowOptionsOperation"
         }
       },
       "description": "PostResetOperation represents an operation to be performed on the new workflow execution after a workflow reset."
+    },
+    "v1PostResetSignalOperation": {
+      "type": "object",
+      "properties": {
+        "signalName": {
+          "type": "string",
+          "description": "The workflow author-defined name of the signal to send to the workflow."
+        },
+        "input": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "Serialized value(s) to provide with the signal."
+        },
+        "header": {
+          "$ref": "#/definitions/v1Header",
+          "description": "Headers that are passed with the signal to the processing workflow."
+        }
+      },
+      "description": "PostResetSignalOperation represents sending a signal after a workflow reset."
+    },
+    "v1PostResetUpdateWorkflowOptionsOperation": {
+      "type": "object",
+      "properties": {
+        "workflowExecutionOptions": {
+          "$ref": "#/definitions/v1WorkflowExecutionOptions",
+          "description": "Workflow Execution options. Partial updates are accepted and controlled by update_mask."
+        },
+        "updateMask": {
+          "type": "string",
+          "description": "Controls which fields from `workflow_execution_options` will be applied.\nTo unset a field, set it to null and use the update mask to indicate that it should be mutated."
+        }
+      },
+      "description": "PostResetUpdateWorkflowOptionsOperation represents updating workflow execution options after a workflow reset."
     },
     "v1Priority": {
       "type": "object",
@@ -13401,49 +13433,6 @@
         }
       }
     },
-    "v1SignalWorkflowExecutionRequest": {
-      "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string"
-        },
-        "workflowExecution": {
-          "$ref": "#/definitions/v1WorkflowExecution"
-        },
-        "signalName": {
-          "type": "string",
-          "title": "The workflow author-defined name of the signal to send to the workflow"
-        },
-        "input": {
-          "$ref": "#/definitions/v1Payloads",
-          "title": "Serialized value(s) to provide with the signal"
-        },
-        "identity": {
-          "type": "string",
-          "title": "The identity of the worker/client"
-        },
-        "requestId": {
-          "type": "string",
-          "title": "Used to de-dupe sent signals"
-        },
-        "control": {
-          "type": "string",
-          "title": "Deprecated"
-        },
-        "header": {
-          "$ref": "#/definitions/v1Header",
-          "description": "Headers that are passed with the signal to the processing workflow.\nThese can include things like auth or tracing tokens."
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apicommonv1Link"
-          },
-          "description": "Links to be associated with the WorkflowExecutionSignaled event."
-        }
-      }
-    },
     "v1SignalWorkflowExecutionResponse": {
       "type": "object"
     },
@@ -14464,27 +14453,6 @@
       ],
       "default": "UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_UNSPECIFIED",
       "description": "UpdateWorkflowExecutionLifecycleStage is specified by clients invoking\nWorkflow Updates and used to indicate to the server how long the\nclient wishes to wait for a return value from the API. If any value other\nthan UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED is sent by the\nclient then the API will complete before the Update is finished and will\nreturn a handle to the running Update so that it can later be polled for\ncompletion.\nIf specified stage wasn't reached before server timeout, server returns\nactual stage reached.\n\n - UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_UNSPECIFIED: An unspecified value for this enum.\n - UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ADMITTED: The API call will not return until the Update request has been admitted\nby the server - it may be the case that due to a considerations like load\nor resource limits that an Update is made to wait before the server will\nindicate that it has been received and will be processed. This value\ndoes not wait for any sort of acknowledgement from a worker.\n - UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_ACCEPTED: The API call will not return until the Update has passed validation on a worker.\n - UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED: The API call will not return until the Update has executed to completion\non a worker and has either been rejected or returned a value or an error."
-    },
-    "v1UpdateWorkflowExecutionOptionsRequest": {
-      "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string",
-          "description": "The namespace name of the target Workflow."
-        },
-        "workflowExecution": {
-          "$ref": "#/definitions/v1WorkflowExecution",
-          "description": "The target Workflow Id and (optionally) a specific Run Id thereof."
-        },
-        "workflowExecutionOptions": {
-          "$ref": "#/definitions/v1WorkflowExecutionOptions",
-          "description": "Workflow Execution options. Partial updates are accepted and controlled by update_mask."
-        },
-        "updateMask": {
-          "type": "string",
-          "description": "Controls which fields from `workflow_execution_options` will be applied.\nTo unset a field, set it to null and use the update mask to indicate that it should be mutated."
-        }
-      }
     },
     "v1UpdateWorkflowExecutionOptionsResponse": {
       "type": "object",

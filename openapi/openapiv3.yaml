@@ -6380,13 +6380,21 @@ components:
         workflowExecutionOptions:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionOptions'
-          description: Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+          description: Update Workflow options that were originally specified via StartWorkflowExecution. Partial updates are accepted and controlled by update_mask.
         updateMask:
           type: string
           description: |-
             Controls which fields from `workflow_execution_options` will be applied.
              To unset a field, set it to null and use the update mask to indicate that it should be mutated.
           format: field-mask
+        postResetOperations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostResetOperation'
+          description: |-
+            Operations to perform after the workflow has been reset. These operations will be applied
+             to the *new* run of the workflow execution in the order they are provided.
+             All operations are applied to the workflow before the first new workflow task is generated
       description: |-
         BatchOperationUpdateWorkflowExecutionOptions sends UpdateWorkflowExecutionOptions requests to batch workflows.
          Keep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest.
@@ -9104,9 +9112,9 @@ components:
     PostResetOperation:
       type: object
       properties:
-        signalOperation:
+        signal:
           $ref: '#/components/schemas/PostResetSignalOperation'
-        updateWorkflowOptionsOperation:
+        updateWorkflowOptions:
           $ref: '#/components/schemas/PostResetUpdateWorkflowOptionsOperation'
       description: PostResetOperation represents an operation to be performed on the new workflow execution after a workflow reset.
     PostResetSignalOperation:
@@ -9123,6 +9131,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/Header'
           description: Headers that are passed with the signal to the processing workflow.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to be associated with the WorkflowExecutionSignaled event.
       description: PostResetSignalOperation represents sending a signal after a workflow reset.
     PostResetUpdateWorkflowOptionsOperation:
       type: object
@@ -9130,7 +9143,7 @@ components:
         workflowExecutionOptions:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionOptions'
-          description: Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+          description: Update Workflow options that were originally specified via StartWorkflowExecution. Partial updates are accepted and controlled by update_mask.
         updateMask:
           type: string
           description: |-

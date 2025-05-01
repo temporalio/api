@@ -34,6 +34,7 @@ option csharp_namespace = "Temporalio.Api.Workflow.V1";
 import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 
 import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/event_type.proto";
@@ -581,3 +582,35 @@ message RequestIdInfo {
     // will be an invalid event ID.
     bool buffered = 3;
 }
+
+// PostResetOperation represents an operation to be performed on the new workflow execution after a workflow reset.
+message PostResetOperation {
+    // SignalWorkflowOperation represents sending a signal after a workflow reset.
+    // Keep the parameter in sync with temporal.api.workflowservice.v1.SignalWorkflowExecutionRequest.
+    message SignalWorkflowOperation {
+        // The workflow author-defined name of the signal to send to the workflow.
+        string signal_name = 1;
+        // Serialized value(s) to provide with the signal.
+        temporal.api.common.v1.Payloads input = 2;
+        // Headers that are passed with the signal to the processing workflow.
+        temporal.api.common.v1.Header header = 3;
+        // Links to be associated with the WorkflowExecutionSignaled event.
+        repeated temporal.api.common.v1.Link links = 4;
+    }
+
+    // UpdateWorkflowOptionsOperation represents updating workflow execution options after a workflow reset.
+    // Keep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest.
+    message UpdateWorkflowOptionsOperation {
+        // Update Workflow options that were originally specified via StartWorkflowExecution. Partial updates are accepted and controlled by update_mask.
+        temporal.api.workflow.v1.WorkflowExecutionOptions workflow_execution_options = 1;
+        // Controls which fields from `workflow_execution_options` will be applied.
+        // To unset a field, set it to null and use the update mask to indicate that it should be mutated.
+        google.protobuf.FieldMask update_mask = 2;
+    }
+
+    oneof variant {
+        SignalWorkflowOperation signal_workflow = 1;
+        UpdateWorkflowOptionsOperation update_workflow_options = 2;
+    }
+}
+

@@ -221,6 +221,9 @@ message StartWorkflowExecutionResponse {
     string run_id = 1;
     // If true, a new workflow was started.
     bool started = 3;
+    // Current execution status of the workflow. Typically remains WORKFLOW_EXECUTION_STATUS_RUNNING
+    // unless a de-dupe occurs or in specific scenarios handled within the ExecuteMultiOperation (refer to its docs).
+    temporal.api.enums.v1.WorkflowExecutionStatus status = 5;
     // When `request_eager_execution` is set on the `StartWorkflowExecutionRequest`, the server - if supported - will
     // return the first workflow task to be eagerly executed.
     // The caller is expected to have a worker available to process the task.
@@ -526,6 +529,10 @@ message RecordActivityTaskHeartbeatResponse {
 
     // Will be set to true if the activity is paused.
     bool activity_paused = 2;
+
+    // Will be set to true if the activity was reset.
+    // Applies only to the current run.
+    bool activity_reset = 3;
 }
 
 message RecordActivityTaskHeartbeatByIdRequest {
@@ -550,6 +557,10 @@ message RecordActivityTaskHeartbeatByIdResponse {
 
     // Will be set to true if the activity is paused.
     bool activity_paused = 2;
+
+    // Will be set to true if the activity was reset.
+    // Applies only to the current run.
+    bool activity_reset = 3;
 }
 
 message RespondActivityTaskCompletedRequest {
@@ -1805,6 +1816,12 @@ message ExecuteMultiOperationRequest {
     }
 }
 
+// IMPORTANT: For [StartWorkflow, UpdateWorkflow] combination ("Update-with-Start") when both
+//   1. the workflow update for the requested update ID has already completed, and
+//   2. the workflow for the requested workflow ID has already been closed,
+// then you'll receive
+//   - an update response containing the update's outcome, and
+//   - a start response with a `status` field that reflects the workflow's current state.
 message ExecuteMultiOperationResponse {
     repeated Response responses = 1;
 
@@ -1831,13 +1848,13 @@ message UpdateActivityOptionsRequest {
     // Controls which fields from `activity_options` will be applied
     google.protobuf.FieldMask update_mask = 5;
 
-    // either activity id or activity type must be provided
-    oneof activity {
-        // Only activity with this ID will be updated.
-        string id = 6;
-        // Update all running activities of this type.
-        string type = 7;
-    }
+        // either activity id or activity type must be provided
+        oneof activity {
+            // Only activity with this ID will be updated.
+            string id = 6;
+            // Update all running activities of this type.
+            string type = 7;
+        }
 }
 
 message UpdateActivityOptionsResponse {

@@ -6063,7 +6063,13 @@ components:
             - $ref: '#/components/schemas/WorkerVersionStamp'
           description: |-
             Version info of the worker who processed this workflow task.
-             Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
+             Deprecated. Use `deployment_version`.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            The Worker Deployment Version that processed this task.
+             Experimental. Worker Deployments are experimental and might significantly change in the future.
     ActivityTaskCompletedEventAttributes:
       type: object
       properties:
@@ -6085,7 +6091,13 @@ components:
             - $ref: '#/components/schemas/WorkerVersionStamp'
           description: |-
             Version info of the worker who processed this workflow task.
-             Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
+             Deprecated. Use `deployment_version`.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            The Worker Deployment Version that completed this task.
+             Experimental. Worker Deployments are experimental and might significantly change in the future.
     ActivityTaskFailedEventAttributes:
       type: object
       properties:
@@ -6119,7 +6131,13 @@ components:
             - $ref: '#/components/schemas/WorkerVersionStamp'
           description: |-
             Version info of the worker who processed this workflow task.
-             Deprecated. Use the info inside the corresponding ActivityTaskStartedEvent
+             Deprecated. Use `deployment_version`.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            The Worker Deployment Version that failed this task.
+             Experimental. Worker Deployments are experimental and might significantly change in the future.
     ActivityTaskScheduledEventAttributes:
       type: object
       properties:
@@ -7171,7 +7189,7 @@ components:
         version:
           type: string
           description: Deprecated. Use `target_deployment_version`.
-        targetDeploymentVersion:
+        deploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
@@ -9779,7 +9797,9 @@ components:
       properties:
         buildId:
           type: string
-          description: Worker build id.
+          description: |-
+            Worker build id.
+             todo carly
         binaryChecksum:
           type: string
           description: A worker binary version identifier (deprecated).
@@ -9898,6 +9918,10 @@ components:
         identity:
           type: string
           description: The identity of the worker/client
+        deploymentOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentOptions'
+          description: Worker deployment options that user has set in the worker.
     RespondActivityTaskCanceledByIdResponse:
       type: object
       properties: {}
@@ -9924,7 +9948,7 @@ components:
             Version info of the worker who processed this task. This message's `build_id` field should
              always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
              field to true. See message docstrings for more.
-             Deprecated. Use `deployment` instead.
+             Deprecated. Use `deployment_options` instead.
         deployment:
           allOf:
             - $ref: '#/components/schemas/Deployment'
@@ -9961,6 +9985,10 @@ components:
         identity:
           type: string
           description: The identity of the worker/client
+        deploymentOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentOptions'
+          description: Worker deployment options that user has set in the worker.
     RespondActivityTaskCompletedByIdResponse:
       type: object
       properties: {}
@@ -9987,7 +10015,7 @@ components:
             Version info of the worker who processed this task. This message's `build_id` field should
              always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
              field to true. See message docstrings for more.
-             Deprecated. Use `deployment` instead.
+             Deprecated. Use `deployment_options` instead.
         deployment:
           allOf:
             - $ref: '#/components/schemas/Deployment'
@@ -10028,6 +10056,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/Payloads'
           description: Additional details to be stored as last activity heartbeat
+        deploymentOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentOptions'
+          description: Worker deployment options that user has set in the worker.
     RespondActivityTaskFailedByIdResponse:
       type: object
       properties:
@@ -10065,7 +10097,7 @@ components:
             Version info of the worker who processed this task. This message's `build_id` field should
              always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
              field to true. See message docstrings for more.
-             Deprecated. Use `deployment` instead.
+             Deprecated. Use `deployment_options` instead.
         deployment:
           allOf:
             - $ref: '#/components/schemas/Deployment'
@@ -12223,7 +12255,7 @@ components:
           type: string
           description: |-
             The Build ID of the worker. Required when `worker_versioning_mode==VERSIONED`, in which case,
-             the worker will be part of a Deployment Version identified by "<deployment_name>.<build_id>".
+             the worker will be part of a Deployment Version.
         workerVersioningMode:
           enum:
             - WORKER_VERSIONING_MODE_UNSPECIFIED
@@ -12233,8 +12265,7 @@ components:
           description: |-
             Required. Versioning Mode for this worker. Must be the same for all workers with the
              same `deployment_name` and `build_id` combination, across all Task Queues.
-             When `worker_versioning_mode==VERSIONED`, the worker will be part of a Deployment Version
-             identified by "<deployment_name>.<build_id>".
+             When `worker_versioning_mode==VERSIONED`, the worker will be part of a Deployment Version.
           format: enum
       description: |-
         Worker Deployment options set in SDK that need to be sent to server in every poll.
@@ -12810,6 +12841,7 @@ components:
           description: |-
             The name of Worker Deployment that completed the most recent workflow task.
              Experimental. Worker Deployments are experimental and might change in the future.
+             Deprecated. Replaced with `versioning_info.deployment_version`.
         priority:
           allOf:
             - $ref: '#/components/schemas/Priority'
@@ -13036,6 +13068,16 @@ components:
              of starting on the Current Version of its Task Queue.
              This is set only if the child workflow is starting on a Task Queue belonging to the same
              Worker Deployment Version.
+             Deprecated. Use `parent_pinned_deployment_version`.
+        parentPinnedDeploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            When present, it means this is a child workflow of a parent that is Pinned to this Worker
+             Deployment Version. In this case, child workflow will start as Pinned to this Version instead
+             of starting on the Current Version of its Task Queue.
+             This is set only if the child workflow is starting on a Task Queue belonging to the same
+             Worker Deployment Version.
         priority:
           allOf:
             - $ref: '#/components/schemas/Priority'
@@ -13185,10 +13227,12 @@ components:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
             The Worker Deployment Version that completed the last workflow task of this workflow execution.
-             Must be present if and only if `behavior` is set. An absent value means no workflow task is
-             completed, or the workflow is unversioned.
-             For child workflows of Pinned parents, this will be set to parent's Pinned Version when the
-             the child starts so that child's first workflow task goes to the same Version as the parent.
+             An absent value means no workflow task is completed, or the workflow is unversioned.
+             If present, and `behavior` is UNSPECIFIED, the last task of this workflow execution was completed
+             by a worker that is not using versioning but _is_ passing Deployment Name and Build ID.
+
+             For child workflows of Pinned parents, this will be set to the parent's Pinned Version when
+             the child starts, so that the child's first workflow task goes to the same Version as the parent.
              Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
              will override this value.
         versioningOverride:
@@ -13398,7 +13442,9 @@ components:
           description: Identity of the worker who completed this task
         binaryChecksum:
           type: string
-          description: Binary ID of the worker who completed this task
+          description: |-
+            Binary ID of the worker who completed this task
+             Deprecated. Replaced with `deployment_version`.
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
@@ -13406,7 +13452,7 @@ components:
             Version info of the worker who processed this workflow task. If present, the `build_id` field
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
-             Deprecated. Use `deployment` and `versioning_behavior` instead.
+             Deprecated. Use `deployment_version` and `versioning_behavior` instead.
         sdkMetadata:
           allOf:
             - $ref: '#/components/schemas/WorkflowTaskCompletedMetadata'
@@ -13424,7 +13470,7 @@ components:
             The deployment that completed this task. May or may not be set for unversioned workers,
              depending on whether a value is sent by the SDK. This value updates workflow execution's
              `versioning_info.deployment`.
-             Deprecated. Replaced with `worker_deployment_version`.
+             Deprecated. Replaced with `deployment_version`.
         versioningBehavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
@@ -13442,11 +13488,20 @@ components:
             The Worker Deployment Version that completed this task. Must be set if `versioning_behavior`
              is set. This value updates workflow execution's `versioning_info.version`.
              Experimental. Worker Deployments are experimental and might significantly change in the future.
+             Deprecated. Replaced with `deployment_version`.
         workerDeploymentName:
           type: string
           description: |-
             The name of Worker Deployment that completed this task. Must be set if `versioning_behavior`
              is set. This value updates workflow execution's `worker_deployment_name`.
+             Experimental. Worker Deployments are experimental and might significantly change in the future.
+             Deprecated. Use `deployment_version`.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            The Worker Deployment Version that completed this task. Must be set if `versioning_behavior`
+             is set. This value updates workflow execution's `versioning_info.worker_deployment_version`.
              Experimental. Worker Deployments are experimental and might significantly change in the future.
     WorkflowTaskCompletedMetadata:
       type: object
@@ -13571,8 +13626,8 @@ components:
         binaryChecksum:
           type: string
           description: |-
-            DEPRECATED since 1.21 - use `worker_version` instead.
-             If a worker explicitly failed this task, its binary id
+            If a worker explicitly failed this task, its binary id
+             Deprecated since 1.21. Use `deployment_version`.
         workerVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerVersionStamp'
@@ -13580,7 +13635,13 @@ components:
             Version info of the worker who processed this workflow task. If present, the `build_id` field
              within is also used as `binary_checksum`, which may be omitted in that case (it may also be
              populated to preserve compatibility).
-             Deprecated. Use the info inside the corresponding WorkflowTaskStartedEvent
+             Deprecated. Use `deployment_version` instead.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            If a worker explicitly failed this task, its Worker Deployment Version.
+             Experimental. Worker Deployments are experimental and might significantly change in the future.
     WorkflowTaskScheduledEventAttributes:
       type: object
       properties:

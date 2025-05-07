@@ -1,25 +1,3 @@
-// The MIT License
-//
-// Copyright (c) 2020 Temporal Technologies Inc.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
 syntax = "proto3";
 
 package temporal.api.workflowservice.v1;
@@ -221,6 +199,9 @@ message StartWorkflowExecutionResponse {
     string run_id = 1;
     // If true, a new workflow was started.
     bool started = 3;
+    // Current execution status of the workflow. Typically remains WORKFLOW_EXECUTION_STATUS_RUNNING
+    // unless a de-dupe occurs or in specific scenarios handled within the ExecuteMultiOperation (refer to its docs).
+    temporal.api.enums.v1.WorkflowExecutionStatus status = 5;
     // When `request_eager_execution` is set on the `StartWorkflowExecutionRequest`, the server - if supported - will
     // return the first workflow task to be eagerly executed.
     // The caller is expected to have a worker available to process the task.
@@ -526,6 +507,10 @@ message RecordActivityTaskHeartbeatResponse {
 
     // Will be set to true if the activity is paused.
     bool activity_paused = 2;
+
+    // Will be set to true if the activity was reset.
+    // Applies only to the current run.
+    bool activity_reset = 3;
 }
 
 message RecordActivityTaskHeartbeatByIdRequest {
@@ -550,6 +535,10 @@ message RecordActivityTaskHeartbeatByIdResponse {
 
     // Will be set to true if the activity is paused.
     bool activity_paused = 2;
+
+    // Will be set to true if the activity was reset.
+    // Applies only to the current run.
+    bool activity_reset = 3;
 }
 
 message RespondActivityTaskCompletedRequest {
@@ -708,6 +697,9 @@ message RequestCancelWorkflowExecutionRequest {
 message RequestCancelWorkflowExecutionResponse {
 }
 
+// Keep the parameters in sync with:
+//   - temporal.api.batch.v1.BatchOperationSignal.
+//   - temporal.api.workflow.v1.PostResetOperation.SignalWorkflow.
 message SignalWorkflowExecutionRequest {
     string namespace = 1;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
@@ -820,6 +812,10 @@ message ResetWorkflowExecutionRequest {
     temporal.api.enums.v1.ResetReapplyType reset_reapply_type = 6;
     // Event types not to be reapplied
     repeated temporal.api.enums.v1.ResetReapplyExcludeType reset_reapply_exclude_types = 7;
+    // Operations to perform after the workflow has been reset. These operations will be applied
+    // to the *new* run of the workflow execution in the order they are provided.
+    // All operations are applied to the workflow before the first new workflow task is generated
+    repeated temporal.api.workflow.v1.PostResetOperation post_reset_operations = 8;
 }
 
 message ResetWorkflowExecutionResponse {
@@ -1805,6 +1801,12 @@ message ExecuteMultiOperationRequest {
     }
 }
 
+// IMPORTANT: For [StartWorkflow, UpdateWorkflow] combination ("Update-with-Start") when both
+//   1. the workflow update for the requested update ID has already completed, and
+//   2. the workflow for the requested workflow ID has already been closed,
+// then you'll receive
+//   - an update response containing the update's outcome, and
+//   - a start response with a `status` field that reflects the workflow's current state.
 message ExecuteMultiOperationResponse {
     repeated Response responses = 1;
 
@@ -1831,13 +1833,13 @@ message UpdateActivityOptionsRequest {
     // Controls which fields from `activity_options` will be applied
     google.protobuf.FieldMask update_mask = 5;
 
-    // either activity id or activity type must be provided
-    oneof activity {
-        // Only activity with this ID will be updated.
-        string id = 6;
-        // Update all running activities of this type.
-        string type = 7;
-    }
+        // either activity id or activity type must be provided
+        oneof activity {
+            // Only activity with this ID will be updated.
+            string id = 6;
+            // Update all running activities of this type.
+            string type = 7;
+        }
 }
 
 message UpdateActivityOptionsResponse {
@@ -1933,6 +1935,9 @@ message ResetActivityRequest {
 message ResetActivityResponse {
 }
 
+// Keep the parameters in sync with:
+//   - temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions.
+//   - temporal.api.workflow.v1.PostResetOperation.UpdateWorkflowOptions.
 message UpdateWorkflowExecutionOptionsRequest {
     // The namespace name of the target Workflow.
     string namespace = 1;

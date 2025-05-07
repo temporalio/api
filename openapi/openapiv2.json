@@ -6807,6 +6807,46 @@
         }
       }
     },
+    "PostResetOperationSignalWorkflow": {
+      "type": "object",
+      "properties": {
+        "signalName": {
+          "type": "string",
+          "description": "The workflow author-defined name of the signal to send to the workflow."
+        },
+        "input": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "Serialized value(s) to provide with the signal."
+        },
+        "header": {
+          "$ref": "#/definitions/v1Header",
+          "description": "Headers that are passed with the signal to the processing workflow."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apicommonv1Link"
+          },
+          "description": "Links to be associated with the WorkflowExecutionSignaled event."
+        }
+      },
+      "description": "SignalWorkflow represents sending a signal after a workflow reset.\nKeep the parameter in sync with temporal.api.workflowservice.v1.SignalWorkflowExecutionRequest."
+    },
+    "PostResetOperationUpdateWorkflowOptions": {
+      "type": "object",
+      "properties": {
+        "workflowExecutionOptions": {
+          "$ref": "#/definitions/v1WorkflowExecutionOptions",
+          "description": "Update Workflow options that were originally specified via StartWorkflowExecution. Partial updates are accepted and controlled by update_mask."
+        },
+        "updateMask": {
+          "type": "string",
+          "description": "Controls which fields from `workflow_execution_options` will be applied.\nTo unset a field, set it to null and use the update mask to indicate that it should be mutated."
+        }
+      },
+      "description": "UpdateWorkflowOptions represents updating workflow execution options after a workflow reset.\nKeep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest."
+    },
     "StartOperationResponseAsync": {
       "type": "object",
       "properties": {
@@ -7329,6 +7369,14 @@
             "$ref": "#/definitions/v1ResetReapplyExcludeType"
           },
           "title": "Event types not to be reapplied"
+        },
+        "postResetOperations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PostResetOperation"
+          },
+          "title": "Operations to perform after the workflow has been reset. These operations will be applied\nto the *new* run of the workflow execution in the order they are provided.\nAll operations are applied to the workflow before the first new workflow task is generated"
         }
       }
     },
@@ -7713,7 +7761,8 @@
           },
           "description": "Links to be associated with the WorkflowExecutionSignaled event."
         }
-      }
+      },
+      "description": "Keep the parameters in sync with:\n  - temporal.api.batch.v1.BatchOperationSignal.\n  - temporal.api.workflow.v1.PostResetOperation.SignalWorkflow."
     },
     "WorkflowServiceStartBatchOperationBody": {
       "type": "object",
@@ -8146,7 +8195,8 @@
           "type": "string",
           "description": "Controls which fields from `workflow_execution_options` will be applied.\nTo unset a field, set it to null and use the update mask to indicate that it should be mutated."
         }
-      }
+      },
+      "description": "Keep the parameters in sync with:\n  - temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions.\n  - temporal.api.workflow.v1.PostResetOperation.UpdateWorkflowOptions."
     },
     "apicommonv1Link": {
       "type": "object",
@@ -8775,6 +8825,14 @@
         "resetReapplyType": {
           "$ref": "#/definitions/v1ResetReapplyType",
           "description": "History event reapply options (deprecated, use `options`)."
+        },
+        "postResetOperations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PostResetOperation"
+          },
+          "title": "Operations to perform after the workflow has been reset. These operations will be applied\nto the *new* run of the workflow execution in the order they are provided.\nAll operations are applied to the workflow before the first new workflow task is generated"
         }
       },
       "description": "BatchOperationReset sends reset requests to batch workflows.\nKeep the parameter in sync with temporal.api.workflowservice.v1.ResetWorkflowExecutionRequest."
@@ -8875,7 +8933,7 @@
         },
         "workflowExecutionOptions": {
           "$ref": "#/definitions/v1WorkflowExecutionOptions",
-          "description": "Workflow Execution options. Partial updates are accepted and controlled by update_mask."
+          "description": "Update Workflow options that were originally specified via StartWorkflowExecution. Partial updates are accepted and controlled by update_mask."
         },
         "updateMask": {
           "type": "string",
@@ -8972,6 +9030,14 @@
         },
         "internal": {
           "$ref": "#/definitions/CallbackInternal"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apicommonv1Link"
+          },
+          "description": "Links associated with the callback. It can be used to link to underlying resources of the\ncallback."
         }
       },
       "description": "Callback to attach to various events in the system, e.g. workflow run completion."
@@ -10103,7 +10169,8 @@
             "$ref": "#/definitions/v1ExecuteMultiOperationResponseResponse"
           }
         }
-      }
+      },
+      "description": "IMPORTANT: For [StartWorkflow, UpdateWorkflow] combination (\"Update-with-Start\") when both\n  1. the workflow update for the requested update ID has already completed, and\n  2. the workflow for the requested workflow ID has already been closed,\nthen you'll receive\n  - an update response containing the update's outcome, and\n  - a start response with a `status` field that reflects the workflow's current state."
     },
     "v1ExecuteMultiOperationResponseResponse": {
       "type": "object",
@@ -12114,6 +12181,18 @@
       },
       "description": "Attached to task responses to give hints to the SDK about how it may adjust its number of\npollers."
     },
+    "v1PostResetOperation": {
+      "type": "object",
+      "properties": {
+        "signalWorkflow": {
+          "$ref": "#/definitions/PostResetOperationSignalWorkflow"
+        },
+        "updateWorkflowOptions": {
+          "$ref": "#/definitions/PostResetOperationUpdateWorkflowOptions"
+        }
+      },
+      "description": "PostResetOperation represents an operation to be performed on the new workflow execution after a workflow reset."
+    },
     "v1Priority": {
       "type": "object",
       "properties": {
@@ -12214,6 +12293,10 @@
         "activityPaused": {
           "type": "boolean",
           "description": "Will be set to true if the activity is paused."
+        },
+        "activityReset": {
+          "type": "boolean",
+          "description": "Will be set to true if the activity was reset.\nApplies only to the current run."
         }
       }
     },
@@ -12227,6 +12310,10 @@
         "activityPaused": {
           "type": "boolean",
           "description": "Will be set to true if the activity is paused."
+        },
+        "activityReset": {
+          "type": "boolean",
+          "description": "Will be set to true if the activity was reset.\nApplies only to the current run."
         }
       }
     },
@@ -13801,6 +13888,10 @@
         "started": {
           "type": "boolean",
           "description": "If true, a new workflow was started."
+        },
+        "status": {
+          "$ref": "#/definitions/v1WorkflowExecutionStatus",
+          "description": "Current execution status of the workflow. Typically remains WORKFLOW_EXECUTION_STATUS_RUNNING\nunless a de-dupe occurs or in specific scenarios handled within the ExecuteMultiOperation (refer to its docs)."
         },
         "eagerWorkflowTask": {
           "$ref": "#/definitions/v1PollWorkflowTaskQueueResponse",

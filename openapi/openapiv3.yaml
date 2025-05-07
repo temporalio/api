@@ -6309,6 +6309,14 @@ components:
           type: string
           description: History event reapply options (deprecated, use `options`).
           format: enum
+        postResetOperations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostResetOperation'
+          description: |-
+            Operations to perform after the workflow has been reset. These operations will be applied
+             to the *new* run of the workflow execution in the order they are provided.
+             All operations are applied to the workflow before the first new workflow task is generated
       description: |-
         BatchOperationReset sends reset requests to batch workflows.
          Keep the parameter in sync with temporal.api.workflowservice.v1.ResetWorkflowExecutionRequest.
@@ -6380,7 +6388,7 @@ components:
         workflowExecutionOptions:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionOptions'
-          description: Workflow Execution options. Partial updates are accepted and controlled by update_mask.
+          description: Update Workflow options that were originally specified via StartWorkflowExecution. Partial updates are accepted and controlled by update_mask.
         updateMask:
           type: string
           description: |-
@@ -6508,6 +6516,13 @@ components:
           $ref: '#/components/schemas/Callback_Nexus'
         internal:
           $ref: '#/components/schemas/Callback_Internal'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: |-
+            Links associated with the callback. It can be used to link to underlying resources of the
+             callback.
       description: Callback to attach to various events in the system, e.g. workflow run completion.
     CallbackInfo:
       type: object
@@ -7380,6 +7395,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ExecuteMultiOperationResponse_Response'
+      description: |-
+        IMPORTANT: For [StartWorkflow, UpdateWorkflow] combination ("Update-with-Start") when both
+           1. the workflow update for the requested update ID has already completed, and
+           2. the workflow for the requested workflow ID has already been closed,
+         then you'll receive
+           - an update response containing the update's outcome, and
+           - a start response with a `status` field that reflects the workflow's current state.
     ExecuteMultiOperationResponse_Response:
       type: object
       properties:
@@ -9101,6 +9123,52 @@ components:
       description: |-
         Attached to task responses to give hints to the SDK about how it may adjust its number of
          pollers.
+    PostResetOperation:
+      type: object
+      properties:
+        signalWorkflow:
+          $ref: '#/components/schemas/PostResetOperation_SignalWorkflow'
+        updateWorkflowOptions:
+          $ref: '#/components/schemas/PostResetOperation_UpdateWorkflowOptions'
+      description: PostResetOperation represents an operation to be performed on the new workflow execution after a workflow reset.
+    PostResetOperation_SignalWorkflow:
+      type: object
+      properties:
+        signalName:
+          type: string
+          description: The workflow author-defined name of the signal to send to the workflow.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: Serialized value(s) to provide with the signal.
+        header:
+          allOf:
+            - $ref: '#/components/schemas/Header'
+          description: Headers that are passed with the signal to the processing workflow.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to be associated with the WorkflowExecutionSignaled event.
+      description: |-
+        SignalWorkflow represents sending a signal after a workflow reset.
+         Keep the parameter in sync with temporal.api.workflowservice.v1.SignalWorkflowExecutionRequest.
+    PostResetOperation_UpdateWorkflowOptions:
+      type: object
+      properties:
+        workflowExecutionOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionOptions'
+          description: Update Workflow options that were originally specified via StartWorkflowExecution. Partial updates are accepted and controlled by update_mask.
+        updateMask:
+          type: string
+          description: |-
+            Controls which fields from `workflow_execution_options` will be applied.
+             To unset a field, set it to null and use the update mask to indicate that it should be mutated.
+          format: field-mask
+      description: |-
+        UpdateWorkflowOptions represents updating workflow execution options after a workflow reset.
+         Keep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest.
     Priority:
       type: object
       properties:
@@ -9240,6 +9308,11 @@ components:
         activityPaused:
           type: boolean
           description: Will be set to true if the activity is paused.
+        activityReset:
+          type: boolean
+          description: |-
+            Will be set to true if the activity was reset.
+             Applies only to the current run.
     RecordActivityTaskHeartbeatRequest:
       type: object
       properties:
@@ -9267,6 +9340,11 @@ components:
         activityPaused:
           type: boolean
           description: Will be set to true if the activity is paused.
+        activityReset:
+          type: boolean
+          description: |-
+            Will be set to true if the activity was reset.
+             Applies only to the current run.
     RegisterNamespaceRequest:
       type: object
       properties:
@@ -9668,6 +9746,14 @@ components:
             type: string
             format: enum
           description: Event types not to be reapplied
+        postResetOperations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostResetOperation'
+          description: |-
+            Operations to perform after the workflow has been reset. These operations will be applied
+             to the *new* run of the workflow execution in the order they are provided.
+             All operations are applied to the workflow before the first new workflow task is generated
     ResetWorkflowExecutionResponse:
       type: object
       properties:
@@ -10708,6 +10794,10 @@ components:
           items:
             $ref: '#/components/schemas/Link'
           description: Links to be associated with the WorkflowExecutionSignaled event.
+      description: |-
+        Keep the parameters in sync with:
+           - temporal.api.batch.v1.BatchOperationSignal.
+           - temporal.api.workflow.v1.PostResetOperation.SignalWorkflow.
     SignalWorkflowExecutionResponse:
       type: object
       properties: {}
@@ -11011,6 +11101,21 @@ components:
         started:
           type: boolean
           description: If true, a new workflow was started.
+        status:
+          enum:
+            - WORKFLOW_EXECUTION_STATUS_UNSPECIFIED
+            - WORKFLOW_EXECUTION_STATUS_RUNNING
+            - WORKFLOW_EXECUTION_STATUS_COMPLETED
+            - WORKFLOW_EXECUTION_STATUS_FAILED
+            - WORKFLOW_EXECUTION_STATUS_CANCELED
+            - WORKFLOW_EXECUTION_STATUS_TERMINATED
+            - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
+            - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+          type: string
+          description: |-
+            Current execution status of the workflow. Typically remains WORKFLOW_EXECUTION_STATUS_RUNNING
+             unless a de-dupe occurs or in specific scenarios handled within the ExecuteMultiOperation (refer to its docs).
+          format: enum
         eagerWorkflowTask:
           allOf:
             - $ref: '#/components/schemas/PollWorkflowTaskQueueResponse'
@@ -11707,6 +11812,10 @@ components:
             Controls which fields from `workflow_execution_options` will be applied.
              To unset a field, set it to null and use the update mask to indicate that it should be mutated.
           format: field-mask
+      description: |-
+        Keep the parameters in sync with:
+           - temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions.
+           - temporal.api.workflow.v1.PostResetOperation.UpdateWorkflowOptions.
     UpdateWorkflowExecutionOptionsResponse:
       type: object
       properties:

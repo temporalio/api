@@ -94,11 +94,11 @@ message WorkflowExecutionInfo {
     // Assigned build ID can also change in the middle of a execution if Compatible Redirect Rules are applied to
     // this execution.
     // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
-    string assigned_build_id = 19;
+    string assigned_build_id = 19 [deprecated = true];
     // Build ID inherited from a previous/parent execution. If present, assigned_build_id will be set to this, instead
     // of using the assignment rules.
     // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
-    string inherited_build_id = 20;
+    string inherited_build_id = 20 [deprecated = true];
     // The first run ID in the execution chain.
     // Executions created via the following operations are considered to be in the same chain
     // - ContinueAsNew
@@ -114,7 +114,8 @@ message WorkflowExecutionInfo {
 
     // The name of Worker Deployment that completed the most recent workflow task.
     // Experimental. Worker Deployments are experimental and might change in the future.
-    string worker_deployment_name = 23;
+    // Deprecated. Replaced with `versioning_info.deployment_version`.
+    string worker_deployment_name = 23 [deprecated = true];
 
     // Priority metadata
     temporal.api.common.v1.Priority priority = 24;
@@ -174,10 +175,12 @@ message WorkflowExecutionVersioningInfo {
     // Deprecated. Use `deployment_version`.
     string version = 5 [deprecated = true];
     // The Worker Deployment Version that completed the last workflow task of this workflow execution.
-    // Must be present if and only if `behavior` is set. An absent value means no workflow task is
-    // completed, or the workflow is unversioned.
-    // For child workflows of Pinned parents, this will be set to parent's Pinned Version when the
-    // the child starts so that child's first workflow task goes to the same Version as the parent.
+    // An absent value means no workflow task is completed, or the workflow is unversioned.
+    // If present, and `behavior` is UNSPECIFIED, the last task of this workflow execution was completed
+    // by a worker that is not using versioning but _is_ passing Deployment Name and Build ID.
+    //
+    // For child workflows of Pinned parents, this will be set to the parent's Pinned Version when
+    // the child starts, so that the child's first workflow task goes to the same Version as the parent.
     // Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
     // will override this value.
     temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 7;
@@ -246,7 +249,7 @@ message DeploymentVersionTransition {
 
     // The target Version of the transition.
     // If nil, a so-far-versioned workflow is transitioning to unversioned workers.
-    temporal.api.deployment.v1.WorkerDeploymentVersion target_deployment_version = 2;
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
 
     // Later: safe transition info
 }
@@ -384,9 +387,10 @@ message ResetPoints {
 // checksum changes (although in general only one or the other will be used at a time).
 message ResetPointInfo {
     // Worker build id.
+    // todo carly
     string build_id = 7;
     // A worker binary version identifier (deprecated).
-    string binary_checksum = 1;
+    string binary_checksum = 1 [deprecated = true];
     // The first run ID in the execution chain that was touched by this worker build.
     string run_id = 2;
     // Event ID of the first WorkflowTaskCompleted event processed by this worker build.

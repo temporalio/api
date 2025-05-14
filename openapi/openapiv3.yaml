@@ -10927,18 +10927,6 @@ components:
     SignalWorkflowExecutionResponse:
       type: object
       properties: {}
-    SourceWorkflowVersioningInfo:
-      type: object
-      properties:
-        deploymentVersion:
-          $ref: '#/components/schemas/WorkerDeploymentVersion'
-        behavior:
-          enum:
-            - VERSIONING_BEHAVIOR_UNSPECIFIED
-            - VERSIONING_BEHAVIOR_PINNED
-            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-          type: string
-          format: enum
     StartBatchOperationRequest:
       type: object
       properties:
@@ -13105,7 +13093,7 @@ components:
           description: Priority metadata
         parentVersioningInfo:
           allOf:
-            - $ref: '#/components/schemas/SourceWorkflowVersioningInfo'
+            - $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes_SourceWorkflowVersioningInfo'
           description: |-
             When present, this is a child workflow of a versioned parent.
              If the parent's effective behavior is PINNED, and the child's Task Queue belongs to the
@@ -13114,7 +13102,7 @@ components:
              If a versioning override is present, it will take precedence over the inherited base version.
         previousRunVersioningInfo:
           allOf:
-            - $ref: '#/components/schemas/SourceWorkflowVersioningInfo'
+            - $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes_SourceWorkflowVersioningInfo'
           description: |-
             When present, this workflow is part of a chain, and the previous workflow in the chain was versioned.
              The `initiator` field of this event specifies why this new workflow was initiated.
@@ -13126,12 +13114,23 @@ components:
              If initiated by a workflow retry on a root workflow execution, the new workflow will not inherit the
              previous workflow's Version, but, if the retried workflow has a Pinned parent or is part of a Pinned
              ContinueAsNew chain, then the new workflow will inherit the version of the existing tree or chain
-             (see `ExecutionInfo.versioning_info.source_workflow_versioning_info`).
 
              If initiated by a workflow Cron, the new workflow will never inherit the previous workflow's Version.
 
              If a versioning override is present, it will take precedence over the inherited base version.
       description: Always the first event in workflow history
+    WorkflowExecutionStartedEventAttributes_SourceWorkflowVersioningInfo:
+      type: object
+      properties:
+        deploymentVersion:
+          $ref: '#/components/schemas/WorkerDeploymentVersion'
+        behavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          format: enum
     WorkflowExecutionTerminatedEventAttributes:
       type: object
       properties:
@@ -13337,14 +13336,6 @@ components:
              worker's task completion response.
              Pending activities will not start new attempts during a transition. Once the transition is
              completed, pending activities will start their next attempt on the new version.
-        sourceWorkflowVersioningInfo:
-          allOf:
-            - $ref: '#/components/schemas/SourceWorkflowVersioningInfo'
-          description: |-
-            When present, this workflow execution is the child of a versioned parent, or is part of
-             a ContinueAsNew chain and the previous workflow in the chain was versioned.
-             If this workflow retries and the source is PINNED, the new retry workflow will inherit the
-             Version of the source workflow.
       description: |-
         Holds all the information about worker versioning for a particular workflow execution.
          Experimental. Versioning info is experimental and might change in the future.

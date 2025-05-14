@@ -134,31 +134,29 @@ message WorkflowExecutionStartedEventAttributes {
     reserved 36;
     reserved "parent_pinned_deployment_version";
 
-    // Specifies the versioning information of the source workflow, if this workflow was started
-    // by a parent of as part of a chain.
-    // The base versioning info of the source workflow may or may not be inherited.
+    // When present, this is a child workflow of a versioned parent.
+    // If the parent's effective behavior is PINNED, and the child's Task Queue belongs to the
+    // parent's Version, the child workflow will inherit the parent's Version.
+    //
     // If a versioning override is present, it will take precedence over the inherited base version.
-    oneof source_workflow_versioning_info {
-        // When present, this is a child workflow of a versioned parent.
-        // If the parent's effective behavior is PINNED, and the child's Task Queue belongs to the
-        // parent's Version, the child workflow will inherit the parent's Version.
-        temporal.api.workflow.v1.SourceWorkflowVersioningInfo parent_versioning_info = 37;
+    temporal.api.workflow.v1.SourceWorkflowVersioningInfo parent_versioning_info = 37;
 
-        // When present, this workflow is part of a chain, and the previous workflow in the chain was versioned.
-        // The `initiator` field of this event specifies why this new workflow was initiated.
-        //
-        // If initiated by a workflow ContinueAsNew, and the previous workflow's effective behavior is PINNED,
-        // and the new workflow's Task Queue belongs to the previous workflow's Version, the new workflow will
-        // inherit the previous workflow's version.
-        //
-        // If initiated by a workflow retry on a root workflow execution, the new workflow will not inherit the
-        // previous workflow's Version, but, if the retried workflow has a Pinned parent or is part of a Pinned
-        // ContinueAsNew chain, then the new workflow will inherit the version of the existing tree or chain
-        // (see `ExecutionInfo.versioning_info.source_workflow_versioning_info`).
-        //
-        // If initiated by a workflow Cron, the new workflow will never inherit the previous workflow's Version.
-        temporal.api.workflow.v1.SourceWorkflowVersioningInfo previous_run_versioning_info = 38;
-    }
+    // When present, this workflow is part of a chain, and the previous workflow in the chain was versioned.
+    // The `initiator` field of this event specifies why this new workflow was initiated.
+    //
+    // If initiated by a workflow ContinueAsNew, and the previous workflow's effective behavior is PINNED,
+    // and the new workflow's Task Queue belongs to the previous workflow's Version, the new workflow will
+    // inherit the previous workflow's version.
+    //
+    // If initiated by a workflow retry on a root workflow execution, the new workflow will not inherit the
+    // previous workflow's Version, but, if the retried workflow has a Pinned parent or is part of a Pinned
+    // ContinueAsNew chain, then the new workflow will inherit the version of the existing tree or chain
+    // (see `ExecutionInfo.versioning_info.source_workflow_versioning_info`).
+    //
+    // If initiated by a workflow Cron, the new workflow will never inherit the previous workflow's Version.
+    //
+    // If a versioning override is present, it will take precedence over the inherited base version.
+    temporal.api.workflow.v1.SourceWorkflowVersioningInfo previous_run_versioning_info = 38;
 }
 
 message WorkflowExecutionCompletedEventAttributes {

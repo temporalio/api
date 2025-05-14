@@ -7174,6 +7174,17 @@
       },
       "description": "RequestIdReference is a indirect reference to a history event through the request ID."
     },
+    "WorkflowExecutionStartedEventAttributesSourceWorkflowVersioningInfo": {
+      "type": "object",
+      "properties": {
+        "deploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
+        },
+        "behavior": {
+          "$ref": "#/definitions/v1VersioningBehavior"
+        }
+      }
+    },
     "WorkflowRuleActionActionActivityPause": {
       "type": "object"
     },
@@ -15186,15 +15197,7 @@
         },
         "inheritBuildId": {
           "type": "boolean",
-          "description": "If this is set, the new execution inherits the Build ID of the current execution. Otherwise,\nthe assignment rules will be used to independently assign a Build ID to the new execution.\nOnly considered for versioning v0.2, which is deprecated."
-        },
-        "currentPinnedVersioningOverride": {
-          "$ref": "#/definitions/v1VersioningOverride",
-          "description": "If this is set, the new execution inherits the versioning override of the current execution,\nbecause the effective behavior of the current execution is pinned."
-        },
-        "currentPinnedDeploymentVersion": {
-          "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "If this is set, the new execution inherits the pinned version of the current execution,\nbecause the effective behavior of the current execution is pinned.\nThis is set only if the new workflow is starting on a Task Queue belonging to the same\nWorker Deployment Version."
+          "description": "If this is set, the new execution inherits the Build ID of the current execution. Otherwise,\nthe assignment rules will be used to independently assign a Build ID to the new execution.\nDeprecated. Only considered for versioning v0.2."
         }
       }
     },
@@ -15561,19 +15564,19 @@
         },
         "parentPinnedWorkerDeploymentVersion": {
           "type": "string",
-          "description": "When present, it means this is a child workflow of a parent that is Pinned to this Worker\nDeployment Version. In this case, child workflow will start as Pinned to this Version instead\nof starting on the Current Version of its Task Queue.\nThis is set only if the child workflow is starting on a Task Queue belonging to the same\nWorker Deployment Version.\nDeprecated. Use `parent_pinned_deployment_version`."
-        },
-        "parentPinnedDeploymentVersion": {
-          "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "When present, it means this is a child workflow of a parent that is Pinned to this Worker\nDeployment Version. In this case, child workflow will start as Pinned to this Version instead\nof starting on the Current Version of its Task Queue.\nThis is set only if the child workflow is starting on a Task Queue belonging to the same\nWorker Deployment Version."
-        },
-        "previousPinnedDeploymentVersion": {
-          "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "When present, it means this is a continued-as-new workflow of a previous execution that is Pinned\nto this Worker Deployment Version. In this case, the new workflow will start as Pinned to this Version\ninstead of starting on the Current Version of its Task Queue.\nThis is set only if the new workflow is starting on a Task Queue belonging to the same\nWorker Deployment Version."
+          "description": "When present, it means this is a child workflow of a parent that is Pinned to this Worker\nDeployment Version. In this case, child workflow will start as Pinned to this Version instead\nof starting on the Current Version of its Task Queue.\nThis is set only if the child workflow is starting on a Task Queue belonging to the same\nWorker Deployment Version.\nDeprecated. Use `parent_versioning_info`."
         },
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "title": "Priority metadata"
+        },
+        "parentVersioningInfo": {
+          "$ref": "#/definitions/WorkflowExecutionStartedEventAttributesSourceWorkflowVersioningInfo",
+          "description": "When present, this is a child workflow of a versioned parent.\nIf the parent's effective behavior is PINNED, and the child's Task Queue belongs to the\nparent's Version, the child workflow will inherit the parent's Version."
+        },
+        "previousRunVersioningInfo": {
+          "$ref": "#/definitions/WorkflowExecutionStartedEventAttributesSourceWorkflowVersioningInfo",
+          "description": "When present, this workflow is part of a chain, and the previous workflow in the chain was versioned.\nThe `initiator` field of this event specifies why this new workflow was initiated.\n\nIf initiated by a workflow ContinueAsNew, and the previous workflow's effective behavior is PINNED,\nand the new workflow's Task Queue belongs to the previous workflow's Version, the new workflow will\ninherit the previous workflow's version.\n\nIf initiated by a workflow retry or Cron, the new workflow will never inherit the previous workflow's Version."
         }
       },
       "title": "Always the first event in workflow history"
@@ -15705,7 +15708,7 @@
       "properties": {
         "behavior": {
           "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "Versioning behavior determines how the server should treat this execution when workers are\nupgraded. When present it means this workflow execution is versioned; UNSPECIFIED means\nunversioned. See the comments in `VersioningBehavior` enum for more info about different\nbehaviors.\nThis field is first set after an execution completes its first workflow task on a versioned\nworker, and set again on completion of every subsequent workflow task.\nFor child workflows of Pinned parents, this will be set to Pinned (along with `version`) when\nthe the child starts so that child's first workflow task goes to the same Version as the\nparent. After the first workflow task, it depends on the child workflow itself if it wants\nto stay pinned or become unpinned (according to Versioning Behavior set in the worker).\nNote that `behavior` is overridden by `versioning_override` if the latter is present."
+          "description": "Versioning behavior determines how the server should treat this execution when workers are\nupgraded. When present it means this workflow execution is versioned; UNSPECIFIED means\nunversioned. See the comments in `VersioningBehavior` enum for more info about different\nbehaviors.\nThis field is first set after an execution completes its first workflow task on a versioned\nworker, and set again on completion of every subsequent workflow task.\nFor child workflows of Pinned parents, this will be set to Pinned (along with `deployment_version`) when\nthe the child starts so that child's first workflow task goes to the same Version as the\nparent. After the first workflow task, it depends on the child workflow itself if it wants\nto stay pinned or become unpinned (according to Versioning Behavior set in the worker).\nNote that `behavior` is overridden by `versioning_override` if the latter is present."
         },
         "deployment": {
           "$ref": "#/definitions/v1Deployment",
@@ -15721,7 +15724,7 @@
         },
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
-          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `version` when override is PINNED). An\noverride can be set when starting a new execution, as well as afterwards by calling the\n`UpdateWorkflowExecutionOptions` API.\nPinned overrides are automatically inherited by child workflows."
+          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `version` when override is PINNED). An\noverride can be set when starting a new execution, as well as afterwards by calling the\n`UpdateWorkflowExecutionOptions` API.\nPinned overrides are automatically inherited by child workflows, continue-as-new workflows, and workflow retries."
         },
         "deploymentTransition": {
           "$ref": "#/definitions/v1DeploymentTransition",
@@ -15729,7 +15732,7 @@
         },
         "versionTransition": {
           "$ref": "#/definitions/v1DeploymentVersionTransition",
-          "description": "When present, indicates the workflow is transitioning to a different deployment version\n(which may belong to the same deployment name or another). Can indicate one of the following\ntransitions: unversioned -> versioned, versioned -> versioned\non a different deployment version, or versioned -> unversioned.\nNot applicable to workflows with PINNED behavior.\nWhen a workflow with AUTO_UPGRADE behavior creates a new workflow task, it will automatically\nstart a transition to the task queue's current version if the task queue's current version is\ndifferent from the workflow's current deployment version.\nIf the AUTO_UPGRADE workflow is stuck due to backlogged activity or workflow tasks, those\ntasks will be redirected to the task queue's current version. As soon as a poller from\nthat deployment version is available to receive the task, the workflow will automatically\nstart a transition to that version and continue execution there.\nA version transition can only exist while there is a pending or started workflow task.\nOnce the pending workflow task completes on the transition's target version, the\ntransition completes and the workflow's `behavior`, and `version` fields are updated per the\nworker's task completion response.\nPending activities will not start new attempts during a transition. Once the transition is\ncompleted, pending activities will start their next attempt on the new version."
+          "description": "When present, indicates the workflow is transitioning to a different deployment version\n(which may belong to the same deployment name or another). Can indicate one of the following\ntransitions: unversioned -> versioned, versioned -> versioned\non a different deployment version, or versioned -> unversioned.\nNot applicable to workflows with PINNED behavior.\nWhen a workflow with AUTO_UPGRADE behavior creates a new workflow task, it will automatically\nstart a transition to the task queue's current version if the task queue's current version is\ndifferent from the workflow's current deployment version.\nIf the AUTO_UPGRADE workflow is stuck due to backlogged activity or workflow tasks, those\ntasks will be redirected to the task queue's current version. As soon as a poller from\nthat deployment version is available to receive the task, the workflow will automatically\nstart a transition to that version and continue execution there.\nA version transition can only exist while there is a pending or started workflow task.\nOnce the pending workflow task completes on the transition's target version, the\ntransition completes and the workflow's `behavior`, and `deployment_version` fields are updated per the\nworker's task completion response.\nPending activities will not start new attempts during a transition. Once the transition is\ncompleted, pending activities will start their next attempt on the new version."
         }
       },
       "description": "Holds all the information about worker versioning for a particular workflow execution.\nExperimental. Versioning info is experimental and might change in the future."

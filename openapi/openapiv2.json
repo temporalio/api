@@ -6917,42 +6917,6 @@
       },
       "description": "UpdateWorkflowOptions represents updating workflow execution options after a workflow reset.\nKeep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest."
     },
-    "StartOperationResponseAsync": {
-      "type": "object",
-      "properties": {
-        "operationId": {
-          "type": "string",
-          "description": "Deprecated: Renamed to operation_token."
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        },
-        "operationToken": {
-          "type": "string"
-        }
-      },
-      "description": "The operation will complete asynchronously.\nThe returned ID can be used to reference this operation."
-    },
-    "StartOperationResponseSync": {
-      "type": "object",
-      "properties": {
-        "payload": {
-          "$ref": "#/definitions/v1Payload"
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        }
-      },
-      "description": "An operation completed successfully."
-    },
     "UpdateWorkerBuildIdCompatibilityRequestAddNewCompatibleVersion": {
       "type": "object",
       "properties": {
@@ -8411,6 +8375,12 @@
         },
         "cancelOperation": {
           "$ref": "#/definitions/v1CancelOperationRequest"
+        },
+        "getOperationInfo": {
+          "$ref": "#/definitions/v1GetOperationInfoRequest"
+        },
+        "getOperationResult": {
+          "$ref": "#/definitions/v1GetOperationResultRequest"
         }
       },
       "description": "A Nexus request."
@@ -8423,6 +8393,12 @@
         },
         "cancelOperation": {
           "$ref": "#/definitions/v1CancelOperationResponse"
+        },
+        "getOperationInfo": {
+          "$ref": "#/definitions/v1GetOperationInfoResponse"
+        },
+        "getOperationResult": {
+          "$ref": "#/definitions/v1GetOperationResultResponse"
         }
       },
       "description": "A response indicating that the handler has successfully processed a request."
@@ -9206,6 +9182,10 @@
         "CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_NAMESPACE_NOT_FOUND"
       ],
       "default": "CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_UNSPECIFIED"
+    },
+    "v1CancelNexusOperationResponse": {
+      "type": "object",
+      "description": "If this response is returned, the cancelation request was successfully processed by a Handler.\nThe operation may ignore the cancelation request and end up in any terminal state."
     },
     "v1CancelOperationRequest": {
       "type": "object",
@@ -10419,6 +10399,148 @@
           "$ref": "#/definitions/v1Endpoint"
         }
       }
+    },
+    "v1GetNexusOperationInfoResponse": {
+      "type": "object",
+      "properties": {
+        "info": {
+          "$ref": "#/definitions/v1OperationInfo"
+        }
+      }
+    },
+    "v1GetNexusOperationResultResponse": {
+      "type": "object",
+      "properties": {
+        "completeSuccess": {
+          "$ref": "#/definitions/v1GetNexusOperationResultResponseComplete"
+        },
+        "operationError": {
+          "$ref": "#/definitions/v1UnsuccessfulOperationError",
+          "description": "The operation completed unsuccessfully (failed or canceled)."
+        },
+        "stillRunning": {
+          "$ref": "#/definitions/v1GetNexusOperationResultResponseStillRunning",
+          "description": "The operation is still running, When waiting for completion, the caller may re-issue this request to start a\nnew long poll."
+        },
+        "timeout": {
+          "$ref": "#/definitions/v1GetNexusOperationResultResponseTimeout",
+          "title": "The server gave up waiting for operation completion. The request may be retried by the caller.\nTODO: does the SDK need to return this or is this a server only result?"
+        }
+      }
+    },
+    "v1GetNexusOperationResultResponseComplete": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/v1Payload"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        }
+      },
+      "description": "The operation completed successfully."
+    },
+    "v1GetNexusOperationResultResponseStillRunning": {
+      "type": "object"
+    },
+    "v1GetNexusOperationResultResponseTimeout": {
+      "type": "object"
+    },
+    "v1GetOperationInfoRequest": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "type": "string",
+          "description": "Service name."
+        },
+        "operation": {
+          "type": "string",
+          "description": "Operation name."
+        },
+        "operationToken": {
+          "type": "string",
+          "description": "Operation token as originally generated by a Handler."
+        }
+      },
+      "description": "A request to cancel an operation.\n"
+    },
+    "v1GetOperationInfoResponse": {
+      "type": "object",
+      "properties": {
+        "info": {
+          "$ref": "#/definitions/v1OperationInfo"
+        }
+      },
+      "description": "Response variant for GetOperationInfoRequest."
+    },
+    "v1GetOperationResultRequest": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "type": "string",
+          "description": "Service name."
+        },
+        "operation": {
+          "type": "string",
+          "description": "Operation name."
+        },
+        "operationToken": {
+          "type": "string",
+          "description": "Operation token as originally generated by a Handler."
+        },
+        "wait": {
+          "type": "string",
+          "description": "If set and non-zero, reflects the duration the caller has indicated that it wants to wait for operation\ncompletion, turning the request into a long poll."
+        }
+      },
+      "description": "A request to cancel an operation.\n"
+    },
+    "v1GetOperationResultResponse": {
+      "type": "object",
+      "properties": {
+        "completeSuccess": {
+          "$ref": "#/definitions/v1GetOperationResultResponseComplete"
+        },
+        "operationError": {
+          "$ref": "#/definitions/v1UnsuccessfulOperationError",
+          "description": "The operation completed unsuccessfully (failed or canceled)."
+        },
+        "stillRunning": {
+          "$ref": "#/definitions/v1GetOperationResultResponseStillRunning",
+          "description": "The operation is still running, When waiting for completion, the caller may re-issue this request to start a\nnew long poll."
+        },
+        "timeout": {
+          "$ref": "#/definitions/v1GetOperationResultResponseTimeout",
+          "title": "The server gave up waiting for operation completion. The request may be retried by the caller.\nTODO: does the SDK need to return this or is this a server only result?"
+        }
+      },
+      "description": "Response variant for GetOperationResultRequest."
+    },
+    "v1GetOperationResultResponseComplete": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/v1Payload"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        }
+      },
+      "description": "The operation completed successfully."
+    },
+    "v1GetOperationResultResponseStillRunning": {
+      "type": "object"
+    },
+    "v1GetOperationResultResponseTimeout": {
+      "type": "object"
     },
     "v1GetSearchAttributesResponse": {
       "type": "object",
@@ -11755,6 +11877,19 @@
         }
       },
       "description": "When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and\nthere is already an existing running workflow, OnConflictOptions defines actions to be taken on\nthe existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent\nhistory event in the running workflow with the changes requested in this object."
+    },
+    "v1OperationInfo": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "Operation token as originally generated by a Handler."
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "description": "See https://github.com/nexus-rpc/api/blob/main/SPEC.md#operationinfo."
     },
     "v1Outcome": {
       "type": "object",
@@ -13807,6 +13942,53 @@
         }
       }
     },
+    "v1StartNexusOperationResponse": {
+      "type": "object",
+      "properties": {
+        "syncSuccess": {
+          "$ref": "#/definitions/v1StartNexusOperationResponseSync"
+        },
+        "asyncSuccess": {
+          "$ref": "#/definitions/v1StartNexusOperationResponseAsync"
+        },
+        "operationError": {
+          "$ref": "#/definitions/v1UnsuccessfulOperationError",
+          "description": "The operation completed unsuccessfully (failed or canceled)."
+        }
+      }
+    },
+    "v1StartNexusOperationResponseAsync": {
+      "type": "object",
+      "properties": {
+        "operationToken": {
+          "type": "string"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        }
+      },
+      "description": "The operation will complete asynchronously.\nThe returned token can be used to reference this operation."
+    },
+    "v1StartNexusOperationResponseSync": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/v1Payload"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        }
+      },
+      "description": "An operation completed successfully."
+    },
     "v1StartOperationRequest": {
       "type": "object",
       "properties": {
@@ -13852,10 +14034,10 @@
       "type": "object",
       "properties": {
         "syncSuccess": {
-          "$ref": "#/definitions/StartOperationResponseSync"
+          "$ref": "#/definitions/v1StartOperationResponseSync"
         },
         "asyncSuccess": {
-          "$ref": "#/definitions/StartOperationResponseAsync"
+          "$ref": "#/definitions/v1StartOperationResponseAsync"
         },
         "operationError": {
           "$ref": "#/definitions/v1UnsuccessfulOperationError",
@@ -13863,6 +14045,42 @@
         }
       },
       "description": "Response variant for StartOperationRequest."
+    },
+    "v1StartOperationResponseAsync": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "description": "Deprecated: Renamed to operation_token."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        },
+        "operationToken": {
+          "type": "string"
+        }
+      },
+      "description": "The operation will complete asynchronously.\nThe returned token can be used to reference this operation."
+    },
+    "v1StartOperationResponseSync": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/v1Payload"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        }
+      },
+      "description": "An operation completed successfully."
     },
     "v1StartTimeFilter": {
       "type": "object",

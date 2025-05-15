@@ -12681,6 +12681,7 @@ components:
           description: |-
             If this is set, the new execution inherits the Build ID of the current execution. Otherwise,
              the assignment rules will be used to independently assign a Build ID to the new execution.
+             Deprecated. Only considered for versioning v0.2.
     WorkflowExecutionExtendedInfo:
       type: object
       properties:
@@ -13087,21 +13088,51 @@ components:
              of starting on the Current Version of its Task Queue.
              This is set only if the child workflow is starting on a Task Queue belonging to the same
              Worker Deployment Version.
-             Deprecated. Use `parent_pinned_deployment_version`.
-        parentPinnedDeploymentVersion:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: |-
-            When present, it means this is a child workflow of a parent that is Pinned to this Worker
-             Deployment Version. In this case, child workflow will start as Pinned to this Version instead
-             of starting on the Current Version of its Task Queue.
-             This is set only if the child workflow is starting on a Task Queue belonging to the same
-             Worker Deployment Version.
+             Deprecated. Use `parent_versioning_info`.
         priority:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata
+        parentVersioningInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes_SourceWorkflowVersioningInfo'
+          description: |-
+            When present, this is a child workflow of a versioned parent.
+             If the parent's effective behavior is PINNED, and the child's Task Queue belongs to the
+             parent's Version, the child workflow will inherit the parent's Version.
+
+             If a versioning override is present, it will take precedence over the inherited base version.
+        previousRunVersioningInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes_SourceWorkflowVersioningInfo'
+          description: |-
+            When present, this workflow is part of a chain, and the previous workflow in the chain was versioned.
+             The `initiator` field of this event specifies why this new workflow was initiated.
+
+             If initiated by a workflow ContinueAsNew, and the previous workflow's effective behavior is PINNED,
+             and the new workflow's Task Queue belongs to the previous workflow's Version, the new workflow will
+             inherit the previous workflow's version.
+
+             If initiated by a workflow retry on a root workflow execution, the new workflow will not inherit the
+             previous workflow's Version, but, if the retried workflow has a Pinned parent or is part of a Pinned
+             ContinueAsNew chain, then the new workflow will inherit the version of the existing tree or chain
+
+             If initiated by a workflow Cron, the new workflow will never inherit the previous workflow's Version.
+
+             If a versioning override is present, it will take precedence over the inherited base version.
       description: Always the first event in workflow history
+    WorkflowExecutionStartedEventAttributes_SourceWorkflowVersioningInfo:
+      type: object
+      properties:
+        deploymentVersion:
+          $ref: '#/components/schemas/WorkerDeploymentVersion'
+        behavior:
+          enum:
+            - VERSIONING_BEHAVIOR_UNSPECIFIED
+            - VERSIONING_BEHAVIOR_PINNED
+            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          format: enum
     WorkflowExecutionTerminatedEventAttributes:
       type: object
       properties:
@@ -13221,7 +13252,7 @@ components:
              behaviors.
              This field is first set after an execution completes its first workflow task on a versioned
              worker, and set again on completion of every subsequent workflow task.
-             For child workflows of Pinned parents, this will be set to Pinned (along with `version`) when
+             For child workflows of Pinned parents, this will be set to Pinned (along with `deployment_version`) when
              the the child starts so that child's first workflow task goes to the same Version as the
              parent. After the first workflow task, it depends on the child workflow itself if it wants
              to stay pinned or become unpinned (according to Versioning Behavior set in the worker).
@@ -13262,7 +13293,7 @@ components:
              precedence over SDK-sent `behavior` (and `version` when override is PINNED). An
              override can be set when starting a new execution, as well as afterwards by calling the
              `UpdateWorkflowExecutionOptions` API.
-             Pinned overrides are automatically inherited by child workflows.
+             Pinned overrides are automatically inherited by child workflows, continue-as-new workflows, and workflow retries.
         deploymentTransition:
           allOf:
             - $ref: '#/components/schemas/DeploymentTransition'
@@ -13303,7 +13334,7 @@ components:
              start a transition to that version and continue execution there.
              A version transition can only exist while there is a pending or started workflow task.
              Once the pending workflow task completes on the transition's target version, the
-             transition completes and the workflow's `behavior`, and `version` fields are updated per the
+             transition completes and the workflow's `behavior`, and `deployment_version` fields are updated per the
              worker's task completion response.
              Pending activities will not start new attempts during a transition. Once the transition is
              completed, pending activities will start their next attempt on the new version.

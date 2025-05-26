@@ -1032,45 +1032,68 @@ message DescribeWorkflowExecutionResponse {
 //     aip.dev/not-precedent: field_behavior annotation not available in our gogo fork --)
 message DescribeTaskQueueRequest {
     string namespace = 1;
-    // Sticky queues are not supported in `ENHANCED` mode.
-    temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
-    // Deprecated. Use `ENHANCED` mode with `task_queue_types`. Ignored in `ENHANCED` mode.
-    // If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
-    temporal.api.enums.v1.TaskQueueType task_queue_type = 3 [deprecated = true];
-    // Deprecated. Ignored in `ENHANCED` mode.
-    bool include_task_queue_status = 4 [deprecated = true];
 
-    // All options except `task_queue_type` and `include_task_queue_status` are only available in the `ENHANCED` mode.
+    // Select the API mode to use for this request: DEFAULT mode (if unset) or ENHANCED mode.
+    // Consult the documentation for each field to understand which mode it is supported in.
     temporal.api.enums.v1.DescribeTaskQueueMode api_mode = 5;
 
+    // [BOTH MODES]
+    // However, sticky queues are not supported in ENHANCED mode.
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
+
+    // [DEFAULT MODE ONLY]
+    // If unspecified (TASK_QUEUE_TYPE_UNSPECIFIED), then default value (TASK_QUEUE_TYPE_WORKFLOW) will be used.
+    // Only supported in default mode (use `task_queue_types` in ENHANCED mode instead).
+    temporal.api.enums.v1.TaskQueueType task_queue_type = 3;
+
+    // [DEFAULT MODE ONLY]
+    // If true, the task queue status will be included in the response.
+    // In ENHANCED mode, use `report_stats` instead.
+    bool include_task_queue_status = 4;
+
+    // [ENHANCED MODE ONLY]
     // Optional. If not provided, the result for the default Build ID will be returned. The default Build ID is the one
     // mentioned in the first unconditional Assignment Rule. If there is no default Build ID, the result for the
     // unversioned queue will be returned.
     // (-- api-linter: core::0140::prepositions --)
     temporal.api.taskqueue.v1.TaskQueueVersionSelection versions = 6;
 
+    // [ENHANCED MODE ONLY]
     // Task queue types to report info about. If not specified, all types are considered.
     repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 7;
-    // Report stats for the requested task queue types and versions
+
+    // [BOTH MODES]
+    // Report stats for the requested task queue type(s), and versions (only in ENHANCED mode).
     bool report_stats = 8;
-    // Report list of pollers for requested task queue types and versions
+
+    // [ENHANCED MODE ONLY]
+    // Report list of pollers for requested task queue types and versions.
     bool report_pollers = 9;
+
+    // [ENHANCED MODE ONLY]
     // Report task reachability for the requested versions and all task types (task reachability is not reported
     // per task type).
     bool report_task_reachability = 10;
 }
 
 message DescribeTaskQueueResponse {
-    // Deprecated. Use `versions_info.types_info.pollers` with `ENHANCED` mode instead.
-    // Not set in `ENHANCED` mode.
-    repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1 [deprecated = true];
-    // Deprecated. Not set in `ENHANCED` mode.
+    // [DEFAULT MODE ONLY]
+    repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1;
+
+    // [DEFAULT MODE ONLY]
+    // Deprecated.
+    // Status of the task queue. Only populated when `include_task_queue_status` is set to true in the request.
     temporal.api.taskqueue.v1.TaskQueueStatus task_queue_status = 2 [deprecated = true];
 
+    // [DEFAULT MODE ONLY]
+    // Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
+    temporal.api.taskqueue.v1.TaskQueueStats task_queue_stats = 5;
+
+    // [ENHANCED MODE ONLY]
     // This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
-    // Only set in `ENHANCED` mode.
     map<string, temporal.api.taskqueue.v1.TaskQueueVersionInfo> versions_info = 3;
 
+    // [ENHANCED MODE ONLY]
     // Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.
     // When not present, it means the tasks are routed to Unversioned workers (workers with
     // UNVERSIONED or unspecified WorkerVersioningMode.)

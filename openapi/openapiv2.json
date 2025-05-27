@@ -7182,6 +7182,10 @@
         },
         "behavior": {
           "$ref": "#/definitions/v1VersioningBehavior"
+        },
+        "taskQueue": {
+          "type": "string",
+          "description": "Task queue name of source workflow if different from started workflow."
         }
       }
     },
@@ -9736,7 +9740,7 @@
         },
         "inheritBuildId": {
           "type": "boolean",
-          "description": "If this is set, the new execution inherits the Build ID of the current execution. Otherwise,\nthe assignment rules will be used to independently assign a Build ID to the new execution."
+          "description": "If this is set, the new execution inherits the Build ID of the current execution. Otherwise,\nthe assignment rules will be used to independently assign a Build ID to the new execution.\nDeprecated. Only considered for versioning v0.2."
         }
       }
     },
@@ -13720,7 +13724,7 @@
         },
         "inheritBuildId": {
           "type": "boolean",
-          "description": "If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment\nrules of the child's Task Queue will be used to independently assign a Build ID to it."
+          "description": "If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment\nrules of the child's Task Queue will be used to independently assign a Build ID to it.\nDeprecated. Only considered for versioning v0.2."
         },
         "priority": {
           "$ref": "#/definitions/v1Priority",
@@ -13841,7 +13845,7 @@
         },
         "inheritBuildId": {
           "type": "boolean",
-          "description": "If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment\nrules of the child's Task Queue will be used to independently assign a Build ID to it."
+          "description": "If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment\nrules of the child's Task Queue will be used to independently assign a Build ID to it.\nDeprecated. Only considered for versioning v0.2."
         },
         "priority": {
           "$ref": "#/definitions/v1Priority",
@@ -14876,7 +14880,7 @@
           "description": "Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.\nIdentifies the worker deployment version to pin the workflow to, in the format\n\"<deployment_name>.<build_id>\".\nDeprecated. Use `override.pinned.version`."
         }
       },
-      "description": "Used to override the versioning behavior (and pinned deployment version, if applicable) of a\nspecific workflow execution. If set, takes precedence over the worker-sent values. See\n`WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call\n`UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`\nto indicate that it should be mutated."
+      "description": "Used to override the versioning behavior (and pinned deployment version, if applicable) of a\nspecific workflow execution. If set, takes precedence over the worker-sent values. See\n`WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call\n`UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`\nto indicate that it should be mutated.\nPinned overrides are automatically inherited by child workflows, continue-as-new workflows,\nworkflow retries, and cron workflows."
     },
     "v1WaitPolicy": {
       "type": "object",
@@ -15474,7 +15478,7 @@
         },
         "continuedExecutionRunId": {
           "type": "string",
-          "description": "Run id of the previous workflow which continued-as-new or retired or cron executed into this\nworkflow."
+          "description": "Run id of the previous workflow which continued-as-new or retried or cron executed into this\nworkflow."
         },
         "initiator": {
           "$ref": "#/definitions/v1ContinueAsNewInitiator"
@@ -15561,7 +15565,7 @@
         },
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
-          "description": "Versioning override applied to this workflow when it was started."
+          "description": "Versioning override applied to this workflow when it was started.\nPinned overrides are automatically inherited by child workflows,\ncontinue-as-new workflows, workflow retries, and cron workflows."
         },
         "parentPinnedWorkerDeploymentVersion": {
           "type": "string",
@@ -15571,13 +15575,13 @@
           "$ref": "#/definitions/v1Priority",
           "title": "Priority metadata"
         },
-        "parentVersioningInfo": {
-          "$ref": "#/definitions/WorkflowExecutionStartedEventAttributesSourceWorkflowVersioningInfo",
-          "description": "When present, this is a child workflow of a versioned parent.\nIf the parent's effective behavior is PINNED, and the child's Task Queue belongs to the\nparent's Version, the child workflow will inherit the parent's Version.\n\nIf a versioning override is present, it will take precedence over the inherited base version."
-        },
         "previousRunVersioningInfo": {
           "$ref": "#/definitions/WorkflowExecutionStartedEventAttributesSourceWorkflowVersioningInfo",
-          "description": "When present, this workflow is part of a chain, and the previous workflow in the chain was versioned.\nThe `initiator` field of this event specifies why this new workflow was initiated.\n\nIf initiated by a workflow ContinueAsNew, and the previous workflow's effective behavior is PINNED,\nand the new workflow's Task Queue belongs to the previous workflow's Version, the new workflow will\ninherit the previous workflow's version.\n\nIf initiated by a workflow retry on a root workflow execution, the new workflow will not inherit the\nprevious workflow's Version, but, if the retried workflow has a Pinned parent or is part of a Pinned\nContinueAsNew chain, then the new workflow will inherit the version of the existing tree or chain\n\nIf initiated by a workflow Cron, the new workflow will never inherit the previous workflow's Version.\n\nIf a versioning override is present, it will take precedence over the inherited base version."
+          "description": "When present, this workflow is part of a retry and/or ContinueAsNew chain, and the previous run in the\nchain was versioned. The `initiator` field of this event specifies why this new workflow was initiated.\nIf present, and the previous run's effective behavior is PINNED, and the new run's Task Queue belongs\nto the previous run's Version, the new run will inherit the previous run's Version.\n\nIf initiated by a workflow ContinueAsNew, always populate.\n\nIf initiated by a workflow Cron, never populate, because new cron workflows should start their own version chain.\n\nIf initiated by a workflow retry, pass the retried run's `previous_run_versioning_info`, because a retry of a\nroot workflow or Cron workflow should not inherit the Pinned Version, but if the retried workflow has a PINNED\nparent or is part of a Pinned continue-as-new chain, the the new workflow should inherit the version of the\nexisting tree or chain.\n\nIf a versioning override is present, it will take precedence over the inherited base version."
+        },
+        "parentVersioningInfo": {
+          "$ref": "#/definitions/WorkflowExecutionStartedEventAttributesSourceWorkflowVersioningInfo",
+          "description": "When present, this is a child workflow of a versioned parent.\nIf the parent's effective behavior is PINNED, and the child's Task Queue belongs to the\nparent's Version, the child workflow will inherit the parent's Version.\n\nIf `versioning_override` is present, it will take precedence over the inherited base version.\nIf `previous_run_versioning_info` is present, it will take precedence over `parent_versioning_info`."
         }
       },
       "title": "Always the first event in workflow history"
@@ -15725,7 +15729,7 @@
         },
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
-          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `version` when override is PINNED). An\noverride can be set when starting a new execution, as well as afterwards by calling the\n`UpdateWorkflowExecutionOptions` API.\nPinned overrides are automatically inherited by child workflows, continue-as-new workflows, and workflow retries."
+          "description": "Present if user has set an execution-specific versioning override. This override takes\nprecedence over SDK-sent `behavior` (and `version` when override is PINNED). An\noverride can be set when starting a new execution, as well as afterwards by calling the\n`UpdateWorkflowExecutionOptions` API.\nPinned overrides are automatically inherited by child workflows, continue-as-new workflows,\nworkflow retries, and cron workflows."
         },
         "deploymentTransition": {
           "$ref": "#/definitions/v1DeploymentTransition",

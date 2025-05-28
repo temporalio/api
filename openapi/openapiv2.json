@@ -6812,6 +6812,18 @@
         },
         "routingConfig": {
           "$ref": "#/definitions/v1RoutingConfig"
+        },
+        "latestVersionSummary": {
+          "$ref": "#/definitions/WorkerDeploymentInfoWorkerDeploymentVersionSummary",
+          "description": "Summary of the version that was added most recently in the Worker Deployment."
+        },
+        "currentVersionSummary": {
+          "$ref": "#/definitions/WorkerDeploymentInfoWorkerDeploymentVersionSummary",
+          "description": "Summary of the current version of the Worker Deployment."
+        },
+        "rampingVersionSummary": {
+          "$ref": "#/definitions/WorkerDeploymentInfoWorkerDeploymentVersionSummary",
+          "description": "Summary of the ramping version of the Worker Deployment."
         }
       },
       "title": "A subset of WorkerDeploymentInfo"
@@ -7094,6 +7106,10 @@
         "version": {
           "type": "string",
           "description": "Deprecated. Use `deployment_version`."
+        },
+        "status": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersionStatus",
+          "description": "The status of the Worker Deployment Version."
         },
         "deploymentVersion": {
           "$ref": "#/definitions/v1WorkerDeploymentVersion",
@@ -7453,6 +7469,10 @@
         "jitter": {
           "type": "string",
           "title": "If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.\n(unless it is paused and keep_paused is set)"
+        },
+        "restoreOriginalOptions": {
+          "type": "boolean",
+          "description": "If set, the activity options will be restored to the defaults.\nDefault options are then options activity was created with.\nThey are part of the first SCHEDULE event."
         }
       }
     },
@@ -8190,6 +8210,10 @@
         "type": {
           "type": "string",
           "description": "Update all running activities of this type."
+        },
+        "restoreOriginal": {
+          "type": "boolean",
+          "description": "If set, the activity options will be restored to the default.\nDefault options are then options activity was created with.\nThey are part of the first SCHEDULE event.\nThis flag cannot be combined with any other option; if you supply\nrestore_original together with other options, the request will be rejected."
         }
       }
     },
@@ -14961,6 +14985,10 @@
           "type": "string",
           "description": "Deprecated. Use `deployment_version`."
         },
+        "status": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersionStatus",
+          "description": "The status of the Worker Deployment Version."
+        },
         "deploymentVersion": {
           "$ref": "#/definitions/v1WorkerDeploymentVersion",
           "description": "Required."
@@ -15020,6 +15048,19 @@
         }
       },
       "description": "A Worker Deployment Version (Version, for short) represents all workers of the same \ncode and config within a Deployment. Workers of the same Version are expected to \nbehave exactly the same so when executions move between them there are no \nnon-determinism issues.\nWorker Deployment Versions are created in Temporal server automatically when \ntheir first poller arrives to the server.\nExperimental. Worker Deployments are experimental and might significantly change in the future."
+    },
+    "v1WorkerDeploymentVersionStatus": {
+      "type": "string",
+      "enum": [
+        "WORKER_DEPLOYMENT_VERSION_STATUS_UNSPECIFIED",
+        "WORKER_DEPLOYMENT_VERSION_STATUS_INACTIVE",
+        "WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT",
+        "WORKER_DEPLOYMENT_VERSION_STATUS_RAMPING",
+        "WORKER_DEPLOYMENT_VERSION_STATUS_DRAINING",
+        "WORKER_DEPLOYMENT_VERSION_STATUS_DRAINED"
+      ],
+      "default": "WORKER_DEPLOYMENT_VERSION_STATUS_UNSPECIFIED",
+      "description": "Specify the status of a Worker Deployment Version.\nExperimental. Worker Deployments are experimental and might significantly change in the future.\n\n - WORKER_DEPLOYMENT_VERSION_STATUS_INACTIVE: The Worker Deployment Version has been created inside the Worker Deployment but is not used by any\nworkflow executions. These Versions can still have workflows if they have an explicit Versioning Override targeting\nthis Version. Such Versioning Override could be set at workflow start time, or at a later time via `UpdateWorkflowExecutionOptions`.\n - WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT: The Worker Deployment Version is the current version of the Worker Deployment. All new workflow executions \nand tasks of existing unversioned or AutoUpgrade workflows are routed to this version.\n - WORKER_DEPLOYMENT_VERSION_STATUS_RAMPING: The Worker Deployment Version is the ramping version of the Worker Deployment. A subset of new Pinned workflow executions are \nrouted to this version. Moreover, a portion of existing unversioned or AutoUpgrade workflow executions are also routed to this version.\n - WORKER_DEPLOYMENT_VERSION_STATUS_DRAINING: The Worker Deployment Version is not used by new workflows but is still used by\nopen pinned workflows. The version cannot be decommissioned safely.\n - WORKER_DEPLOYMENT_VERSION_STATUS_DRAINED: The Worker Deployment Version is not used by new or open workflows, but might be still needed by\nQueries sent to closed workflows. The version can be decommissioned safely if user does\nnot query closed workflows. If the user does query closed workflows for some time x after\nworkflows are closed, they should decommission the version after it has been drained for that duration."
     },
     "v1WorkerVersionCapabilities": {
       "type": "object",

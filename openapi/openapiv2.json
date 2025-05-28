@@ -7190,26 +7190,6 @@
       },
       "description": "RequestIdReference is a indirect reference to a history event through the request ID."
     },
-    "WorkflowExecutionStartedEventAttributesSourceWorkflowVersioningInfo": {
-      "type": "object",
-      "properties": {
-        "deploymentVersion": {
-          "$ref": "#/definitions/v1WorkerDeploymentVersion"
-        },
-        "behavior": {
-          "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "Base versioning behavior of source workflow."
-        },
-        "taskQueue": {
-          "type": "string",
-          "description": "Task queue name of source workflow if different from started workflow."
-        },
-        "pinnedOverride": {
-          "$ref": "#/definitions/v1VersioningOverride",
-          "description": "Override of source workflow if that override is pinned.\nPinned overrides are automatically inherited by child workflows,\ncontinue-as-new workflows, workflow retries, and cron workflows."
-        }
-      }
-    },
     "WorkflowRuleActionActionActivityPause": {
       "type": "object"
     },
@@ -15611,7 +15591,7 @@
         },
         "versioningOverride": {
           "$ref": "#/definitions/v1VersioningOverride",
-          "description": "Versioning override applied to this workflow when it was started."
+          "description": "Versioning override applied to this workflow when it was started.\nChildren, crons, retries, and continue-as-new will inherit source run's override if pinned\nand if the new workflow's Task Queue belongs to the override version."
         },
         "parentPinnedWorkerDeploymentVersion": {
           "type": "string",
@@ -15621,13 +15601,9 @@
           "$ref": "#/definitions/v1Priority",
           "title": "Priority metadata"
         },
-        "previousRunVersioningInfo": {
-          "$ref": "#/definitions/WorkflowExecutionStartedEventAttributesSourceWorkflowVersioningInfo",
-          "description": "When present, this workflow is part of a retry and/or ContinueAsNew chain, and the previous run in the\nchain was versioned. The `initiator` field of this event specifies why this new workflow was initiated.\nIf present, and the previous run's base behavior is PINNED, and the new run's Task Queue belongs\nto the previous run's Version, the new run will inherit the previous run's Version.\n\nIf initiated by a workflow ContinueAsNew, always populate.\n\nIf initiated by a workflow Cron, never populate, because new cron workflows should start their own version chain.\n\nIf initiated by a workflow retry, pass the retried run's `previous_run_versioning_info`, because a retry of a\nroot workflow or Cron workflow should not inherit the Pinned Version, but if the retried workflow has a PINNED\nparent or is part of a Pinned continue-as-new chain, the the new workflow should inherit the version of the\nexisting tree or chain.\n\nIf a versioning override is present, it will take precedence over the inherited base version."
-        },
-        "parentVersioningInfo": {
-          "$ref": "#/definitions/WorkflowExecutionStartedEventAttributesSourceWorkflowVersioningInfo",
-          "description": "When present, this is a child workflow of a versioned parent.\nIf the parent's base behavior is PINNED, and the child's Task Queue belongs to the\nparent's Version, the child workflow will inherit the parent's Version.\n\nIf `versioning_override` is present, it will take precedence over the inherited base version.\nIf `previous_run_versioning_info` is present, it will take precedence over `parent_versioning_info`."
+        "inheritedPinnedVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
+          "description": "If present, the new workflow should start on this version with pinned base behavior.\nChild of pinned parent will inherit the parent's version if the Child's Task Queue belongs to that version.\n\nNew run initiated by workflow ContinueAsNew of pinned run, will inherit the previous run's version if the\nnew run's Task Queue belongs to that version.\n\nNew run initiated by workflow Cron will never inherit.\n\nNew run initiated by workflow Retry will only inherit if the retried run is effectively pinned at the time\nof retry, and the retried run inherited a pinned version when it started (ie. it is a child of a pinned\nparent, or a CaN of a pinned run, and is running on a Task Queue in the inherited version).\n\nPinned override is inherited if Task Queue of new run is compatible with the override version.\nOverride is inherited separately and takes precedence over inherited base version."
         }
       },
       "title": "Always the first event in workflow history"

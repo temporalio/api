@@ -14,63 +14,92 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "temporal/api/deployment/v1/message.proto";
 
+message WorkerPollerInfo {
 
-message WorkerTaskStatus {
-  google.protobuf.Timestamp last_successful_task_poll_time = 1;
+  int32 active_pollers = 1;
 
-  int32 task_pollers = 2;
+  int32 available_pollers = 2;
 
-  int32 slots_available = 3;
-  int32 slots_used = 4;
-
-  int32 processed_tasks = 5;
-  int32 failed_tasks = 6;
-
-  float process_rate_min = 7;
-  float failure_rate_min = 8;
+  google.protobuf.Timestamp last_successful_poll_time = 3;
 }
 
-// Holds everything needed to identify the host/process context
-message WorkerHostInfo {
-  // worker host identifier, should be unique for the namespace.
-  string host_id = 1;
+message WorkerSlotsInfo {
 
-  // worker process identifier, should be unique for the host.
+  // Number of slots available for the worker to specific tasks.
+  int32 slots_available = 1;
+  // Number of slots used by the worker for specific tasks.
+  int32 slots_used = 2;
+
+  // Total number of tasks processed by the worker so far.
+  int32 processed_tasks = 3;
+  // Total number of failed tasks processed by the worker so far.
+  int32 failed_tasks = 4;
+
+  // Number of tasks processed in the last minute.
+  int32 processed_tasks_last_minute = 5;
+  // Number of failed tasks processed in the last minute.
+  int32 failure_tasks_last_minute = 6;
+}
+
+// Holds everything needed to identify the worker host/process context
+message WorkerHostInfo {
+  // Worker host identifier, should be unique for the namespace.
+  string host_name = 1;
+
+  // Worker process identifier, should be unique for the host.
   string process_id = 2;
 
-  // freeform (e.g. "k8s container abc123", etc.)
-  string host_context = 3;
-
-  // Worker identity, set by the worker, may not be unique.
-  string worker_identity = 7;
+  // Worker identity, set by the client, may not be unique.
+  // Usually host_name+(user group name)+process_id, but can be overwritten by the user.
+  string worker_identity = 3;
 }
 
-message WorkerStatus {
-  // Worker identifier, should be unique for the namespace. Required.
+// Worker info message, contains information about the worker and its current state.
+// All information is provided by the worker itself.
+message WorkerInfo {
+  // Worker identifier, should be unique for the namespace.
+  // It is different from worker identity, which is usually a combination of host_name and process_id.
   string worker_id = 1;
 
-  // Worker host information. Required.
+  // Worker host information.
   WorkerHostInfo host_info = 2;
 
-  // Task queue this worker is polling for tasks. Required.
+  // Task queue this worker is polling for tasks.
   string task_queue = 3;
 
-  // Required.
   temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 4;
 
-  string sdk_name = 6;
-  string sdk_version = 7;
+  string sdk_name = 5;
+  string sdk_version = 6;
 
-  google.protobuf.Duration uptime = 9;
-  google.protobuf.Timestamp last_heartbeat_time = 10;
+  // Worker status. Possible values - "running", "shutting_down", "shutdown".
+  string status = 7;
 
-  WorkerTaskStatus workflow_task_status = 11;
-  WorkerTaskStatus activity_task_status = 12;
-  WorkerTaskStatus nexus_task_status = 13;
+  // Uptime of the worker, since it started.
+  // This is the time since the worker started, not the time since the last heartbeat.
+  // It can be used to determine worker start time. (current time - uptime)
+  google.protobuf.Duration uptime = 8;
 
-  float cpu_usage_percent = 14;
-  int64 memory_usage_bytes = 15;
-  float cache_hit_ratio = 16;
-  float max_cache_size = 17;
-  float available_cache_size = 18;
+  // Last heartbeat time, coming from the worker. Worker should set it to "now".
+  google.protobuf.Timestamp last_heartbeat_time = 9;
+
+  WorkerSlotsInfo workflow_task_slots_info = 10;
+  WorkerSlotsInfo activity_task_slots_info = 11;
+  WorkerSlotsInfo nexus_task_slots_info = 12;
+  WorkerSlotsInfo local_activity_slots_info = 13;
+
+  WorkerPollerInfo workflow_poller_info = 14;
+  WorkerPollerInfo workflow_sticky_poller_info = 15;
+  WorkerPollerInfo activity_poller_info = 16;
+  WorkerPollerInfo nexus_poller_info = 17;
+
+  float cpu_usage_percent = 18;
+  int64 memory_usage_bytes = 19;
+
+  // A Workflow Task found a cached Workflow Execution to run against.
+  int32 sticky_cache_hit = 20;
+  // A Workflow Task did not find a cached Workflow execution to run against.
+  int32 sticky_cache_miss = 21;
+  // Current cache size, expressed in number of Workflow Executions.
+  int32 sticky_cache_size = 22;
 }

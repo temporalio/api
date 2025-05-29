@@ -2225,6 +2225,7 @@
           },
           {
             "name": "query",
+            "description": "`query` in ListWorkers is used to filter workers based on worker status info.\nThe following worker status attributes are expected are supported as part of the query:\n* WorkerId\n* WorkerIdentity\n* HostId\n* TaskQueue\n* DeploymentName\n* BuildId\n* SdkName\n* SdkVersion\n* Uptime\n* LastHeartbeatTime\n* Status\nCurrently metrics are not supported as a part of ListWorkers query.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -5865,6 +5866,7 @@
           },
           {
             "name": "query",
+            "description": "`query` in ListWorkers is used to filter workers based on worker status info.\nThe following worker status attributes are expected are supported as part of the query:\n* WorkerId\n* WorkerIdentity\n* HostId\n* TaskQueue\n* DeploymentName\n* BuildId\n* SdkName\n* SdkVersion\n* Uptime\n* LastHeartbeatTime\n* Status\nCurrently metrics are not supported as a part of ListWorkers query.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -7574,8 +7576,8 @@
           "type": "string",
           "description": "The identity of the client who initiated this request."
         },
-        "workerStatus": {
-          "$ref": "#/definitions/v1WorkerStatus"
+        "workerInfo": {
+          "$ref": "#/definitions/v1WorkerInfo"
         }
       }
     },
@@ -11371,11 +11373,11 @@
     "v1ListWorkersResponse": {
       "type": "object",
       "properties": {
-        "workerStatus": {
+        "workerInfo": {
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1WorkerStatus"
+            "$ref": "#/definitions/v1WorkerInfo"
           }
         },
         "nextPageToken": {
@@ -15270,43 +15272,38 @@
     "v1WorkerHostInfo": {
       "type": "object",
       "properties": {
-        "hostId": {
+        "hostName": {
           "type": "string",
-          "description": "worker host identifier, should be unique for the namespace."
+          "description": "Worker host identifier, should be unique for the namespace."
         },
         "processId": {
           "type": "string",
-          "description": "worker process identifier, should be unique for the host."
-        },
-        "hostContext": {
-          "type": "string",
-          "title": "freeform (e.g. \"k8s container abc123\", etc.)"
+          "description": "Worker process identifier, should be unique for the host."
         },
         "workerIdentity": {
           "type": "string",
-          "description": "Worker identity, set by the worker, may not be unique."
+          "description": "Worker identity, set by the client, may not be unique.\nUsually host_name+(user group name)+process_id, but can be overwritten by the user."
         }
       },
-      "title": "Holds everything needed to identify the host/process context"
+      "title": "Holds everything needed to identify the worker host/process context"
     },
-    "v1WorkerStatus": {
+    "v1WorkerInfo": {
       "type": "object",
       "properties": {
         "workerId": {
           "type": "string",
-          "description": "Worker identifier, should be unique for the namespace. Required."
+          "description": "Worker identifier, should be unique for the namespace.\nIt is different from worker identity, which is usually a combination of host_name and process_id."
         },
         "hostInfo": {
           "$ref": "#/definitions/v1WorkerHostInfo",
-          "description": "Worker host information. Required."
+          "description": "Worker host information."
         },
         "taskQueue": {
           "type": "string",
-          "description": "Task queue this worker is polling for tasks. Required."
+          "description": "Task queue this worker is polling for tasks."
         },
         "deploymentVersion": {
-          "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "Required."
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
         },
         "sdkName": {
           "type": "string"
@@ -15314,21 +15311,42 @@
         "sdkVersion": {
           "type": "string"
         },
+        "status": {
+          "type": "string",
+          "description": "Worker status. Possible values - \"running\", \"shutting_down\", \"shutdown\"."
+        },
         "uptime": {
-          "type": "string"
+          "type": "string",
+          "title": "Uptime of the worker, since it started.\nThis is the time since the worker started, not the time since the last heartbeat.\nIt can be used to determine worker start time. (current time - uptime)"
         },
         "lastHeartbeatTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Last heartbeat time, coming from the worker. Worker should set it to \"now\"."
         },
-        "workflowTaskStatus": {
-          "$ref": "#/definitions/v1WorkerTaskStatus"
+        "workflowTaskSlotsInfo": {
+          "$ref": "#/definitions/v1WorkerSlotsInfo"
         },
-        "activityTaskStatus": {
-          "$ref": "#/definitions/v1WorkerTaskStatus"
+        "activityTaskSlotsInfo": {
+          "$ref": "#/definitions/v1WorkerSlotsInfo"
         },
-        "nexusTaskStatus": {
-          "$ref": "#/definitions/v1WorkerTaskStatus"
+        "nexusTaskSlotsInfo": {
+          "$ref": "#/definitions/v1WorkerSlotsInfo"
+        },
+        "localActivitySlotsInfo": {
+          "$ref": "#/definitions/v1WorkerSlotsInfo"
+        },
+        "workflowPollerInfo": {
+          "$ref": "#/definitions/v1WorkerPollerInfo"
+        },
+        "workflowStickyPollerInfo": {
+          "$ref": "#/definitions/v1WorkerPollerInfo"
+        },
+        "activityPollerInfo": {
+          "$ref": "#/definitions/v1WorkerPollerInfo"
+        },
+        "nexusPollerInfo": {
+          "$ref": "#/definitions/v1WorkerPollerInfo"
         },
         "cpuUsagePercent": {
           "type": "number",
@@ -15338,54 +15356,73 @@
           "type": "string",
           "format": "int64"
         },
-        "cacheHitRatio": {
-          "type": "number",
-          "format": "float"
+        "stickyCacheHit": {
+          "type": "integer",
+          "format": "int32",
+          "description": "A Workflow Task found a cached Workflow Execution to run against."
         },
-        "maxCacheSize": {
-          "type": "number",
-          "format": "float"
+        "stickyCacheMiss": {
+          "type": "integer",
+          "format": "int32",
+          "description": "A Workflow Task did not find a cached Workflow execution to run against."
         },
-        "availableCacheSize": {
-          "type": "number",
-          "format": "float"
+        "stickyCacheSize": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Current cache size, expressed in number of Workflow Executions."
+        }
+      },
+      "description": "Worker info message, contains information about the worker and its current state.\nAll information is provided by the worker itself."
+    },
+    "v1WorkerPollerInfo": {
+      "type": "object",
+      "properties": {
+        "activePollers": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "availablePollers": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "lastSuccessfulPollTime": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
-    "v1WorkerTaskStatus": {
+    "v1WorkerSlotsInfo": {
       "type": "object",
       "properties": {
-        "lastSuccessfulTaskPollTime": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "taskPollers": {
-          "type": "integer",
-          "format": "int32"
-        },
         "slotsAvailable": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Number of slots available for the worker to specific tasks."
         },
         "slotsUsed": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Number of slots used by the worker for specific tasks."
         },
         "processedTasks": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Total number of tasks processed by the worker so far."
         },
         "failedTasks": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Total number of failed tasks processed by the worker so far."
         },
-        "processRateMin": {
-          "type": "number",
-          "format": "float"
+        "processedTasksLastMinute": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of tasks processed in the last minute."
         },
-        "failureRateMin": {
-          "type": "number",
-          "format": "float"
+        "failureTasksLastMinute": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Number of failed tasks processed in the last minute."
         }
       }
     },

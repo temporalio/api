@@ -2006,6 +2006,21 @@ paths:
             format: bytes
         - name: query
           in: query
+          description: |-
+            `query` in ListWorkers is used to filter workers based on worker status info.
+             The following worker status attributes are expected are supported as part of the query:
+            * WorkerId
+            * WorkerIdentity
+            * HostId
+            * TaskQueue
+            * DeploymentName
+            * BuildId
+            * SdkName
+            * SdkVersion
+            * Uptime
+            * LastHeartbeatTime
+            * Status
+             Currently metrics are not supported as a part of ListWorkers query.
           schema:
             type: string
       responses:
@@ -5256,6 +5271,21 @@ paths:
             format: bytes
         - name: query
           in: query
+          description: |-
+            `query` in ListWorkers is used to filter workers based on worker status info.
+             The following worker status attributes are expected are supported as part of the query:
+            * WorkerId
+            * WorkerIdentity
+            * HostId
+            * TaskQueue
+            * DeploymentName
+            * BuildId
+            * SdkName
+            * SdkVersion
+            * Uptime
+            * LastHeartbeatTime
+            * Status
+             Currently metrics are not supported as a part of ListWorkers query.
           schema:
             type: string
       responses:
@@ -8433,10 +8463,10 @@ components:
     ListWorkersResponse:
       type: object
       properties:
-        workerStatus:
+        workerInfo:
           type: array
           items:
-            $ref: '#/components/schemas/WorkerStatus'
+            $ref: '#/components/schemas/WorkerInfo'
         nextPageToken:
           type: string
           description: Next page token
@@ -9660,8 +9690,8 @@ components:
         identity:
           type: string
           description: The identity of the client who initiated this request.
-        workerStatus:
-          $ref: '#/components/schemas/WorkerStatus'
+        workerInfo:
+          $ref: '#/components/schemas/WorkerInfo'
     RecordWorkerHeartbeatResponse:
       type: object
       properties: {}
@@ -12637,93 +12667,128 @@ components:
     WorkerHostInfo:
       type: object
       properties:
-        hostId:
+        hostName:
           type: string
-          description: worker host identifier, should be unique for the namespace.
+          description: Worker host identifier, should be unique for the namespace.
         processId:
           type: string
-          description: worker process identifier, should be unique for the host.
-        hostContext:
-          type: string
-          description: freeform (e.g. "k8s container abc123", etc.)
+          description: Worker process identifier, should be unique for the host.
         workerIdentity:
           type: string
-          description: Worker identity, set by the worker, may not be unique.
-      description: Holds everything needed to identify the host/process context
-    WorkerStatus:
+          description: |-
+            Worker identity, set by the client, may not be unique.
+             Usually host_name+(user group name)+process_id, but can be overwritten by the user.
+      description: Holds everything needed to identify the worker host/process context
+    WorkerInfo:
       type: object
       properties:
         workerId:
           type: string
-          description: Worker identifier, should be unique for the namespace. Required.
+          description: |-
+            Worker identifier, should be unique for the namespace.
+             It is different from worker identity, which is usually a combination of host_name and process_id.
         hostInfo:
           allOf:
             - $ref: '#/components/schemas/WorkerHostInfo'
-          description: Worker host information. Required.
+          description: Worker host information.
         taskQueue:
           type: string
-          description: Task queue this worker is polling for tasks. Required.
+          description: Task queue this worker is polling for tasks.
         deploymentVersion:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: Required.
+          $ref: '#/components/schemas/WorkerDeploymentVersion'
         sdkName:
           type: string
         sdkVersion:
           type: string
+        status:
+          type: string
+          description: Worker status. Possible values - "running", "shutting_down", "shutdown".
         uptime:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
+          description: |-
+            Uptime of the worker, since it started.
+             This is the time since the worker started, not the time since the last heartbeat.
+             It can be used to determine worker start time. (current time - uptime)
         lastHeartbeatTime:
           type: string
+          description: Last heartbeat time, coming from the worker. Worker should set it to "now".
           format: date-time
-        workflowTaskStatus:
-          $ref: '#/components/schemas/WorkerTaskStatus'
-        activityTaskStatus:
-          $ref: '#/components/schemas/WorkerTaskStatus'
-        nexusTaskStatus:
-          $ref: '#/components/schemas/WorkerTaskStatus'
+        workflowTaskSlotsInfo:
+          $ref: '#/components/schemas/WorkerSlotsInfo'
+        activityTaskSlotsInfo:
+          $ref: '#/components/schemas/WorkerSlotsInfo'
+        nexusTaskSlotsInfo:
+          $ref: '#/components/schemas/WorkerSlotsInfo'
+        localActivitySlotsInfo:
+          $ref: '#/components/schemas/WorkerSlotsInfo'
+        workflowPollerInfo:
+          $ref: '#/components/schemas/WorkerPollerInfo'
+        workflowStickyPollerInfo:
+          $ref: '#/components/schemas/WorkerPollerInfo'
+        activityPollerInfo:
+          $ref: '#/components/schemas/WorkerPollerInfo'
+        nexusPollerInfo:
+          $ref: '#/components/schemas/WorkerPollerInfo'
         cpuUsagePercent:
           type: number
           format: float
         memoryUsageBytes:
           type: string
-        cacheHitRatio:
-          type: number
-          format: float
-        maxCacheSize:
-          type: number
-          format: float
-        availableCacheSize:
-          type: number
-          format: float
-    WorkerTaskStatus:
+        stickyCacheHit:
+          type: integer
+          description: A Workflow Task found a cached Workflow Execution to run against.
+          format: int32
+        stickyCacheMiss:
+          type: integer
+          description: A Workflow Task did not find a cached Workflow execution to run against.
+          format: int32
+        stickyCacheSize:
+          type: integer
+          description: Current cache size, expressed in number of Workflow Executions.
+          format: int32
+      description: |-
+        Worker info message, contains information about the worker and its current state.
+         All information is provided by the worker itself.
+    WorkerPollerInfo:
       type: object
       properties:
-        lastSuccessfulTaskPollTime:
-          type: string
-          format: date-time
-        taskPollers:
+        activePollers:
           type: integer
           format: int32
+        availablePollers:
+          type: integer
+          format: int32
+        lastSuccessfulPollTime:
+          type: string
+          format: date-time
+    WorkerSlotsInfo:
+      type: object
+      properties:
         slotsAvailable:
           type: integer
+          description: Number of slots available for the worker to specific tasks.
           format: int32
         slotsUsed:
           type: integer
+          description: Number of slots used by the worker for specific tasks.
           format: int32
         processedTasks:
           type: integer
+          description: Total number of tasks processed by the worker so far.
           format: int32
         failedTasks:
           type: integer
+          description: Total number of failed tasks processed by the worker so far.
           format: int32
-        processRateMin:
-          type: number
-          format: float
-        failureRateMin:
-          type: number
-          format: float
+        processedTasksLastMinute:
+          type: integer
+          description: Number of tasks processed in the last minute.
+          format: int32
+        failureTasksLastMinute:
+          type: integer
+          description: Number of failed tasks processed in the last minute.
+          format: int32
     WorkerVersionCapabilities:
       type: object
       properties:

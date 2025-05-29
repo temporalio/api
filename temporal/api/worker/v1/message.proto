@@ -12,6 +12,7 @@ option csharp_namespace = "Temporalio.Api.Worker.V1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "temporal/api/deployment/v1/message.proto";
 
 
 message WorkerTaskStatus {
@@ -29,31 +30,47 @@ message WorkerTaskStatus {
   float failure_rate_min = 8;
 }
 
+// Holds everything needed to identify the host/process context
+message WorkerHostInfo {
+  // worker host identifier, should be unique for the namespace.
+  string host_id = 1;
+
+  // worker process identifier, should be unique for the host.
+  string process_id = 2;
+
+  // freeform (e.g. "k8s container abc123", etc.)
+  string host_context = 3;
+
+  // Worker identity, set by the worker, may not be unique.
+  string worker_identity = 7;
+}
+
 message WorkerStatus {
-  string namespace_id = 1;
-  // Unique identifier for the namespace.
-  string worker_id = 2;
+  // Worker identifier, should be unique for the namespace. Required.
+  string worker_id = 1;
 
-  string host_id = 3;
-  string task_queue = 4;
-  string deployment_name = 5;
-  string build_id = 6;
-  string sdk_name = 7;
-  string sdk_version = 8;
+  // Worker host information. Required.
+  WorkerHostInfo host_info = 2;
 
-  string worker_identity = 9;
+  // Task queue this worker is polling for tasks. Required.
+  string task_queue = 3;
 
-  int32 worker_status = 10;
-  google.protobuf.Duration uptime = 11;
+  // Required.
+  temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 4;
 
-  google.protobuf.Timestamp last_heartbeat_time = 12;
+  string sdk_name = 6;
+  string sdk_version = 7;
 
-  WorkerTaskStatus workflow_task_status = 13;
-  WorkerTaskStatus activity_task_status = 14;
-  WorkerTaskStatus nexus_task_status = 15;
+  google.protobuf.Duration uptime = 9;
+  google.protobuf.Timestamp last_heartbeat_time = 10;
 
-  float cpu_usage_percent = 16;
-  int64 memory_usage_bytes = 17;
-  float cache_hit_ratio = 18;
-  float cache_size = 19;
+  WorkerTaskStatus workflow_task_status = 11;
+  WorkerTaskStatus activity_task_status = 12;
+  WorkerTaskStatus nexus_task_status = 13;
+
+  float cpu_usage_percent = 14;
+  int64 memory_usage_bytes = 15;
+  float cache_hit_ratio = 16;
+  float max_cache_size = 17;
+  float available_cache_size = 18;
 }

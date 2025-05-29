@@ -2115,46 +2115,6 @@
         ]
       }
     },
-    "/api/v1/namespaces/{namespace}/worker-heartbeat": {
-      "post": {
-        "summary": "WorkerHeartbeat receive heartbeat request from the worker.",
-        "operationId": "WorkerHeartbeat2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1WorkerHeartbeatResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceWorkerHeartbeatBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/api/v1/namespaces/{namespace}/worker-task-reachability": {
       "get": {
         "summary": "Deprecated. Use `DescribeTaskQueue`.",
@@ -2226,13 +2186,13 @@
     },
     "/api/v1/namespaces/{namespace}/workers": {
       "get": {
-        "summary": "ListWorkerStatus is a visibility API to list worker status information in a specific namespace.",
-        "operationId": "ListWorkerStatus2",
+        "summary": "ListWorkers is a visibility API to list worker status information in a specific namespace.",
+        "operationId": "ListWorkers2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListWorkerStatusResponse"
+              "$ref": "#/definitions/v1ListWorkersResponse"
             }
           },
           "default": {
@@ -2268,6 +2228,46 @@
             "in": "query",
             "required": false,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/workers/heartbeat": {
+      "post": {
+        "summary": "WorkerHeartbeat receive heartbeat request from the worker.",
+        "operationId": "RecordWorkerHeartbeat2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RecordWorkerHeartbeatResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "Namespace of the workflow which scheduled this activity.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceRecordWorkerHeartbeatBody"
+            }
           }
         ],
         "tags": [
@@ -5718,12 +5718,12 @@
     "/namespaces/{namespace}/worker-heartbeat": {
       "post": {
         "summary": "WorkerHeartbeat receive heartbeat request from the worker.",
-        "operationId": "WorkerHeartbeat",
+        "operationId": "RecordWorkerHeartbeat",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1WorkerHeartbeatResponse"
+              "$ref": "#/definitions/v1RecordWorkerHeartbeatResponse"
             }
           },
           "default": {
@@ -5746,7 +5746,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowServiceWorkerHeartbeatBody"
+              "$ref": "#/definitions/WorkflowServiceRecordWorkerHeartbeatBody"
             }
           }
         ],
@@ -5826,13 +5826,13 @@
     },
     "/namespaces/{namespace}/workers": {
       "get": {
-        "summary": "ListWorkerStatus is a visibility API to list worker status information in a specific namespace.",
-        "operationId": "ListWorkerStatus",
+        "summary": "ListWorkers is a visibility API to list worker status information in a specific namespace.",
+        "operationId": "ListWorkers",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ListWorkerStatusResponse"
+              "$ref": "#/definitions/v1ListWorkersResponse"
             }
           },
           "default": {
@@ -7567,6 +7567,18 @@
         }
       }
     },
+    "WorkflowServiceRecordWorkerHeartbeatBody": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the client who initiated this request."
+        },
+        "workerStatus": {
+          "$ref": "#/definitions/v1WorkerStatus"
+        }
+      }
+    },
     "WorkflowServiceRequestCancelWorkflowExecutionBody": {
       "type": "object",
       "properties": {
@@ -8534,18 +8546,6 @@
         }
       },
       "description": "Keep the parameters in sync with:\n  - temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions.\n  - temporal.api.workflow.v1.PostResetOperation.UpdateWorkflowOptions."
-    },
-    "WorkflowServiceWorkerHeartbeatBody": {
-      "type": "object",
-      "properties": {
-        "identity": {
-          "type": "string",
-          "description": "The identity of the client who initiated this request."
-        },
-        "workerStatus": {
-          "$ref": "#/definitions/v1WorkerStatus"
-        }
-      }
     },
     "apicommonv1Link": {
       "type": "object",
@@ -11368,7 +11368,7 @@
         }
       }
     },
-    "v1ListWorkerStatusResponse": {
+    "v1ListWorkersResponse": {
       "type": "object",
       "properties": {
         "workerStatus": {
@@ -12717,6 +12717,9 @@
           "$ref": "#/definitions/apifailurev1Failure"
         }
       }
+    },
+    "v1RecordWorkerHeartbeatResponse": {
+      "type": "object"
     },
     "v1RegisterNamespaceRequest": {
       "type": "object",
@@ -15264,42 +15267,52 @@
       "default": "WORKER_DEPLOYMENT_VERSION_STATUS_UNSPECIFIED",
       "description": "Specify the status of a Worker Deployment Version.\nExperimental. Worker Deployments are experimental and might significantly change in the future.\n\n - WORKER_DEPLOYMENT_VERSION_STATUS_INACTIVE: The Worker Deployment Version has been created inside the Worker Deployment but is not used by any\nworkflow executions. These Versions can still have workflows if they have an explicit Versioning Override targeting\nthis Version. Such Versioning Override could be set at workflow start time, or at a later time via `UpdateWorkflowExecutionOptions`.\n - WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT: The Worker Deployment Version is the current version of the Worker Deployment. All new workflow executions \nand tasks of existing unversioned or AutoUpgrade workflows are routed to this version.\n - WORKER_DEPLOYMENT_VERSION_STATUS_RAMPING: The Worker Deployment Version is the ramping version of the Worker Deployment. A subset of new Pinned workflow executions are \nrouted to this version. Moreover, a portion of existing unversioned or AutoUpgrade workflow executions are also routed to this version.\n - WORKER_DEPLOYMENT_VERSION_STATUS_DRAINING: The Worker Deployment Version is not used by new workflows but is still used by\nopen pinned workflows. The version cannot be decommissioned safely.\n - WORKER_DEPLOYMENT_VERSION_STATUS_DRAINED: The Worker Deployment Version is not used by new or open workflows, but might be still needed by\nQueries sent to closed workflows. The version can be decommissioned safely if user does\nnot query closed workflows. If the user does query closed workflows for some time x after\nworkflows are closed, they should decommission the version after it has been drained for that duration."
     },
-    "v1WorkerHeartbeatResponse": {
-      "type": "object"
+    "v1WorkerHostInfo": {
+      "type": "object",
+      "properties": {
+        "hostId": {
+          "type": "string",
+          "description": "worker host identifier, should be unique for the namespace."
+        },
+        "processId": {
+          "type": "string",
+          "description": "worker process identifier, should be unique for the host."
+        },
+        "hostContext": {
+          "type": "string",
+          "title": "freeform (e.g. \"k8s container abc123\", etc.)"
+        },
+        "workerIdentity": {
+          "type": "string",
+          "description": "Worker identity, set by the worker, may not be unique."
+        }
+      },
+      "title": "Holds everything needed to identify the host/process context"
     },
     "v1WorkerStatus": {
       "type": "object",
       "properties": {
-        "namespaceId": {
-          "type": "string"
-        },
         "workerId": {
-          "type": "string"
+          "type": "string",
+          "description": "Worker identifier, should be unique for the namespace. Required."
         },
-        "hostId": {
-          "type": "string"
+        "hostInfo": {
+          "$ref": "#/definitions/v1WorkerHostInfo",
+          "description": "Worker host information. Required."
         },
         "taskQueue": {
-          "type": "string"
+          "type": "string",
+          "description": "Task queue this worker is polling for tasks. Required."
         },
-        "deploymentName": {
-          "type": "string"
-        },
-        "buildId": {
-          "type": "string"
+        "deploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
+          "description": "Required."
         },
         "sdkName": {
           "type": "string"
         },
         "sdkVersion": {
           "type": "string"
-        },
-        "workerIdentity": {
-          "type": "string"
-        },
-        "workerStatus": {
-          "type": "integer",
-          "format": "int32"
         },
         "uptime": {
           "type": "string"
@@ -15329,7 +15342,11 @@
           "type": "number",
           "format": "float"
         },
-        "cacheSize": {
+        "maxCacheSize": {
+          "type": "number",
+          "format": "float"
+        },
+        "availableCacheSize": {
           "type": "number",
           "format": "float"
         }

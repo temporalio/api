@@ -1902,38 +1902,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/worker-heartbeat:
-    post:
-      tags:
-        - WorkflowService
-      description: WorkerHeartbeat receive heartbeat request from the worker.
-      operationId: WorkerHeartbeat
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace of the workflow which scheduled this activity.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkerHeartbeatRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkerHeartbeatResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/worker-task-reachability:
     get:
       tags:
@@ -2018,8 +1986,8 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: ListWorkerStatus is a visibility API to list worker status information in a specific namespace.
-      operationId: ListWorkerStatus
+      description: ListWorkers is a visibility API to list worker status information in a specific namespace.
+      operationId: ListWorkers
       parameters:
         - name: namespace
           in: path
@@ -2046,7 +2014,39 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ListWorkerStatusResponse'
+                $ref: '#/components/schemas/ListWorkersResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workers/heartbeat:
+    post:
+      tags:
+        - WorkflowService
+      description: WorkerHeartbeat receive heartbeat request from the worker.
+      operationId: RecordWorkerHeartbeat
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordWorkerHeartbeatRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWorkerHeartbeatResponse'
         default:
           description: Default error response
           content:
@@ -5125,7 +5125,7 @@ paths:
       tags:
         - WorkflowService
       description: WorkerHeartbeat receive heartbeat request from the worker.
-      operationId: WorkerHeartbeat
+      operationId: RecordWorkerHeartbeat
       parameters:
         - name: namespace
           in: path
@@ -5137,7 +5137,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkerHeartbeatRequest'
+              $ref: '#/components/schemas/RecordWorkerHeartbeatRequest'
         required: true
       responses:
         "200":
@@ -5145,7 +5145,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkerHeartbeatResponse'
+                $ref: '#/components/schemas/RecordWorkerHeartbeatResponse'
         default:
           description: Default error response
           content:
@@ -5236,8 +5236,8 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: ListWorkerStatus is a visibility API to list worker status information in a specific namespace.
-      operationId: ListWorkerStatus
+      description: ListWorkers is a visibility API to list worker status information in a specific namespace.
+      operationId: ListWorkers
       parameters:
         - name: namespace
           in: path
@@ -5264,7 +5264,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ListWorkerStatusResponse'
+                $ref: '#/components/schemas/ListWorkersResponse'
         default:
           description: Default error response
           content:
@@ -8430,7 +8430,7 @@ components:
             - $ref: '#/components/schemas/WorkerDeploymentInfo_WorkerDeploymentVersionSummary'
           description: Summary of the ramping version of the Worker Deployment.
       description: A subset of WorkerDeploymentInfo
-    ListWorkerStatusResponse:
+    ListWorkersResponse:
       type: object
       properties:
         workerStatus:
@@ -9651,6 +9651,20 @@ components:
           description: |-
             Will be set to true if the activity was reset.
              Applies only to the current run.
+    RecordWorkerHeartbeatRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace of the workflow which scheduled this activity.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        workerStatus:
+          $ref: '#/components/schemas/WorkerStatus'
+    RecordWorkerHeartbeatResponse:
+      type: object
+      properties: {}
     RegisterNamespaceRequest:
       type: object
       properties:
@@ -12620,44 +12634,43 @@ components:
             - TASK_QUEUE_TYPE_NEXUS
           type: string
           format: enum
-    WorkerHeartbeatRequest:
+    WorkerHostInfo:
       type: object
       properties:
-        namespace:
+        hostId:
           type: string
-          description: Namespace of the workflow which scheduled this activity.
-        identity:
+          description: worker host identifier, should be unique for the namespace.
+        processId:
           type: string
-          description: The identity of the client who initiated this request.
-        workerStatus:
-          $ref: '#/components/schemas/WorkerStatus'
-    WorkerHeartbeatResponse:
-      type: object
-      properties: {}
+          description: worker process identifier, should be unique for the host.
+        hostContext:
+          type: string
+          description: freeform (e.g. "k8s container abc123", etc.)
+        workerIdentity:
+          type: string
+          description: Worker identity, set by the worker, may not be unique.
+      description: Holds everything needed to identify the host/process context
     WorkerStatus:
       type: object
       properties:
-        namespaceId:
-          type: string
         workerId:
           type: string
-        hostId:
-          type: string
+          description: Worker identifier, should be unique for the namespace. Required.
+        hostInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkerHostInfo'
+          description: Worker host information. Required.
         taskQueue:
           type: string
-        deploymentName:
-          type: string
-        buildId:
-          type: string
+          description: Task queue this worker is polling for tasks. Required.
+        deploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: Required.
         sdkName:
           type: string
         sdkVersion:
           type: string
-        workerIdentity:
-          type: string
-        workerStatus:
-          type: integer
-          format: int32
         uptime:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
@@ -12678,7 +12691,10 @@ components:
         cacheHitRatio:
           type: number
           format: float
-        cacheSize:
+        maxCacheSize:
+          type: number
+          format: float
+        availableCacheSize:
           type: number
           format: float
     WorkerTaskStatus:

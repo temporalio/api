@@ -11100,6 +11100,7 @@ components:
           description: |-
             If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment
              rules of the child's Task Queue will be used to independently assign a Build ID to it.
+             Deprecated. Only considered for versioning v0.2.
         priority:
           allOf:
             - $ref: '#/components/schemas/Priority'
@@ -12174,6 +12175,8 @@ components:
          `WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call
          `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
          to indicate that it should be mutated.
+         Pinned overrides are automatically inherited by child workflows, continue-as-new workflows,
+         workflow retries, and cron workflows.
     VersioningOverride_PinnedOverride:
       type: object
       properties:
@@ -12732,6 +12735,7 @@ components:
           description: |-
             If this is set, the new execution inherits the Build ID of the current execution. Otherwise,
              the assignment rules will be used to independently assign a Build ID to the new execution.
+             Deprecated. Only considered for versioning v0.2.
     WorkflowExecutionExtendedInfo:
       type: object
       properties:
@@ -13014,7 +13018,7 @@ components:
         continuedExecutionRunId:
           type: string
           description: |-
-            Run id of the previous workflow which continued-as-new or retired or cron executed into this
+            Run id of the previous workflow which continued-as-new or retried or cron executed into this
              workflow.
         initiator:
           enum:
@@ -13129,7 +13133,10 @@ components:
         versioningOverride:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride'
-          description: Versioning override applied to this workflow when it was started.
+          description: |-
+            Versioning override applied to this workflow when it was started.
+             Children, crons, retries, and continue-as-new will inherit source run's override if pinned
+             and if the new workflow's Task Queue belongs to the override version.
         parentPinnedWorkerDeploymentVersion:
           type: string
           description: |-
@@ -13138,20 +13145,29 @@ components:
              of starting on the Current Version of its Task Queue.
              This is set only if the child workflow is starting on a Task Queue belonging to the same
              Worker Deployment Version.
-             Deprecated. Use `parent_pinned_deployment_version`.
-        parentPinnedDeploymentVersion:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: |-
-            When present, it means this is a child workflow of a parent that is Pinned to this Worker
-             Deployment Version. In this case, child workflow will start as Pinned to this Version instead
-             of starting on the Current Version of its Task Queue.
-             This is set only if the child workflow is starting on a Task Queue belonging to the same
-             Worker Deployment Version.
+             Deprecated. Use `parent_versioning_info`.
         priority:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata
+        inheritedPinnedVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            If present, the new workflow should start on this version with pinned base behavior.
+             Child of pinned parent will inherit the parent's version if the Child's Task Queue belongs to that version.
+
+             New run initiated by workflow ContinueAsNew of pinned run, will inherit the previous run's version if the
+             new run's Task Queue belongs to that version.
+
+             New run initiated by workflow Cron will never inherit.
+
+             New run initiated by workflow Retry will only inherit if the retried run is effectively pinned at the time
+             of retry, and the retried run inherited a pinned version when it started (ie. it is a child of a pinned
+             parent, or a CaN of a pinned run, and is running on a Task Queue in the inherited version).
+
+             Pinned override is inherited if Task Queue of new run is compatible with the override version.
+             Override is inherited separately and takes precedence over inherited base version.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -13272,7 +13288,7 @@ components:
              behaviors.
              This field is first set after an execution completes its first workflow task on a versioned
              worker, and set again on completion of every subsequent workflow task.
-             For child workflows of Pinned parents, this will be set to Pinned (along with `version`) when
+             For child workflows of Pinned parents, this will be set to Pinned (along with `deployment_version`) when
              the the child starts so that child's first workflow task goes to the same Version as the
              parent. After the first workflow task, it depends on the child workflow itself if it wants
              to stay pinned or become unpinned (according to Versioning Behavior set in the worker).
@@ -13313,7 +13329,8 @@ components:
              precedence over SDK-sent `behavior` (and `version` when override is PINNED). An
              override can be set when starting a new execution, as well as afterwards by calling the
              `UpdateWorkflowExecutionOptions` API.
-             Pinned overrides are automatically inherited by child workflows.
+             Pinned overrides are automatically inherited by child workflows, continue-as-new workflows,
+             workflow retries, and cron workflows.
         deploymentTransition:
           allOf:
             - $ref: '#/components/schemas/DeploymentTransition'
@@ -13354,7 +13371,7 @@ components:
              start a transition to that version and continue execution there.
              A version transition can only exist while there is a pending or started workflow task.
              Once the pending workflow task completes on the transition's target version, the
-             transition completes and the workflow's `behavior`, and `version` fields are updated per the
+             transition completes and the workflow's `behavior`, and `deployment_version` fields are updated per the
              worker's task completion response.
              Pending activities will not start new attempts during a transition. Once the transition is
              completed, pending activities will start their next attempt on the new version.

@@ -9,8 +9,6 @@ option java_outer_classname = "MessageProto";
 option ruby_package = "Temporalio::Api::Worker::V1";
 option csharp_namespace = "Temporalio.Api.Worker.V1";
 
-
-import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/enums/v1/common.proto";
@@ -31,7 +29,8 @@ message WorkerSlotsInfo {
   // Number of slots used by the worker for specific tasks.
   int32 slots_used = 2;
 
-  // Total number of tasks processed by the worker so far.
+  // Total number of tasks processed (completed both successfully and unsuccesfully)
+  // by the worker since the worker started. This is a cumulative counter.
   int32 processed_tasks = 3;
   // Total number of failed tasks processed by the worker so far.
   int32 failed_tasks = 4;
@@ -60,7 +59,7 @@ message WorkerHostInfo {
 message WorkerInfo {
   // Worker identifier, should be unique for the namespace.
   // It is different from worker identity, which is usually a combination of host_name and process_id.
-  string worker_id = 1;
+  string worker_instance_key = 1;
 
   // Worker host information.
   WorkerHostInfo host_info = 2;
@@ -76,10 +75,9 @@ message WorkerInfo {
   // Worker status. Possible values - "running", "shutting_down", "shutdown".
   temporal.api.enums.v1.WorkerStatus status = 7;
 
-  // Uptime of the worker, since it started.
-  // This is the time since the worker started, not the time since the last heartbeat.
-  // It can be used to determine worker start time. (current time - uptime)
-  google.protobuf.Duration uptime = 8;
+  // Worker start time.
+  // It can be used to determine worker uptime. (current time - start time)
+  google.protobuf.Timestamp start_time = 8;
 
   // Last heartbeat time, coming from the worker. Worker should set it to "now".
   google.protobuf.Timestamp last_heartbeat_time = 9;

@@ -12719,6 +12719,10 @@ components:
           type: string
           description: Last heartbeat time, coming from the worker. Worker should set it to "now".
           format: date-time
+        elapsedSinceLastHeartbeat:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Elapsed time since the last heartbeat from the worker.
         workflowTaskSlotsInfo:
           $ref: '#/components/schemas/WorkerSlotsInfo'
         activityTaskSlotsInfo:
@@ -12755,6 +12759,8 @@ components:
       description: |-
         Worker info message, contains information about the worker and its current state.
          All information is provided by the worker itself.
+         (-- api-linter: core::0140::prepositions=disabled
+             aip.dev/not-precedent: Removing those words make names less clear. --)
     WorkerPollerInfo:
       type: object
       properties:
@@ -12788,13 +12794,16 @@ components:
           type: integer
           description: Total number of failed tasks processed by the worker so far.
           format: int32
-        processedTasksLastMinute:
+        processedTasksLastInterval:
           type: integer
-          description: Number of tasks processed in the last minute.
+          description: |-
+            Number of tasks processed in since the last heartbeat from the worker.
+             This is a cumulative counter, and it is reset to 0 each time the worker sends a heartbeat.
+             Contains both successful and failed tasks.
           format: int32
-        failureTasksLastMinute:
+        failureTasksLastInterval:
           type: integer
-          description: Number of failed tasks processed in the last minute.
+          description: Number of failed tasks processed since the last heartbeat from the worker.
           format: int32
     WorkerVersionCapabilities:
       type: object

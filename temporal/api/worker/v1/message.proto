@@ -9,6 +9,7 @@ option java_outer_classname = "MessageProto";
 option ruby_package = "Temporalio::Api::Worker::V1";
 option csharp_namespace = "Temporalio.Api.Worker.V1";
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/enums/v1/common.proto";
@@ -35,10 +36,12 @@ message WorkerSlotsInfo {
   // Total number of failed tasks processed by the worker so far.
   int32 total_failed_tasks = 4;
 
-  // Number of tasks processed in the last minute.
-  int32 processed_tasks_last_minute = 5;
-  // Number of failed tasks processed in the last minute.
-  int32 failure_tasks_last_minute = 6;
+  // Number of tasks processed in since the last heartbeat from the worker.
+  // This is a cumulative counter, and it is reset to 0 each time the worker sends a heartbeat.
+  // Contains both successful and failed tasks.
+  int32 processed_tasks_last_interval = 5;
+  // Number of failed tasks processed since the last heartbeat from the worker.
+  int32 failure_tasks_last_interval = 6;
 }
 
 // Holds everything needed to identify the worker host/process context
@@ -56,6 +59,8 @@ message WorkerHostInfo {
 
 // Worker info message, contains information about the worker and its current state.
 // All information is provided by the worker itself.
+// (-- api-linter: core::0140::prepositions=disabled
+//     aip.dev/not-precedent: Removing those words make names less clear. --)
 message WorkerInfo {
   // Worker identifier, should be unique for the namespace.
   // It is different from worker identity, which is usually a combination of host_name and process_id.
@@ -81,24 +86,26 @@ message WorkerInfo {
 
   // Last heartbeat time, coming from the worker. Worker should set it to "now".
   google.protobuf.Timestamp last_heartbeat_time = 9;
+  // Elapsed time since the last heartbeat from the worker.
+  google.protobuf.Duration elapsed_since_last_heartbeat = 10;
 
-  WorkerSlotsInfo workflow_task_slots_info = 10;
-  WorkerSlotsInfo activity_task_slots_info = 11;
-  WorkerSlotsInfo nexus_task_slots_info = 12;
-  WorkerSlotsInfo local_activity_slots_info = 13;
+  WorkerSlotsInfo workflow_task_slots_info = 11;
+  WorkerSlotsInfo activity_task_slots_info = 12;
+  WorkerSlotsInfo nexus_task_slots_info = 13;
+  WorkerSlotsInfo local_activity_slots_info = 14;
 
-  WorkerPollerInfo workflow_poller_info = 14;
-  WorkerPollerInfo workflow_sticky_poller_info = 15;
-  WorkerPollerInfo activity_poller_info = 16;
-  WorkerPollerInfo nexus_poller_info = 17;
+  WorkerPollerInfo workflow_poller_info = 15;
+  WorkerPollerInfo workflow_sticky_poller_info = 16;
+  WorkerPollerInfo activity_poller_info = 17;
+  WorkerPollerInfo nexus_poller_info = 18;
 
-  float current_host_cpu_usage = 18;
-  int64 current_host_mem_usage = 19;
+  float current_host_cpu_usage = 19;
+  int64 current_host_mem_usage = 20;
 
   // A Workflow Task found a cached Workflow Execution to run against.
-  int32 total_sticky_cache_hit = 20;
+  int32 total_sticky_cache_hit = 21;
   // A Workflow Task did not find a cached Workflow execution to run against.
-  int32 total_sticky_cache_miss = 21;
+  int32 total_sticky_cache_miss = 22;
   // Current cache size, expressed in number of Workflow Executions.
-  int32 current_sticky_cache_size = 22;
+  int32 current_sticky_cache_size = 23;
 }

@@ -2225,7 +2225,7 @@
           },
           {
             "name": "query",
-            "description": "`query` in ListWorkers is used to filter workers based on worker status info.\nThe following worker status attributes are expected are supported as part of the query:\n* WorkerId\n* WorkerIdentity\n* HostId\n* TaskQueue\n* DeploymentName\n* BuildId\n* SdkName\n* SdkVersion\n* StartTime\n* LastHeartbeatTime\n* Status\nCurrently metrics are not supported as a part of ListWorkers query.",
+            "description": "`query` in ListWorkers is used to filter workers based on worker status info.\nThe following worker status attributes are expected are supported as part of the query:\n* WorkerInstanceKey\n* WorkerIdentity\n* HostName\n* TaskQueue\n* DeploymentName\n* BuildId\n* SdkName\n* SdkVersion\n* StartTime\n* LastHeartbeatTime\n* Status\nCurrently metrics are not supported as a part of ListWorkers query.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -2257,7 +2257,7 @@
         "parameters": [
           {
             "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity.",
+            "description": "Namespace this worker belongs to.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -5716,46 +5716,6 @@
         ]
       }
     },
-    "/namespaces/{namespace}/worker-heartbeat": {
-      "post": {
-        "summary": "WorkerHeartbeat receive heartbeat request from the worker.",
-        "operationId": "RecordWorkerHeartbeat",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1RecordWorkerHeartbeatResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceRecordWorkerHeartbeatBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/namespaces/{namespace}/worker-task-reachability": {
       "get": {
         "summary": "Deprecated. Use `DescribeTaskQueue`.",
@@ -5866,10 +5826,50 @@
           },
           {
             "name": "query",
-            "description": "`query` in ListWorkers is used to filter workers based on worker status info.\nThe following worker status attributes are expected are supported as part of the query:\n* WorkerId\n* WorkerIdentity\n* HostId\n* TaskQueue\n* DeploymentName\n* BuildId\n* SdkName\n* SdkVersion\n* StartTime\n* LastHeartbeatTime\n* Status\nCurrently metrics are not supported as a part of ListWorkers query.",
+            "description": "`query` in ListWorkers is used to filter workers based on worker status info.\nThe following worker status attributes are expected are supported as part of the query:\n* WorkerInstanceKey\n* WorkerIdentity\n* HostName\n* TaskQueue\n* DeploymentName\n* BuildId\n* SdkName\n* SdkVersion\n* StartTime\n* LastHeartbeatTime\n* Status\nCurrently metrics are not supported as a part of ListWorkers query.",
             "in": "query",
             "required": false,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/workers/heartbeat": {
+      "post": {
+        "summary": "WorkerHeartbeat receive heartbeat request from the worker.",
+        "operationId": "RecordWorkerHeartbeat",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RecordWorkerHeartbeatResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "Namespace this worker belongs to.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceRecordWorkerHeartbeatBody"
+            }
           }
         ],
         "tags": [
@@ -7576,8 +7576,8 @@
           "type": "string",
           "description": "The identity of the client who initiated this request."
         },
-        "workerInfo": {
-          "$ref": "#/definitions/v1WorkerInfo"
+        "workerHeartbeat": {
+          "$ref": "#/definitions/v1WorkerHeartbeat"
         }
       }
     },
@@ -10747,10 +10747,6 @@
         "nexus": {
           "type": "boolean",
           "description": "True if the server supports Nexus operations.\nThis flag is dependent both on server version and for Nexus to be enabled via server configuration."
-        },
-        "acceptWorkerInfo": {
-          "type": "boolean",
-          "description": "True if the server support collecting workers information."
         }
       },
       "description": "System capability details."
@@ -11377,7 +11373,7 @@
     "v1ListWorkersResponse": {
       "type": "object",
       "properties": {
-        "workerInfo": {
+        "workersInfo": {
           "type": "array",
           "items": {
             "type": "object",
@@ -15273,30 +15269,16 @@
       "default": "WORKER_DEPLOYMENT_VERSION_STATUS_UNSPECIFIED",
       "description": "Specify the status of a Worker Deployment Version.\nExperimental. Worker Deployments are experimental and might significantly change in the future.\n\n - WORKER_DEPLOYMENT_VERSION_STATUS_INACTIVE: The Worker Deployment Version has been created inside the Worker Deployment but is not used by any\nworkflow executions. These Versions can still have workflows if they have an explicit Versioning Override targeting\nthis Version. Such Versioning Override could be set at workflow start time, or at a later time via `UpdateWorkflowExecutionOptions`.\n - WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT: The Worker Deployment Version is the current version of the Worker Deployment. All new workflow executions \nand tasks of existing unversioned or AutoUpgrade workflows are routed to this version.\n - WORKER_DEPLOYMENT_VERSION_STATUS_RAMPING: The Worker Deployment Version is the ramping version of the Worker Deployment. A subset of new Pinned workflow executions are \nrouted to this version. Moreover, a portion of existing unversioned or AutoUpgrade workflow executions are also routed to this version.\n - WORKER_DEPLOYMENT_VERSION_STATUS_DRAINING: The Worker Deployment Version is not used by new workflows but is still used by\nopen pinned workflows. The version cannot be decommissioned safely.\n - WORKER_DEPLOYMENT_VERSION_STATUS_DRAINED: The Worker Deployment Version is not used by new or open workflows, but might be still needed by\nQueries sent to closed workflows. The version can be decommissioned safely if user does\nnot query closed workflows. If the user does query closed workflows for some time x after\nworkflows are closed, they should decommission the version after it has been drained for that duration."
     },
-    "v1WorkerHostInfo": {
-      "type": "object",
-      "properties": {
-        "hostName": {
-          "type": "string",
-          "description": "Worker host identifier."
-        },
-        "processId": {
-          "type": "string",
-          "description": "Worker process identifier, should be unique for the host."
-        },
-        "workerIdentity": {
-          "type": "string",
-          "description": "Worker identity, set by the client, may not be unique.\nUsually host_name+(user group name)+process_id, but can be overwritten by the user."
-        }
-      },
-      "title": "Holds everything needed to identify the worker host/process context"
-    },
-    "v1WorkerInfo": {
+    "v1WorkerHeartbeat": {
       "type": "object",
       "properties": {
         "workerInstanceKey": {
           "type": "string",
           "description": "Worker identifier, should be unique for the namespace.\nIt is distinct from worker identity, which is not necessarily namespace-unique."
+        },
+        "workerIdentity": {
+          "type": "string",
+          "description": "Worker identity, set by the client, may not be unique.\nUsually host_name+(user group name)+process_id, but can be overwritten by the user."
         },
         "hostInfo": {
           "$ref": "#/definitions/v1WorkerHostInfo",
@@ -15359,11 +15341,13 @@
         },
         "currentHostCpuUsage": {
           "type": "number",
-          "format": "float"
+          "format": "float",
+          "description": "System used CPU as a float in the range [0.0, 1.0] where 1.0 is defined as all\ncores on the host pegged."
         },
         "currentHostMemUsage": {
-          "type": "string",
-          "format": "int64"
+          "type": "number",
+          "format": "float",
+          "description": "System used memory as a float in the range [0.0, 1.0] where 1.0 is defined as\nall available memory on the host is used."
         },
         "totalStickyCacheHit": {
           "type": "integer",
@@ -15383,16 +15367,42 @@
       },
       "description": "Worker info message, contains information about the worker and its current state.\nAll information is provided by the worker itself."
     },
+    "v1WorkerHostInfo": {
+      "type": "object",
+      "properties": {
+        "hostName": {
+          "type": "string",
+          "description": "Worker host identifier."
+        },
+        "processId": {
+          "type": "string",
+          "description": "Worker process identifier, should be unique for the host."
+        }
+      },
+      "title": "Holds everything needed to identify the worker host/process context"
+    },
+    "v1WorkerInfo": {
+      "type": "object",
+      "properties": {
+        "workerHeartbeat": {
+          "$ref": "#/definitions/v1WorkerHeartbeat"
+        }
+      }
+    },
     "v1WorkerPollerInfo": {
       "type": "object",
       "properties": {
-        "activePollers": {
+        "currentPollers": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "description": "Number of polling RPCs that are currently in flight."
         },
         "lastSuccessfulPollTime": {
           "type": "string",
           "format": "date-time"
+        },
+        "isAutoscaling": {
+          "type": "boolean"
         }
       }
     },
@@ -15409,6 +15419,10 @@
           "format": "int32",
           "description": "Number of slots used by the worker for specific tasks."
         },
+        "slotSupplierKind": {
+          "type": "string",
+          "title": "Kind of the slot supplier, which is used to determine how the slots are allocated.\nPossible values: \"Fixed | ResourceBased | Custom String\""
+        },
         "totalProcessedTasks": {
           "type": "integer",
           "format": "int32",
@@ -15419,12 +15433,12 @@
           "format": "int32",
           "description": "Total number of failed tasks processed by the worker so far."
         },
-        "processedTasksLastInterval": {
+        "lastIntervalProcessedTasks": {
           "type": "integer",
           "format": "int32",
           "description": "Number of tasks processed in since the last heartbeat from the worker.\nThis is a cumulative counter, and it is reset to 0 each time the worker sends a heartbeat.\nContains both successful and failed tasks."
         },
-        "failureTasksLastInterval": {
+        "lastIntervalFailureTasks": {
           "type": "integer",
           "format": "int32",
           "description": "Number of failed tasks processed since the last heartbeat from the worker."

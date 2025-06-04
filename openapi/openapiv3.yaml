@@ -1982,6 +1982,92 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workers:
+    get:
+      tags:
+        - WorkflowService
+      description: ListWorkers is a visibility API to list worker status information in a specific namespace.
+      operationId: ListWorkers
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          schema:
+            type: string
+            format: bytes
+        - name: query
+          in: query
+          description: |-
+            `query` in ListWorkers is used to filter workers based on worker status info.
+             The following worker status attributes are expected are supported as part of the query:
+            * WorkerId
+            * WorkerIdentity
+            * HostId
+            * TaskQueue
+            * DeploymentName
+            * BuildId
+            * SdkName
+            * SdkVersion
+            * StartTime
+            * LastHeartbeatTime
+            * Status
+             Currently metrics are not supported as a part of ListWorkers query.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWorkersResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workers/heartbeat:
+    post:
+      tags:
+        - WorkflowService
+      description: WorkerHeartbeat receive heartbeat request from the worker.
+      operationId: RecordWorkerHeartbeat
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordWorkerHeartbeatRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWorkerHeartbeatResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflow-count:
     get:
       tags:
@@ -5049,6 +5135,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/worker-heartbeat:
+    post:
+      tags:
+        - WorkflowService
+      description: WorkerHeartbeat receive heartbeat request from the worker.
+      operationId: RecordWorkerHeartbeat
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordWorkerHeartbeatRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWorkerHeartbeatResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/worker-task-reachability:
     get:
       tags:
@@ -5123,6 +5241,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetWorkerTaskReachabilityResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workers:
+    get:
+      tags:
+        - WorkflowService
+      description: ListWorkers is a visibility API to list worker status information in a specific namespace.
+      operationId: ListWorkers
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          schema:
+            type: string
+            format: bytes
+        - name: query
+          in: query
+          description: |-
+            `query` in ListWorkers is used to filter workers based on worker status info.
+             The following worker status attributes are expected are supported as part of the query:
+            * WorkerId
+            * WorkerIdentity
+            * HostId
+            * TaskQueue
+            * DeploymentName
+            * BuildId
+            * SdkName
+            * SdkVersion
+            * StartTime
+            * LastHeartbeatTime
+            * Status
+             Currently metrics are not supported as a part of ListWorkers query.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWorkersResponse'
         default:
           description: Default error response
           content:
@@ -8288,6 +8460,17 @@ components:
             - $ref: '#/components/schemas/WorkerDeploymentInfo_WorkerDeploymentVersionSummary'
           description: Summary of the ramping version of the Worker Deployment.
       description: A subset of WorkerDeploymentInfo
+    ListWorkersResponse:
+      type: object
+      properties:
+        workerInfo:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkerInfo'
+        nextPageToken:
+          type: string
+          description: Next page token
+          format: bytes
     ListWorkflowExecutionsResponse:
       type: object
       properties:
@@ -9498,6 +9681,20 @@ components:
           description: |-
             Will be set to true if the activity was reset.
              Applies only to the current run.
+    RecordWorkerHeartbeatRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace of the workflow which scheduled this activity.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        workerInfo:
+          $ref: '#/components/schemas/WorkerInfo'
+    RecordWorkerHeartbeatResponse:
+      type: object
+      properties: {}
     RegisterNamespaceRequest:
       type: object
       properties:
@@ -12467,6 +12664,146 @@ components:
             - TASK_QUEUE_TYPE_NEXUS
           type: string
           format: enum
+    WorkerHostInfo:
+      type: object
+      properties:
+        hostName:
+          type: string
+          description: Worker host identifier.
+        processId:
+          type: string
+          description: Worker process identifier, should be unique for the host.
+        workerIdentity:
+          type: string
+          description: |-
+            Worker identity, set by the client, may not be unique.
+             Usually host_name+(user group name)+process_id, but can be overwritten by the user.
+      description: Holds everything needed to identify the worker host/process context
+    WorkerInfo:
+      type: object
+      properties:
+        workerInstanceKey:
+          type: string
+          description: |-
+            Worker identifier, should be unique for the namespace.
+             It is distinct from worker identity, which is not necessarily namespace-unique.
+        hostInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkerHostInfo'
+          description: Worker host information.
+        taskQueue:
+          type: string
+          description: Task queue this worker is polling for tasks.
+        deploymentVersion:
+          $ref: '#/components/schemas/WorkerDeploymentVersion'
+        sdkName:
+          type: string
+        sdkVersion:
+          type: string
+        status:
+          enum:
+            - WORKER_STATUS_UNSPECIFIED
+            - WORKER_STATUS_RUNNING
+            - WORKER_STATUS_SHUTTING_DOWN
+            - WORKER_STATUS_SHUTDOWN
+          type: string
+          description: Worker status. Defined by SDK.
+          format: enum
+        startTime:
+          type: string
+          description: |-
+            Worker start time.
+             It can be used to determine worker uptime. (current time - start time)
+          format: date-time
+        lastHeartbeatTime:
+          type: string
+          description: Last heartbeat time, coming from the worker. Worker should set it to "now".
+          format: date-time
+        elapsedSinceLastHeartbeat:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Elapsed time since the last heartbeat from the worker.
+        workflowTaskSlotsInfo:
+          $ref: '#/components/schemas/WorkerSlotsInfo'
+        activityTaskSlotsInfo:
+          $ref: '#/components/schemas/WorkerSlotsInfo'
+        nexusTaskSlotsInfo:
+          $ref: '#/components/schemas/WorkerSlotsInfo'
+        localActivitySlotsInfo:
+          $ref: '#/components/schemas/WorkerSlotsInfo'
+        workflowPollerInfo:
+          $ref: '#/components/schemas/WorkerPollerInfo'
+        workflowStickyPollerInfo:
+          $ref: '#/components/schemas/WorkerPollerInfo'
+        activityPollerInfo:
+          $ref: '#/components/schemas/WorkerPollerInfo'
+        nexusPollerInfo:
+          $ref: '#/components/schemas/WorkerPollerInfo'
+        currentHostCpuUsage:
+          type: number
+          format: float
+        currentHostMemUsage:
+          type: string
+        totalStickyCacheHit:
+          type: integer
+          description: A Workflow Task found a cached Workflow Execution to run against.
+          format: int32
+        totalStickyCacheMiss:
+          type: integer
+          description: A Workflow Task did not find a cached Workflow execution to run against.
+          format: int32
+        currentStickyCacheSize:
+          type: integer
+          description: Current cache size, expressed in number of Workflow Executions.
+          format: int32
+      description: |-
+        Worker info message, contains information about the worker and its current state.
+         All information is provided by the worker itself.
+         (-- api-linter: core::0140::prepositions=disabled
+             aip.dev/not-precedent: Removing those words make names less clear. --)
+    WorkerPollerInfo:
+      type: object
+      properties:
+        activePollers:
+          type: integer
+          format: int32
+        lastSuccessfulPollTime:
+          type: string
+          format: date-time
+    WorkerSlotsInfo:
+      type: object
+      properties:
+        currentSlotsAvailable:
+          type: integer
+          description: |-
+            Number of slots available for the worker to specific tasks.
+             May be -1 if the upper bound is not known.
+          format: int32
+        currentSlotsUsed:
+          type: integer
+          description: Number of slots used by the worker for specific tasks.
+          format: int32
+        totalProcessedTasks:
+          type: integer
+          description: |-
+            Total number of tasks processed (completed both successfully and unsuccesfully, or any other way)
+             by the worker since the worker started. This is a cumulative counter.
+          format: int32
+        totalFailedTasks:
+          type: integer
+          description: Total number of failed tasks processed by the worker so far.
+          format: int32
+        processedTasksLastInterval:
+          type: integer
+          description: |-
+            Number of tasks processed in since the last heartbeat from the worker.
+             This is a cumulative counter, and it is reset to 0 each time the worker sends a heartbeat.
+             Contains both successful and failed tasks.
+          format: int32
+        failureTasksLastInterval:
+          type: integer
+          description: Number of failed tasks processed since the last heartbeat from the worker.
+          format: int32
     WorkerVersionCapabilities:
       type: object
       properties:

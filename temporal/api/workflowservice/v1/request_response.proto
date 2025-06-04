@@ -40,6 +40,7 @@ import "temporal/api/batch/v1/message.proto";
 import "temporal/api/sdk/v1/task_complete_metadata.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
 import "temporal/api/nexus/v1/message.proto";
+import "temporal/api/worker/v1/message.proto";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
@@ -265,6 +266,9 @@ message PollWorkflowTaskQueueRequest {
     // Worker deployment options that user has set in the worker.
     // Experimental. Worker Deployments are experimental and might significantly change in the future.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
+
+    // Worker info to be sent to the server.
+    temporal.api.worker.v1.WorkerInfo worker_info = 7;
 }
 
 message PollWorkflowTaskQueueResponse {
@@ -436,6 +440,10 @@ message PollActivityTaskQueueRequest {
     temporal.api.common.v1.WorkerVersionCapabilities worker_version_capabilities = 5 [deprecated = true];
     // Worker deployment options that user has set in the worker.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
+
+    // Worker info to be sent to the server.
+    temporal.api.worker.v1.WorkerInfo worker_info = 7;
+
 }
 
 message PollActivityTaskQueueResponse {
@@ -993,6 +1001,8 @@ message ShutdownWorkerRequest {
     string sticky_task_queue = 2;
     string identity = 3;
     string reason = 4;
+
+    temporal.api.worker.v1.WorkerInfo worker_info = 5;
 }
 
 message ShutdownWorkerResponse {
@@ -1170,6 +1180,9 @@ message GetSystemInfoResponse {
         // True if the server supports Nexus operations.
         // This flag is dependent both on server version and for Nexus to be enabled via server configuration.
         bool nexus = 11;
+
+        // True if the server support collecting workers information.
+        bool accept_worker_info = 12;
     }
 }
 
@@ -1754,6 +1767,9 @@ message PollNexusTaskQueueRequest {
     temporal.api.common.v1.WorkerVersionCapabilities worker_version_capabilities = 4 [deprecated = true];
     // Worker deployment options that user has set in the worker.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
+
+    // Worker info to be sent to the server.
+    temporal.api.worker.v1.WorkerInfo worker_info = 7;
 }
 
 message PollNexusTaskQueueResponse {
@@ -2345,4 +2361,46 @@ message TriggerWorkflowRuleRequest {
 message TriggerWorkflowRuleResponse {
     // True is the rule was applied, based on the rule conditions (predicate/visibility_query).
     bool applied = 1;
+}
+message RecordWorkerHeartbeatRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    temporal.api.worker.v1.WorkerInfo worker_info = 3;
+}
+
+message RecordWorkerHeartbeatResponse {
+
+}
+
+message ListWorkersRequest {
+    string namespace = 1;
+    int32 page_size = 2;
+    bytes next_page_token = 3;
+
+    // `query` in ListWorkers is used to filter workers based on worker status info.
+    // The following worker status attributes are expected are supported as part of the query:
+    //* WorkerId
+    //* WorkerIdentity
+    //* HostId
+    //* TaskQueue
+    //* DeploymentName
+    //* BuildId
+    //* SdkName
+    //* SdkVersion
+    //* StartTime
+    //* LastHeartbeatTime
+    //* Status
+    // Currently metrics are not supported as a part of ListWorkers query.
+    string query = 4;
+}
+
+message ListWorkersResponse {
+    repeated temporal.api.worker.v1.WorkerInfo worker_info = 1;
+
+    // Next page token
+    bytes next_page_token = 2;
 }

@@ -46,7 +46,7 @@ message WorkflowExecutionStartedEventAttributes {
     google.protobuf.Duration workflow_run_timeout = 8;
     // Timeout of a single workflow task.
     google.protobuf.Duration workflow_task_timeout = 9;
-    // Run id of the previous workflow which continued-as-new or retired or cron executed into this
+    // Run id of the previous workflow which continued-as-new or retried or cron executed into this
     // workflow.
     string continued_execution_run_id = 10;
     temporal.api.enums.v1.ContinueAsNewInitiator initiator = 11;
@@ -119,24 +119,38 @@ message WorkflowExecutionStartedEventAttributes {
     // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     string inherited_build_id = 32 [deprecated = true];
     // Versioning override applied to this workflow when it was started.
+    // Children, crons, retries, and continue-as-new will inherit source run's override if pinned
+    // and if the new workflow's Task Queue belongs to the override version.
     temporal.api.workflow.v1.VersioningOverride versioning_override = 33;
     // When present, it means this is a child workflow of a parent that is Pinned to this Worker
     // Deployment Version. In this case, child workflow will start as Pinned to this Version instead
     // of starting on the Current Version of its Task Queue.
     // This is set only if the child workflow is starting on a Task Queue belonging to the same
     // Worker Deployment Version.
-    // Deprecated. Use `parent_pinned_deployment_version`.
+    // Deprecated. Use `parent_versioning_info`.
     string parent_pinned_worker_deployment_version = 34 [deprecated = true];
-
-    // When present, it means this is a child workflow of a parent that is Pinned to this Worker
-    // Deployment Version. In this case, child workflow will start as Pinned to this Version instead
-    // of starting on the Current Version of its Task Queue.
-    // This is set only if the child workflow is starting on a Task Queue belonging to the same
-    // Worker Deployment Version.
-    temporal.api.deployment.v1.WorkerDeploymentVersion parent_pinned_deployment_version = 36;
 
     // Priority metadata
     temporal.api.common.v1.Priority priority = 35;
+
+    reserved 36;
+    reserved "parent_pinned_deployment_version";
+
+    // If present, the new workflow should start on this version with pinned base behavior.
+    // Child of pinned parent will inherit the parent's version if the Child's Task Queue belongs to that version.
+    //
+    // New run initiated by workflow ContinueAsNew of pinned run, will inherit the previous run's version if the
+    // new run's Task Queue belongs to that version.
+    //
+    // New run initiated by workflow Cron will never inherit.
+    //
+    // New run initiated by workflow Retry will only inherit if the retried run is effectively pinned at the time
+    // of retry, and the retried run inherited a pinned version when it started (ie. it is a child of a pinned
+    // parent, or a CaN of a pinned run, and is running on a Task Queue in the inherited version).
+    //
+    // Pinned override is inherited if Task Queue of new run is compatible with the override version.
+    // Override is inherited separately and takes precedence over inherited base version.
+    temporal.api.deployment.v1.WorkerDeploymentVersion inherited_pinned_version = 37;
 }
 
 message WorkflowExecutionCompletedEventAttributes {
@@ -191,7 +205,8 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     temporal.api.common.v1.SearchAttributes search_attributes = 14;
     // If this is set, the new execution inherits the Build ID of the current execution. Otherwise,
     // the assignment rules will be used to independently assign a Build ID to the new execution.
-    bool inherit_build_id = 15;
+    // Deprecated. Only considered for versioning v0.2.
+    bool inherit_build_id = 15 [deprecated = true];
 
     // workflow_execution_timeout is omitted as it shouldn't be overridden from within a workflow.
 }
@@ -662,7 +677,8 @@ message StartChildWorkflowExecutionInitiatedEventAttributes {
     temporal.api.common.v1.SearchAttributes search_attributes = 17;
     // If this is set, the child workflow inherits the Build ID of the parent. Otherwise, the assignment
     // rules of the child's Task Queue will be used to independently assign a Build ID to it.
-    bool inherit_build_id = 19;
+    // Deprecated. Only considered for versioning v0.2.
+    bool inherit_build_id = 19 [deprecated = true];
     // Priority metadata
     temporal.api.common.v1.Priority priority = 20;
 }

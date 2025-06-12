@@ -315,3 +315,39 @@ message PollerScalingDecision {
   // all slots are already occupied.
   int32 poll_request_delta_suggestion = 1;
 }
+
+message RateLimit { 
+
+    // Zero is a valid rate limit.
+    float requests_per_second = 1;
+
+}
+
+message ConfigMetadata {
+
+    // Reason for why the rate limit was set.
+    string reason = 1;
+    
+    // Can be "system", "worker" or "api".
+    string source = 2;
+    
+    // Identity of the last updater.
+    // Set by the request's identity field.
+    string identity = 3;
+    
+    // Time of the last update.
+    google.protobuf.Timestamp update_time = 4;
+}
+
+message RateLimitConfig { 
+    RateLimit rate_limit = 1;    
+    ConfigMetadata metadata = 2;
+}
+
+message TaskQueueConfig {
+    TaskQueue task_queue = 1;
+    temporal.api.enums.v1.TaskQueueType task_queue_type = 2;
+    // Unless modified, this is the system-defined rate limit.
+    RateLimitConfig queue_rate_limit = 3;
+    RateLimitConfig fairness_keys_rate_limit_default = 4;
+}

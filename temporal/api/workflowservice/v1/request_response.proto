@@ -2502,6 +2502,7 @@ message GetNexusOperationInfoRequest {
 }
 message GetNexusOperationInfoResponse {
     temporal.api.nexus.v1.OperationInfo info = 1;
+    repeated temporal.api.nexus.v1.Link links = 2;
 }
 
 message GetNexusOperationResultRequest {
@@ -2534,7 +2535,14 @@ message GetNexusOperationResultResponse {
         repeated temporal.api.nexus.v1.Link links = 2;
     }
 
+    // The operation completed unsuccessfully (failed or canceled).
+    message Error {
+        temporal.api.nexus.v1.UnsuccessfulOperationError operation_error = 1;
+        repeated temporal.api.nexus.v1.Link links = 2;
+    }
+
     message StillRunning {
+        repeated temporal.api.nexus.v1.Link links = 1;
     }
 
     message Timeout {
@@ -2543,7 +2551,7 @@ message GetNexusOperationResultResponse {
     oneof variant {
         Complete complete_success = 1;
         // The operation completed unsuccessfully (failed or canceled).
-        temporal.api.nexus.v1.UnsuccessfulOperationError operation_error = 2;
+        Error operation_error = 2;
         // The operation is still running, When waiting for completion, the caller may re-issue this request to start a
         // new long poll.
         StillRunning still_running = 3;

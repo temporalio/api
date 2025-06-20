@@ -1457,6 +1457,45 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/task-queues/update-config": {
+      "post": {
+        "summary": "Update taskqueue config and uncouple taskqueue settings from the worker lifecycle",
+        "operationId": "UpdateTaskQueueConfig2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTaskQueueConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceUpdateTaskQueueConfigBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/task-queues/{taskQueue.name}": {
       "get": {
         "summary": "DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:\n  - List of pollers\n  - Workflow Reachability status\n  - Backlog info for Workflow and/or Activity tasks",
@@ -1600,6 +1639,13 @@
           {
             "name": "reportTaskReachability",
             "description": "Deprecated (as part of the ENHANCED mode deprecation).\nReport task reachability for the requested versions and all task types (task reachability is not reported\nper task type).",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "showTaskQueueConfig",
+            "description": "Show Task Queue Config",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -5097,6 +5143,45 @@
         ]
       }
     },
+    "/namespaces/{namespace}/task-queues/update-config": {
+      "post": {
+        "summary": "Update taskqueue config and uncouple taskqueue settings from the worker lifecycle",
+        "operationId": "UpdateTaskQueueConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTaskQueueConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceUpdateTaskQueueConfigBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/task-queues/{taskQueue.name}": {
       "get": {
         "summary": "DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:\n  - List of pollers\n  - Workflow Reachability status\n  - Backlog info for Workflow and/or Activity tasks",
@@ -5240,6 +5325,13 @@
           {
             "name": "reportTaskReachability",
             "description": "Deprecated (as part of the ENHANCED mode deprecation).\nReport task reachability for the requested versions and all task types (task reachability is not reported\nper task type).",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "showTaskQueueConfig",
+            "description": "Show Task Queue Config",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -7149,6 +7241,37 @@
       },
       "description": "An operation completed successfully."
     },
+    "UpdateTaskQueueConfigRequestRateLimitUpdate": {
+      "type": "object",
+      "properties": {
+        "requestsPerSecond": {
+          "type": "number",
+          "format": "float"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for why the rate limit was set."
+        }
+      }
+    },
+    "UpdateTaskQueueConfigRequestUpdateFairnessKeyRateLimitDefault": {
+      "type": "object",
+      "properties": {
+        "rateLimit": {
+          "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
+          "description": "Default rate limit to apply for all fairness keys.\nIf null, removes the existing rate limit."
+        }
+      }
+    },
+    "UpdateTaskQueueConfigRequestUpdateQueueRateLimit": {
+      "type": "object",
+      "properties": {
+        "rateLimit": {
+          "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
+          "description": "Rate limit to apply to task queue.\nIt must be less than or equal to the system-level setting at the time\nof the request. If null, removes the existing rate limit."
+        }
+      }
+    },
     "UpdateWorkerBuildIdCompatibilityRequestAddNewCompatibleVersion": {
       "type": "object",
       "properties": {
@@ -8448,6 +8571,29 @@
         "searchAttributes": {
           "$ref": "#/definitions/v1SearchAttributes",
           "description": "Schedule search attributes to be updated.\nDo not set this field if you do not want to update the search attributes.\nA non-null empty object will set the search attributes to an empty map.\nNote: you cannot only update the search attributes with `UpdateScheduleRequest`,\nyou must also set the `schedule` field; otherwise, it will unset the schedule."
+        }
+      }
+    },
+    "WorkflowServiceUpdateTaskQueueConfigBody": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string"
+        },
+        "taskQueueName": {
+          "type": "string",
+          "description": "Selects the task queue to update."
+        },
+        "taskQueueType": {
+          "$ref": "#/definitions/v1TaskQueueType"
+        },
+        "updateQueueRateLimit": {
+          "$ref": "#/definitions/UpdateTaskQueueConfigRequestUpdateQueueRateLimit",
+          "description": "Update to queue-wide rate limit.\nIf not set, this configuration is unchanged.\nNOTE: A limit set by the worker is overriden; and restored again when reset."
+        },
+        "updateFairnessKeyRateLimitDefault": {
+          "$ref": "#/definitions/UpdateTaskQueueConfigRequestUpdateFairnessKeyRateLimitDefault",
+          "description": "Update to the default fairness key rate limit.\nIf not set, this configuration is unchanged."
         }
       }
     },
@@ -9888,6 +10034,28 @@
         }
       }
     },
+    "v1ConfigMetadata": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for why the rate limit was set."
+        },
+        "source": {
+          "type": "string",
+          "description": "Can be \"system\", \"worker\" or \"api\"."
+        },
+        "identity": {
+          "type": "string",
+          "description": "Identity of the last updater.\nSet by the request's identity field."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time of the last update."
+        }
+      }
+    },
     "v1ContinueAsNewInitiator": {
       "type": "string",
       "enum": [
@@ -10305,6 +10473,9 @@
             "$ref": "#/definitions/v1TaskQueueVersionInfo"
           },
           "description": "Deprecated.\nOnly returned in ENHANCED mode.\nThis map contains Task Queue information for each Build ID. Empty string as key value means unversioned."
+        },
+        "configs": {
+          "$ref": "#/definitions/v1TaskQueueConfig"
         }
       }
     },
@@ -12670,6 +12841,27 @@
       },
       "description": "Range represents a set of integer values, used to match fields of a calendar\ntime in StructuredCalendarSpec. If end < start, then end is interpreted as\nequal to start. This means you can use a Range with start set to a value, and\nend and step unset (defaulting to 0) to represent a single value."
     },
+    "v1RateLimit": {
+      "type": "object",
+      "properties": {
+        "requestsPerSecond": {
+          "type": "number",
+          "format": "float",
+          "description": "Zero is a valid rate limit."
+        }
+      }
+    },
+    "v1RateLimitConfig": {
+      "type": "object",
+      "properties": {
+        "rateLimit": {
+          "$ref": "#/definitions/v1RateLimit"
+        },
+        "metadata": {
+          "$ref": "#/definitions/v1ConfigMetadata"
+        }
+      }
+    },
     "v1RecordActivityTaskHeartbeatByIdResponse": {
       "type": "object",
       "properties": {
@@ -14428,6 +14620,24 @@
       },
       "title": "See https://docs.temporal.io/docs/concepts/task-queues/"
     },
+    "v1TaskQueueConfig": {
+      "type": "object",
+      "properties": {
+        "taskQueue": {
+          "$ref": "#/definitions/v1TaskQueue"
+        },
+        "taskQueueType": {
+          "$ref": "#/definitions/v1TaskQueueType"
+        },
+        "queueRateLimit": {
+          "$ref": "#/definitions/v1RateLimitConfig",
+          "description": "Unless modified, this is the system-defined rate limit."
+        },
+        "fairnessKeysRateLimitDefault": {
+          "$ref": "#/definitions/v1RateLimitConfig"
+        }
+      }
+    },
     "v1TaskQueueKind": {
       "type": "string",
       "enum": [
@@ -14878,6 +15088,14 @@
     },
     "v1UpdateScheduleResponse": {
       "type": "object"
+    },
+    "v1UpdateTaskQueueConfigResponse": {
+      "type": "object",
+      "properties": {
+        "configs": {
+          "$ref": "#/definitions/v1TaskQueueConfig"
+        }
+      }
     },
     "v1UpdateWorkerBuildIdCompatibilityResponse": {
       "type": "object",

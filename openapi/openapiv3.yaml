@@ -1300,6 +1300,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/task-queues/update-config:
+    post:
+      tags:
+        - WorkflowService
+      description: Update taskqueue config and uncouple taskqueue settings from the worker lifecycle
+      operationId: UpdateTaskQueueConfig
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskQueueConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTaskQueueConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/worker-build-id-compatibility:
     get:
       tags:
@@ -1499,6 +1530,11 @@ paths:
             Deprecated (as part of the ENHANCED mode deprecation).
              Report task reachability for the requested versions and all task types (task reachability is not reported
              per task type).
+          schema:
+            type: boolean
+        - name: showTaskQueueConfig
+          in: query
+          description: Show Task Queue Config
           schema:
             type: boolean
       responses:
@@ -4566,6 +4602,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/task-queues/update-config:
+    post:
+      tags:
+        - WorkflowService
+      description: Update taskqueue config and uncouple taskqueue settings from the worker lifecycle
+      operationId: UpdateTaskQueueConfig
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskQueueConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTaskQueueConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/task-queues/{taskQueue}/worker-build-id-compatibility:
     get:
       tags:
@@ -4765,6 +4832,11 @@ paths:
             Deprecated (as part of the ENHANCED mode deprecation).
              Report task reachability for the requested versions and all task types (task reachability is not reported
              per task type).
+          schema:
+            type: boolean
+        - name: showTaskQueueConfig
+          in: query
+          description: Show Task Queue Config
           schema:
             type: boolean
       responses:
@@ -7125,6 +7197,24 @@ components:
       description: |-
         Used by the worker versioning APIs, represents an unordered set of one or more versions which are
          considered to be compatible with each other. Currently the versions are always worker build IDs.
+    ConfigMetadata:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Reason for why the rate limit was set.
+        source:
+          type: string
+          description: Can be "system", "worker" or "api".
+        identity:
+          type: string
+          description: |-
+            Identity of the last updater.
+             Set by the request's identity field.
+        updateTime:
+          type: string
+          description: Time of the last update.
+          format: date-time
     CountWorkflowExecutionsResponse:
       type: object
       properties:
@@ -7519,6 +7609,8 @@ components:
             Deprecated.
              Only returned in ENHANCED mode.
              This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
+        configs:
+          $ref: '#/components/schemas/TaskQueueConfig'
     DescribeWorkerDeploymentResponse:
       type: object
       properties:
@@ -9611,6 +9703,20 @@ components:
          time in StructuredCalendarSpec. If end < start, then end is interpreted as
          equal to start. This means you can use a Range with start set to a value, and
          end and step unset (defaulting to 0) to represent a single value.
+    RateLimit:
+      type: object
+      properties:
+        requestsPerSecond:
+          type: number
+          description: Zero is a valid rate limit.
+          format: float
+    RateLimitConfig:
+      type: object
+      properties:
+        rateLimit:
+          $ref: '#/components/schemas/RateLimit'
+        metadata:
+          $ref: '#/components/schemas/ConfigMetadata'
     RecordActivityTaskHeartbeatByIdRequest:
       type: object
       properties:
@@ -11613,6 +11719,25 @@ components:
             Iff kind == TASK_QUEUE_KIND_STICKY, then this field contains the name of
              the normal task queue that the sticky worker is running on.
       description: See https://docs.temporal.io/docs/concepts/task-queues/
+    TaskQueueConfig:
+      type: object
+      properties:
+        taskQueue:
+          $ref: '#/components/schemas/TaskQueue'
+        taskQueueType:
+          enum:
+            - TASK_QUEUE_TYPE_UNSPECIFIED
+            - TASK_QUEUE_TYPE_WORKFLOW
+            - TASK_QUEUE_TYPE_ACTIVITY
+            - TASK_QUEUE_TYPE_NEXUS
+          type: string
+          format: enum
+        queueRateLimit:
+          allOf:
+            - $ref: '#/components/schemas/RateLimitConfig'
+          description: Unless modified, this is the system-defined rate limit.
+        fairnessKeysRateLimitDefault:
+          $ref: '#/components/schemas/RateLimitConfig'
     TaskQueueReachability:
       type: object
       properties:
@@ -12147,6 +12272,70 @@ components:
     UpdateScheduleResponse:
       type: object
       properties: {}
+    UpdateTaskQueueConfigRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        identity:
+          type: string
+        taskQueueName:
+          type: string
+          description: Selects the task queue to update.
+        taskQueueType:
+          enum:
+            - TASK_QUEUE_TYPE_UNSPECIFIED
+            - TASK_QUEUE_TYPE_WORKFLOW
+            - TASK_QUEUE_TYPE_ACTIVITY
+            - TASK_QUEUE_TYPE_NEXUS
+          type: string
+          format: enum
+        updateQueueRateLimit:
+          allOf:
+            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_UpdateQueueRateLimit'
+          description: |-
+            Update to queue-wide rate limit.
+             If not set, this configuration is unchanged.
+             NOTE: A limit set by the worker is overriden; and restored again when reset.
+        updateFairnessKeyRateLimitDefault:
+          allOf:
+            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_UpdateFairnessKeyRateLimitDefault'
+          description: |-
+            Update to the default fairness key rate limit.
+             If not set, this configuration is unchanged.
+    UpdateTaskQueueConfigRequest_RateLimitUpdate:
+      type: object
+      properties:
+        requestsPerSecond:
+          type: number
+          format: float
+        reason:
+          type: string
+          description: Reason for why the rate limit was set.
+    UpdateTaskQueueConfigRequest_UpdateFairnessKeyRateLimitDefault:
+      type: object
+      properties:
+        rateLimit:
+          allOf:
+            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_RateLimitUpdate'
+          description: |-
+            Default rate limit to apply for all fairness keys.
+             If null, removes the existing rate limit.
+    UpdateTaskQueueConfigRequest_UpdateQueueRateLimit:
+      type: object
+      properties:
+        rateLimit:
+          allOf:
+            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_RateLimitUpdate'
+          description: |-
+            Rate limit to apply to task queue.
+             It must be less than or equal to the system-level setting at the time
+             of the request. If null, removes the existing rate limit.
+    UpdateTaskQueueConfigResponse:
+      type: object
+      properties:
+        configs:
+          $ref: '#/components/schemas/TaskQueueConfig'
     UpdateWorkerDeploymentVersionMetadataRequest:
       type: object
       properties:

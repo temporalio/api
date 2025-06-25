@@ -1457,45 +1457,6 @@
         ]
       }
     },
-    "/api/v1/namespaces/{namespace}/task-queues/update-config": {
-      "post": {
-        "summary": "Update taskqueue config and uncouple taskqueue settings from the worker lifecycle",
-        "operationId": "UpdateTaskQueueConfig2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateTaskQueueConfigResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUpdateTaskQueueConfigBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/api/v1/namespaces/{namespace}/task-queues/{taskQueue.name}": {
       "get": {
         "summary": "DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:\n  - List of pollers\n  - Workflow Reachability status\n  - Backlog info for Workflow and/or Activity tasks",
@@ -1649,6 +1610,52 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/task-queues/{taskQueueName}/update-config": {
+      "post": {
+        "summary": "Update taskqueue config and uncouple taskqueue settings from the worker lifecycle\nrate limit set by this api overrides the worker-set rate limit\nIf unset worker rate limits continue to take effect",
+        "operationId": "UpdateTaskQueueConfig2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTaskQueueConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "taskQueueName",
+            "description": "Selects the task queue to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceUpdateTaskQueueConfigBody"
+            }
           }
         ],
         "tags": [
@@ -5143,45 +5150,6 @@
         ]
       }
     },
-    "/namespaces/{namespace}/task-queues/update-config": {
-      "post": {
-        "summary": "Update taskqueue config and uncouple taskqueue settings from the worker lifecycle",
-        "operationId": "UpdateTaskQueueConfig",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateTaskQueueConfigResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUpdateTaskQueueConfigBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/namespaces/{namespace}/task-queues/{taskQueue.name}": {
       "get": {
         "summary": "DescribeTaskQueue returns the following information about the target task queue, broken down by Build ID:\n  - List of pollers\n  - Workflow Reachability status\n  - Backlog info for Workflow and/or Activity tasks",
@@ -5335,6 +5303,52 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/task-queues/{taskQueueName}/update-config": {
+      "post": {
+        "summary": "Update taskqueue config and uncouple taskqueue settings from the worker lifecycle\nrate limit set by this api overrides the worker-set rate limit\nIf unset worker rate limits continue to take effect",
+        "operationId": "UpdateTaskQueueConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTaskQueueConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "taskQueueName",
+            "description": "Selects the task queue to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceUpdateTaskQueueConfigBody"
+            }
           }
         ],
         "tags": [
@@ -8580,10 +8594,6 @@
         "identity": {
           "type": "string"
         },
-        "taskQueueName": {
-          "type": "string",
-          "description": "Selects the task queue to update."
-        },
         "taskQueueType": {
           "$ref": "#/definitions/v1TaskQueueType"
         },
@@ -10042,10 +10052,9 @@
           "description": "Reason for why the rate limit was set."
         },
         "source": {
-          "type": "string",
-          "description": "Can be \"system\", \"worker\" or \"api\"."
+          "$ref": "#/definitions/v1Source"
         },
-        "identity": {
+        "updateIdentity": {
           "type": "string",
           "description": "Identity of the last updater.\nSet by the request's identity field."
         },
@@ -10474,7 +10483,7 @@
           },
           "description": "Deprecated.\nOnly returned in ENHANCED mode.\nThis map contains Task Queue information for each Build ID. Empty string as key value means unversioned."
         },
-        "configs": {
+        "config": {
           "$ref": "#/definitions/v1TaskQueueConfig"
         }
       }
@@ -14090,6 +14099,16 @@
     "v1SignalWorkflowExecutionResponse": {
       "type": "object"
     },
+    "v1Source": {
+      "type": "string",
+      "enum": [
+        "SOURCE_UNSPECIFIED",
+        "SOURCE_API",
+        "SOURCE_SYSTEM",
+        "SOURCE_WORKER"
+      ],
+      "default": "SOURCE_UNSPECIFIED"
+    },
     "v1StartBatchOperationResponse": {
       "type": "object"
     },
@@ -14623,18 +14642,13 @@
     "v1TaskQueueConfig": {
       "type": "object",
       "properties": {
-        "taskQueue": {
-          "$ref": "#/definitions/v1TaskQueue"
-        },
-        "taskQueueType": {
-          "$ref": "#/definitions/v1TaskQueueType"
-        },
         "queueRateLimit": {
           "$ref": "#/definitions/v1RateLimitConfig",
           "description": "Unless modified, this is the system-defined rate limit."
         },
         "fairnessKeysRateLimitDefault": {
-          "$ref": "#/definitions/v1RateLimitConfig"
+          "$ref": "#/definitions/v1RateLimitConfig",
+          "description": "If set, each individual fairness key will be limited to this rate, scaled by the weight of the fairness key."
         }
       }
     },
@@ -15092,7 +15106,7 @@
     "v1UpdateTaskQueueConfigResponse": {
       "type": "object",
       "properties": {
-        "configs": {
+        "config": {
           "$ref": "#/definitions/v1TaskQueueConfig"
         }
       }

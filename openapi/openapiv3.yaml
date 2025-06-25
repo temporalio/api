@@ -1473,6 +1473,11 @@ paths:
           description: Report stats for the requested task queue type(s).
           schema:
             type: boolean
+        - name: showTaskQueueConfig
+          in: query
+          description: Show Task Queue Config
+          schema:
+            type: boolean
         - name: includeTaskQueueStatus
           in: query
           description: |-
@@ -1539,11 +1544,6 @@ paths:
             Deprecated (as part of the ENHANCED mode deprecation).
              Report task reachability for the requested versions and all task types (task reachability is not reported
              per task type).
-          schema:
-            type: boolean
-        - name: showTaskQueueConfig
-          in: query
-          description: Show Task Queue Config
           schema:
             type: boolean
       responses:
@@ -4784,6 +4784,11 @@ paths:
           description: Report stats for the requested task queue type(s).
           schema:
             type: boolean
+        - name: showTaskQueueConfig
+          in: query
+          description: Show Task Queue Config
+          schema:
+            type: boolean
         - name: includeTaskQueueStatus
           in: query
           description: |-
@@ -4850,11 +4855,6 @@ paths:
             Deprecated (as part of the ENHANCED mode deprecation).
              Report task reachability for the requested versions and all task types (task reachability is not reported
              per task type).
-          schema:
-            type: boolean
-        - name: showTaskQueueConfig
-          in: query
-          description: Show Task Queue Config
           schema:
             type: boolean
       responses:
@@ -7593,10 +7593,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PollerInfo'
-        stats:
-          allOf:
-            - $ref: '#/components/schemas/TaskQueueStats'
-          description: Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
         versioningInfo:
           allOf:
             - $ref: '#/components/schemas/TaskQueueVersioningInfo'
@@ -7610,6 +7606,21 @@ components:
              they are always routed to their Pinned Deployment Version. However, new workflow executions
              are typically not Pinned until they complete their first task (unless they are started with
              a Pinned VersioningOverride or are Child Workflows of a Pinned parent).
+        stats:
+          allOf:
+            - $ref: '#/components/schemas/TaskQueueStats'
+          description: Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
+        config:
+          $ref: '#/components/schemas/TaskQueueConfig'
+        source:
+          enum:
+            - SOURCE_UNSPECIFIED
+            - SOURCE_API
+            - SOURCE_WORKER
+            - SOURCE_SYSTEM
+          type: string
+          description: Source of the update
+          format: enum
         taskQueueStatus:
           allOf:
             - $ref: '#/components/schemas/TaskQueueStatus'
@@ -7624,8 +7635,6 @@ components:
             Deprecated.
              Only returned in ENHANCED mode.
              This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
-        config:
-          $ref: '#/components/schemas/TaskQueueConfig'
     DescribeWorkerDeploymentResponse:
       type: object
       properties:
@@ -12305,45 +12314,29 @@ components:
           format: enum
         updateQueueRateLimit:
           allOf:
-            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_UpdateQueueRateLimit'
+            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_RateLimitUpdate'
           description: |-
             Update to queue-wide rate limit.
              If not set, this configuration is unchanged.
              NOTE: A limit set by the worker is overriden; and restored again when reset.
+             It must be less than or equal to the system-level setting at the time
+             of the request. If null, removes the existing rate limit.
         updateFairnessKeyRateLimitDefault:
           allOf:
-            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_UpdateFairnessKeyRateLimitDefault'
+            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_RateLimitUpdate'
           description: |-
             Update to the default fairness key rate limit.
              If not set, this configuration is unchanged.
     UpdateTaskQueueConfigRequest_RateLimitUpdate:
       type: object
       properties:
-        requestsPerSecond:
-          type: number
-          format: float
+        rateLimit:
+          allOf:
+            - $ref: '#/components/schemas/RateLimit'
+          description: Rate Limit to be updated
         reason:
           type: string
           description: Reason for why the rate limit was set.
-    UpdateTaskQueueConfigRequest_UpdateFairnessKeyRateLimitDefault:
-      type: object
-      properties:
-        rateLimit:
-          allOf:
-            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_RateLimitUpdate'
-          description: |-
-            Default rate limit to apply for all fairness keys.
-             If null, removes the existing rate limit.
-    UpdateTaskQueueConfigRequest_UpdateQueueRateLimit:
-      type: object
-      properties:
-        rateLimit:
-          allOf:
-            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_RateLimitUpdate'
-          description: |-
-            Rate limit to apply to task queue.
-             It must be less than or equal to the system-level setting at the time
-             of the request. If null, removes the existing rate limit.
     UpdateTaskQueueConfigResponse:
       type: object
       properties:

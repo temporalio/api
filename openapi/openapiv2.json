@@ -1530,6 +1530,13 @@
             "type": "boolean"
           },
           {
+            "name": "showTaskQueueConfig",
+            "description": "Show Task Queue Config",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
             "name": "includeTaskQueueStatus",
             "description": "Deprecated, use `report_stats` instead.\nIf true, the task queue status will be included in the response.",
             "in": "query",
@@ -1600,13 +1607,6 @@
           {
             "name": "reportTaskReachability",
             "description": "Deprecated (as part of the ENHANCED mode deprecation).\nReport task reachability for the requested versions and all task types (task reachability is not reported\nper task type).",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          },
-          {
-            "name": "showTaskQueueConfig",
-            "description": "Show Task Queue Config",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -5223,6 +5223,13 @@
             "type": "boolean"
           },
           {
+            "name": "showTaskQueueConfig",
+            "description": "Show Task Queue Config",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
             "name": "includeTaskQueueStatus",
             "description": "Deprecated, use `report_stats` instead.\nIf true, the task queue status will be included in the response.",
             "in": "query",
@@ -5293,13 +5300,6 @@
           {
             "name": "reportTaskReachability",
             "description": "Deprecated (as part of the ENHANCED mode deprecation).\nReport task reachability for the requested versions and all task types (task reachability is not reported\nper task type).",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          },
-          {
-            "name": "showTaskQueueConfig",
-            "description": "Show Task Queue Config",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -7258,31 +7258,13 @@
     "UpdateTaskQueueConfigRequestRateLimitUpdate": {
       "type": "object",
       "properties": {
-        "requestsPerSecond": {
-          "type": "number",
-          "format": "float"
+        "rateLimit": {
+          "$ref": "#/definitions/v1RateLimit",
+          "title": "Rate Limit to be updated"
         },
         "reason": {
           "type": "string",
           "description": "Reason for why the rate limit was set."
-        }
-      }
-    },
-    "UpdateTaskQueueConfigRequestUpdateFairnessKeyRateLimitDefault": {
-      "type": "object",
-      "properties": {
-        "rateLimit": {
-          "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
-          "description": "Default rate limit to apply for all fairness keys.\nIf null, removes the existing rate limit."
-        }
-      }
-    },
-    "UpdateTaskQueueConfigRequestUpdateQueueRateLimit": {
-      "type": "object",
-      "properties": {
-        "rateLimit": {
-          "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
-          "description": "Rate limit to apply to task queue.\nIt must be less than or equal to the system-level setting at the time\nof the request. If null, removes the existing rate limit."
         }
       }
     },
@@ -8598,11 +8580,11 @@
           "$ref": "#/definitions/v1TaskQueueType"
         },
         "updateQueueRateLimit": {
-          "$ref": "#/definitions/UpdateTaskQueueConfigRequestUpdateQueueRateLimit",
-          "description": "Update to queue-wide rate limit.\nIf not set, this configuration is unchanged.\nNOTE: A limit set by the worker is overriden; and restored again when reset."
+          "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
+          "description": "Update to queue-wide rate limit.\nIf not set, this configuration is unchanged.\nNOTE: A limit set by the worker is overriden; and restored again when reset.\nIt must be less than or equal to the system-level setting at the time\nof the request. If null, removes the existing rate limit."
         },
         "updateFairnessKeyRateLimitDefault": {
-          "$ref": "#/definitions/UpdateTaskQueueConfigRequestUpdateFairnessKeyRateLimitDefault",
+          "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
           "description": "Update to the default fairness key rate limit.\nIf not set, this configuration is unchanged."
         }
       }
@@ -10461,13 +10443,20 @@
             "$ref": "#/definitions/v1PollerInfo"
           }
         },
+        "versioningInfo": {
+          "$ref": "#/definitions/v1TaskQueueVersioningInfo",
+          "description": "Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.\nWhen not present, it means the tasks are routed to Unversioned workers (workers with\nUNVERSIONED or unspecified WorkerVersioningMode.)\nTask Queue Versioning info is updated indirectly by calling SetWorkerDeploymentCurrentVersion\nand SetWorkerDeploymentRampingVersion on Worker Deployments.\nNote: This information is not relevant to Pinned workflow executions and their activities as\nthey are always routed to their Pinned Deployment Version. However, new workflow executions\nare typically not Pinned until they complete their first task (unless they are started with\na Pinned VersioningOverride or are Child Workflows of a Pinned parent)."
+        },
         "stats": {
           "$ref": "#/definitions/v1TaskQueueStats",
           "description": "Statistics for the task queue. Only populated when `report_stats` is set to true in the request."
         },
-        "versioningInfo": {
-          "$ref": "#/definitions/v1TaskQueueVersioningInfo",
-          "description": "Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.\nWhen not present, it means the tasks are routed to Unversioned workers (workers with\nUNVERSIONED or unspecified WorkerVersioningMode.)\nTask Queue Versioning info is updated indirectly by calling SetWorkerDeploymentCurrentVersion\nand SetWorkerDeploymentRampingVersion on Worker Deployments.\nNote: This information is not relevant to Pinned workflow executions and their activities as\nthey are always routed to their Pinned Deployment Version. However, new workflow executions\nare typically not Pinned until they complete their first task (unless they are started with\na Pinned VersioningOverride or are Child Workflows of a Pinned parent)."
+        "config": {
+          "$ref": "#/definitions/v1TaskQueueConfig"
+        },
+        "source": {
+          "$ref": "#/definitions/v1Source",
+          "title": "Source of the update"
         },
         "taskQueueStatus": {
           "$ref": "#/definitions/v1TaskQueueStatus",
@@ -10479,9 +10468,6 @@
             "$ref": "#/definitions/v1TaskQueueVersionInfo"
           },
           "description": "Deprecated.\nOnly returned in ENHANCED mode.\nThis map contains Task Queue information for each Build ID. Empty string as key value means unversioned."
-        },
-        "config": {
-          "$ref": "#/definitions/v1TaskQueueConfig"
         }
       }
     },
@@ -14095,6 +14081,17 @@
     },
     "v1SignalWorkflowExecutionResponse": {
       "type": "object"
+    },
+    "v1Source": {
+      "type": "string",
+      "enum": [
+        "SOURCE_UNSPECIFIED",
+        "SOURCE_API",
+        "SOURCE_WORKER",
+        "SOURCE_SYSTEM"
+      ],
+      "default": "SOURCE_UNSPECIFIED",
+      "title": "Source for the update"
     },
     "v1StartBatchOperationResponse": {
       "type": "object"

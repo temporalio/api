@@ -1058,6 +1058,9 @@ message DescribeTaskQueueRequest {
     // Report stats for the requested task queue type(s).
     bool report_stats = 8;
 
+    // Show Task Queue Config
+    bool show_task_queue_config = 11;
+
     // Deprecated, use `report_stats` instead.
     // If true, the task queue status will be included in the response.
     bool include_task_queue_status = 4 [deprecated = true];
@@ -1086,16 +1089,10 @@ message DescribeTaskQueueRequest {
     // Report task reachability for the requested versions and all task types (task reachability is not reported
     // per task type).
     bool report_task_reachability = 10 [deprecated = true];
-
-    // Show Task Queue Config
-    bool show_task_queue_config = 11;
 }
 
 message DescribeTaskQueueResponse {
     repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1;
-
-    // Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
-    temporal.api.taskqueue.v1.TaskQueueStats stats = 5;
 
     // Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.
     // When not present, it means the tasks are routed to Unversioned workers (workers with
@@ -1108,6 +1105,14 @@ message DescribeTaskQueueResponse {
     // a Pinned VersioningOverride or are Child Workflows of a Pinned parent).
     temporal.api.taskqueue.v1.TaskQueueVersioningInfo versioning_info = 4;
 
+    // Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
+    temporal.api.taskqueue.v1.TaskQueueStats stats = 5;
+
+    temporal.api.taskqueue.v1.TaskQueueConfig config  = 6;
+
+    // Source of the update
+    temporal.api.enums.v1.Source source = 7;
+
     // Deprecated.
     // Status of the task queue. Only populated when `include_task_queue_status` is set to true in the request.
     temporal.api.taskqueue.v1.TaskQueueStatus task_queue_status = 2 [deprecated = true];
@@ -1116,8 +1121,6 @@ message DescribeTaskQueueResponse {
     // Only returned in ENHANCED mode.
     // This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
     map<string, temporal.api.taskqueue.v1.TaskQueueVersionInfo> versions_info = 3 [deprecated = true];
-
-    temporal.api.taskqueue.v1.TaskQueueConfig config  = 6;
 }
 
 message GetClusterInfoRequest {
@@ -2416,24 +2419,12 @@ message ListWorkersResponse {
 message UpdateTaskQueueConfigRequest {
     message RateLimitUpdate { 
 
-        float requests_per_second = 1;
+        // Rate Limit to be updated
+        temporal.api.taskqueue.v1.RateLimit rate_limit = 1;
 
         // Reason for why the rate limit was set.
         string reason = 2;
 
-    }
-
-    message UpdateQueueRateLimit {
-        // Rate limit to apply to task queue.
-        // It must be less than or equal to the system-level setting at the time
-        // of the request. If null, removes the existing rate limit.
-        RateLimitUpdate rate_limit = 1;
-    }
-
-    message UpdateFairnessKeyRateLimitDefault {
-        // Default rate limit to apply for all fairness keys.
-        // If null, removes the existing rate limit.
-        RateLimitUpdate rate_limit = 1;
     }
 
     string namespace = 1;
@@ -2447,11 +2438,13 @@ message UpdateTaskQueueConfigRequest {
     // Update to queue-wide rate limit.
     // If not set, this configuration is unchanged.
     // NOTE: A limit set by the worker is overriden; and restored again when reset.
-    UpdateQueueRateLimit update_queue_rate_limit = 5;
+    // It must be less than or equal to the system-level setting at the time
+    // of the request. If null, removes the existing rate limit.
+    RateLimitUpdate update_queue_rate_limit = 5;
     
     // Update to the default fairness key rate limit.
     // If not set, this configuration is unchanged.
-    UpdateFairnessKeyRateLimitDefault update_fairness_key_rate_limit_default = 6;
+    RateLimitUpdate update_fairness_key_rate_limit_default = 6;
 }
 
 message UpdateTaskQueueConfigResponse {

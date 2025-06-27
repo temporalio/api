@@ -1530,8 +1530,8 @@
             "type": "boolean"
           },
           {
-            "name": "showTaskQueueConfig",
-            "description": "Show Task Queue Config",
+            "name": "reportTaskQueueConfig",
+            "description": "Report Task Queue Config",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -1617,7 +1617,7 @@
         ]
       }
     },
-    "/api/v1/namespaces/{namespace}/task-queues/{taskQueueName}/update-config": {
+    "/api/v1/namespaces/{namespace}/task-queues/{taskQueueName}/update-config/{taskQueueType}": {
       "post": {
         "summary": "Updates task queue configuration.\nFor the overall queue rate limit: the rate limit set by this api overrides the worker-set rate limit,\nwhich uncouples the rate limit from the worker lifecycle.\nIf the overall queue rate limit is unset, the worker-set rate limit takes effect.",
         "operationId": "UpdateTaskQueueConfig2",
@@ -1648,6 +1648,18 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "taskQueueType",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "TASK_QUEUE_TYPE_UNSPECIFIED",
+              "TASK_QUEUE_TYPE_WORKFLOW",
+              "TASK_QUEUE_TYPE_ACTIVITY",
+              "TASK_QUEUE_TYPE_NEXUS"
+            ]
           },
           {
             "name": "body",
@@ -5230,8 +5242,8 @@
             "type": "boolean"
           },
           {
-            "name": "showTaskQueueConfig",
-            "description": "Show Task Queue Config",
+            "name": "reportTaskQueueConfig",
+            "description": "Report Task Queue Config",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -5317,7 +5329,7 @@
         ]
       }
     },
-    "/namespaces/{namespace}/task-queues/{taskQueueName}/update-config": {
+    "/namespaces/{namespace}/task-queues/{taskQueueName}/update-config/{taskQueueType}": {
       "post": {
         "summary": "Updates task queue configuration.\nFor the overall queue rate limit: the rate limit set by this api overrides the worker-set rate limit,\nwhich uncouples the rate limit from the worker lifecycle.\nIf the overall queue rate limit is unset, the worker-set rate limit takes effect.",
         "operationId": "UpdateTaskQueueConfig",
@@ -5348,6 +5360,18 @@
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "taskQueueType",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "TASK_QUEUE_TYPE_UNSPECIFIED",
+              "TASK_QUEUE_TYPE_WORKFLOW",
+              "TASK_QUEUE_TYPE_ACTIVITY",
+              "TASK_QUEUE_TYPE_NEXUS"
+            ]
           },
           {
             "name": "body",
@@ -7038,6 +7062,20 @@
         }
       }
     },
+    "DescribeTaskQueueResponseEffectiveRateLimit": {
+      "type": "object",
+      "properties": {
+        "queueRateLimitRps": {
+          "type": "number",
+          "format": "float",
+          "description": "The effective rate limit for the task queue."
+        },
+        "rateLimitSource": {
+          "$ref": "#/definitions/v1RateLimitSource",
+          "title": "Source of the RateLimit Configuration,which can be one of the following values:\n- SOURCE_API: The rate limit that is set via the TaskQueueConfig api.\n- SOURCE_WORKER: The rate limit is the value set using the workerOptions in TaskQueueActivitiesPerSecond.\n- SOURCE_SYSTEM: The rate limit is the default value set by the system"
+        }
+      }
+    },
     "DescribeWorkerDeploymentVersionResponseVersionTaskQueue": {
       "type": "object",
       "properties": {
@@ -8605,16 +8643,13 @@
         "identity": {
           "type": "string"
         },
-        "taskQueueType": {
-          "$ref": "#/definitions/v1TaskQueueType"
-        },
         "updateQueueRateLimit": {
           "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
-          "description": "Update to queue-wide rate limit.\nIf not set, this configuration is unchanged.\nNOTE: A limit set by the worker is overriden; and restored again when reset.\nIt must be less than or equal to the system-level setting at the time\nof the request. If null, removes the existing rate limit."
+          "description": "Update to queue-wide rate limit.\nIf not set, this configuration is unchanged.\nNOTE: A limit set by the worker is overriden; and restored again when reset.\nIf the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit."
         },
         "updateFairnessKeyRateLimitDefault": {
           "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
-          "description": "Update to the default fairness key rate limit.\nIf not set, this configuration is unchanged."
+          "description": "Update to the default fairness key rate limit.\nIf not set, this configuration is unchanged.\nIf the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit."
         }
       }
     },
@@ -10482,11 +10517,10 @@
         },
         "config": {
           "$ref": "#/definitions/v1TaskQueueConfig",
-          "description": "Only populated if show_task_queue_config is set to true."
+          "description": "Only populated if report_task_queue_config is set to true."
         },
-        "source": {
-          "$ref": "#/definitions/v1Source",
-          "title": "Source of the update"
+        "effectiveRateLimit": {
+          "$ref": "#/definitions/DescribeTaskQueueResponseEffectiveRateLimit"
         },
         "taskQueueStatus": {
           "$ref": "#/definitions/v1TaskQueueStatus",
@@ -12892,6 +12926,17 @@
         }
       }
     },
+    "v1RateLimitSource": {
+      "type": "string",
+      "enum": [
+        "RATE_LIMIT_SOURCE_UNSPECIFIED",
+        "RATE_LIMIT_SOURCE_API",
+        "RATE_LIMIT_SOURCE_WORKER",
+        "RATE_LIMIT_SOURCE_SYSTEM"
+      ],
+      "default": "RATE_LIMIT_SOURCE_UNSPECIFIED",
+      "description": "Source for the effective rate limit.\n\n - RATE_LIMIT_SOURCE_API: The value was set by the API.\n - RATE_LIMIT_SOURCE_WORKER: The value was set by a worker.\n - RATE_LIMIT_SOURCE_SYSTEM: The values was set as the system default."
+    },
     "v1RecordActivityTaskHeartbeatByIdResponse": {
       "type": "object",
       "properties": {
@@ -14119,17 +14164,6 @@
     },
     "v1SignalWorkflowExecutionResponse": {
       "type": "object"
-    },
-    "v1Source": {
-      "type": "string",
-      "enum": [
-        "SOURCE_UNSPECIFIED",
-        "SOURCE_API",
-        "SOURCE_WORKER",
-        "SOURCE_SYSTEM"
-      ],
-      "default": "SOURCE_UNSPECIFIED",
-      "title": "Source for the update"
     },
     "v1StartBatchOperationResponse": {
       "type": "object"

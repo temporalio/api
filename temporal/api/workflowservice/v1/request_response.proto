@@ -1058,8 +1058,8 @@ message DescribeTaskQueueRequest {
     // Report stats for the requested task queue type(s).
     bool report_stats = 8;
 
-    // Show Task Queue Config
-    bool show_task_queue_config = 11;
+    // Report Task Queue Config
+    bool report_task_queue_config = 11;
 
     // Deprecated, use `report_stats` instead.
     // If true, the task queue status will be included in the response.
@@ -1108,11 +1108,21 @@ message DescribeTaskQueueResponse {
     // Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
     temporal.api.taskqueue.v1.TaskQueueStats stats = 5;
 
-    // Only populated if show_task_queue_config is set to true.
+    // Only populated if report_task_queue_config is set to true.
     temporal.api.taskqueue.v1.TaskQueueConfig config  = 6;
 
-    // Source of the update
-    temporal.api.enums.v1.Source source = 7;
+    message EffectiveRateLimit {
+        // The effective rate limit for the task queue.
+        float queue_rate_limit_rps = 1;
+
+        // Source of the RateLimit Configuration,which can be one of the following values:
+        // - SOURCE_API: The rate limit that is set via the TaskQueueConfig api.
+        // - SOURCE_WORKER: The rate limit is the value set using the workerOptions in TaskQueueActivitiesPerSecond.
+        // - SOURCE_SYSTEM: The rate limit is the default value set by the system
+        temporal.api.enums.v1.RateLimitSource rate_limit_source = 2;
+    }
+
+    EffectiveRateLimit effective_rate_limit = 7;
 
     // Deprecated.
     // Status of the task queue. Only populated when `include_task_queue_status` is set to true in the request.
@@ -2445,11 +2455,11 @@ message UpdateTaskQueueConfigRequest {
     // Update to queue-wide rate limit.
     // If not set, this configuration is unchanged.
     // NOTE: A limit set by the worker is overriden; and restored again when reset.
-    // It must be less than or equal to the system-level setting at the time
-    // of the request. If null, removes the existing rate limit.
+    // If the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit.
     RateLimitUpdate update_queue_rate_limit = 5;
     // Update to the default fairness key rate limit.
     // If not set, this configuration is unchanged.
+    // If the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit.
     RateLimitUpdate update_fairness_key_rate_limit_default = 6;
 }
 

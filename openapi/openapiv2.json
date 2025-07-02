@@ -6900,6 +6900,23 @@
         }
       }
     },
+    "CompleteNexusOperationRequestSuccess": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/v1Payload",
+          "description": "Operation result."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          },
+          "description": "Links containing handler information which can be attached to operations scheduled by the caller."
+        }
+      }
+    },
     "CountWorkflowExecutionsResponseAggregationGroup": {
       "type": "object",
       "properties": {
@@ -6983,6 +7000,22 @@
           "title": "Additional restrictions:\n- setting `first_execution_run_id` is invalid\n- setting `workflow_execution.run_id` is invalid"
         }
       }
+    },
+    "GetOperationResultResponseError": {
+      "type": "object",
+      "properties": {
+        "operationError": {
+          "$ref": "#/definitions/v1UnsuccessfulOperationError"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        }
+      },
+      "description": "The operation completed unsuccessfully (failed or canceled)."
     },
     "LinkBatchJob": {
       "type": "object",
@@ -9470,10 +9503,6 @@
       ],
       "default": "CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_UNSPECIFIED"
     },
-    "v1CancelNexusOperationResponse": {
-      "type": "object",
-      "description": "If this response is returned, the cancelation request was successfully processed by a Handler.\nThe operation may ignore the cancelation request and end up in any terminal state."
-    },
     "v1CancelOperationRequest": {
       "type": "object",
       "properties": {
@@ -9890,7 +9919,12 @@
       "description": "Used by the worker versioning APIs, represents an unordered set of one or more versions which are\nconsidered to be compatible with each other. Currently the versions are always worker build IDs."
     },
     "v1CompleteNexusOperationResponse": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "handlerError": {
+          "$ref": "#/definitions/v1HandlerError"
+        }
+      }
     },
     "v1CompleteWorkflowExecutionCommandAttributes": {
       "type": "object",
@@ -10707,12 +10741,8 @@
         "info": {
           "$ref": "#/definitions/v1OperationInfo"
         },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
+        "handlerError": {
+          "$ref": "#/definitions/v1HandlerError"
         }
       }
     },
@@ -10723,7 +10753,7 @@
           "$ref": "#/definitions/v1GetNexusOperationResultResponseComplete"
         },
         "operationError": {
-          "$ref": "#/definitions/v1GetNexusOperationResultResponseError",
+          "$ref": "#/definitions/v1UnsuccessfulOperationError",
           "description": "The operation completed unsuccessfully (failed or canceled)."
         },
         "stillRunning": {
@@ -10733,6 +10763,10 @@
         "timeout": {
           "$ref": "#/definitions/v1GetNexusOperationResultResponseTimeout",
           "description": "The server gave up waiting for operation completion. The request may be retried by the caller."
+        },
+        "handlerError": {
+          "$ref": "#/definitions/v1HandlerError",
+          "description": "There was an error connecting to the handler."
         }
       }
     },
@@ -10741,44 +10775,12 @@
       "properties": {
         "payload": {
           "$ref": "#/definitions/v1Payload"
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
         }
       },
       "description": "The operation completed successfully."
     },
-    "v1GetNexusOperationResultResponseError": {
-      "type": "object",
-      "properties": {
-        "operationError": {
-          "$ref": "#/definitions/v1UnsuccessfulOperationError"
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        }
-      },
-      "description": "The operation completed unsuccessfully (failed or canceled)."
-    },
     "v1GetNexusOperationResultResponseStillRunning": {
-      "type": "object",
-      "properties": {
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        }
-      }
+      "type": "object"
     },
     "v1GetNexusOperationResultResponseTimeout": {
       "type": "object"
@@ -10847,7 +10849,7 @@
           "description": "The operation completed successfully."
         },
         "operationError": {
-          "$ref": "#/definitions/v1GetOperationResultResponseError",
+          "$ref": "#/definitions/GetOperationResultResponseError",
           "description": "The operation completed unsuccessfully (failed or canceled)."
         },
         "stillRunning": {
@@ -10876,22 +10878,6 @@
         }
       },
       "description": "The operation completed successfully."
-    },
-    "v1GetOperationResultResponseError": {
-      "type": "object",
-      "properties": {
-        "operationError": {
-          "$ref": "#/definitions/v1UnsuccessfulOperationError"
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        }
-      },
-      "description": "The operation completed unsuccessfully (failed or canceled)."
     },
     "v1GetOperationResultResponseStillRunning": {
       "type": "object",
@@ -13164,6 +13150,15 @@
         }
       }
     },
+    "v1RequestCancelNexusOperationResponse": {
+      "type": "object",
+      "properties": {
+        "handlerError": {
+          "$ref": "#/definitions/v1HandlerError"
+        }
+      },
+      "description": "If this response is returned, the cancelation request was successfully processed by a Handler.\nThe operation may ignore the cancelation request and end up in any terminal state."
+    },
     "v1RequestCancelWorkflowExecutionResponse": {
       "type": "object"
     },
@@ -14340,6 +14335,9 @@
         "operationError": {
           "$ref": "#/definitions/v1UnsuccessfulOperationError",
           "description": "The operation completed unsuccessfully (failed or canceled)."
+        },
+        "handlerError": {
+          "$ref": "#/definitions/v1HandlerError"
         }
       }
     },

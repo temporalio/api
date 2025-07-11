@@ -2245,13 +2245,13 @@
     },
     "/api/v1/namespaces/{namespace}/workers/command": {
       "post": {
-        "summary": "SetWorkerConfig sets the worker configuration for a specific worker.\nCan be used to partially update the worker configuration.\nCan be used to update the configuration of multiple workers.",
-        "operationId": "SetWorkerConfig2",
+        "summary": "UpdateWorkerConfig updates the worker configuration for a specific worker.\nCan be used to partially update the worker configuration.\nCan be used to update the configuration of multiple workers.",
+        "operationId": "UpdateWorkerConfig2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1SetWorkerConfigResponse"
+              "$ref": "#/definitions/v1UpdateWorkerConfigResponse"
             }
           },
           "default": {
@@ -2274,7 +2274,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowServiceSetWorkerConfigBody"
+              "$ref": "#/definitions/WorkflowServiceUpdateWorkerConfigBody"
             }
           }
         ],
@@ -5983,13 +5983,13 @@
         ]
       },
       "post": {
-        "summary": "SetWorkerConfig sets the worker configuration for a specific worker.\nCan be used to partially update the worker configuration.\nCan be used to update the configuration of multiple workers.",
-        "operationId": "SetWorkerConfig",
+        "summary": "UpdateWorkerConfig updates the worker configuration for a specific worker.\nCan be used to partially update the worker configuration.\nCan be used to update the configuration of multiple workers.",
+        "operationId": "UpdateWorkerConfig",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1SetWorkerConfigResponse"
+              "$ref": "#/definitions/v1UpdateWorkerConfigResponse"
             }
           },
           "default": {
@@ -6012,7 +6012,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowServiceSetWorkerConfigBody"
+              "$ref": "#/definitions/WorkflowServiceUpdateWorkerConfigBody"
             }
           }
         ],
@@ -7312,20 +7312,6 @@
       },
       "description": "UpdateWorkflowOptions represents updating workflow execution options after a workflow reset.\nKeep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest."
     },
-    "SetWorkerConfigRequestPartialWorkerConfig": {
-      "type": "object",
-      "properties": {
-        "workerConfig": {
-          "$ref": "#/definitions/v1WorkerConfig",
-          "description": "The worker configuration to set."
-        },
-        "updateMask": {
-          "type": "string",
-          "title": "Controls which fields from `worker_config` will be applied"
-        }
-      },
-      "description": "Partial updates are accepted and controlled by update_mask."
-    },
     "StartOperationResponseAsync": {
       "type": "object",
       "properties": {
@@ -7513,7 +7499,7 @@
         "initialPollers": {
           "type": "integer",
           "format": "int32",
-          "description": "This many polls will be attempted initially before scaling kicks in. Must be between\n`minimum` and `maximum`."
+          "description": "This many polls will be attempted initially before scaling kicks in. Must be between\n minimum` and `maximum`."
         }
       }
     },
@@ -8153,27 +8139,6 @@
       },
       "title": "[cleanup-wv-pre-release] Pre-release deployment APIs, clean up later"
     },
-    "WorkflowServiceSetWorkerConfigBody": {
-      "type": "object",
-      "properties": {
-        "identity": {
-          "type": "string",
-          "description": "The identity of the client who initiated this request."
-        },
-        "reason": {
-          "type": "string",
-          "description": "Reason for sending worker command, can be used for audit purpose."
-        },
-        "workerInstanceKey": {
-          "type": "string",
-          "description": "Worker instance key to which the command should be sent."
-        },
-        "partialConfig": {
-          "$ref": "#/definitions/SetWorkerConfigRequestPartialWorkerConfig",
-          "title": "JSON string representation of the worker config"
-        }
-      }
-    },
     "WorkflowServiceSetWorkerDeploymentCurrentVersionBody": {
       "type": "object",
       "properties": {
@@ -8715,6 +8680,31 @@
         "searchAttributes": {
           "$ref": "#/definitions/v1SearchAttributes",
           "description": "Schedule search attributes to be updated.\nDo not set this field if you do not want to update the search attributes.\nA non-null empty object will set the search attributes to an empty map.\nNote: you cannot only update the search attributes with `UpdateScheduleRequest`,\nyou must also set the `schedule` field; otherwise, it will unset the schedule."
+        }
+      }
+    },
+    "WorkflowServiceUpdateWorkerConfigBody": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the client who initiated this request."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for sending worker command, can be used for audit purpose."
+        },
+        "workerConfig": {
+          "$ref": "#/definitions/v1WorkerConfig",
+          "description": "Partial updates are accepted and controlled by update_mask.\nThe worker configuration to set."
+        },
+        "updateMask": {
+          "type": "string",
+          "title": "Controls which fields from `worker_config` will be applied"
+        },
+        "workerInstanceKey": {
+          "type": "string",
+          "description": "Worker instance key to which the command should be sent."
         }
       }
     },
@@ -14004,19 +13994,6 @@
       },
       "title": "[cleanup-wv-pre-release] Pre-release deployment APIs, clean up later"
     },
-    "v1SetWorkerConfigResponse": {
-      "type": "object",
-      "properties": {
-        "workerConfig": {
-          "$ref": "#/definitions/v1WorkerConfig",
-          "description": "The worker configuration. Will be returned if the command was sent to a single worker."
-        },
-        "jobId": {
-          "type": "string",
-          "description": "If the command was sent to a multiple workers - it will be converted into a batch job, and this is the job ID."
-        }
-      }
-    },
     "v1SetWorkerDeploymentCurrentVersionResponse": {
       "type": "object",
       "properties": {
@@ -15188,6 +15165,19 @@
     "v1UpdateWorkerBuildIdCompatibilityResponse": {
       "type": "object",
       "title": "[cleanup-wv-pre-release]"
+    },
+    "v1UpdateWorkerConfigResponse": {
+      "type": "object",
+      "properties": {
+        "workerConfig": {
+          "$ref": "#/definitions/v1WorkerConfig",
+          "description": "The worker configuration. Will be returned if the command was sent to a single worker."
+        },
+        "jobId": {
+          "type": "string",
+          "description": "If the command was sent to a multiple workers - it will be converted into a batch job, and this is the job ID."
+        }
+      }
     },
     "v1UpdateWorkerDeploymentVersionMetadataResponse": {
       "type": "object",

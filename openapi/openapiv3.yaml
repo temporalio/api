@@ -2046,10 +2046,10 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        SetWorkerConfig sets the worker configuration for a specific worker.
+        UpdateWorkerConfig updates the worker configuration for a specific worker.
          Can be used to partially update the worker configuration.
          Can be used to update the configuration of multiple workers.
-      operationId: SetWorkerConfig
+      operationId: UpdateWorkerConfig
       parameters:
         - name: namespace
           in: path
@@ -2061,7 +2061,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetWorkerConfigRequest'
+              $ref: '#/components/schemas/UpdateWorkerConfigRequest'
         required: true
       responses:
         "200":
@@ -2069,7 +2069,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SetWorkerConfigResponse'
+                $ref: '#/components/schemas/UpdateWorkerConfigResponse'
         default:
           description: Default error response
           content:
@@ -5390,10 +5390,10 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        SetWorkerConfig sets the worker configuration for a specific worker.
+        UpdateWorkerConfig updates the worker configuration for a specific worker.
          Can be used to partially update the worker configuration.
          Can be used to update the configuration of multiple workers.
-      operationId: SetWorkerConfig
+      operationId: UpdateWorkerConfig
       parameters:
         - name: namespace
           in: path
@@ -5405,7 +5405,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetWorkerConfigRequest'
+              $ref: '#/components/schemas/UpdateWorkerConfigRequest'
         required: true
       responses:
         "200":
@@ -5413,7 +5413,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SetWorkerConfigResponse'
+                $ref: '#/components/schemas/UpdateWorkerConfigResponse'
         default:
           description: Default error response
           content:
@@ -10997,47 +10997,6 @@ components:
             - $ref: '#/components/schemas/DeploymentInfo'
           description: Info of the deployment that was current before executing this operation.
       description: '[cleanup-wv-pre-release] Pre-release deployment APIs, clean up later'
-    SetWorkerConfigRequest:
-      type: object
-      properties:
-        namespace:
-          type: string
-          description: Namespace this worker belongs to.
-        identity:
-          type: string
-          description: The identity of the client who initiated this request.
-        reason:
-          type: string
-          description: Reason for sending worker command, can be used for audit purpose.
-        workerInstanceKey:
-          type: string
-          description: Worker instance key to which the command should be sent.
-        partialConfig:
-          allOf:
-            - $ref: '#/components/schemas/SetWorkerConfigRequest_PartialWorkerConfig'
-          description: JSON string representation of the worker config
-    SetWorkerConfigRequest_PartialWorkerConfig:
-      type: object
-      properties:
-        workerConfig:
-          allOf:
-            - $ref: '#/components/schemas/WorkerConfig'
-          description: The worker configuration to set.
-        updateMask:
-          type: string
-          description: Controls which fields from `worker_config` will be applied
-          format: field-mask
-      description: Partial updates are accepted and controlled by update_mask.
-    SetWorkerConfigResponse:
-      type: object
-      properties:
-        workerConfig:
-          allOf:
-            - $ref: '#/components/schemas/WorkerConfig'
-          description: The worker configuration. Will be returned if the command was sent to a single worker.
-        jobId:
-          type: string
-          description: If the command was sent to a multiple workers - it will be converted into a batch job, and this is the job ID.
     SetWorkerDeploymentCurrentVersionRequest:
       type: object
       properties:
@@ -12379,6 +12338,41 @@ components:
     UpdateScheduleResponse:
       type: object
       properties: {}
+    UpdateWorkerConfigRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace this worker belongs to.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        reason:
+          type: string
+          description: Reason for sending worker command, can be used for audit purpose.
+        workerConfig:
+          allOf:
+            - $ref: '#/components/schemas/WorkerConfig'
+          description: |-
+            Partial updates are accepted and controlled by update_mask.
+             The worker configuration to set.
+        updateMask:
+          type: string
+          description: Controls which fields from `worker_config` will be applied
+          format: field-mask
+        workerInstanceKey:
+          type: string
+          description: Worker instance key to which the command should be sent.
+    UpdateWorkerConfigResponse:
+      type: object
+      properties:
+        workerConfig:
+          allOf:
+            - $ref: '#/components/schemas/WorkerConfig'
+          description: The worker configuration. Will be returned if the command was sent to a single worker.
+        jobId:
+          type: string
+          description: If the command was sent to a multiple workers - it will be converted into a batch job, and this is the job ID.
     UpdateWorkerDeploymentVersionMetadataRequest:
       type: object
       properties:
@@ -12697,7 +12691,7 @@ components:
           type: integer
           description: |-
             This many polls will be attempted initially before scaling kicks in. Must be between
-             `minimum` and `maximum`.
+              minimum` and `maximum`.
           format: int32
     WorkerConfig_SimplePollerBehavior:
       type: object

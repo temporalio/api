@@ -32,6 +32,7 @@ import "temporal/api/namespace/v1/message.proto";
 import "temporal/api/query/v1/message.proto";
 import "temporal/api/replication/v1/message.proto";
 import "temporal/api/rules/v1/message.proto";
+import "temporal/api/sdk/v1/worker_config.proto";
 import "temporal/api/schedule/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
@@ -2418,4 +2419,63 @@ message ListWorkersResponse {
 
     // Next page token
     bytes next_page_token = 2;
+}
+
+message GetWorkerConfigRequest {
+    // Namespace this worker belongs to.
+    string namespace = 1;
+
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    // Reason for sending worker command, can be used for audit purpose.
+    string reason = 3;
+
+}
+
+message GetWorkerConfigResponse {
+    // The worker configuration.
+    temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+}
+
+message UpdateWorkerConfigRequest {
+    // Namespace this worker belongs to.
+    string namespace = 1;
+
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    // Reason for sending worker command, can be used for audit purpose.
+    string reason = 3;
+
+    // Partial updates are accepted and controlled by update_mask.
+    // The worker configuration to set.
+    temporal.api.sdk.v1.WorkerConfig worker_config = 4;
+
+    // Controls which fields from `worker_config` will be applied
+    google.protobuf.FieldMask update_mask = 5;
+
+    // Eventually we will extend this as way to send command to multiple workers.
+    // Options are:
+    // - query (will be used as query to ListWorkers, same format as in ListWorkersRequest.query)
+    // - task queue (just a shortcut. Same as query=' "TaskQueue"="my-task-queue" ')
+    // - etc.
+    //   All of these can be replaced with a query, but it is not convenient.
+    // string filter = 5;
+    // string task_queue = 6;
+    // ...
+    oneof selector {
+        // Worker instance key to which the command should be sent.
+        string worker_instance_key = 6;
+    }
+}
+
+message UpdateWorkerConfigResponse {
+    oneof response {
+        // The worker configuration. Will be returned if the command was sent to a single worker.
+        temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+
+        // If the command was sent to a multiple workers - it will be converted into a batch job, and this is the job ID.
+        string job_id = 2;
+    }
 }

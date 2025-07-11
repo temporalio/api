@@ -1905,12 +1905,28 @@ message PauseActivityRequest {
     oneof activity {
         // Only the activity with this ID will be paused.
         string id = 4;
-        // Pause all running activities of this type.
-        string type = 5;
+        // Pause by type with option to pause all, running, or future activities of this type.
+        // (-- api-linter: core::0140::prepositions=disabled --)
+        PauseByType pause_by_type = 7;
     }
+    reserved 5;
+    reserved "type";
 
     // Reason to pause the activity.
     string reason = 6;
+
+    // (-- api-linter: core::0123::resource-annotation=disabled --)
+    message PauseByType{
+        string name = 1;
+        PauseByTypeOption option = 2;
+    }
+
+    enum PauseByTypeOption{
+        PAUSE_BY_TYPE_OPTION_UNSPECIFIED = 0;
+        PAUSE_BY_TYPE_OPTION_ALL = 1;
+        PAUSE_BY_TYPE_OPTION_RUNNING = 2;
+        PAUSE_BY_TYPE_OPTION_FUTURE = 3;
+    }
 }
 
 message PauseActivityResponse {
@@ -1980,6 +1996,7 @@ message ResetActivityRequest {
     // Default options are then options activity was created with.
     // They are part of the first SCHEDULE event.
     bool restore_original_options = 9;
+
 
 }
 
@@ -2208,8 +2225,8 @@ message ListWorkerDeploymentsResponse {
         google.protobuf.Timestamp create_time = 2;
         temporal.api.deployment.v1.RoutingConfig routing_config = 3;
         // Summary of the version that was added most recently in the Worker Deployment.
-        temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary latest_version_summary = 4; 
-        // Summary of the current version of the Worker Deployment. 
+        temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary latest_version_summary = 4;
+        // Summary of the current version of the Worker Deployment.
         temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary current_version_summary = 5;
         // Summary of the ramping version of the Worker Deployment.
         temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary ramping_version_summary = 6;

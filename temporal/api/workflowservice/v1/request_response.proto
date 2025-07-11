@@ -32,7 +32,7 @@ import "temporal/api/namespace/v1/message.proto";
 import "temporal/api/query/v1/message.proto";
 import "temporal/api/replication/v1/message.proto";
 import "temporal/api/rules/v1/message.proto";
-import "temporal/api/sdk/v1/worker_commands.proto";
+import "temporal/api/sdk/v1/worker_config.proto";
 import "temporal/api/schedule/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
@@ -2498,7 +2498,7 @@ message GetWorkerConfigResponse {
     }
 }
 
-message SetWorkerConfigRequest {
+message UpdateWorkerConfigRequest {
     // Namespace this worker belongs to.
     string namespace = 1;
 
@@ -2507,6 +2507,13 @@ message SetWorkerConfigRequest {
 
     // Reason for sending worker command, can be used for audit purpose.
     string reason = 3;
+
+    // Partial updates are accepted and controlled by update_mask.
+    // The worker configuration to set.
+    temporal.api.sdk.v1.WorkerConfig worker_config = 4;
+
+    // Controls which fields from `worker_config` will be applied
+    google.protobuf.FieldMask update_mask = 5;
 
     // Eventually we will extend this as way to send command to multiple workers.
     // Options are:
@@ -2519,23 +2526,11 @@ message SetWorkerConfigRequest {
     // ...
     oneof selector {
         // Worker instance key to which the command should be sent.
-        string worker_instance_key = 4;
+        string worker_instance_key = 6;
     }
-
-    // Partial updates are accepted and controlled by update_mask.
-    message PartialWorkerConfig {
-        // The worker configuration to set.
-        temporal.api.sdk.v1.WorkerConfig worker_config = 1;
-
-        // Controls which fields from `worker_config` will be applied
-        google.protobuf.FieldMask update_mask = 2;
-    }
-
-    // JSON string representation of the worker config
-    PartialWorkerConfig partial_config = 5;
 }
 
-message SetWorkerConfigResponse {
+message UpdateWorkerConfigResponse {
     oneof response {
         // The worker configuration. Will be returned if the command was sent to a single worker.
         temporal.api.sdk.v1.WorkerConfig worker_config = 1;

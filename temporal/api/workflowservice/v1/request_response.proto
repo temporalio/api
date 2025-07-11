@@ -2476,22 +2476,43 @@ message UpdateTaskQueueConfigResponse {
     temporal.api.taskqueue.v1.TaskQueueConfig config = 1;
 }
 
-message WorkerCommandRequest {
+message GetWorkerConfigRequest {
     // Namespace this worker belongs to.
     string namespace = 1;
 
     // The identity of the client who initiated this request.
     string identity = 2;
 
-    // for audit purposes
+    // Reason for sending worker command, can be used for audit purpose.
     string reason = 3;
 
-    // ->THIS IS TO DISCUSS<-
-    // I add this as oneof because we will need a way to send command to multiple workers.
+}
+
+message GetWorkerConfigResponse {
+    oneof response {
+        // The worker configuration.
+        temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+
+        // If the command was sent to a batch job, this is the job ID.
+        string job_id = 3;
+    }
+}
+
+message SetWorkerConfigRequest {
+    // Namespace this worker belongs to.
+    string namespace = 1;
+
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    // Reason for sending worker command, can be used for audit purpose.
+    string reason = 3;
+
+    // Eventually we will extend this as way to send command to multiple workers.
     // Options are:
     // - query (will be used as query to ListWorkers, same format as in ListWorkersRequest.query)
     // - task queue (just a shortcut. Same as query=' "TaskQueue"="my-task-queue" ')
-    // - may be something else? Like SDK, deployment, etc.
+    // - etc.
     //   All of these can be replaced with a query, but it is not convenient.
     // string filter = 5;
     // string task_queue = 6;
@@ -2501,15 +2522,25 @@ message WorkerCommandRequest {
         string worker_instance_key = 4;
     }
 
-    oneof command {
-        temporal.api.sdk.v1.GetWorkerConfigCommand get_worker_config = 10;
-        temporal.api.sdk.v1.SetWorkerConfigCommand set_worker_config = 11;
+    // Partial updates are accepted and controlled by update_mask.
+    message PartialWorkerConfig {
+        // The worker configuration to set.
+        temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+
+        // Controls which fields from `worker_config` will be applied
+        google.protobuf.FieldMask update_mask = 2;
     }
+
+    // JSON string representation of the worker config
+    PartialWorkerConfig partial_config = 5;
 }
 
-message WorkerCommandResponse {
+message SetWorkerConfigResponse {
     oneof response {
-        temporal.api.sdk.v1.GetWorkerConfigResponse get_worker_config = 1;
-        temporal.api.sdk.v1.SetWorkerConfigResponse set_worker_config = 2;
+        // The worker configuration. Will be returned if the command was sent to a single worker.
+        temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+
+        // If the command was sent to a multiple workers - it will be converted into a batch job, and this is the job ID.
+        string job_id = 2;
     }
 }

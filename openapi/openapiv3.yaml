@@ -2037,7 +2037,7 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: ListWorkers is a visibility API to list worker status information in a specific namespace.
+      description: ListWorkers is a visibility API to list workers status information in a specific namespace.
       operationId: ListWorkers
       parameters:
         - name: namespace
@@ -2088,11 +2088,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workers/command:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        SetWorkerConfig sets the worker configuration for a specific worker.
+         Can be used to partially update the worker configuration.
+         Can be used to update the configuration of multiple workers.
+      operationId: SetWorkerConfig
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace this worker belongs to.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetWorkerConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetWorkerConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workers/config:
     get:
       tags:
         - WorkflowService
-      description: ListWorkers is a visibility API to list worker status information in a specific namespace.
-      operationId: WorkerCommand
+      description: GetWorkerConfig returns the worker configuration for a specific worker.
+      operationId: GetWorkerConfig
       parameters:
         - name: namespace
           in: path
@@ -2107,57 +2142,7 @@ paths:
             type: string
         - name: reason
           in: query
-          description: for audit purposes
-          schema:
-            type: string
-        - name: workerInstanceKey
-          in: query
-          description: Worker instance key to which the command should be sent.
-          schema:
-            type: string
-        - name: setWorkerConfig.partialConfig.workerConfig.maxCachedWorkflows
-          in: query
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.workerConfig.simplePoller.maxPollers
-          in: query
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.workerConfig.autoscalingPoller.minPollers
-          in: query
-          description: |-
-            At least this many poll calls will always be attempted (assuming slots are available).
-             Cannot be zero.
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.workerConfig.autoscalingPoller.maxPollers
-          in: query
-          description: At most this many poll calls will ever be open at once. Must be >= `minimum`.
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.workerConfig.autoscalingPoller.initialPollers
-          in: query
-          description: |-
-            This many polls will be attempted initially before scaling kicks in. Must be between
-             `minimum` and `maximum`.
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.updateMask
-          in: query
-          description: |-
-            DISCUSSION POINT: should we use a field mask here? Or too much complexity for the user?
-             if not - we can remove this message and just use `WorkerConfig` directly.
-             Controls which fields from `worker_config` will be applied
-          schema:
-            type: string
-            format: field-mask
-        - name: setWorkerConfig.jsonConfig
-          in: query
+          description: Reason for sending worker command, can be used for audit purpose.
           schema:
             type: string
       responses:
@@ -2166,7 +2151,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkerCommandResponse'
+                $ref: '#/components/schemas/GetWorkerConfigResponse'
         default:
           description: Default error response
           content:
@@ -5407,7 +5392,7 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: ListWorkers is a visibility API to list worker status information in a specific namespace.
+      description: ListWorkers is a visibility API to list workers status information in a specific namespace.
       operationId: ListWorkers
       parameters:
         - name: namespace
@@ -5457,12 +5442,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/workers/command:
+  /namespaces/{namespace}/workers/config:
     get:
       tags:
         - WorkflowService
-      description: ListWorkers is a visibility API to list worker status information in a specific namespace.
-      operationId: WorkerCommand
+      description: GetWorkerConfig returns the worker configuration for a specific worker.
+      operationId: GetWorkerConfig
       parameters:
         - name: namespace
           in: path
@@ -5477,57 +5462,7 @@ paths:
             type: string
         - name: reason
           in: query
-          description: for audit purposes
-          schema:
-            type: string
-        - name: workerInstanceKey
-          in: query
-          description: Worker instance key to which the command should be sent.
-          schema:
-            type: string
-        - name: setWorkerConfig.partialConfig.workerConfig.maxCachedWorkflows
-          in: query
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.workerConfig.simplePoller.maxPollers
-          in: query
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.workerConfig.autoscalingPoller.minPollers
-          in: query
-          description: |-
-            At least this many poll calls will always be attempted (assuming slots are available).
-             Cannot be zero.
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.workerConfig.autoscalingPoller.maxPollers
-          in: query
-          description: At most this many poll calls will ever be open at once. Must be >= `minimum`.
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.workerConfig.autoscalingPoller.initialPollers
-          in: query
-          description: |-
-            This many polls will be attempted initially before scaling kicks in. Must be between
-             `minimum` and `maximum`.
-          schema:
-            type: integer
-            format: int32
-        - name: setWorkerConfig.partialConfig.updateMask
-          in: query
-          description: |-
-            DISCUSSION POINT: should we use a field mask here? Or too much complexity for the user?
-             if not - we can remove this message and just use `WorkerConfig` directly.
-             Controls which fields from `worker_config` will be applied
-          schema:
-            type: string
-            format: field-mask
-        - name: setWorkerConfig.jsonConfig
-          in: query
+          description: Reason for sending worker command, can be used for audit purpose.
           schema:
             type: string
       responses:
@@ -5536,7 +5471,41 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkerCommandResponse'
+                $ref: '#/components/schemas/GetWorkerConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        SetWorkerConfig sets the worker configuration for a specific worker.
+         Can be used to partially update the worker configuration.
+         Can be used to update the configuration of multiple workers.
+      operationId: SetWorkerConfig
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace this worker belongs to.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetWorkerConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetWorkerConfigResponse'
         default:
           description: Default error response
           content:
@@ -8347,9 +8316,9 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerConfig'
           description: The worker configuration.
-      description: |-
-        TO DISCUSS: not sure I like the word "response" here, it has a different meaning in the context of commands.
-         ?
+        jobId:
+          type: string
+          description: If the command was sent to a batch job, this is the job ID.
     GetWorkerTaskReachabilityResponse:
       type: object
       properties:
@@ -11245,13 +11214,47 @@ components:
             - $ref: '#/components/schemas/DeploymentInfo'
           description: Info of the deployment that was current before executing this operation.
       description: '[cleanup-wv-pre-release] Pre-release deployment APIs, clean up later'
+    SetWorkerConfigRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace this worker belongs to.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        reason:
+          type: string
+          description: Reason for sending worker command, can be used for audit purpose.
+        workerInstanceKey:
+          type: string
+          description: Worker instance key to which the command should be sent.
+        partialConfig:
+          allOf:
+            - $ref: '#/components/schemas/SetWorkerConfigRequest_PartialWorkerConfig'
+          description: JSON string representation of the worker config
+    SetWorkerConfigRequest_PartialWorkerConfig:
+      type: object
+      properties:
+        workerConfig:
+          allOf:
+            - $ref: '#/components/schemas/WorkerConfig'
+          description: The worker configuration to set.
+        updateMask:
+          type: string
+          description: Controls which fields from `worker_config` will be applied
+          format: field-mask
+      description: Partial updates are accepted and controlled by update_mask.
     SetWorkerConfigResponse:
       type: object
       properties:
         workerConfig:
           allOf:
             - $ref: '#/components/schemas/WorkerConfig'
-          description: The updated worker configuration.
+          description: The worker configuration. Will be returned if the command was sent to a single worker.
+        jobId:
+          type: string
+          description: If the command was sent to a multiple workers - it will be converted into a batch job, and this is the job ID.
     SetWorkerDeploymentCurrentVersionRequest:
       type: object
       properties:
@@ -12951,22 +12954,15 @@ components:
              user specified timeout, API call returns even if specified stage is not reached.
           format: enum
       description: Specifies client's intent to wait for Update results.
-    WorkerCommandResponse:
-      type: object
-      properties:
-        getWorkerConfig:
-          $ref: '#/components/schemas/GetWorkerConfigResponse'
-        setWorkerConfig:
-          $ref: '#/components/schemas/SetWorkerConfigResponse'
     WorkerConfig:
       type: object
       properties:
         maxCachedWorkflows:
           type: integer
           format: int32
-        simplePoller:
+        simplePollerBehavior:
           $ref: '#/components/schemas/WorkerConfig_SimplePollerBehavior'
-        autoscalingPoller:
+        autoscalingPollerBehavior:
           $ref: '#/components/schemas/WorkerConfig_AutoscalingPollerBehavior'
     WorkerConfig_AutoscalingPollerBehavior:
       type: object

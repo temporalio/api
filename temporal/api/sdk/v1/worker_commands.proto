@@ -9,63 +9,28 @@ option java_outer_classname = "WorkerCommandsProto";
 option ruby_package = "Temporalio::Api::Sdk::V1";
 option csharp_namespace = "Temporalio.Api.Sdk.V1";
 
-import "google/protobuf/field_mask.proto";
-
 message WorkerConfig {
     message SimplePollerBehavior {
       int32 max_pollers = 1;
     }
+
     message AutoscalingPollerBehavior {
       // At least this many poll calls will always be attempted (assuming slots are available).
       // Cannot be zero.
       int32 min_pollers = 1;
+
       // At most this many poll calls will ever be open at once. Must be >= `minimum`.
       int32 max_pollers = 2;
+
       // This many polls will be attempted initially before scaling kicks in. Must be between
       // `minimum` and `maximum`.
       int32 initial_pollers = 3;
     }
 
-  int32 max_cached_workflows = 1;
-  oneof poller {
-      SimplePollerBehavior simple_poller = 2;
-      AutoscalingPollerBehavior autoscaling_poller = 3;
-  }
-}
+    int32 max_cached_workflows = 1;
 
-message GetWorkerConfigCommand {
-
-}
-
-// TO DISCUSS: not sure I like the word "response" here, it has a different meaning in the context of commands.
-// ?
-message GetWorkerConfigResponse {
-  // The worker configuration.
-  temporal.api.sdk.v1.WorkerConfig worker_config = 1;
-}
-
-
-message SetWorkerConfigCommand {
-  // The worker configuration to set.
-  message PartialWorkerConfig {
-    WorkerConfig worker_config = 1;
-
-    // DISCUSSION POINT: should we use a field mask here? Or too much complexity for the user?
-    // if not - we can remove this message and just use `WorkerConfig` directly.
-    // Controls which fields from `worker_config` will be applied
-    google.protobuf.FieldMask update_mask = 2;
-  }
-
-  // DISCUSSION POINT: should we use only structured data? I feel there will be a value to just send json string as config
-  // especially for multiple workers in batch.
-  oneof source {
-    // JSON string representation of the worker config
-    PartialWorkerConfig partial_config = 1;
-    string json_config = 2;
-  }
-}
-
-message SetWorkerConfigResponse {
-  // The updated worker configuration.
-  temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+    oneof poller_behavior {
+        SimplePollerBehavior simple_poller_behavior = 2;
+        AutoscalingPollerBehavior autoscaling_poller_behavior = 3;
+    }
 }

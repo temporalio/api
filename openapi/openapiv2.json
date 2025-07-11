@@ -6900,23 +6900,6 @@
         }
       }
     },
-    "CompleteNexusOperationRequestSuccess": {
-      "type": "object",
-      "properties": {
-        "payload": {
-          "$ref": "#/definitions/v1Payload",
-          "description": "Operation result."
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          },
-          "description": "Links containing handler information which can be attached to operations scheduled by the caller."
-        }
-      }
-    },
     "CountWorkflowExecutionsResponseAggregationGroup": {
       "type": "object",
       "properties": {
@@ -7001,6 +6984,22 @@
         }
       }
     },
+    "GetOperationResultResponseComplete": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/v1Payload"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        }
+      },
+      "description": "The operation completed successfully."
+    },
     "GetOperationResultResponseError": {
       "type": "object",
       "properties": {
@@ -7016,6 +7015,9 @@
         }
       },
       "description": "The operation completed unsuccessfully (failed or canceled)."
+    },
+    "GetOperationResultResponseTimeout": {
+      "type": "object"
     },
     "LinkBatchJob": {
       "type": "object",
@@ -7174,6 +7176,42 @@
         }
       },
       "description": "UpdateWorkflowOptions represents updating workflow execution options after a workflow reset.\nKeep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest."
+    },
+    "StartOperationResponseAsync": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "description": "Deprecated. Renamed to operation_token."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        },
+        "operationToken": {
+          "type": "string"
+        }
+      },
+      "description": "The operation will complete asynchronously.\nThe returned token can be used to reference this operation."
+    },
+    "StartOperationResponseSync": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/v1Payload"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
+        }
+      },
+      "description": "An operation completed successfully."
     },
     "UpdateWorkerBuildIdCompatibilityRequestAddNewCompatibleVersion": {
       "type": "object",
@@ -10754,7 +10792,8 @@
       "type": "object",
       "properties": {
         "completeSuccess": {
-          "$ref": "#/definitions/v1GetNexusOperationResultResponseComplete"
+          "$ref": "#/definitions/v1Payload",
+          "description": "The operation completed successfully."
         },
         "operationError": {
           "$ref": "#/definitions/v1UnsuccessfulOperationError",
@@ -10764,29 +10803,13 @@
           "$ref": "#/definitions/v1GetNexusOperationResultResponseStillRunning",
           "description": "The operation is still running, When waiting for completion, the caller may re-issue this request to start a\nnew long poll."
         },
-        "timeout": {
-          "$ref": "#/definitions/v1GetNexusOperationResultResponseTimeout",
-          "description": "The server gave up waiting for operation completion. The request may be retried by the caller."
-        },
         "handlerError": {
           "$ref": "#/definitions/v1HandlerError",
           "description": "There was an error connecting to the handler."
         }
       }
     },
-    "v1GetNexusOperationResultResponseComplete": {
-      "type": "object",
-      "properties": {
-        "payload": {
-          "$ref": "#/definitions/v1Payload"
-        }
-      },
-      "description": "The operation completed successfully."
-    },
     "v1GetNexusOperationResultResponseStillRunning": {
-      "type": "object"
-    },
-    "v1GetNexusOperationResultResponseTimeout": {
       "type": "object"
     },
     "v1GetOperationInfoRequest": {
@@ -10849,7 +10872,7 @@
       "type": "object",
       "properties": {
         "completeSuccess": {
-          "$ref": "#/definitions/v1GetOperationResultResponseComplete",
+          "$ref": "#/definitions/GetOperationResultResponseComplete",
           "description": "The operation completed successfully."
         },
         "operationError": {
@@ -10861,27 +10884,11 @@
           "description": "The operation is still running, When waiting for completion, the caller may re-issue this request to start a\nnew long poll."
         },
         "timeout": {
-          "$ref": "#/definitions/v1GetOperationResultResponseTimeout",
+          "$ref": "#/definitions/GetOperationResultResponseTimeout",
           "description": "The server gave up waiting for operation completion. The request may be retried by the caller."
         }
       },
       "description": "Response variant for GetOperationResultRequest."
-    },
-    "v1GetOperationResultResponseComplete": {
-      "type": "object",
-      "properties": {
-        "payload": {
-          "$ref": "#/definitions/v1Payload"
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        }
-      },
-      "description": "The operation completed successfully."
     },
     "v1GetOperationResultResponseStillRunning": {
       "type": "object",
@@ -10894,9 +10901,6 @@
           }
         }
       }
-    },
-    "v1GetOperationResultResponseTimeout": {
-      "type": "object"
     },
     "v1GetSearchAttributesResponse": {
       "type": "object",
@@ -14331,10 +14335,12 @@
       "type": "object",
       "properties": {
         "syncSuccess": {
-          "$ref": "#/definitions/v1StartNexusOperationResponseSync"
+          "$ref": "#/definitions/v1Payload",
+          "description": "An operation completed successfully."
         },
         "asyncSuccess": {
-          "$ref": "#/definitions/v1StartNexusOperationResponseAsync"
+          "type": "string",
+          "description": "The operation will complete asynchronously.\nThe returned string is an operation token which can be used to reference this operation."
         },
         "operationError": {
           "$ref": "#/definitions/v1UnsuccessfulOperationError",
@@ -14342,40 +14348,15 @@
         },
         "handlerError": {
           "$ref": "#/definitions/v1HandlerError"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apinexusv1Link"
+          }
         }
       }
-    },
-    "v1StartNexusOperationResponseAsync": {
-      "type": "object",
-      "properties": {
-        "operationToken": {
-          "type": "string"
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        }
-      },
-      "description": "The operation will complete asynchronously.\nThe returned token can be used to reference this operation."
-    },
-    "v1StartNexusOperationResponseSync": {
-      "type": "object",
-      "properties": {
-        "payload": {
-          "$ref": "#/definitions/v1Payload"
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        }
-      },
-      "description": "An operation completed successfully."
     },
     "v1StartOperationRequest": {
       "type": "object",
@@ -14422,10 +14403,10 @@
       "type": "object",
       "properties": {
         "syncSuccess": {
-          "$ref": "#/definitions/v1StartOperationResponseSync"
+          "$ref": "#/definitions/StartOperationResponseSync"
         },
         "asyncSuccess": {
-          "$ref": "#/definitions/v1StartOperationResponseAsync"
+          "$ref": "#/definitions/StartOperationResponseAsync"
         },
         "operationError": {
           "$ref": "#/definitions/v1UnsuccessfulOperationError",
@@ -14433,42 +14414,6 @@
         }
       },
       "description": "Response variant for StartOperationRequest."
-    },
-    "v1StartOperationResponseAsync": {
-      "type": "object",
-      "properties": {
-        "operationId": {
-          "type": "string",
-          "description": "Deprecated. Renamed to operation_token."
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        },
-        "operationToken": {
-          "type": "string"
-        }
-      },
-      "description": "The operation will complete asynchronously.\nThe returned token can be used to reference this operation."
-    },
-    "v1StartOperationResponseSync": {
-      "type": "object",
-      "properties": {
-        "payload": {
-          "$ref": "#/definitions/v1Payload"
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apinexusv1Link"
-          }
-        }
-      },
-      "description": "An operation completed successfully."
     },
     "v1StartTimeFilter": {
       "type": "object",

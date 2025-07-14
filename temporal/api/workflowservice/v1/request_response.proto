@@ -32,7 +32,7 @@ import "temporal/api/namespace/v1/message.proto";
 import "temporal/api/query/v1/message.proto";
 import "temporal/api/replication/v1/message.proto";
 import "temporal/api/rules/v1/message.proto";
-import "temporal/api/sdk/v1/worker_config.proto";
+import "temporal/api/sdk/v1/worker_commands.proto";
 import "temporal/api/schedule/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
@@ -2477,17 +2477,9 @@ message UpdateTaskQueueConfigResponse {
 }
 
 message GetWorkerConfigRequest {
-    // Namespace this worker belongs to.
-    string namespace = 1;
-
-    // The identity of the client who initiated this request.
-    string identity = 2;
-
-    // Reason for sending worker command, can be used for audit purpose.
-    string reason = 3;
-
+    temporal.api.sdk.v1.WorkerCommandContext context = 1;
     // Worker instance key to which the command should be sent.
-    string worker_instance_key = 4;
+    string worker_instance_key = 2;
 }
 
 message GetWorkerConfigResponse {
@@ -2496,35 +2488,17 @@ message GetWorkerConfigResponse {
 }
 
 message UpdateWorkerConfigRequest {
-    // Namespace this worker belongs to.
-    string namespace = 1;
-
-    // The identity of the client who initiated this request.
-    string identity = 2;
-
-    // Reason for sending worker command, can be used for audit purpose.
-    string reason = 3;
+    temporal.api.sdk.v1.WorkerCommandContext context = 1;
 
     // Partial updates are accepted and controlled by update_mask.
     // The worker configuration to set.
-    temporal.api.sdk.v1.WorkerConfig worker_config = 4;
+    temporal.api.sdk.v1.WorkerConfig worker_config = 2;
 
     // Controls which fields from `worker_config` will be applied
-    google.protobuf.FieldMask update_mask = 5;
+    google.protobuf.FieldMask update_mask = 3;
 
-    // Eventually we will extend this as way to send command to multiple workers.
-    // Options are:
-    // - query (will be used as query to ListWorkers, same format as in ListWorkersRequest.query)
-    // - task queue (just a shortcut. Same as query=' "TaskQueue"="my-task-queue" ')
-    // - etc.
-    //   All of these can be replaced with a query, but it is not convenient.
-    // string filter = 5;
-    // string task_queue = 6;
-    // ...
-    oneof selector {
-        // Worker instance key to which the command should be sent.
-        string worker_instance_key = 6;
-    }
+    temporal.api.sdk.v1.WorkerSelector selector = 4;
+
 }
 
 message UpdateWorkerConfigResponse {
@@ -2533,6 +2507,5 @@ message UpdateWorkerConfigResponse {
         temporal.api.sdk.v1.WorkerConfig worker_config = 1;
 
         // If the command was sent to a multiple workers - it will be converted into a batch job, and this is the job ID.
-        string job_id = 2;
     }
 }

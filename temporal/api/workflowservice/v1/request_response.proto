@@ -1058,6 +1058,9 @@ message DescribeTaskQueueRequest {
     // Report stats for the requested task queue type(s).
     bool report_stats = 8;
 
+    // Report Task Queue Config
+    bool report_config = 11;
+
     // Deprecated, use `report_stats` instead.
     // If true, the task queue status will be included in the response.
     bool include_task_queue_status = 4 [deprecated = true];
@@ -1091,9 +1094,6 @@ message DescribeTaskQueueRequest {
 message DescribeTaskQueueResponse {
     repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1;
 
-    // Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
-    temporal.api.taskqueue.v1.TaskQueueStats stats = 5;
-
     // Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.
     // When not present, it means the tasks are routed to Unversioned workers (workers with
     // UNVERSIONED or unspecified WorkerVersioningMode.)
@@ -1104,6 +1104,25 @@ message DescribeTaskQueueResponse {
     // are typically not Pinned until they complete their first task (unless they are started with
     // a Pinned VersioningOverride or are Child Workflows of a Pinned parent).
     temporal.api.taskqueue.v1.TaskQueueVersioningInfo versioning_info = 4;
+
+    // Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
+    temporal.api.taskqueue.v1.TaskQueueStats stats = 5;
+
+    // Only populated if report_task_queue_config is set to true.
+    temporal.api.taskqueue.v1.TaskQueueConfig config  = 6;
+
+    message EffectiveRateLimit {
+        // The effective rate limit for the task queue.
+        float requests_per_second = 1;
+
+        // Source of the RateLimit Configuration,which can be one of the following values:
+        // - SOURCE_API: The rate limit that is set via the TaskQueueConfig api.
+        // - SOURCE_WORKER: The rate limit is the value set using the workerOptions in TaskQueueActivitiesPerSecond.
+        // - SOURCE_SYSTEM: The rate limit is the default value set by the system
+        temporal.api.enums.v1.RateLimitSource rate_limit_source = 2;
+    }
+
+    EffectiveRateLimit effective_rate_limit = 7;
 
     // Deprecated.
     // Status of the task queue. Only populated when `include_task_queue_status` is set to true in the request.
@@ -2418,4 +2437,32 @@ message ListWorkersResponse {
 
     // Next page token
     bytes next_page_token = 2;
+}
+
+message UpdateTaskQueueConfigRequest {
+    message RateLimitUpdate { 
+        // Rate Limit to be updated
+        temporal.api.taskqueue.v1.RateLimit rate_limit = 1;
+        // Reason for why the rate limit was set.
+        string reason = 2;
+    }
+
+    string namespace = 1;
+    string identity = 2;
+    // Selects the task queue to update.
+    string task_queue = 3;
+    temporal.api.enums.v1.TaskQueueType task_queue_type = 4;
+    // Update to queue-wide rate limit.
+    // If not set, this configuration is unchanged.
+    // NOTE: A limit set by the worker is overriden; and restored again when reset.
+    // If the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit.
+    RateLimitUpdate update_queue_rate_limit = 5;
+    // Update to the default fairness key rate limit.
+    // If not set, this configuration is unchanged.
+    // If the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit.
+    RateLimitUpdate update_fairness_key_rate_limit_default = 6;
+}
+
+message UpdateTaskQueueConfigResponse {
+    temporal.api.taskqueue.v1.TaskQueueConfig config = 1;
 }

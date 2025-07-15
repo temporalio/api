@@ -2476,22 +2476,6 @@ message UpdateTaskQueueConfigResponse {
     temporal.api.taskqueue.v1.TaskQueueConfig config = 1;
 }
 
-message WorkerSelector {
-    // Eventually we will extend this as way to send command to multiple workers.
-    // Options are:
-    // - query (will be used as query to ListWorkers, same format as in ListWorkersRequest.query)
-    // - task queue (just a shortcut. Same as query=' "TaskQueue"="my-task-queue" ')
-    // - etc.
-    //   All but 'query' are shortcuts, can be replaced with a query, but it is not convenient.
-    // string query = 5;
-    // string task_queue = 6;
-    // ...
-    oneof selector {
-        // Worker instance key to which the command should be sent.
-        string worker_instance_key = 1;
-    }
-}
-
 message FetchWorkerConfigRequest {
     // Namespace this worker belongs to.
     string namespace = 1;
@@ -2502,8 +2486,9 @@ message FetchWorkerConfigRequest {
     // Reason for sending worker command, can be used for audit purpose.
     string reason = 3;
 
-    // Worker instance key to which the command should be sent.
-    string worker_instance_key = 4;
+    // Defines which workers should receive this command.
+    // only single worker is supported at this time.
+    temporal.api.common.v1.WorkerSelector selector = 6;
 }
 
 message FetchWorkerConfigResponse {
@@ -2529,7 +2514,7 @@ message UpdateWorkerConfigRequest {
     google.protobuf.FieldMask update_mask = 5;
 
     // Defines which workers should receive this command.
-    WorkerSelector selector = 6;
+    temporal.api.common.v1.WorkerSelector selector = 6;
 }
 
 message UpdateWorkerConfigResponse {

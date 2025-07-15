@@ -1300,6 +1300,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/update-config:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Updates task queue configuration.
+         For the overall queue rate limit: the rate limit set by this api overrides the worker-set rate limit,
+         which uncouples the rate limit from the worker lifecycle.
+         If the overall queue rate limit is unset, the worker-set rate limit takes effect.
+      operationId: UpdateTaskQueueConfig
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: taskQueue
+          in: path
+          description: Selects the task queue to update.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskQueueConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTaskQueueConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/worker-build-id-compatibility:
     get:
       tags:
@@ -1431,6 +1472,11 @@ paths:
         - name: reportStats
           in: query
           description: Report stats for the requested task queue type(s).
+          schema:
+            type: boolean
+        - name: reportConfig
+          in: query
+          description: Report Task Queue Config
           schema:
             type: boolean
         - name: includeTaskQueueStatus
@@ -4571,6 +4617,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/task-queues/{taskQueue}/update-config:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Updates task queue configuration.
+         For the overall queue rate limit: the rate limit set by this api overrides the worker-set rate limit,
+         which uncouples the rate limit from the worker lifecycle.
+         If the overall queue rate limit is unset, the worker-set rate limit takes effect.
+      operationId: UpdateTaskQueueConfig
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: taskQueue
+          in: path
+          description: Selects the task queue to update.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskQueueConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTaskQueueConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/task-queues/{taskQueue}/worker-build-id-compatibility:
     get:
       tags:
@@ -4702,6 +4789,11 @@ paths:
         - name: reportStats
           in: query
           description: Report stats for the requested task queue type(s).
+          schema:
+            type: boolean
+        - name: reportConfig
+          in: query
+          description: Report Task Queue Config
           schema:
             type: boolean
         - name: includeTaskQueueStatus
@@ -7135,6 +7227,21 @@ components:
       description: |-
         Used by the worker versioning APIs, represents an unordered set of one or more versions which are
          considered to be compatible with each other. Currently the versions are always worker build IDs.
+    ConfigMetadata:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Reason for why the config was set.
+        updateIdentity:
+          type: string
+          description: |-
+            Identity of the last updater.
+             Set by the request's identity field.
+        updateTime:
+          type: string
+          description: Time of the last update.
+          format: date-time
     CountWorkflowExecutionsResponse:
       type: object
       properties:
@@ -7526,6 +7633,12 @@ components:
              they are always routed to their Pinned Deployment Version. However, new workflow executions
              are typically not Pinned until they complete their first task (unless they are started with
              a Pinned VersioningOverride or are Child Workflows of a Pinned parent).
+        config:
+          allOf:
+            - $ref: '#/components/schemas/TaskQueueConfig'
+          description: Only populated if report_task_queue_config is set to true.
+        effectiveRateLimit:
+          $ref: '#/components/schemas/DescribeTaskQueueResponse_EffectiveRateLimit'
         taskQueueStatus:
           allOf:
             - $ref: '#/components/schemas/TaskQueueStatus'
@@ -7540,6 +7653,26 @@ components:
             Deprecated.
              Only returned in ENHANCED mode.
              This map contains Task Queue information for each Build ID. Empty string as key value means unversioned.
+    DescribeTaskQueueResponse_EffectiveRateLimit:
+      type: object
+      properties:
+        requestsPerSecond:
+          type: number
+          description: The effective rate limit for the task queue.
+          format: float
+        rateLimitSource:
+          enum:
+            - RATE_LIMIT_SOURCE_UNSPECIFIED
+            - RATE_LIMIT_SOURCE_API
+            - RATE_LIMIT_SOURCE_WORKER
+            - RATE_LIMIT_SOURCE_SYSTEM
+          type: string
+          description: |-
+            Source of the RateLimit Configuration,which can be one of the following values:
+             - SOURCE_API: The rate limit that is set via the TaskQueueConfig api.
+             - SOURCE_WORKER: The rate limit is the value set using the workerOptions in TaskQueueActivitiesPerSecond.
+             - SOURCE_SYSTEM: The rate limit is the default value set by the system
+          format: enum
     DescribeWorkerDeploymentResponse:
       type: object
       properties:
@@ -9663,6 +9796,20 @@ components:
          time in StructuredCalendarSpec. If end < start, then end is interpreted as
          equal to start. This means you can use a Range with start set to a value, and
          end and step unset (defaulting to 0) to represent a single value.
+    RateLimit:
+      type: object
+      properties:
+        requestsPerSecond:
+          type: number
+          description: Zero is a valid rate limit.
+          format: float
+    RateLimitConfig:
+      type: object
+      properties:
+        rateLimit:
+          $ref: '#/components/schemas/RateLimit'
+        metadata:
+          $ref: '#/components/schemas/ConfigMetadata'
     RecordActivityTaskHeartbeatByIdRequest:
       type: object
       properties:
@@ -11667,6 +11814,17 @@ components:
             Iff kind == TASK_QUEUE_KIND_STICKY, then this field contains the name of
              the normal task queue that the sticky worker is running on.
       description: See https://docs.temporal.io/docs/concepts/task-queues/
+    TaskQueueConfig:
+      type: object
+      properties:
+        queueRateLimit:
+          allOf:
+            - $ref: '#/components/schemas/RateLimitConfig'
+          description: Unless modified, this is the system-defined rate limit.
+        fairnessKeysRateLimitDefault:
+          allOf:
+            - $ref: '#/components/schemas/RateLimitConfig'
+          description: If set, each individual fairness key will be limited to this rate, scaled by the weight of the fairness key.
     TaskQueueReachability:
       type: object
       properties:
@@ -12207,6 +12365,54 @@ components:
     UpdateScheduleResponse:
       type: object
       properties: {}
+    UpdateTaskQueueConfigRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        identity:
+          type: string
+        taskQueue:
+          type: string
+          description: Selects the task queue to update.
+        taskQueueType:
+          enum:
+            - TASK_QUEUE_TYPE_UNSPECIFIED
+            - TASK_QUEUE_TYPE_WORKFLOW
+            - TASK_QUEUE_TYPE_ACTIVITY
+            - TASK_QUEUE_TYPE_NEXUS
+          type: string
+          format: enum
+        updateQueueRateLimit:
+          allOf:
+            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_RateLimitUpdate'
+          description: |-
+            Update to queue-wide rate limit.
+             If not set, this configuration is unchanged.
+             NOTE: A limit set by the worker is overriden; and restored again when reset.
+             If the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit.
+        updateFairnessKeyRateLimitDefault:
+          allOf:
+            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_RateLimitUpdate'
+          description: |-
+            Update to the default fairness key rate limit.
+             If not set, this configuration is unchanged.
+             If the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit.
+    UpdateTaskQueueConfigRequest_RateLimitUpdate:
+      type: object
+      properties:
+        rateLimit:
+          allOf:
+            - $ref: '#/components/schemas/RateLimit'
+          description: Rate Limit to be updated
+        reason:
+          type: string
+          description: Reason for why the rate limit was set.
+    UpdateTaskQueueConfigResponse:
+      type: object
+      properties:
+        config:
+          $ref: '#/components/schemas/TaskQueueConfig'
     UpdateWorkerDeploymentVersionMetadataRequest:
       type: object
       properties:

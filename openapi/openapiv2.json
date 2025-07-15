@@ -1530,6 +1530,13 @@
             "type": "boolean"
           },
           {
+            "name": "reportConfig",
+            "description": "Report Task Queue Config",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
             "name": "includeTaskQueueStatus",
             "description": "Deprecated, use `report_stats` instead.\nIf true, the task queue status will be included in the response.",
             "in": "query",
@@ -1603,6 +1610,52 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/task-queues/{taskQueue}/update-config": {
+      "post": {
+        "summary": "Updates task queue configuration.\nFor the overall queue rate limit: the rate limit set by this api overrides the worker-set rate limit,\nwhich uncouples the rate limit from the worker lifecycle.\nIf the overall queue rate limit is unset, the worker-set rate limit takes effect.",
+        "operationId": "UpdateTaskQueueConfig2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTaskQueueConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "taskQueue",
+            "description": "Selects the task queue to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceUpdateTaskQueueConfigBody"
+            }
           }
         ],
         "tags": [
@@ -5177,6 +5230,13 @@
             "type": "boolean"
           },
           {
+            "name": "reportConfig",
+            "description": "Report Task Queue Config",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
             "name": "includeTaskQueueStatus",
             "description": "Deprecated, use `report_stats` instead.\nIf true, the task queue status will be included in the response.",
             "in": "query",
@@ -5250,6 +5310,52 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/task-queues/{taskQueue}/update-config": {
+      "post": {
+        "summary": "Updates task queue configuration.\nFor the overall queue rate limit: the rate limit set by this api overrides the worker-set rate limit,\nwhich uncouples the rate limit from the worker lifecycle.\nIf the overall queue rate limit is unset, the worker-set rate limit takes effect.",
+        "operationId": "UpdateTaskQueueConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateTaskQueueConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "taskQueue",
+            "description": "Selects the task queue to update.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceUpdateTaskQueueConfigBody"
+            }
           }
         ],
         "tags": [
@@ -6932,6 +7038,20 @@
         }
       }
     },
+    "DescribeTaskQueueResponseEffectiveRateLimit": {
+      "type": "object",
+      "properties": {
+        "requestsPerSecond": {
+          "type": "number",
+          "format": "float",
+          "description": "The effective rate limit for the task queue."
+        },
+        "rateLimitSource": {
+          "$ref": "#/definitions/v1RateLimitSource",
+          "title": "Source of the RateLimit Configuration,which can be one of the following values:\n- SOURCE_API: The rate limit that is set via the TaskQueueConfig api.\n- SOURCE_WORKER: The rate limit is the value set using the workerOptions in TaskQueueActivitiesPerSecond.\n- SOURCE_SYSTEM: The rate limit is the default value set by the system"
+        }
+      }
+    },
     "DescribeWorkerDeploymentVersionResponseVersionTaskQueue": {
       "type": "object",
       "properties": {
@@ -7184,6 +7304,19 @@
         }
       },
       "description": "An operation completed successfully."
+    },
+    "UpdateTaskQueueConfigRequestRateLimitUpdate": {
+      "type": "object",
+      "properties": {
+        "rateLimit": {
+          "$ref": "#/definitions/v1RateLimit",
+          "title": "Rate Limit to be updated"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for why the rate limit was set."
+        }
+      }
     },
     "UpdateWorkerBuildIdCompatibilityRequestAddNewCompatibleVersion": {
       "type": "object",
@@ -8488,6 +8621,25 @@
         "searchAttributes": {
           "$ref": "#/definitions/v1SearchAttributes",
           "description": "Schedule search attributes to be updated.\nDo not set this field if you do not want to update the search attributes.\nA non-null empty object will set the search attributes to an empty map.\nNote: you cannot only update the search attributes with `UpdateScheduleRequest`,\nyou must also set the `schedule` field; otherwise, it will unset the schedule."
+        }
+      }
+    },
+    "WorkflowServiceUpdateTaskQueueConfigBody": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string"
+        },
+        "taskQueueType": {
+          "$ref": "#/definitions/v1TaskQueueType"
+        },
+        "updateQueueRateLimit": {
+          "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
+          "description": "Update to queue-wide rate limit.\nIf not set, this configuration is unchanged.\nNOTE: A limit set by the worker is overriden; and restored again when reset.\nIf the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit."
+        },
+        "updateFairnessKeyRateLimitDefault": {
+          "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
+          "description": "Update to the default fairness key rate limit.\nIf not set, this configuration is unchanged.\nIf the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit."
         }
       }
     },
@@ -9928,6 +10080,24 @@
         }
       }
     },
+    "v1ConfigMetadata": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for why the config was set."
+        },
+        "updateIdentity": {
+          "type": "string",
+          "description": "Identity of the last updater.\nSet by the request's identity field."
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time of the last update."
+        }
+      }
+    },
     "v1ContinueAsNewInitiator": {
       "type": "string",
       "enum": [
@@ -10341,6 +10511,13 @@
         "versioningInfo": {
           "$ref": "#/definitions/v1TaskQueueVersioningInfo",
           "description": "Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.\nWhen not present, it means the tasks are routed to Unversioned workers (workers with\nUNVERSIONED or unspecified WorkerVersioningMode.)\nTask Queue Versioning info is updated indirectly by calling SetWorkerDeploymentCurrentVersion\nand SetWorkerDeploymentRampingVersion on Worker Deployments.\nNote: This information is not relevant to Pinned workflow executions and their activities as\nthey are always routed to their Pinned Deployment Version. However, new workflow executions\nare typically not Pinned until they complete their first task (unless they are started with\na Pinned VersioningOverride or are Child Workflows of a Pinned parent)."
+        },
+        "config": {
+          "$ref": "#/definitions/v1TaskQueueConfig",
+          "description": "Only populated if report_task_queue_config is set to true."
+        },
+        "effectiveRateLimit": {
+          "$ref": "#/definitions/DescribeTaskQueueResponseEffectiveRateLimit"
         },
         "taskQueueStatus": {
           "$ref": "#/definitions/v1TaskQueueStatus",
@@ -12725,6 +12902,38 @@
       },
       "description": "Range represents a set of integer values, used to match fields of a calendar\ntime in StructuredCalendarSpec. If end < start, then end is interpreted as\nequal to start. This means you can use a Range with start set to a value, and\nend and step unset (defaulting to 0) to represent a single value."
     },
+    "v1RateLimit": {
+      "type": "object",
+      "properties": {
+        "requestsPerSecond": {
+          "type": "number",
+          "format": "float",
+          "description": "Zero is a valid rate limit."
+        }
+      }
+    },
+    "v1RateLimitConfig": {
+      "type": "object",
+      "properties": {
+        "rateLimit": {
+          "$ref": "#/definitions/v1RateLimit"
+        },
+        "metadata": {
+          "$ref": "#/definitions/v1ConfigMetadata"
+        }
+      }
+    },
+    "v1RateLimitSource": {
+      "type": "string",
+      "enum": [
+        "RATE_LIMIT_SOURCE_UNSPECIFIED",
+        "RATE_LIMIT_SOURCE_API",
+        "RATE_LIMIT_SOURCE_WORKER",
+        "RATE_LIMIT_SOURCE_SYSTEM"
+      ],
+      "default": "RATE_LIMIT_SOURCE_UNSPECIFIED",
+      "description": "Source for the effective rate limit.\n\n - RATE_LIMIT_SOURCE_API: The value was set by the API.\n - RATE_LIMIT_SOURCE_WORKER: The value was set by a worker.\n - RATE_LIMIT_SOURCE_SYSTEM: The value was set as the system default."
+    },
     "v1RecordActivityTaskHeartbeatByIdResponse": {
       "type": "object",
       "properties": {
@@ -14483,6 +14692,19 @@
       },
       "title": "See https://docs.temporal.io/docs/concepts/task-queues/"
     },
+    "v1TaskQueueConfig": {
+      "type": "object",
+      "properties": {
+        "queueRateLimit": {
+          "$ref": "#/definitions/v1RateLimitConfig",
+          "description": "Unless modified, this is the system-defined rate limit."
+        },
+        "fairnessKeysRateLimitDefault": {
+          "$ref": "#/definitions/v1RateLimitConfig",
+          "description": "If set, each individual fairness key will be limited to this rate, scaled by the weight of the fairness key."
+        }
+      }
+    },
     "v1TaskQueueKind": {
       "type": "string",
       "enum": [
@@ -14938,6 +15160,14 @@
     },
     "v1UpdateScheduleResponse": {
       "type": "object"
+    },
+    "v1UpdateTaskQueueConfigResponse": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "$ref": "#/definitions/v1TaskQueueConfig"
+        }
+      }
     },
     "v1UpdateWorkerBuildIdCompatibilityResponse": {
       "type": "object",

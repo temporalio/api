@@ -6715,6 +6715,38 @@ components:
       description: |-
         BatchOperationReset sends reset requests to batch workflows.
          Keep the parameter in sync with temporal.api.workflowservice.v1.ResetWorkflowExecutionRequest.
+    BatchOperationResetActivities:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        type:
+          type: string
+        matchAll:
+          type: boolean
+        resetAttempts:
+          type: boolean
+          description: Providing this flag will also reset the number of attempts.
+        resetHeartbeat:
+          type: boolean
+          description: Providing this flag will also reset the heartbeat details.
+        keepPaused:
+          type: boolean
+          description: if activity is paused, it will remain paused after reset
+        jitter:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            If set, the activity will start at a random time within the specified jitter
+             duration, introducing variability to the start time.
+        restoreOriginalOptions:
+          type: boolean
+          description: |-
+            If set, the activity options will be restored to the defaults.
+             Default options are then options activity was created with.
+             They are part of the first SCHEDULE event.
+      description: BatchOperationResetActivities sends reset requests to batch workflows.
     BatchOperationSignal:
       type: object
       properties:
@@ -6774,6 +6806,33 @@ components:
             If set, the activity will start at a random time within the specified jitter
              duration, introducing variability to the start time.
       description: BatchOperationUnpauseActivities sends unpause requests to batch workflows.
+    BatchOperationUpdateOptionsActivities:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        type:
+          type: string
+        matchAll:
+          type: boolean
+        activityOptions:
+          allOf:
+            - $ref: '#/components/schemas/ActivityOptions'
+          description: Update Activity options. Partial updates are accepted and controlled by update_mask.
+        updateMask:
+          type: string
+          description: Controls which fields from `activity_options` will be applied
+          format: field-mask
+        restoreOriginal:
+          type: boolean
+          description: |-
+            If set, the activity options will be restored to the default.
+             Default options are then options activity was created with.
+             They are part of the first SCHEDULE event.
+             This flag cannot be combined with any other option; if you supply
+             restore_original together with other options, the request will be rejected.
+      description: BatchOperationUpdateOptionsActivities sends update-options requests to batch workflows.
     BatchOperationUpdateWorkflowExecutionOptions:
       type: object
       properties:
@@ -11401,6 +11460,10 @@ components:
           $ref: '#/components/schemas/BatchOperationUpdateWorkflowExecutionOptions'
         unpauseActivitiesOperation:
           $ref: '#/components/schemas/BatchOperationUnpauseActivities'
+        resetActivitiesOperation:
+          $ref: '#/components/schemas/BatchOperationResetActivities'
+        updateOptionsActivitiesOperation:
+          $ref: '#/components/schemas/BatchOperationUpdateOptionsActivities'
     StartBatchOperationResponse:
       type: object
       properties: {}

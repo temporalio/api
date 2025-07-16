@@ -135,3 +135,58 @@ message BatchOperationTriggerWorkflowRule {
     temporal.api.rules.v1.WorkflowRuleSpec spec = 3;
   }
 }
+
+// BatchOperationResetActivities sends reset requests to batch workflows.
+message BatchOperationResetActivities {
+  // The identity of the worker/client.
+  string identity = 1;
+
+  // The activity to unpause. If match_all is set to true, all activities will be unpaused.
+  oneof activity {
+    string type = 2;
+    bool match_all = 3;
+  }
+
+  // Providing this flag will also reset the number of attempts.
+  bool reset_attempts = 4;
+
+  // Providing this flag will also reset the heartbeat details.
+  bool reset_heartbeat = 5;
+
+  // if activity is paused, it will remain paused after reset
+  bool keep_paused = 6;
+
+  // If set, the activity will start at a random time within the specified jitter
+  // duration, introducing variability to the start time.
+  google.protobuf.Duration jitter = 7;
+
+  // If set, the activity options will be restored to the defaults.
+  // Default options are then options activity was created with.
+  // They are part of the first SCHEDULE event.
+  bool restore_original_options = 8;
+}
+
+// BatchOperationUpdateOptionsActivities sends update-options requests to batch workflows.
+message BatchOperationUpdateOptionsActivities {
+  // The identity of the worker/client.
+  string identity = 1;
+
+  // The activity to unpause. If match_all is set to true, all activities will be unpaused.
+  oneof activity {
+    string type = 2;
+    bool match_all = 3;
+  }
+
+  // Update Activity options. Partial updates are accepted and controlled by update_mask.
+  temporal.api.activity.v1.ActivityOptions activity_options = 4;
+
+  // Controls which fields from `activity_options` will be applied
+  google.protobuf.FieldMask update_mask = 5;
+
+  // If set, the activity options will be restored to the default.
+  // Default options are then options activity was created with.
+  // They are part of the first SCHEDULE event.
+  // This flag cannot be combined with any other option; if you supply
+  // restore_original together with other options, the request will be rejected.
+  bool restore_original = 6;
+}

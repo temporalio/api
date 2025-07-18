@@ -1678,6 +1678,8 @@ message StartBatchOperationRequest {
         temporal.api.batch.v1.BatchOperationReset reset_operation = 14;
         temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions update_workflow_options_operation = 15;
         temporal.api.batch.v1.BatchOperationUnpauseActivities unpause_activities_operation = 16;
+        temporal.api.batch.v1.BatchOperationResetActivities reset_activities_operation = 17;
+        temporal.api.batch.v1.BatchOperationUpdateActivityOptions update_activity_options_operation = 18;
     }
 }
 
@@ -1875,6 +1877,7 @@ message ExecuteMultiOperationResponse {
     }
 }
 
+// NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions
 message UpdateActivityOptionsRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
@@ -1890,12 +1893,14 @@ message UpdateActivityOptionsRequest {
     // Controls which fields from `activity_options` will be applied
     google.protobuf.FieldMask update_mask = 5;
 
-    // either activity id or activity type must be provided
+    // either activity id, activity type or update_all must be provided
     oneof activity {
         // Only activity with this ID will be updated.
         string id = 6;
         // Update all running activities of this type.
         string type = 7;
+        // Update all running activities.
+        bool match_all = 9;
     }
 
     // If set, the activity options will be restored to the default.
@@ -1967,6 +1972,7 @@ message UnpauseActivityRequest {
 message UnpauseActivityResponse {
 }
 
+// NOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities
 message ResetActivityRequest {
     // Namespace of the workflow which scheduled this activity.
     string namespace = 1;
@@ -1976,19 +1982,21 @@ message ResetActivityRequest {
     // The identity of the client who initiated this request.
     string identity = 3;
 
-    // either activity id or activity type must be provided
+    // either activity id, activity type or update_all must be provided
     oneof activity {
         // Only activity with this ID will be reset.
         string id = 4;
         // Reset all running activities with of this type.
         string type = 5;
+        // Reset all running activities.
+        bool match_all = 10;
     }
 
     // Indicates that activity should reset heartbeat details.
     // This flag will be applied only to the new instance of the activity.
     bool reset_heartbeat = 6;
 
-    // if activity is paused, it will remain paused after reset
+    // If activity is paused, it will remain paused after reset
     bool keep_paused = 7;
 
     // If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.

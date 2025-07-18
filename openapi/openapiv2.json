@@ -7804,13 +7804,17 @@
           "type": "string",
           "description": "Reset all running activities with of this type."
         },
+        "matchAll": {
+          "type": "boolean",
+          "description": "Reset all running activities."
+        },
         "resetHeartbeat": {
           "type": "boolean",
           "description": "Indicates that activity should reset heartbeat details.\nThis flag will be applied only to the new instance of the activity."
         },
         "keepPaused": {
           "type": "boolean",
-          "title": "if activity is paused, it will remain paused after reset"
+          "title": "If activity is paused, it will remain paused after reset"
         },
         "jitter": {
           "type": "string",
@@ -7820,7 +7824,8 @@
           "type": "boolean",
           "description": "If set, the activity options will be restored to the defaults.\nDefault options are then options activity was created with.\nThey are part of the first SCHEDULE event."
         }
-      }
+      },
+      "title": "NOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities"
     },
     "WorkflowServiceResetWorkflowExecutionBody": {
       "type": "object",
@@ -8312,6 +8317,12 @@
         },
         "unpauseActivitiesOperation": {
           "$ref": "#/definitions/v1BatchOperationUnpauseActivities"
+        },
+        "resetActivitiesOperation": {
+          "$ref": "#/definitions/v1BatchOperationResetActivities"
+        },
+        "updateActivityOptionsOperation": {
+          "$ref": "#/definitions/v1BatchOperationUpdateActivityOptions"
         }
       }
     },
@@ -8561,11 +8572,16 @@
           "type": "string",
           "description": "Update all running activities of this type."
         },
+        "matchAll": {
+          "type": "boolean",
+          "description": "Update all running activities."
+        },
         "restoreOriginal": {
           "type": "boolean",
           "description": "If set, the activity options will be restored to the default.\nDefault options are then options activity was created with.\nThey are part of the first SCHEDULE event.\nThis flag cannot be combined with any other option; if you supply\nrestore_original together with other options, the request will be rejected."
         }
-      }
+      },
+      "title": "NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions"
     },
     "WorkflowServiceUpdateNamespaceBody": {
       "type": "object",
@@ -9377,6 +9393,42 @@
       },
       "description": "BatchOperationReset sends reset requests to batch workflows.\nKeep the parameter in sync with temporal.api.workflowservice.v1.ResetWorkflowExecutionRequest."
     },
+    "v1BatchOperationResetActivities": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the worker/client."
+        },
+        "type": {
+          "type": "string"
+        },
+        "matchAll": {
+          "type": "boolean"
+        },
+        "resetAttempts": {
+          "type": "boolean",
+          "description": "Setting this flag will also reset the number of attempts."
+        },
+        "resetHeartbeat": {
+          "type": "boolean",
+          "description": "Setting this flag will also reset the heartbeat details."
+        },
+        "keepPaused": {
+          "type": "boolean",
+          "title": "If activity is paused, it will remain paused after reset"
+        },
+        "jitter": {
+          "type": "string",
+          "description": "If set, the activity will start at a random time within the specified jitter\nduration, introducing variability to the start time."
+        },
+        "restoreOriginalOptions": {
+          "type": "boolean",
+          "description": "If set, the activity options will be restored to the defaults.\nDefault options are then options activity was created with.\nThey are part of the first ActivityTaskScheduled event."
+        }
+      },
+      "title": "BatchOperationResetActivities sends activity reset requests in a batch.\nNOTE: keep in sync with temporal.api.workflowservice.v1.ResetActivityRequest"
+    },
     "v1BatchOperationSignal": {
       "type": "object",
       "properties": {
@@ -9432,7 +9484,10 @@
         "BATCH_OPERATION_TYPE_SIGNAL",
         "BATCH_OPERATION_TYPE_DELETE",
         "BATCH_OPERATION_TYPE_RESET",
-        "BATCH_OPERATION_TYPE_UPDATE_EXECUTION_OPTIONS"
+        "BATCH_OPERATION_TYPE_UPDATE_EXECUTION_OPTIONS",
+        "BATCH_OPERATION_TYPE_UNPAUSE_ACTIVITY",
+        "BATCH_OPERATION_TYPE_UPDATE_ACTIVITY_OPTIONS",
+        "BATCH_OPERATION_TYPE_RESET_ACTIVITY"
       ],
       "default": "BATCH_OPERATION_TYPE_UNSPECIFIED"
     },
@@ -9451,11 +9506,11 @@
         },
         "resetAttempts": {
           "type": "boolean",
-          "description": "Providing this flag will also reset the number of attempts."
+          "description": "Setting this flag will also reset the number of attempts."
         },
         "resetHeartbeat": {
           "type": "boolean",
-          "description": "Providing this flag will also reset the heartbeat details."
+          "description": "Setting this flag will also reset the heartbeat details."
         },
         "jitter": {
           "type": "string",
@@ -9463,6 +9518,34 @@
         }
       },
       "description": "BatchOperationUnpauseActivities sends unpause requests to batch workflows."
+    },
+    "v1BatchOperationUpdateActivityOptions": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the worker/client."
+        },
+        "type": {
+          "type": "string"
+        },
+        "matchAll": {
+          "type": "boolean"
+        },
+        "activityOptions": {
+          "$ref": "#/definitions/v1ActivityOptions",
+          "description": "Update Activity options. Partial updates are accepted and controlled by update_mask."
+        },
+        "updateMask": {
+          "type": "string",
+          "title": "Controls which fields from `activity_options` will be applied"
+        },
+        "restoreOriginal": {
+          "type": "boolean",
+          "description": "If set, the activity options will be restored to the default.\nDefault options are then options activity was created with.\nThey are part of the first ActivityTaskScheduled event.\nThis flag cannot be combined with any other option; if you supply\nrestore_original together with other options, the request will be rejected."
+        }
+      },
+      "title": "BatchOperationUpdateActivityOptions sends an update-activity-options requests in a batch.\nNOTE: keep in sync with temporal.api.workflowservice.v1.UpdateActivityRequest"
     },
     "v1BatchOperationUpdateWorkflowExecutionOptions": {
       "type": "object",

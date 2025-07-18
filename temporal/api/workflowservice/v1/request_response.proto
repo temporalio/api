@@ -32,6 +32,7 @@ import "temporal/api/namespace/v1/message.proto";
 import "temporal/api/query/v1/message.proto";
 import "temporal/api/replication/v1/message.proto";
 import "temporal/api/rules/v1/message.proto";
+import "temporal/api/sdk/v1/worker_config.proto";
 import "temporal/api/schedule/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
@@ -2448,7 +2449,7 @@ message ListWorkersResponse {
 }
 
 message UpdateTaskQueueConfigRequest {
-    message RateLimitUpdate { 
+    message RateLimitUpdate {
         // Rate Limit to be updated
         temporal.api.taskqueue.v1.RateLimit rate_limit = 1;
         // Reason for why the rate limit was set.
@@ -2473,4 +2474,54 @@ message UpdateTaskQueueConfigRequest {
 
 message UpdateTaskQueueConfigResponse {
     temporal.api.taskqueue.v1.TaskQueueConfig config = 1;
+}
+
+message FetchWorkerConfigRequest {
+    // Namespace this worker belongs to.
+    string namespace = 1;
+
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    // Reason for sending worker command, can be used for audit purpose.
+    string reason = 3;
+
+    // Defines which workers should receive this command.
+    // only single worker is supported at this time.
+    temporal.api.common.v1.WorkerSelector selector = 6;
+}
+
+message FetchWorkerConfigResponse {
+    // The worker configuration.
+    temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+}
+
+message UpdateWorkerConfigRequest {
+    // Namespace this worker belongs to.
+    string namespace = 1;
+
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    // Reason for sending worker command, can be used for audit purpose.
+    string reason = 3;
+
+    // Partial updates are accepted and controlled by update_mask.
+    // The worker configuration to set.
+    temporal.api.sdk.v1.WorkerConfig worker_config = 4;
+
+    // Controls which fields from `worker_config` will be applied
+    google.protobuf.FieldMask update_mask = 5;
+
+    // Defines which workers should receive this command.
+    temporal.api.common.v1.WorkerSelector selector = 6;
+}
+
+message UpdateWorkerConfigResponse {
+    oneof response {
+        // The worker configuration. Will be returned if the command was sent to a single worker.
+        temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+
+        // Once we support sending update to a multiple workers - it will be converted into a batch job, and job id will be returned.
+    }
 }

@@ -2087,6 +2087,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workers/fetch-config:
+    post:
+      tags:
+        - WorkflowService
+      description: FetchWorkerConfig returns the worker configuration for a specific worker.
+      operationId: FetchWorkerConfig
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace this worker belongs to.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FetchWorkerConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FetchWorkerConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workers/heartbeat:
     post:
       tags:
@@ -2113,6 +2145,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RecordWorkerHeartbeatResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workers/update-config:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        UpdateWorkerConfig updates the worker configuration of one or more workers.
+         Can be used to partially update the worker configuration.
+         Can be used to update the configuration of multiple workers.
+      operationId: UpdateWorkerConfig
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace this worker belongs to.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkerConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkerConfigResponse'
         default:
           description: Default error response
           content:
@@ -5371,6 +5438,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workers/fetch-config:
+    post:
+      tags:
+        - WorkflowService
+      description: FetchWorkerConfig returns the worker configuration for a specific worker.
+      operationId: FetchWorkerConfig
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace this worker belongs to.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FetchWorkerConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FetchWorkerConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workers/heartbeat:
     post:
       tags:
@@ -5397,6 +5496,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RecordWorkerHeartbeatResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workers/update-config:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        UpdateWorkerConfig updates the worker configuration of one or more workers.
+         Can be used to partially update the worker configuration.
+         Can be used to update the configuration of multiple workers.
+      operationId: UpdateWorkerConfig
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace this worker belongs to.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkerConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkerConfigResponse'
         default:
           description: Default error response
           content:
@@ -8038,6 +8172,31 @@ components:
           $ref: '#/components/schemas/NexusOperationFailureInfo'
         nexusHandlerFailureInfo:
           $ref: '#/components/schemas/NexusHandlerFailureInfo'
+    FetchWorkerConfigRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace this worker belongs to.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        reason:
+          type: string
+          description: Reason for sending worker command, can be used for audit purpose.
+        selector:
+          allOf:
+            - $ref: '#/components/schemas/WorkerSelector'
+          description: |-
+            Defines which workers should receive this command.
+             only single worker is supported at this time.
+    FetchWorkerConfigResponse:
+      type: object
+      properties:
+        workerConfig:
+          allOf:
+            - $ref: '#/components/schemas/WorkerConfig'
+          description: The worker configuration.
     GetClusterInfoResponse:
       type: object
       properties:
@@ -12471,6 +12630,39 @@ components:
       properties:
         config:
           $ref: '#/components/schemas/TaskQueueConfig'
+    UpdateWorkerConfigRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace this worker belongs to.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        reason:
+          type: string
+          description: Reason for sending worker command, can be used for audit purpose.
+        workerConfig:
+          allOf:
+            - $ref: '#/components/schemas/WorkerConfig'
+          description: |-
+            Partial updates are accepted and controlled by update_mask.
+             The worker configuration to set.
+        updateMask:
+          type: string
+          description: Controls which fields from `worker_config` will be applied
+          format: field-mask
+        selector:
+          allOf:
+            - $ref: '#/components/schemas/WorkerSelector'
+          description: Defines which workers should receive this command.
+    UpdateWorkerConfigResponse:
+      type: object
+      properties:
+        workerConfig:
+          allOf:
+            - $ref: '#/components/schemas/WorkerConfig'
+          description: The worker configuration. Will be returned if the command was sent to a single worker.
     UpdateWorkerDeploymentVersionMetadataRequest:
       type: object
       properties:
@@ -12762,6 +12954,41 @@ components:
              user specified timeout, API call returns even if specified stage is not reached.
           format: enum
       description: Specifies client's intent to wait for Update results.
+    WorkerConfig:
+      type: object
+      properties:
+        workflowCacheSize:
+          type: integer
+          format: int32
+        simplePollerBehavior:
+          $ref: '#/components/schemas/WorkerConfig_SimplePollerBehavior'
+        autoscalingPollerBehavior:
+          $ref: '#/components/schemas/WorkerConfig_AutoscalingPollerBehavior'
+    WorkerConfig_AutoscalingPollerBehavior:
+      type: object
+      properties:
+        minPollers:
+          type: integer
+          description: |-
+            At least this many poll calls will always be attempted (assuming slots are available).
+             Cannot be zero.
+          format: int32
+        maxPollers:
+          type: integer
+          description: At most this many poll calls will ever be open at once. Must be >= `minimum`.
+          format: int32
+        initialPollers:
+          type: integer
+          description: |-
+            This many polls will be attempted initially before scaling kicks in. Must be between
+              `minimum` and `maximum`.
+          format: int32
+    WorkerConfig_SimplePollerBehavior:
+      type: object
+      properties:
+        maxPollers:
+          type: integer
+          format: int32
     WorkerDeploymentInfo:
       type: object
       properties:
@@ -13127,6 +13354,16 @@ components:
         isAutoscaling:
           type: boolean
           description: Set true if the number of concurrent pollers is auto-scaled
+    WorkerSelector:
+      type: object
+      properties:
+        workerInstanceKey:
+          type: string
+          description: Worker instance key to which the command should be sent.
+      description: |-
+        This is used to send commands to a specific worker or a group of workers.
+         Right now, it is used to send commands to a specific worker instance.
+         Will be extended to be able to send command to multiple workers.
     WorkerSlotsInfo:
       type: object
       properties:

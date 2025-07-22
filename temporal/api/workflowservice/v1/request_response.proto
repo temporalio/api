@@ -32,6 +32,7 @@ import "temporal/api/namespace/v1/message.proto";
 import "temporal/api/query/v1/message.proto";
 import "temporal/api/replication/v1/message.proto";
 import "temporal/api/rules/v1/message.proto";
+import "temporal/api/sdk/v1/worker_config.proto";
 import "temporal/api/schedule/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
@@ -1685,6 +1686,8 @@ message StartBatchOperationRequest {
         temporal.api.batch.v1.BatchOperationReset reset_operation = 14;
         temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions update_workflow_options_operation = 15;
         temporal.api.batch.v1.BatchOperationUnpauseActivities unpause_activities_operation = 16;
+        temporal.api.batch.v1.BatchOperationResetActivities reset_activities_operation = 17;
+        temporal.api.batch.v1.BatchOperationUpdateActivityOptions update_activity_options_operation = 18;
     }
 }
 
@@ -1882,6 +1885,7 @@ message ExecuteMultiOperationResponse {
     }
 }
 
+// NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions
 message UpdateActivityOptionsRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
@@ -1897,12 +1901,14 @@ message UpdateActivityOptionsRequest {
     // Controls which fields from `activity_options` will be applied
     google.protobuf.FieldMask update_mask = 5;
 
-    // either activity id or activity type must be provided
+    // either activity id, activity type or update_all must be provided
     oneof activity {
         // Only activity with this ID will be updated.
         string id = 6;
         // Update all running activities of this type.
         string type = 7;
+        // Update all running activities.
+        bool match_all = 9;
     }
 
     // If set, the activity options will be restored to the default.
@@ -1974,6 +1980,7 @@ message UnpauseActivityRequest {
 message UnpauseActivityResponse {
 }
 
+// NOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities
 message ResetActivityRequest {
     // Namespace of the workflow which scheduled this activity.
     string namespace = 1;
@@ -1983,19 +1990,21 @@ message ResetActivityRequest {
     // The identity of the client who initiated this request.
     string identity = 3;
 
-    // either activity id or activity type must be provided
+    // either activity id, activity type or update_all must be provided
     oneof activity {
         // Only activity with this ID will be reset.
         string id = 4;
         // Reset all running activities with of this type.
         string type = 5;
+        // Reset all running activities.
+        bool match_all = 10;
     }
 
     // Indicates that activity should reset heartbeat details.
     // This flag will be applied only to the new instance of the activity.
     bool reset_heartbeat = 6;
 
-    // if activity is paused, it will remain paused after reset
+    // If activity is paused, it will remain paused after reset
     bool keep_paused = 7;
 
     // If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.
@@ -2477,4 +2486,54 @@ message UpdateTaskQueueConfigRequest {
 
 message UpdateTaskQueueConfigResponse {
     temporal.api.taskqueue.v1.TaskQueueConfig config = 1;
+}
+
+message FetchWorkerConfigRequest {
+    // Namespace this worker belongs to.
+    string namespace = 1;
+
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    // Reason for sending worker command, can be used for audit purpose.
+    string reason = 3;
+
+    // Defines which workers should receive this command.
+    // only single worker is supported at this time.
+    temporal.api.common.v1.WorkerSelector selector = 6;
+}
+
+message FetchWorkerConfigResponse {
+    // The worker configuration.
+    temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+}
+
+message UpdateWorkerConfigRequest {
+    // Namespace this worker belongs to.
+    string namespace = 1;
+
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    // Reason for sending worker command, can be used for audit purpose.
+    string reason = 3;
+
+    // Partial updates are accepted and controlled by update_mask.
+    // The worker configuration to set.
+    temporal.api.sdk.v1.WorkerConfig worker_config = 4;
+
+    // Controls which fields from `worker_config` will be applied
+    google.protobuf.FieldMask update_mask = 5;
+
+    // Defines which workers should receive this command.
+    temporal.api.common.v1.WorkerSelector selector = 6;
+}
+
+message UpdateWorkerConfigResponse {
+    oneof response {
+        // The worker configuration. Will be returned if the command was sent to a single worker.
+        temporal.api.sdk.v1.WorkerConfig worker_config = 1;
+
+        // Once we support sending update to a multiple workers - it will be converted into a batch job, and job id will be returned.
+    }
 }

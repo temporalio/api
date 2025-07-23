@@ -776,6 +776,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/batch-workflows/{workflowId}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        StartWorkflowExecution starts a new workflow execution.
+
+         It will create the execution with a `WORKFLOW_EXECUTION_STARTED` event in its history and
+         also schedule the first workflow task. Returns `WorkflowExecutionAlreadyStarted`, if an
+         instance already exists with same workflow id.
+      operationId: StartBatchWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartBatchWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartBatchWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/current-deployment/{deployment.series_name}:
     post:
       tags:
@@ -4185,6 +4226,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/batch-workflows/{workflowId}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        StartWorkflowExecution starts a new workflow execution.
+
+         It will create the execution with a `WORKFLOW_EXECUTION_STARTED` event in its history and
+         also schedule the first workflow task. Returns `WorkflowExecutionAlreadyStarted`, if an
+         instance already exists with same workflow id.
+      operationId: StartBatchWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartBatchWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartBatchWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/current-deployment/{deployment.series_name}:
     post:
       tags:
@@ -6769,6 +6851,53 @@ components:
         createTime:
           type: string
           format: date-time
+    BatchOperation:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: The namespace of the batch operation.
+        query:
+          type: string
+          description: The query to perform.
+        workflowExecutions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowExecution'
+        reason:
+          type: string
+        terminationOperation:
+          $ref: '#/components/schemas/BatchOperationTermination'
+        cancellationOperation:
+          $ref: '#/components/schemas/BatchOperationCancellation'
+        signalOperation:
+          $ref: '#/components/schemas/BatchOperationSignal'
+        deletionOperation:
+          $ref: '#/components/schemas/BatchOperationDeletion'
+        resetOperation:
+          $ref: '#/components/schemas/BatchOperationReset'
+        updateWorkflowExecutionOptionsOperation:
+          $ref: '#/components/schemas/BatchOperationUpdateWorkflowExecutionOptions'
+        unpauseActivitiesOperation:
+          $ref: '#/components/schemas/BatchOperationUnpauseActivities'
+        updateActivityOptionsOperation:
+          $ref: '#/components/schemas/BatchOperationUpdateActivityOptions'
+        resetActivitiesOperation:
+          $ref: '#/components/schemas/BatchOperationResetActivities'
+        rps:
+          type: number
+          format: double
+        concurrency:
+          type: string
+        attemptsOnRetryableError:
+          type: string
+        activityHeartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+        nonRetryableErrors:
+          type: array
+          items:
+            type: string
     BatchOperationCancellation:
       type: object
       properties:
@@ -11719,6 +11848,176 @@ components:
     StartBatchOperationResponse:
       type: object
       properties: {}
+    StartBatchWorkflowExecutionRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        workflowId:
+          type: string
+        workflowType:
+          $ref: '#/components/schemas/WorkflowType'
+        taskQueue:
+          $ref: '#/components/schemas/TaskQueue'
+        input:
+          allOf:
+            - $ref: '#/components/schemas/BatchOperation'
+          description: Serialized arguments to the workflow. These are passed as arguments to the workflow function.
+        workflowExecutionTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Total workflow execution timeout including retries and continue as new.
+        workflowRunTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Timeout of a single workflow run.
+        workflowTaskTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Timeout of a single workflow task.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request
+        requestId:
+          type: string
+          description: A unique identifier for this start request. Typically UUIDv4.
+        workflowIdReusePolicy:
+          enum:
+            - WORKFLOW_ID_REUSE_POLICY_UNSPECIFIED
+            - WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE
+            - WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY
+            - WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
+            - WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING
+          type: string
+          description: |-
+            Defines whether to allow re-using the workflow id from a previously *closed* workflow.
+             The default policy is WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+
+             See `workflow_id_conflict_policy` for handling a workflow id duplication with a *running* workflow.
+          format: enum
+        workflowIdConflictPolicy:
+          enum:
+            - WORKFLOW_ID_CONFLICT_POLICY_UNSPECIFIED
+            - WORKFLOW_ID_CONFLICT_POLICY_FAIL
+            - WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+            - WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING
+          type: string
+          description: |-
+            Defines how to resolve a workflow id conflict with a *running* workflow.
+             The default policy is WORKFLOW_ID_CONFLICT_POLICY_FAIL.
+
+             See `workflow_id_reuse_policy` for handling a workflow id duplication with a *closed* workflow.
+          format: enum
+        retryPolicy:
+          allOf:
+            - $ref: '#/components/schemas/RetryPolicy'
+          description: The retry policy for the workflow. Will never exceed `workflow_execution_timeout`.
+        cronSchedule:
+          type: string
+          description: See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/
+        memo:
+          $ref: '#/components/schemas/Memo'
+        searchAttributes:
+          $ref: '#/components/schemas/SearchAttributes'
+        header:
+          $ref: '#/components/schemas/Header'
+        requestEagerExecution:
+          type: boolean
+          description: |-
+            Request to get the first workflow task inline in the response bypassing matching service and worker polling.
+             If set to `true` the caller is expected to have a worker available and capable of processing the task.
+             The returned task will be marked as started and is expected to be completed by the specified
+             `workflow_task_timeout`.
+        continuedFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: |-
+            These values will be available as ContinuedFailure and LastCompletionResult in the
+             WorkflowExecutionStarted event and through SDKs. The are currently only used by the
+             server itself (for the schedules feature) and are not intended to be exposed in
+             StartWorkflowExecution.
+        lastCompletionResult:
+          $ref: '#/components/schemas/Payloads'
+        workflowStartDelay:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
+             If the workflow gets a signal before the delay, a workflow task will be dispatched and the rest
+             of the delay will be ignored.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: |-
+            Callbacks to be called by the server when this workflow reaches a terminal state.
+             If the workflow continues-as-new, these callbacks will be carried over to the new execution.
+             Callback addresses must be whitelisted in the server's dynamic configuration.
+        userMetadata:
+          allOf:
+            - $ref: '#/components/schemas/UserMetadata'
+          description: |-
+            Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo
+             for use by user interfaces to display the fixed as-of-start summary and details of the
+             workflow.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to be associated with the workflow.
+        versioningOverride:
+          allOf:
+            - $ref: '#/components/schemas/VersioningOverride'
+          description: |-
+            If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.
+             To unset the override after the workflow is running, use UpdateWorkflowExecutionOptions.
+        onConflictOptions:
+          allOf:
+            - $ref: '#/components/schemas/OnConflictOptions'
+          description: |-
+            Defines actions to be done to the existing running workflow when the conflict policy
+             WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING is used. If not set (ie., nil value) or set to a
+             empty object (ie., all options with default value), it won't do anything to the existing
+             running workflow. If set, it will add a history event to the running workflow.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: Priority metadata
+    StartBatchWorkflowExecutionResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run id of the workflow that was started - or used (via WorkflowIdConflictPolicy USE_EXISTING).
+        started:
+          type: boolean
+          description: If true, a new workflow was started.
+        status:
+          enum:
+            - WORKFLOW_EXECUTION_STATUS_UNSPECIFIED
+            - WORKFLOW_EXECUTION_STATUS_RUNNING
+            - WORKFLOW_EXECUTION_STATUS_COMPLETED
+            - WORKFLOW_EXECUTION_STATUS_FAILED
+            - WORKFLOW_EXECUTION_STATUS_CANCELED
+            - WORKFLOW_EXECUTION_STATUS_TERMINATED
+            - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
+            - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+          type: string
+          description: |-
+            Current execution status of the workflow. Typically remains WORKFLOW_EXECUTION_STATUS_RUNNING
+             unless a de-dupe occurs or in specific scenarios handled within the ExecuteMultiOperation (refer to its docs).
+          format: enum
+        eagerWorkflowTask:
+          allOf:
+            - $ref: '#/components/schemas/PollWorkflowTaskQueueResponse'
+          description: |-
+            When `request_eager_execution` is set on the `StartWorkflowExecutionRequest`, the server - if supported - will
+             return the first workflow task to be eagerly executed.
+             The caller is expected to have a worker available to process the task.
+        link:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: Link to the workflow event.
     StartChildWorkflowExecutionFailedEventAttributes:
       type: object
       properties:

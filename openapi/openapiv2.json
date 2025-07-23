@@ -870,6 +870,52 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/batch-workflows/{workflowId}": {
+      "post": {
+        "summary": "StartWorkflowExecution starts a new workflow execution.",
+        "description": "It will create the execution with a `WORKFLOW_EXECUTION_STARTED` event in its history and\nalso schedule the first workflow task. Returns `WorkflowExecutionAlreadyStarted`, if an\ninstance already exists with same workflow id.",
+        "operationId": "StartBatchWorkflowExecution2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartBatchWorkflowExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceStartBatchWorkflowExecutionBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/current-deployment/{deployment.seriesName}": {
       "post": {
         "summary": "Sets a deployment as the current deployment for its deployment series. Can optionally update\nthe metadata of the deployment as well.\nExperimental. This API might significantly change or be removed in a future release.\nDeprecated. Replaced by `SetWorkerDeploymentCurrentVersion`.",
@@ -4673,6 +4719,52 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/WorkflowServiceStopBatchOperationBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/batch-workflows/{workflowId}": {
+      "post": {
+        "summary": "StartWorkflowExecution starts a new workflow execution.",
+        "description": "It will create the execution with a `WORKFLOW_EXECUTION_STARTED` event in its history and\nalso schedule the first workflow task. Returns `WorkflowExecutionAlreadyStarted`, if an\ninstance already exists with same workflow id.",
+        "operationId": "StartBatchWorkflowExecution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartBatchWorkflowExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceStartBatchWorkflowExecutionBody"
             }
           }
         ],
@@ -8539,6 +8631,113 @@
         }
       }
     },
+    "WorkflowServiceStartBatchWorkflowExecutionBody": {
+      "type": "object",
+      "properties": {
+        "workflowType": {
+          "$ref": "#/definitions/v1WorkflowType"
+        },
+        "taskQueue": {
+          "$ref": "#/definitions/v1TaskQueue"
+        },
+        "input": {
+          "$ref": "#/definitions/v1BatchOperation",
+          "description": "Serialized arguments to the workflow. These are passed as arguments to the workflow function."
+        },
+        "workflowExecutionTimeout": {
+          "type": "string",
+          "description": "Total workflow execution timeout including retries and continue as new."
+        },
+        "workflowRunTimeout": {
+          "type": "string",
+          "description": "Timeout of a single workflow run."
+        },
+        "workflowTaskTimeout": {
+          "type": "string",
+          "description": "Timeout of a single workflow task."
+        },
+        "identity": {
+          "type": "string",
+          "title": "The identity of the client who initiated this request"
+        },
+        "requestId": {
+          "type": "string",
+          "description": "A unique identifier for this start request. Typically UUIDv4."
+        },
+        "workflowIdReusePolicy": {
+          "$ref": "#/definitions/v1WorkflowIdReusePolicy",
+          "description": "Defines whether to allow re-using the workflow id from a previously *closed* workflow.\nThe default policy is WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.\n\nSee `workflow_id_conflict_policy` for handling a workflow id duplication with a *running* workflow."
+        },
+        "workflowIdConflictPolicy": {
+          "$ref": "#/definitions/v1WorkflowIdConflictPolicy",
+          "description": "Defines how to resolve a workflow id conflict with a *running* workflow.\nThe default policy is WORKFLOW_ID_CONFLICT_POLICY_FAIL.\n\nSee `workflow_id_reuse_policy` for handling a workflow id duplication with a *closed* workflow."
+        },
+        "retryPolicy": {
+          "$ref": "#/definitions/v1RetryPolicy",
+          "description": "The retry policy for the workflow. Will never exceed `workflow_execution_timeout`."
+        },
+        "cronSchedule": {
+          "type": "string",
+          "title": "See https://docs.temporal.io/docs/content/what-is-a-temporal-cron-job/"
+        },
+        "memo": {
+          "$ref": "#/definitions/v1Memo"
+        },
+        "searchAttributes": {
+          "$ref": "#/definitions/v1SearchAttributes"
+        },
+        "header": {
+          "$ref": "#/definitions/v1Header"
+        },
+        "requestEagerExecution": {
+          "type": "boolean",
+          "description": "Request to get the first workflow task inline in the response bypassing matching service and worker polling.\nIf set to `true` the caller is expected to have a worker available and capable of processing the task.\nThe returned task will be marked as started and is expected to be completed by the specified\n`workflow_task_timeout`."
+        },
+        "continuedFailure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "These values will be available as ContinuedFailure and LastCompletionResult in the\nWorkflowExecutionStarted event and through SDKs. The are currently only used by the\nserver itself (for the schedules feature) and are not intended to be exposed in\nStartWorkflowExecution."
+        },
+        "lastCompletionResult": {
+          "$ref": "#/definitions/v1Payloads"
+        },
+        "workflowStartDelay": {
+          "type": "string",
+          "description": "Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.\nIf the workflow gets a signal before the delay, a workflow task will be dispatched and the rest\nof the delay will be ignored."
+        },
+        "completionCallbacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Callback"
+          },
+          "description": "Callbacks to be called by the server when this workflow reaches a terminal state.\nIf the workflow continues-as-new, these callbacks will be carried over to the new execution.\nCallback addresses must be whitelisted in the server's dynamic configuration."
+        },
+        "userMetadata": {
+          "$ref": "#/definitions/v1UserMetadata",
+          "description": "Metadata on the workflow if it is started. This is carried over to the WorkflowExecutionInfo\nfor use by user interfaces to display the fixed as-of-start summary and details of the\nworkflow."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apicommonv1Link"
+          },
+          "description": "Links to be associated with the workflow."
+        },
+        "versioningOverride": {
+          "$ref": "#/definitions/v1VersioningOverride",
+          "description": "If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.\nTo unset the override after the workflow is running, use UpdateWorkflowExecutionOptions."
+        },
+        "onConflictOptions": {
+          "$ref": "#/definitions/v1OnConflictOptions",
+          "description": "Defines actions to be done to the existing running workflow when the conflict policy\nWORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING is used. If not set (ie., nil value) or set to a\nempty object (ie., all options with default value), it won't do anything to the existing\nrunning workflow. If set, it will add a history event to the running workflow."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "title": "Priority metadata"
+        }
+      }
+    },
     "WorkflowServiceStartWorkflowExecutionBody": {
       "type": "object",
       "properties": {
@@ -9555,6 +9754,77 @@
         "createTime": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1BatchOperation": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "description": "The namespace of the batch operation."
+        },
+        "query": {
+          "type": "string",
+          "description": "The query to perform."
+        },
+        "workflowExecutions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowExecution"
+          }
+        },
+        "reason": {
+          "type": "string"
+        },
+        "terminationOperation": {
+          "$ref": "#/definitions/v1BatchOperationTermination"
+        },
+        "cancellationOperation": {
+          "$ref": "#/definitions/v1BatchOperationCancellation"
+        },
+        "signalOperation": {
+          "$ref": "#/definitions/v1BatchOperationSignal"
+        },
+        "deletionOperation": {
+          "$ref": "#/definitions/v1BatchOperationDeletion"
+        },
+        "resetOperation": {
+          "$ref": "#/definitions/v1BatchOperationReset"
+        },
+        "updateWorkflowExecutionOptionsOperation": {
+          "$ref": "#/definitions/v1BatchOperationUpdateWorkflowExecutionOptions"
+        },
+        "unpauseActivitiesOperation": {
+          "$ref": "#/definitions/v1BatchOperationUnpauseActivities"
+        },
+        "updateActivityOptionsOperation": {
+          "$ref": "#/definitions/v1BatchOperationUpdateActivityOptions"
+        },
+        "resetActivitiesOperation": {
+          "$ref": "#/definitions/v1BatchOperationResetActivities"
+        },
+        "rps": {
+          "type": "number",
+          "format": "double"
+        },
+        "concurrency": {
+          "type": "string",
+          "format": "int64"
+        },
+        "attemptsOnRetryableError": {
+          "type": "string",
+          "format": "int64"
+        },
+        "activityHeartbeatTimeout": {
+          "type": "string"
+        },
+        "nonRetryableErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -14509,6 +14779,31 @@
     },
     "v1StartBatchOperationResponse": {
       "type": "object"
+    },
+    "v1StartBatchWorkflowExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The run id of the workflow that was started - or used (via WorkflowIdConflictPolicy USE_EXISTING)."
+        },
+        "started": {
+          "type": "boolean",
+          "description": "If true, a new workflow was started."
+        },
+        "status": {
+          "$ref": "#/definitions/v1WorkflowExecutionStatus",
+          "description": "Current execution status of the workflow. Typically remains WORKFLOW_EXECUTION_STATUS_RUNNING\nunless a de-dupe occurs or in specific scenarios handled within the ExecuteMultiOperation (refer to its docs)."
+        },
+        "eagerWorkflowTask": {
+          "$ref": "#/definitions/v1PollWorkflowTaskQueueResponse",
+          "description": "When `request_eager_execution` is set on the `StartWorkflowExecutionRequest`, the server - if supported - will\nreturn the first workflow task to be eagerly executed.\nThe caller is expected to have a worker available to process the task."
+        },
+        "link": {
+          "$ref": "#/definitions/apicommonv1Link",
+          "description": "Link to the workflow event."
+        }
+      }
     },
     "v1StartChildWorkflowExecutionCommandAttributes": {
       "type": "object",

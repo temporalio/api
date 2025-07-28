@@ -2582,32 +2582,32 @@ message StartNexusOperationRequest {
 }
 
 message StartNexusOperationResponse {
-    // The operation completed synchronously.
-    message Complete {
-        oneof outcome {
-            // The operation completed successfully.
-            temporal.api.common.v1.Payload success = 1;
-            // The operation completed unsuccessfully (failed or canceled).
-            temporal.api.nexus.v1.UnsuccessfulOperationError operation_error = 2;
-        }
+    message Sync {
+        // The result of the operation.
+        temporal.api.common.v1.Payload result = 1;
     }
 
-    // The operation will complete asynchronously.
-    message Started {
+    message Async {
         // An operation token which can be used to reference this operation.
         string operation_token = 1;
     }
 
-    oneof variant {
-        // The handler has indicated the operation was completed synchronously.
-        Complete result = 1;
-        // The handler has indicated that the operation was started and will complete asynchronously.
-        Started async_success = 2;
-        // There was an error connecting to the handler.
-        temporal.api.nexus.v1.HandlerError handler_error = 3;
+    message Unsuccessful {
+        temporal.api.nexus.v1.UnsuccessfulOperationError operation_error = 1;
     }
 
-    repeated temporal.api.nexus.v1.Link links = 4;
+    oneof variant {
+        // The handler has indicated the operation was completed synchronously.
+        Sync sync_success = 1;
+        // The handler has indicated that the operation was started and will complete asynchronously.
+        Async async_success = 2;
+        // The operation completed unsuccessfully (failed or canceled).
+        Unsuccessful unsuccessful = 3;
+        // There was an error connecting to the handler.
+        temporal.api.nexus.v1.HandlerError handler_error = 4;
+    }
+
+    repeated temporal.api.nexus.v1.Link links = 5;
 }
 
 message RequestCancelNexusOperationRequest {
@@ -2695,25 +2695,26 @@ message GetNexusOperationResultRequest {
 }
 
 message GetNexusOperationResultResponse {
-    message Complete {
-        oneof outcome {
-            // The operation completed successfully.
-            temporal.api.common.v1.Payload success = 1;
-            // The operation completed unsuccessfully (failed or canceled).
-            temporal.api.nexus.v1.UnsuccessfulOperationError operation_error = 2;
-        }
+    message Successful {
+        temporal.api.common.v1.Payload result = 1;
+    }
+
+    message Unsuccessful {
+        temporal.api.nexus.v1.UnsuccessfulOperationError operation_error = 1;
     }
 
     message StillRunning {
     }
 
     oneof variant {
-        // The operation has finished.
-        Complete result = 1;
+        // The operation has finished successfully.
+        Successful successful = 1;
+        // The operation has finished unsuccessfully.
+        Unsuccessful unsuccessful = 2;
         // The operation is still running, When waiting for completion, the caller may re-issue this request to start a
         // new long poll.
-        StillRunning still_running = 2;
+        StillRunning still_running = 3;
         // There was an error connecting to the handler.
-        temporal.api.nexus.v1.HandlerError handler_error = 3;
+        temporal.api.nexus.v1.HandlerError handler_error = 4;
     }
 }

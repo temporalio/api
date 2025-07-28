@@ -168,26 +168,28 @@ message GetOperationInfoResponse {
 
 // Response variant for GetOperationResultRequest.
 message GetOperationResultResponse {
-    message Complete {
-        oneof outcome {
-            // The operation completed successfully.
-            temporal.api.common.v1.Payload success = 1;
-            // The operation completed unsuccessfully (failed or canceled).
-            UnsuccessfulOperationError operation_error = 2;
-        }
+    message Successful {
+        temporal.api.common.v1.Payload result = 1;
+    }
+
+    message Unsuccessful {
+        UnsuccessfulOperationError operation_error = 1;
     }
 
     message StillRunning {
     }
 
     oneof variant {
-        Complete result = 1;
+        // The operation completed successfully.
+        Successful successful = 1;
+        // The operation completed unsuccessfully (failed or canceled).
+        Unsuccessful unsuccessful = 2;
         // The operation is still running, When waiting for completion, the caller may re-issue this request to start a
         // new long poll.
-        StillRunning still_running = 2;
+        StillRunning still_running = 3;
     }
 
-    repeated Link links = 3;
+    repeated Link links = 4;
 }
 
 // A response indicating that the handler has successfully processed a request.

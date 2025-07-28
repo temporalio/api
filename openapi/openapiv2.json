@@ -7507,6 +7507,16 @@
       },
       "description": "UpdateWorkflowOptions represents updating workflow execution options after a workflow reset.\nKeep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest."
     },
+    "StartNexusOperationResponseStarted": {
+      "type": "object",
+      "properties": {
+        "operationToken": {
+          "type": "string",
+          "description": "An operation token which can be used to reference this operation."
+        }
+      },
+      "description": "The operation will complete asynchronously."
+    },
     "StartOperationResponseAsync": {
       "type": "object",
       "properties": {
@@ -10476,14 +10486,6 @@
       },
       "description": "Used by the worker versioning APIs, represents an unordered set of one or more versions which are\nconsidered to be compatible with each other. Currently the versions are always worker build IDs."
     },
-    "v1CompleteNexusOperationResponse": {
-      "type": "object",
-      "properties": {
-        "handlerError": {
-          "$ref": "#/definitions/v1HandlerError"
-        }
-      }
-    },
     "v1CompleteWorkflowExecutionCommandAttributes": {
       "type": "object",
       "properties": {
@@ -11357,20 +11359,17 @@
           "$ref": "#/definitions/v1OperationInfo"
         },
         "handlerError": {
-          "$ref": "#/definitions/v1HandlerError"
+          "$ref": "#/definitions/v1HandlerError",
+          "description": "There was an error connecting to the handler."
         }
       }
     },
     "v1GetNexusOperationResultResponse": {
       "type": "object",
       "properties": {
-        "completeSuccess": {
-          "$ref": "#/definitions/v1Payload",
-          "description": "The operation completed successfully."
-        },
-        "operationError": {
-          "$ref": "#/definitions/v1UnsuccessfulOperationError",
-          "description": "The operation completed unsuccessfully (failed or canceled)."
+        "complete": {
+          "$ref": "#/definitions/v1GetNexusOperationResultResponseComplete",
+          "description": "The operation has finished."
         },
         "stillRunning": {
           "$ref": "#/definitions/v1GetNexusOperationResultResponseStillRunning",
@@ -11379,6 +11378,19 @@
         "handlerError": {
           "$ref": "#/definitions/v1HandlerError",
           "description": "There was an error connecting to the handler."
+        }
+      }
+    },
+    "v1GetNexusOperationResultResponseComplete": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "$ref": "#/definitions/v1Payload",
+          "description": "The operation completed successfully."
+        },
+        "operationError": {
+          "$ref": "#/definitions/v1UnsuccessfulOperationError",
+          "description": "The operation completed unsuccessfully (failed or canceled)."
         }
       }
     },
@@ -13780,7 +13792,8 @@
       "type": "object",
       "properties": {
         "handlerError": {
-          "$ref": "#/definitions/v1HandlerError"
+          "$ref": "#/definitions/v1HandlerError",
+          "description": "There was an error connecting to the handler."
         }
       },
       "description": "If this response is returned, the cancelation request was successfully processed by a Handler.\nThe operation may ignore the cancelation request and end up in any terminal state."
@@ -14952,20 +14965,17 @@
     "v1StartNexusOperationResponse": {
       "type": "object",
       "properties": {
-        "syncSuccess": {
-          "$ref": "#/definitions/v1Payload",
-          "description": "An operation completed successfully."
+        "sync": {
+          "$ref": "#/definitions/v1StartNexusOperationResponseComplete",
+          "description": "The handler has indicated the operation was completed synchronously."
         },
         "asyncSuccess": {
-          "type": "string",
-          "description": "The operation will complete asynchronously.\nThe returned string is an operation token which can be used to reference this operation."
-        },
-        "operationError": {
-          "$ref": "#/definitions/v1UnsuccessfulOperationError",
-          "description": "The operation completed unsuccessfully (failed or canceled)."
+          "$ref": "#/definitions/StartNexusOperationResponseStarted",
+          "description": "The handler has indicated that the operation was started and will complete asynchronously."
         },
         "handlerError": {
-          "$ref": "#/definitions/v1HandlerError"
+          "$ref": "#/definitions/v1HandlerError",
+          "description": "There was an error connecting to the handler."
         },
         "links": {
           "type": "array",
@@ -14975,6 +14985,20 @@
           }
         }
       }
+    },
+    "v1StartNexusOperationResponseComplete": {
+      "type": "object",
+      "properties": {
+        "syncSuccess": {
+          "$ref": "#/definitions/v1Payload",
+          "description": "The operation completed successfully."
+        },
+        "operationError": {
+          "$ref": "#/definitions/v1UnsuccessfulOperationError",
+          "description": "The operation completed unsuccessfully (failed or canceled)."
+        }
+      },
+      "description": "The operation completed synchronously."
     },
     "v1StartOperationRequest": {
       "type": "object",
@@ -15284,6 +15308,20 @@
         }
       },
       "title": "StructuredCalendarSpec describes an event specification relative to the\ncalendar, in a form that's easy to work with programmatically. Each field can\nbe one or more ranges.\nA timestamp matches if at least one range of each field matches the\ncorresponding fields of the timestamp, except for year: if year is missing,\nthat means all years match. For all fields besides year, at least one Range\nmust be present to match anything.\nTODO: add relative-to-end-of-month\nTODO: add nth day-of-week in month"
+    },
+    "v1TaskDispatchTarget": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "A registered endpoint name."
+        },
+        "taskQueue": {
+          "type": "string",
+          "description": "Dispatch directly to a task queue on the caller namespace."
+        }
+      },
+      "description": "Target to which Nexus tasks should be routed."
     },
     "v1TaskIdBlock": {
       "type": "object",

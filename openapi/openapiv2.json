@@ -2296,6 +2296,45 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/workers/describe/{workerInstanceKey}": {
+      "get": {
+        "summary": "DescribeWorker returns information about the specified worker.",
+        "operationId": "DescribeWorker2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeWorkerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "Namespace this worker belongs to.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "workerInstanceKey",
+            "description": "Worker instance key to describe.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/workers/fetch-config": {
       "post": {
         "summary": "FetchWorkerConfig returns the worker configuration for a specific worker.",
@@ -6037,6 +6076,45 @@
         ]
       }
     },
+    "/namespaces/{namespace}/workers/describe/{workerInstanceKey}": {
+      "get": {
+        "summary": "DescribeWorker returns information about the specified worker.",
+        "operationId": "DescribeWorker",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeWorkerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "Namespace this worker belongs to.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "workerInstanceKey",
+            "description": "Worker instance key to describe.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/workers/fetch-config": {
       "post": {
         "summary": "FetchWorkerConfig returns the worker configuration for a specific worker.",
@@ -7224,6 +7302,13 @@
         "stats": {
           "$ref": "#/definitions/v1TaskQueueStats",
           "description": "Only set if `report_task_queue_stats` is set on the request."
+        },
+        "statsByPriorityKey": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1TaskQueueStats"
+          },
+          "description": "Task queue stats breakdown by priority key. Only contains actively used priority keys.\nOnly set if `report_task_queue_stats` is set to true in the request."
         }
       }
     },
@@ -10824,13 +10909,20 @@
             "$ref": "#/definitions/v1PollerInfo"
           }
         },
+        "stats": {
+          "$ref": "#/definitions/v1TaskQueueStats",
+          "description": "Statistics for the task queue.\nOnly set if `report_stats` is set on the request."
+        },
+        "statsByPriorityKey": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1TaskQueueStats"
+          },
+          "description": "Task queue stats breakdown by priority key. Only contains actively used priority keys.\nOnly set if `report_stats` is set on the request."
+        },
         "versioningInfo": {
           "$ref": "#/definitions/v1TaskQueueVersioningInfo",
           "description": "Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.\nWhen not present, it means the tasks are routed to Unversioned workers (workers with\nUNVERSIONED or unspecified WorkerVersioningMode.)\nTask Queue Versioning info is updated indirectly by calling SetWorkerDeploymentCurrentVersion\nand SetWorkerDeploymentRampingVersion on Worker Deployments.\nNote: This information is not relevant to Pinned workflow executions and their activities as\nthey are always routed to their Pinned Deployment Version. However, new workflow executions\nare typically not Pinned until they complete their first task (unless they are started with\na Pinned VersioningOverride or are Child Workflows of a Pinned parent)."
-        },
-        "stats": {
-          "$ref": "#/definitions/v1TaskQueueStats",
-          "description": "Statistics for the task queue. Only populated when `report_stats` is set to true in the request."
         },
         "config": {
           "$ref": "#/definitions/v1TaskQueueConfig",
@@ -10878,6 +10970,14 @@
             "$ref": "#/definitions/DescribeWorkerDeploymentVersionResponseVersionTaskQueue"
           },
           "description": "All the Task Queues that have ever polled from this Deployment version."
+        }
+      }
+    },
+    "v1DescribeWorkerResponse": {
+      "type": "object",
+      "properties": {
+        "workerInfo": {
+          "$ref": "#/definitions/v1WorkerInfo"
         }
       }
     },
@@ -11204,6 +11304,14 @@
         },
         "visibilityStore": {
           "type": "string"
+        },
+        "initialFailoverVersion": {
+          "type": "string",
+          "format": "int64"
+        },
+        "failoverVersionIncrement": {
+          "type": "string",
+          "format": "int64"
         }
       },
       "description": "GetClusterInfoResponse contains information about Temporal cluster."
@@ -12285,6 +12393,10 @@
         "asyncUpdate": {
           "type": "boolean",
           "title": "True if the namespace supports async update"
+        },
+        "workerHeartbeats": {
+          "type": "boolean",
+          "title": "True if the namespace supports worker heartbeats"
         }
       },
       "description": "Namespace capability details. Should contain what features are enabled in a namespace."
@@ -13015,6 +13127,19 @@
         "PENDING_WORKFLOW_TASK_STATE_STARTED"
       ],
       "default": "PENDING_WORKFLOW_TASK_STATE_UNSPECIFIED"
+    },
+    "v1PluginInfo": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the plugin, required."
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the plugin, may be empty."
+        }
+      }
     },
     "v1PollActivityTaskQueueResponse": {
       "type": "object",
@@ -15606,7 +15731,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "A key-value map for any customized purpose.\nIf data already exists on the namespace, \nthis will merge with the existing key values."
+          "description": "A key-value map for any customized purpose.\nIf data already exists on the namespace,\nthis will merge with the existing key values."
         },
         "state": {
           "$ref": "#/definitions/v1NamespaceState",
@@ -16169,6 +16294,14 @@
           "type": "integer",
           "format": "int32",
           "description": "Current cache size, expressed in number of Workflow Executions."
+        },
+        "plugins": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PluginInfo"
+          },
+          "description": "Plugins currently in use by this SDK."
         }
       },
       "description": "Worker info message, contains information about the worker and its current state.\nAll information is provided by the worker itself."

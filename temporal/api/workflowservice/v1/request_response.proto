@@ -1095,6 +1095,16 @@ message DescribeTaskQueueRequest {
 message DescribeTaskQueueResponse {
     repeated temporal.api.taskqueue.v1.PollerInfo pollers = 1;
 
+    // Statistics for the task queue.
+    // Only set if `report_stats` is set on the request.
+    temporal.api.taskqueue.v1.TaskQueueStats stats = 5;
+
+    // Task queue stats breakdown by priority key. Only contains actively used priority keys.
+    // Only set if `report_stats` is set on the request.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "by" is used to clarify the keys and values. --)
+    map<int32, temporal.api.taskqueue.v1.TaskQueueStats> stats_by_priority_key = 8;
+
     // Specifies which Worker Deployment Version(s) Server routes this Task Queue's tasks to.
     // When not present, it means the tasks are routed to Unversioned workers (workers with
     // UNVERSIONED or unspecified WorkerVersioningMode.)
@@ -1105,9 +1115,6 @@ message DescribeTaskQueueResponse {
     // are typically not Pinned until they complete their first task (unless they are started with
     // a Pinned VersioningOverride or are Child Workflows of a Pinned parent).
     temporal.api.taskqueue.v1.TaskQueueVersioningInfo versioning_info = 4;
-
-    // Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
-    temporal.api.taskqueue.v1.TaskQueueStats stats = 5;
 
     // Only populated if report_task_queue_config is set to true.
     temporal.api.taskqueue.v1.TaskQueueConfig config  = 6;
@@ -1150,6 +1157,8 @@ message GetClusterInfoResponse {
     int32 history_shard_count = 6;
     string persistence_store = 7;
     string visibility_store = 8;
+    int64 initial_failover_version = 9;
+    int64 failover_version_increment = 10;
 }
 
 message GetSystemInfoRequest {
@@ -2069,6 +2078,11 @@ message DescribeWorkerDeploymentVersionResponse {
         temporal.api.enums.v1.TaskQueueType type = 2;
         // Only set if `report_task_queue_stats` is set on the request.
         temporal.api.taskqueue.v1.TaskQueueStats stats = 3;
+        // Task queue stats breakdown by priority key. Only contains actively used priority keys.
+        // Only set if `report_task_queue_stats` is set to true in the request.
+        // (-- api-linter: core::0140::prepositions=disabled
+        //     aip.dev/not-precedent: "by" is used to clarify the key. --)
+        map<int32, temporal.api.taskqueue.v1.TaskQueueStats> stats_by_priority_key = 4;
     }
 }
 
@@ -2524,6 +2538,18 @@ message UpdateWorkerConfigResponse {
 
         // Once we support sending update to a multiple workers - it will be converted into a batch job, and job id will be returned.
     }
+}
+
+message DescribeWorkerRequest {
+    // Namespace this worker belongs to.
+    string namespace = 1;
+
+    // Worker instance key to describe.
+    string worker_instance_key = 2;
+}
+
+message DescribeWorkerResponse {
+    temporal.api.worker.v1.WorkerInfo worker_info = 1;
 }
 
 message StartNexusOperationRequest {

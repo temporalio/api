@@ -2087,6 +2087,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workers/describe/{workerInstanceKey}:
+    get:
+      tags:
+        - WorkflowService
+      description: DescribeWorker returns information about the specified worker.
+      operationId: DescribeWorker
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace this worker belongs to.
+          required: true
+          schema:
+            type: string
+        - name: workerInstanceKey
+          in: path
+          description: Worker instance key to describe.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeWorkerResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workers/fetch-config:
     post:
       tags:
@@ -5438,6 +5470,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workers/describe/{workerInstanceKey}:
+    get:
+      tags:
+        - WorkflowService
+      description: DescribeWorker returns information about the specified worker.
+      operationId: DescribeWorker
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace this worker belongs to.
+          required: true
+          schema:
+            type: string
+        - name: workerInstanceKey
+          in: path
+          description: Worker instance key to describe.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeWorkerResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workers/fetch-config:
     post:
       tags:
@@ -7805,6 +7869,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PollerInfo'
+        stats:
+          allOf:
+            - $ref: '#/components/schemas/TaskQueueStats'
+          description: |-
+            Statistics for the task queue.
+             Only set if `report_stats` is set on the request.
+        statsByPriorityKey:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TaskQueueStats'
+          description: |-
+            Task queue stats breakdown by priority key. Only contains actively used priority keys.
+             Only set if `report_stats` is set on the request.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "by" is used to clarify the keys and values. --)
         versioningInfo:
           allOf:
             - $ref: '#/components/schemas/TaskQueueVersioningInfo'
@@ -7818,10 +7897,6 @@ components:
              they are always routed to their Pinned Deployment Version. However, new workflow executions
              are typically not Pinned until they complete their first task (unless they are started with
              a Pinned VersioningOverride or are Child Workflows of a Pinned parent).
-        stats:
-          allOf:
-            - $ref: '#/components/schemas/TaskQueueStats'
-          description: Statistics for the task queue. Only populated when `report_stats` is set to true in the request.
         config:
           allOf:
             - $ref: '#/components/schemas/TaskQueueConfig'
@@ -7901,6 +7976,20 @@ components:
           allOf:
             - $ref: '#/components/schemas/TaskQueueStats'
           description: Only set if `report_task_queue_stats` is set on the request.
+        statsByPriorityKey:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TaskQueueStats'
+          description: |-
+            Task queue stats breakdown by priority key. Only contains actively used priority keys.
+             Only set if `report_task_queue_stats` is set to true in the request.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "by" is used to clarify the key. --)
+    DescribeWorkerResponse:
+      type: object
+      properties:
+        workerInfo:
+          $ref: '#/components/schemas/WorkerInfo'
     DescribeWorkflowExecutionResponse:
       type: object
       properties:
@@ -8221,6 +8310,10 @@ components:
         persistenceStore:
           type: string
         visibilityStore:
+          type: string
+        initialFailoverVersion:
+          type: string
+        failoverVersionIncrement:
           type: string
       description: GetClusterInfoResponse contains information about Temporal cluster.
     GetCurrentDeploymentResponse:
@@ -9035,6 +9128,9 @@ components:
         asyncUpdate:
           type: boolean
           description: True if the namespace supports async update
+        workerHeartbeats:
+          type: boolean
+          description: True if the namespace supports worker heartbeats
       description: Namespace capability details. Should contain what features are enabled in a namespace.
     NamespaceReplicationConfig:
       type: object
@@ -9720,6 +9816,15 @@ components:
         attempt:
           type: integer
           format: int32
+    PluginInfo:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the plugin, required.
+        version:
+          type: string
+          description: The version of the plugin, may be empty.
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -12522,7 +12627,10 @@ components:
           type: object
           additionalProperties:
             type: string
-          description: "A key-value map for any customized purpose.\n If data already exists on the namespace, \n this will merge with the existing key values."
+          description: |-
+            A key-value map for any customized purpose.
+             If data already exists on the namespace,
+             this will merge with the existing key values.
         state:
           enum:
             - NAMESPACE_STATE_UNSPECIFIED
@@ -13352,6 +13460,11 @@ components:
           type: integer
           description: Current cache size, expressed in number of Workflow Executions.
           format: int32
+        plugins:
+          type: array
+          items:
+            $ref: '#/components/schemas/PluginInfo'
+          description: Plugins currently in use by this SDK.
       description: |-
         Worker info message, contains information about the worker and its current state.
          All information is provided by the worker itself.

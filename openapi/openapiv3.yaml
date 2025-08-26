@@ -1914,14 +1914,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-manager:
+  /api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-owner:
     post:
       tags:
         - WorkflowService
       description: |-
-        Set/unset the Manager of a Worker Deployment.
+        Set/unset the Owner of a Worker Deployment.
          Experimental. This API might significantly change or be removed in a future release.
-      operationId: SetWorkerDeploymentManager
+      operationId: SetWorkerDeploymentOwner
       parameters:
         - name: namespace
           in: path
@@ -1937,7 +1937,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetWorkerDeploymentManagerRequest'
+              $ref: '#/components/schemas/SetWorkerDeploymentOwnerRequest'
         required: true
       responses:
         "200":
@@ -1945,7 +1945,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SetWorkerDeploymentManagerResponse'
+                $ref: '#/components/schemas/SetWorkerDeploymentOwnerResponse'
         default:
           description: Default error response
           content:
@@ -5335,14 +5335,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/worker-deployments/{deploymentName}/set-manager:
+  /namespaces/{namespace}/worker-deployments/{deploymentName}/set-owner:
     post:
       tags:
         - WorkflowService
       description: |-
-        Set/unset the Manager of a Worker Deployment.
+        Set/unset the Owner of a Worker Deployment.
          Experimental. This API might significantly change or be removed in a future release.
-      operationId: SetWorkerDeploymentManager
+      operationId: SetWorkerDeploymentOwner
       parameters:
         - name: namespace
           in: path
@@ -5358,7 +5358,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetWorkerDeploymentManagerRequest'
+              $ref: '#/components/schemas/SetWorkerDeploymentOwnerRequest'
         required: true
       responses:
         "200":
@@ -5366,7 +5366,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SetWorkerDeploymentManagerResponse'
+                $ref: '#/components/schemas/SetWorkerDeploymentOwnerResponse'
         default:
           description: Default error response
           content:
@@ -11499,6 +11499,11 @@ components:
              needed. If the request is unexpectedly rejected due to missing pollers, then that means the
              pollers have not reached to the server yet. Only set this if you expect those pollers to
              never arrive.
+        ignoreOwner:
+          type: boolean
+          description: |-
+            Optional. If Worker Deployment's `owner_identity` is set, the default is to reject writes from
+             clients without that identity. Pass `true` here to bypass this protection.
       description: Set/unset the Current Version of a Worker Deployment.
     SetWorkerDeploymentCurrentVersionResponse:
       type: object
@@ -11517,18 +11522,18 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: The version that was current before executing this operation.
-    SetWorkerDeploymentManagerRequest:
+    SetWorkerDeploymentOwnerRequest:
       type: object
       properties:
         namespace:
           type: string
         deploymentName:
           type: string
-        manager:
+        ownerIdentity:
           type: string
           description: |-
-            Optional. The string that you want to set as the Deployment's `manager`.
-             Empty string will set the `manager` field to an empty string.
+            Optional. The string that you want to set as the Deployment's `owner_identity`.
+             Empty string will unset the `owner_identity` field.
         conflictToken:
           type: string
           description: |-
@@ -11541,7 +11546,7 @@ components:
           type: string
           description: Optional. The identity of the client who initiated this request.
       description: Set/unset the Manager of a Worker Deployment.
-    SetWorkerDeploymentManagerResponse:
+    SetWorkerDeploymentOwnerResponse:
       type: object
       properties:
         conflictToken:
@@ -11551,9 +11556,9 @@ components:
              that write to the Worker Deployment state to ensure that the state
              did not change between this API call and a future write.
           format: bytes
-        previousManager:
+        previousOwnerIdentity:
           type: string
-          description: What the `manager` field was before this change.
+          description: What the `owner_identity` field was before this change.
     SetWorkerDeploymentRampingVersionRequest:
       type: object
       properties:
@@ -11604,6 +11609,11 @@ components:
              Note: this check only happens when the ramping version is about to change, not every time
              that the percentage changes. Also note that the check is against the deployment's Current
              Version, not the previous Ramping Version.
+        ignoreOwner:
+          type: boolean
+          description: |-
+            Optional. If Worker Deployment's `owner_identity` is set, the default is to reject writes from
+             clients without that identity. Pass `true` here to bypass this protection.
       description: Set/unset the Ramping Version of a Worker Deployment and its ramp percentage.
     SetWorkerDeploymentRampingVersionResponse:
       type: object
@@ -13285,16 +13295,13 @@ components:
             Identity of the last client who modified the configuration of this Deployment. Set to the
              `identity` value sent by APIs such as `SetWorkerDeploymentCurrentVersion` and
              `SetWorkerDeploymentRampingVersion`.
-        manager:
+        ownerIdentity:
           type: string
           description: |-
-            Indicates what client is currently expected to make writes to this Worker Deployment, if any.
-             Like `last_modifier_identity`, on each write to the Deployment's `routing_config`, this is set
-             to the identity of the client that did the write.
-             Unlike `last_modifier_identity`, `manager` can be set to an arbitrary string, including the empty
-             string, by the `SetWorkerDeploymentManager` API. Clients can choose to behave differently in response
-             to different `manager` values, such as by refusing to do writes unless the `manager` value indicates
-             that they can do so without overwriting another client's changes.
+            Identity of the client that has the exclusive right to make changes to this Worker Deployment without
+             passing a `ignore_owner` flag, if any. Empty by default.
+             If this is set, clients whose identity does not match `owner_identity` will have to pass `ignore_owner`
+             flag to write to the Worker Deployment.
       description: "A Worker Deployment (Deployment, for short) represents all workers serving \n a shared set of Task Queues. Typically, a Deployment represents one service or \n application.\n A Deployment contains multiple Deployment Versions, each representing a different \n version of workers. (see documentation of WorkerDeploymentVersionInfo)\n Deployment records are created in Temporal server automatically when their\n first poller arrives to the server.\n Experimental. Worker Deployments are experimental and might significantly change in the future."
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object

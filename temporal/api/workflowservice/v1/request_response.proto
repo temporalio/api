@@ -2165,6 +2165,9 @@ message SetWorkerDeploymentCurrentVersionRequest {
     // pollers have not reached to the server yet. Only set this if you expect those pollers to
     // never arrive.
     bool ignore_missing_task_queues = 6;
+    // Optional. If Worker Deployment's `owner_identity` is set, the default is to reject writes from
+    // clients without that identity. Pass `true` here to bypass this protection.
+    bool ignore_owner = 8;
 }
 
 message SetWorkerDeploymentCurrentVersionResponse {
@@ -2217,6 +2220,9 @@ message SetWorkerDeploymentRampingVersionRequest {
     // that the percentage changes. Also note that the check is against the deployment's Current
     // Version, not the previous Ramping Version.
     bool ignore_missing_task_queues = 7;
+    // Optional. If Worker Deployment's `owner_identity` is set, the default is to reject writes from
+    // clients without that identity. Pass `true` here to bypass this protection.
+    bool ignore_owner = 9;
 }
 
 message SetWorkerDeploymentRampingVersionResponse {
@@ -2312,13 +2318,13 @@ message UpdateWorkerDeploymentVersionMetadataResponse {
 }
 
 // Set/unset the Manager of a Worker Deployment.
-message SetWorkerDeploymentManagerRequest {
+message SetWorkerDeploymentOwnerRequest {
     string namespace = 1;
     string deployment_name = 2;
 
-    // Optional. The string that you want to set as the Deployment's `manager`.
-    // Empty string will set the `manager` field to an empty string.
-    string manager = 3;
+    // Optional. The string that you want to set as the Deployment's `owner_identity`.
+    // Empty string will unset the `owner_identity` field.
+    string owner_identity = 3;
 
     // Optional. This can be the value of conflict_token from a Describe, or another Worker
     // Deployment API. Passing a non-nil conflict token will cause this request to fail if the
@@ -2330,14 +2336,14 @@ message SetWorkerDeploymentManagerRequest {
     string identity = 5;
 }
 
-message SetWorkerDeploymentManagerResponse {
+message SetWorkerDeploymentOwnerResponse {
     // This value is returned so that it can be optionally passed to APIs
     // that write to the Worker Deployment state to ensure that the state
     // did not change between this API call and a future write.
     bytes conflict_token = 1;
 
-    // What the `manager` field was before this change.
-    string previous_manager = 2;
+    // What the `owner_identity` field was before this change.
+    string previous_owner_identity = 2;
 }
 
 // Returns the Current Deployment of a deployment series.

@@ -2130,15 +2130,15 @@
         ]
       }
     },
-    "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-manager": {
+    "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-owner": {
       "post": {
-        "summary": "Set/unset the Manager of a Worker Deployment.\nExperimental. This API might significantly change or be removed in a future release.",
-        "operationId": "SetWorkerDeploymentManager2",
+        "summary": "Set/unset the Owner of a Worker Deployment.\nExperimental. This API might significantly change or be removed in a future release.",
+        "operationId": "SetWorkerDeploymentOwner2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1SetWorkerDeploymentManagerResponse"
+              "$ref": "#/definitions/v1SetWorkerDeploymentOwnerResponse"
             }
           },
           "default": {
@@ -2166,7 +2166,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentManagerBody"
+              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentOwnerBody"
             }
           }
         ],
@@ -5955,15 +5955,15 @@
         ]
       }
     },
-    "/namespaces/{namespace}/worker-deployments/{deploymentName}/set-manager": {
+    "/namespaces/{namespace}/worker-deployments/{deploymentName}/set-owner": {
       "post": {
-        "summary": "Set/unset the Manager of a Worker Deployment.\nExperimental. This API might significantly change or be removed in a future release.",
-        "operationId": "SetWorkerDeploymentManager",
+        "summary": "Set/unset the Owner of a Worker Deployment.\nExperimental. This API might significantly change or be removed in a future release.",
+        "operationId": "SetWorkerDeploymentOwner",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1SetWorkerDeploymentManagerResponse"
+              "$ref": "#/definitions/v1SetWorkerDeploymentOwnerResponse"
             }
           },
           "default": {
@@ -5991,7 +5991,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentManagerBody"
+              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentOwnerBody"
             }
           }
         ],
@@ -8482,16 +8482,20 @@
         "ignoreMissingTaskQueues": {
           "type": "boolean",
           "description": "Optional. By default this request would be rejected if not all the expected Task Queues are\nbeing polled by the new Version, to protect against accidental removal of Task Queues, or\nworker health issues. Pass `true` here to bypass this protection.\nThe set of expected Task Queues is the set of all the Task Queues that were ever poller by\nthe existing Current Version of the Deployment, with the following exclusions:\n  - Task Queues that are not used anymore (inferred by having empty backlog and a task\n    add_rate of 0.)\n  - Task Queues that are moved to another Worker Deployment (inferred by the Task Queue\n    having a different Current Version than the Current Version of this deployment.)\nWARNING: Do not set this flag unless you are sure that the missing task queue pollers are not\nneeded. If the request is unexpectedly rejected due to missing pollers, then that means the\npollers have not reached to the server yet. Only set this if you expect those pollers to\nnever arrive."
+        },
+        "ignoreOwner": {
+          "type": "boolean",
+          "description": "Optional. If Worker Deployment's `owner_identity` is set, the default is to reject writes from\nclients without that identity. Pass `true` here to bypass this protection."
         }
       },
       "description": "Set/unset the Current Version of a Worker Deployment."
     },
-    "WorkflowServiceSetWorkerDeploymentManagerBody": {
+    "WorkflowServiceSetWorkerDeploymentOwnerBody": {
       "type": "object",
       "properties": {
-        "manager": {
+        "ownerIdentity": {
           "type": "string",
-          "description": "Optional. The string that you want to set as the Deployment's `manager`.\nEmpty string will set the `manager` field to an empty string."
+          "description": "Optional. The string that you want to set as the Deployment's `owner_identity`.\nEmpty string will unset the `owner_identity` field."
         },
         "conflictToken": {
           "type": "string",
@@ -8533,6 +8537,10 @@
         "ignoreMissingTaskQueues": {
           "type": "boolean",
           "description": "Optional. By default this request would be rejected if not all the expected Task Queues are\nbeing polled by the new Version, to protect against accidental removal of Task Queues, or\nworker health issues. Pass `true` here to bypass this protection.\nThe set of expected Task Queues equals to all the Task Queues ever polled from the existing\nCurrent Version of the Deployment, with the following exclusions:\n  - Task Queues that are not used anymore (inferred by having empty backlog and a task\n    add_rate of 0.)\n  - Task Queues that are moved to another Worker Deployment (inferred by the Task Queue\n    having a different Current Version than the Current Version of this deployment.)\nWARNING: Do not set this flag unless you are sure that the missing task queue poller are not\nneeded. If the request is unexpectedly rejected due to missing pollers, then that means the\npollers have not reached to the server yet. Only set this if you expect those pollers to\nnever arrive.\nNote: this check only happens when the ramping version is about to change, not every time\nthat the percentage changes. Also note that the check is against the deployment's Current\nVersion, not the previous Ramping Version."
+        },
+        "ignoreOwner": {
+          "type": "boolean",
+          "description": "Optional. If Worker Deployment's `owner_identity` is set, the default is to reject writes from\nclients without that identity. Pass `true` here to bypass this protection."
         }
       },
       "description": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage."
@@ -14550,7 +14558,7 @@
         }
       }
     },
-    "v1SetWorkerDeploymentManagerResponse": {
+    "v1SetWorkerDeploymentOwnerResponse": {
       "type": "object",
       "properties": {
         "conflictToken": {
@@ -14558,9 +14566,9 @@
           "format": "byte",
           "description": "This value is returned so that it can be optionally passed to APIs\nthat write to the Worker Deployment state to ensure that the state\ndid not change between this API call and a future write."
         },
-        "previousManager": {
+        "previousOwnerIdentity": {
           "type": "string",
-          "description": "What the `manager` field was before this change."
+          "description": "What the `owner_identity` field was before this change."
         }
       }
     },
@@ -16034,9 +16042,9 @@
           "type": "string",
           "description": "Identity of the last client who modified the configuration of this Deployment. Set to the\n`identity` value sent by APIs such as `SetWorkerDeploymentCurrentVersion` and\n`SetWorkerDeploymentRampingVersion`."
         },
-        "manager": {
+        "ownerIdentity": {
           "type": "string",
-          "description": "Indicates what client is currently expected to make writes to this Worker Deployment, if any.\nLike `last_modifier_identity`, on each write to the Deployment's `routing_config`, this is set\nto the identity of the client that did the write.\nUnlike `last_modifier_identity`, `manager` can be set to an arbitrary string, including the empty\nstring, by the `SetWorkerDeploymentManager` API. Clients can choose to behave differently in response\nto different `manager` values, such as by refusing to do writes unless the `manager` value indicates\nthat they can do so without overwriting another client's changes."
+          "description": "Identity of the client that has the exclusive right to make changes to this Worker Deployment without\npassing a `ignore_owner` flag, if any. Empty by default.\nIf this is set, clients whose identity does not match `owner_identity` will have to pass `ignore_owner`\nflag to write to the Worker Deployment."
         }
       },
       "description": "A Worker Deployment (Deployment, for short) represents all workers serving \na shared set of Task Queues. Typically, a Deployment represents one service or \napplication.\nA Deployment contains multiple Deployment Versions, each representing a different \nversion of workers. (see documentation of WorkerDeploymentVersionInfo)\nDeployment records are created in Temporal server automatically when their\nfirst poller arrives to the server.\nExperimental. Worker Deployments are experimental and might significantly change in the future."

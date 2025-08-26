@@ -2130,6 +2130,51 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-manager": {
+      "post": {
+        "summary": "Set/unset the Manager of a Worker Deployment.\nExperimental. This API might significantly change or be removed in a future release.",
+        "operationId": "SetWorkerDeploymentManager2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetWorkerDeploymentManagerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentName",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentManagerBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-ramping-version": {
       "post": {
         "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nExperimental. This API might significantly change or be removed in a future release.",
@@ -5910,6 +5955,51 @@
         ]
       }
     },
+    "/namespaces/{namespace}/worker-deployments/{deploymentName}/set-manager": {
+      "post": {
+        "summary": "Set/unset the Manager of a Worker Deployment.\nExperimental. This API might significantly change or be removed in a future release.",
+        "operationId": "SetWorkerDeploymentManager",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetWorkerDeploymentManagerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentName",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceSetWorkerDeploymentManagerBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/worker-deployments/{deploymentName}/set-ramping-version": {
       "post": {
         "summary": "Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for\ngradual ramp to unversioned workers too.\nExperimental. This API might significantly change or be removed in a future release.",
@@ -8395,6 +8485,25 @@
         }
       },
       "description": "Set/unset the Current Version of a Worker Deployment."
+    },
+    "WorkflowServiceSetWorkerDeploymentManagerBody": {
+      "type": "object",
+      "properties": {
+        "manager": {
+          "type": "string",
+          "description": "Optional. The string that you want to set as the Deployment's `manager`.\nEmpty string will set the `manager` field to an empty string."
+        },
+        "conflictToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Optional. This can be the value of conflict_token from a Describe, or another Worker\nDeployment API. Passing a non-nil conflict token will cause this request to fail if the\nDeployment's configuration has been modified between the API call that generated the\ntoken and this one."
+        },
+        "identity": {
+          "type": "string",
+          "description": "Optional. The identity of the client who initiated this request."
+        }
+      },
+      "description": "Set/unset the Manager of a Worker Deployment."
     },
     "WorkflowServiceSetWorkerDeploymentRampingVersionBody": {
       "type": "object",
@@ -14441,6 +14550,20 @@
         }
       }
     },
+    "v1SetWorkerDeploymentManagerResponse": {
+      "type": "object",
+      "properties": {
+        "conflictToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "This value is returned so that it can be optionally passed to APIs\nthat write to the Worker Deployment state to ensure that the state\ndid not change between this API call and a future write."
+        },
+        "previousManager": {
+          "type": "string",
+          "description": "What the `manager` field was before this change."
+        }
+      }
+    },
     "v1SetWorkerDeploymentRampingVersionResponse": {
       "type": "object",
       "properties": {
@@ -15910,6 +16033,10 @@
         "lastModifierIdentity": {
           "type": "string",
           "description": "Identity of the last client who modified the configuration of this Deployment. Set to the\n`identity` value sent by APIs such as `SetWorkerDeploymentCurrentVersion` and\n`SetWorkerDeploymentRampingVersion`."
+        },
+        "manager": {
+          "type": "string",
+          "description": "Indicates what client is currently expected to make writes to this Worker Deployment, if any.\nLike `last_modifier_identity`, on each write to the Deployment's `routing_config`, this is set\nto the identity of the client that did the write.\nUnlike `last_modifier_identity`, `manager` can be set to an arbitrary string, including the empty\nstring, by the `SetWorkerDeploymentManager` API. Clients can choose to behave differently in response\nto different `manager` values, such as by refusing to do writes unless the `manager` value indicates\nthat they can do so without overwriting another client's changes."
         }
       },
       "description": "A Worker Deployment (Deployment, for short) represents all workers serving \na shared set of Task Queues. Typically, a Deployment represents one service or \napplication.\nA Deployment contains multiple Deployment Versions, each representing a different \nversion of workers. (see documentation of WorkerDeploymentVersionInfo)\nDeployment records are created in Temporal server automatically when their\nfirst poller arrives to the server.\nExperimental. Worker Deployments are experimental and might significantly change in the future."

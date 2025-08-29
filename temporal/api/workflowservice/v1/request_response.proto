@@ -2317,26 +2317,30 @@ message UpdateWorkerDeploymentVersionMetadataResponse {
     temporal.api.deployment.v1.VersionMetadata metadata = 1;
 }
 
-// Set/unset the Manager of a Worker Deployment.
-message SetWorkerDeploymentOwnerRequest {
+// Update the OwnerIdentity of a Worker Deployment.
+message UpdateWorkerDeploymentOwnershipRequest {
     string namespace = 1;
     string deployment_name = 2;
 
-    // Optional. The string that you want to set as the Deployment's `owner_identity`.
-    // Empty string will unset the `owner_identity` field.
-    string owner_identity = 3;
+    oneof operation {
+        // Set OwnerIdentity to the identity of the user submitting this request.
+        bool take = 3;
+        // Unset OwnerIdentity.
+        // Rejected if OwnerIdentity is set does not match the identity of the user submitting this request.
+        bool release = 4;
+    }
 
     // Optional. This can be the value of conflict_token from a Describe, or another Worker
     // Deployment API. Passing a non-nil conflict token will cause this request to fail if the
     // Deployment's configuration has been modified between the API call that generated the
     // token and this one.
-    bytes conflict_token = 4;
+    bytes conflict_token = 5;
 
-    // Optional. The identity of the client who initiated this request.
-    string identity = 5;
+    // Required. The identity of the client who initiated this request.
+    string identity = 6;
 }
 
-message SetWorkerDeploymentOwnerResponse {
+message UpdateWorkerDeploymentOwnershipResponse {
     // This value is returned so that it can be optionally passed to APIs
     // that write to the Worker Deployment state to ensure that the state
     // did not change between this API call and a future write.

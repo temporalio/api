@@ -1259,4 +1259,104 @@ service WorkflowService {
             }
         };
     }
+
+    // StartActivityExecution starts a new activity execution.
+    //
+    // Returns an `ExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
+    // unless permitted by the specified ID conflict policy.
+    rpc StartActivityExecution (StartActivityExecutionRequest) returns (StartActivityExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activities/{activity_id}"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}"
+                body: "*"
+            }
+        };
+    }
+
+    // DescribeActivityExecution returns information about the specified activity execution.
+    rpc DescribeActivityExecution (DescribeActivityExecutionRequest) returns (DescribeActivityExecutionResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/activities/{execution.activity_id}"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/activities/{execution.activity_id}"
+            }
+        };
+    }
+
+    // ListActivityExecutions is a visibility API to list activity executions in a specific namespace.
+    rpc ListActivityExecutions (ListActivityExecutionsRequest) returns (ListActivityExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/activities"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/activities"
+            }
+        };
+    }
+
+    // CountActivityExecutions is a visibility API to count of activity executions in a specific namespace.
+    rpc CountActivityExecutions (CountActivityExecutionsRequest) returns (CountActivityExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/activity-count"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/activity-count"
+            }
+        };
+    }
+
+    // GetActivityResult returns the activity result if it is in a terminal status or (optionally) wait for it to reach
+    // one.
+    rpc GetActivityResult (GetActivityResultRequest) returns (GetActivityResultResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/activities/{execution.activity_id}/result"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/activities/{execution.activity_id}/result"
+            }
+        };
+    }
+
+    // RequestCancelActivityExecution requests cancellation of an activity execution.
+    //
+    // Requesting to cancel an activity does not automatically transition the activity to canceled status. If the
+    // activity has a currently running attempt, the activity will only transition to canceled status if the current
+    // attempt is unsuccessful.
+    // TODO: Clarify what happens if there are no more allowed retries after the current attempt.
+    // 
+    // It returns success if the requested activity is already closed.
+    // TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?
+    rpc RequestCancelActivityExecution (RequestCancelActivityExecutionRequest) returns (RequestCancelActivityExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activities/{execution.activity_id}/cancel"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/{execution.activity_id}/cancel"
+                body: "*"
+            }
+        };
+    }
+
+    // TerminateActivityExecution terminates an existing activity execution immediately.
+    //
+    // Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a
+    // running attempt and will be requested to be canceled by the server when it heartbeats.
+    rpc TerminateActivityExecution (TerminateActivityExecutionRequest) returns (TerminateActivityExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activities/{execution.activity_id}/terminate"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/{execution.activity_id}/terminate"
+                body: "*"
+            }
+        };
+    }
+
+    // DeleteActivityExecution asynchronously deletes a specific activity execution (when
+    // ActivityExecution.run_id is provided) or the latest activity execution (when
+    // ActivityExecution.run_id is not provided). If the activity EXecution is running, it will be
+    // terminated before deletion.
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: Activity deletion not exposed to HTTP, users should use cancel or terminate. --)
+    rpc DeleteActivityExecution (DeleteActivityExecutionRequest) returns (DeleteActivityExecutionResponse) {}
 }

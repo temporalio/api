@@ -19,6 +19,7 @@ import "temporal/api/enums/v1/reset.proto";
 import "temporal/api/enums/v1/task_queue.proto";
 import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/update.proto";
+import "temporal/api/enums/v1/id.proto";
 import "temporal/api/activity/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
@@ -520,7 +521,7 @@ message RecordActivityTaskHeartbeatResponse {
 message RecordActivityTaskHeartbeatByIdRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
-    // Id of the workflow which scheduled this activity
+    // Id of the workflow which scheduled this activity, leave empty to target a standalone activity
     string workflow_id = 2;
     // Run Id of the workflow which scheduled this activity
     string run_id = 3;
@@ -572,7 +573,7 @@ message RespondActivityTaskCompletedResponse {
 message RespondActivityTaskCompletedByIdRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
-    // Id of the workflow which scheduled this activity
+    // Id of the workflow which scheduled this activity, leave empty to target a standalone activity
     string workflow_id = 2;
     // Run Id of the workflow which scheduled this activity
     string run_id = 3;
@@ -619,7 +620,7 @@ message RespondActivityTaskFailedResponse {
 message RespondActivityTaskFailedByIdRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
-    // Id of the workflow which scheduled this activity
+    // Id of the workflow which scheduled this activity, leave empty to target a standalone activity
     string workflow_id = 2;
     // Run Id of the workflow which scheduled this activity
     string run_id = 3;
@@ -666,7 +667,7 @@ message RespondActivityTaskCanceledResponse {
 message RespondActivityTaskCanceledByIdRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
-    // Id of the workflow which scheduled this activity
+    // Id of the workflow which scheduled this activity, leave empty to target a standalone activity
     string workflow_id = 2;
     // Run Id of the workflow which scheduled this activity
     string run_id = 3;
@@ -2594,4 +2595,173 @@ message DescribeWorkerRequest {
 
 message DescribeWorkerResponse {
     temporal.api.worker.v1.WorkerInfo worker_info = 1;
+}
+
+message StartActivityExecutionRequest {
+    string namespace = 1;
+    // The identity of the client who initiated this request
+    string identity = 2;
+    // A unique identifier for this start request. Typically UUIDv4.
+    string request_id = 3;
+
+    string activity_id = 4;
+    temporal.api.common.v1.ActivityType activity_type = 5;
+    temporal.api.activity.v1.ActivityOptions options = 6;
+    // Serialized arguments to the activity. These are passed as arguments to the activity function.
+    temporal.api.common.v1.Payloads input = 7;
+
+    // Defines whether to allow re-using the activity id from a previously *closed* activity.
+    // The default policy is ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    temporal.api.enums.v1.IdReusePolicy id_reuse_policy = 8;
+    // Defines how to resolve an activity id conflict with a *running* activity.
+    // The default policy is ID_CONFLICT_POLICY_FAIL.
+    temporal.api.enums.v1.IdConflictPolicy id_conflict_policy = 9;
+
+    // Arbitrary structured data that can be attached to the activity execution and made available via the list and
+    // describe APIs.
+    temporal.api.common.v1.Memo memo = 10;
+    // Search attributes for indexing.
+    temporal.api.common.v1.SearchAttributes search_attributes = 11;
+    // Header for context propagation and tracing purposes.
+    temporal.api.common.v1.Header header = 12;
+    // Request to get the first activity task inline in the response bypassing matching service and worker polling.
+    // If set to `true` the caller is expected to have a worker available and capable of processing the task.
+    // The returned task will be marked as started and is expected to be completed by the specified
+    // `schedule_to_close_timeout`.
+    bool request_eager_execution = 13;
+    // Callbacks to be called by the server when this activity reaches a terminal status.
+    // Callback addresses must be whitelisted in the server's dynamic configuration.
+    repeated temporal.api.common.v1.Callback completion_callbacks = 14;
+    // Metadata for use by user interfaces to display the fixed as-of-start summary and details of the activity.
+    temporal.api.sdk.v1.UserMetadata user_metadata = 15;
+    // Links to be associated with the activity.
+    repeated temporal.api.common.v1.Link links = 16;
+    // Defines actions to be done to the existing running activity when ID_CONFLICT_POLICY_USE_EXISTING is used. If not
+    // set or empty, it won't do anything to the existing running activity.
+    temporal.api.activity.v1.OnConflictOptions on_conflict_options = 17;
+    // Priority metadata
+    temporal.api.common.v1.Priority priority = 18;
+}
+
+message StartActivityExecutionResponse {
+    // The run ID of the activity that was started - or used (via ID_CONFLICT_POLICY_USE_EXISTING).
+    string run_id = 1;
+    // If true, a new activity was started.
+    bool started = 2;
+    // When `request_eager_execution` is set on the `StartActivityExecutionRequest`, the server will return the first
+    // activity task to be eagerly executed.
+    // The caller is expected to have a worker available to process the task.
+    PollActivityTaskQueueResponse eager_task = 3;
+    // Link to the workflow event.
+    temporal.api.common.v1.Link link = 4;
+}
+
+message DescribeActivityExecutionRequest {
+    string namespace = 1;
+    // Activity execution, targets the latest run if run_id is empty.
+    temporal.api.activity.v1.ActivityExecution execution = 2;
+}
+
+message DescribeActivityExecutionResponse {
+    temporal.api.activity.v1.ActivityExecutionInfo info = 1;
+}
+
+message ListActivityExecutionsRequest {
+    string namespace = 1;
+    // Max number of executions to return per page.
+    int32 page_size = 2;
+    // Token returned in ListActivityExecutionsResponse.
+    bytes next_page_token = 3;
+    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+    string query = 4;
+}
+
+message ListActivityExecutionsResponse {
+    repeated temporal.api.activity.v1.ActivityListInfo executions = 1;
+    // Token to use to fetch the next page. If empty, there is no next page.
+    bytes next_page_token = 2;
+}
+
+message CountActivityExecutionsRequest {
+    string namespace = 1;
+    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+    string query = 2;
+}
+
+message CountActivityExecutionsResponse {
+    // If `query` is not grouping by any field, the count is an approximate number
+    // of activities that match the query.
+    // If `query` is grouping by a field, the count is simply the sum of the counts
+    // of the groups returned in the response. This number can be smaller than the
+    // total number of activities matching the query.
+    int64 count = 1;
+
+    // Contains the groups if the request is grouping by a field.
+    // The list might not be complete, and the counts of each group is approximate.
+    repeated AggregationGroup groups = 2;
+
+    message AggregationGroup {
+        repeated temporal.api.common.v1.Payload group_values = 1;
+        int64 count = 2;
+    }
+}
+
+message GetActivityResultRequest {
+    string namespace = 1;
+    // Activity execution, targets the latest run if run_id is empty.
+    temporal.api.activity.v1.ActivityExecution execution = 2;
+    // If set, turns this request into a long poll that is unblocked when the activity reaches a terminal status.
+    // The wait duration is capped by the request's context deadline or by the maximum enforced long poll interval
+    // allowed by the server.
+    bool wait = 3;
+}
+
+message GetActivityResultResponse {
+    // The run ID of the completed activity, may be used in case a run ID was not specified in the request.
+    string run_id = 1;
+
+    oneof outcome {
+        // The result if the activity completed successfully.
+        temporal.api.common.v1.Payloads result = 2;
+        // The failure if the activity completed unsuccessfully.
+        temporal.api.failure.v1.Failure failure = 3;
+    }
+}
+
+message RequestCancelActivityExecutionRequest {
+    string namespace = 1;
+    // Activity execution, targets the latest run if run_id is empty.
+    temporal.api.activity.v1.ActivityExecution execution = 2;
+    // The identity of the worker/client.
+    string identity = 3;
+    // Used to de-dupe cancellation requests.
+    string request_id = 4;
+    // Reason for requesting the cancellation, recorded and available via the DescribeActivityExecution API.
+    // Not propagated to a worker if an activity attempt is currently running.
+    string reason = 5;
+}
+
+message RequestCancelActivityExecutionResponse {
+}
+
+message TerminateActivityExecutionRequest {
+    string namespace = 1;
+    // Activity execution, targets the latest run if run_id is empty.
+    temporal.api.activity.v1.ActivityExecution execution = 2;
+    // Reason for requesting the termination, recorded in in the activity's result failure outcome.
+    string reason = 3;
+    // The identity of the worker/client.
+    string identity = 4;
+}
+
+message TerminateActivityExecutionResponse {
+}
+
+message DeleteActivityExecutionRequest {
+    string namespace = 1;
+    // Activity execution, targets the latest run if run_id is empty.
+    temporal.api.activity.v1.ActivityExecution execution = 2;
+}
+
+message DeleteActivityExecutionResponse {
 }

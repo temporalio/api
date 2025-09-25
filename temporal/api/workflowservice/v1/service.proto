@@ -458,7 +458,8 @@ service WorkflowService {
         };
     }
 
-    // ScanWorkflowExecutions is a visibility API to list large amount of workflow executions in a specific namespace without order.
+    // ScanWorkflowExecutions _was_ a visibility API to list large amount of workflow executions in a specific namespace without order.
+    // It has since been deprecated in favor of `ListWorkflowExecutions` and rewritten to use `ListWorkflowExecutions` internally.
     //
     // Deprecated: Replaced with `ListWorkflowExecutions`.
     // (-- api-linter: core::0127::http-annotation=disabled
@@ -918,6 +919,19 @@ service WorkflowService {
             body: "*"
             additional_bindings {
                 post: "/api/v1/namespaces/{namespace}/worker-deployment-versions/{deployment_version.deployment_name}/{deployment_version.build_id}/update-metadata"
+                body: "*"
+            }
+        };
+    }
+
+    // Set/unset the ManagerIdentity of a Worker Deployment.
+    // Experimental. This API might significantly change or be removed in a future release.
+    rpc SetWorkerDeploymentManager (SetWorkerDeploymentManagerRequest) returns (SetWorkerDeploymentManagerResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/worker-deployments/{deployment_name}/set-manager"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/worker-deployments/{deployment_name}/set-manager"
                 body: "*"
             }
         };

@@ -1914,6 +1914,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-manager:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Set/unset the ManagerIdentity of a Worker Deployment.
+         Experimental. This API might significantly change or be removed in a future release.
+      operationId: SetWorkerDeploymentManager
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetWorkerDeploymentManagerRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetWorkerDeploymentManagerResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/set-ramping-version:
     post:
       tags:
@@ -5291,6 +5329,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SetWorkerDeploymentCurrentVersionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/worker-deployments/{deploymentName}/set-manager:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Set/unset the ManagerIdentity of a Worker Deployment.
+         Experimental. This API might significantly change or be removed in a future release.
+      operationId: SetWorkerDeploymentManager
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetWorkerDeploymentManagerRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetWorkerDeploymentManagerResponse'
         default:
           description: Default error response
           content:
@@ -10015,7 +10091,7 @@ components:
              configuration, and defaults to 5.
 
              If priority is not present (or zero), then the effective priority will be
-             the default priority, which is is calculated by (min+max)/2. With the
+             the default priority, which is calculated by (min+max)/2. With the
              default max of 5, and min of 1, that comes out to 3.
           format: int32
         fairnessKey:
@@ -11423,6 +11499,12 @@ components:
              needed. If the request is unexpectedly rejected due to missing pollers, then that means the
              pollers have not reached to the server yet. Only set this if you expect those pollers to
              never arrive.
+        allowNoPollers:
+          type: boolean
+          description: |-
+            Optional. By default this request will be rejected if no pollers have been seen for the proposed
+             Current Version, in order to protect users from routing tasks to pollers that do not exist, leading
+             to possible timeouts. Pass `true` here to bypass this protection.
       description: Set/unset the Current Version of a Worker Deployment.
     SetWorkerDeploymentCurrentVersionResponse:
       type: object
@@ -11441,6 +11523,46 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: The version that was current before executing this operation.
+    SetWorkerDeploymentManagerRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        deploymentName:
+          type: string
+        managerIdentity:
+          type: string
+          description: |-
+            Arbitrary value for `manager_identity`.
+             Empty will unset the field.
+        self:
+          type: boolean
+          description: True will set `manager_identity` to `identity`.
+        conflictToken:
+          type: string
+          description: |-
+            Optional. This can be the value of conflict_token from a Describe, or another Worker
+             Deployment API. Passing a non-nil conflict token will cause this request to fail if the
+             Deployment's configuration has been modified between the API call that generated the
+             token and this one.
+          format: bytes
+        identity:
+          type: string
+          description: Required. The identity of the client who initiated this request.
+      description: Update the ManagerIdentity of a Worker Deployment.
+    SetWorkerDeploymentManagerResponse:
+      type: object
+      properties:
+        conflictToken:
+          type: string
+          description: |-
+            This value is returned so that it can be optionally passed to APIs
+             that write to the Worker Deployment state to ensure that the state
+             did not change between this API call and a future write.
+          format: bytes
+        previousManagerIdentity:
+          type: string
+          description: What the `manager_identity` field was before this change.
     SetWorkerDeploymentRampingVersionRequest:
       type: object
       properties:
@@ -11491,6 +11613,12 @@ components:
              Note: this check only happens when the ramping version is about to change, not every time
              that the percentage changes. Also note that the check is against the deployment's Current
              Version, not the previous Ramping Version.
+        allowNoPollers:
+          type: boolean
+          description: |-
+            Optional. By default this request will be rejected if no pollers have been seen for the proposed
+             Current Version, in order to protect users from routing tasks to pollers that do not exist, leading
+             to possible timeouts. Pass `true` here to bypass this protection.
       description: Set/unset the Ramping Version of a Worker Deployment and its ramp percentage.
     SetWorkerDeploymentRampingVersionResponse:
       type: object
@@ -13188,6 +13316,13 @@ components:
             Identity of the last client who modified the configuration of this Deployment. Set to the
              `identity` value sent by APIs such as `SetWorkerDeploymentCurrentVersion` and
              `SetWorkerDeploymentRampingVersion`.
+        managerIdentity:
+          type: string
+          description: |-
+            Identity of the client that has the exclusive right to make changes to this Worker Deployment.
+             Empty by default.
+             If this is set, clients whose identity does not match `manager_identity` will not be able to make changes
+             to this Worker Deployment. They can either set their own identity as the manager or unset the field to proceed.
       description: "A Worker Deployment (Deployment, for short) represents all workers serving \n a shared set of Task Queues. Typically, a Deployment represents one service or \n application.\n A Deployment contains multiple Deployment Versions, each representing a different \n version of workers. (see documentation of WorkerDeploymentVersionInfo)\n Deployment records are created in Temporal server automatically when their\n first poller arrives to the server.\n Experimental. Worker Deployments are experimental and might significantly change in the future."
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object

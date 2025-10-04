@@ -1276,6 +1276,10 @@ service WorkflowService {
     }
 
     // DescribeActivityExecution returns information about the specified activity execution.
+    // Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
+    // progress.
+    // In case the activity has not made progress by the time the long poll request times out, an empty response is
+    // returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
     rpc DescribeActivityExecution (DescribeActivityExecutionRequest) returns (DescribeActivityExecutionResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/activities/{execution.activity_id}"
@@ -1305,9 +1309,9 @@ service WorkflowService {
         };
     }
 
-    // GetActivityResult returns the activity result if it is in a terminal status or (optionally) wait for it to reach
-    // one.
-    rpc GetActivityResult (GetActivityResultRequest) returns (GetActivityResultResponse) {
+    // GetActivityExecutionResult returns the activity result if it is in a terminal status or (optionally) wait for it
+    // to reach one.
+    rpc GetActivityExecutionResult (GetActivityExecutionResultRequest) returns (GetActivityExecutionResultResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/activities/{execution.activity_id}/result"
             additional_bindings {

@@ -678,7 +678,12 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: DescribeActivityExecution returns information about the specified activity execution.
+      description: |-
+        DescribeActivityExecution returns information about the specified activity execution.
+         Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
+         progress.
+         In case the activity has not made progress by the time the long poll request times out, an empty response is
+         returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
       operationId: DescribeActivityExecution
       parameters:
         - name: namespace
@@ -699,6 +704,20 @@ paths:
           in: query
           schema:
             type: string
+        - name: includeInput
+          in: query
+          description: If true, the activity input is returned in the response.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
+             the token was returned.
+             This token is returned as part of the `DescribeActivityExecutionResponse`.
+          schema:
+            type: string
+            format: bytes
       responses:
         "200":
           description: OK
@@ -753,9 +772,9 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        GetActivityResult returns the activity result if it is in a terminal status or (optionally) wait for it to reach
-         one.
-      operationId: GetActivityResult
+        GetActivityExecutionResult returns the activity result if it is in a terminal status or (optionally) wait for it
+         to reach one.
+      operationId: GetActivityExecutionResult
       parameters:
         - name: namespace
           in: path
@@ -789,7 +808,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetActivityResultResponse'
+                $ref: '#/components/schemas/GetActivityExecutionResultResponse'
         default:
           description: Default error response
           content:
@@ -4434,7 +4453,12 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: DescribeActivityExecution returns information about the specified activity execution.
+      description: |-
+        DescribeActivityExecution returns information about the specified activity execution.
+         Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
+         progress.
+         In case the activity has not made progress by the time the long poll request times out, an empty response is
+         returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
       operationId: DescribeActivityExecution
       parameters:
         - name: namespace
@@ -4455,6 +4479,20 @@ paths:
           in: query
           schema:
             type: string
+        - name: includeInput
+          in: query
+          description: If true, the activity input is returned in the response.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
+             the token was returned.
+             This token is returned as part of the `DescribeActivityExecutionResponse`.
+          schema:
+            type: string
+            format: bytes
       responses:
         "200":
           description: OK
@@ -4509,9 +4547,9 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        GetActivityResult returns the activity result if it is in a terminal status or (optionally) wait for it to reach
-         one.
-      operationId: GetActivityResult
+        GetActivityExecutionResult returns the activity result if it is in a terminal status or (optionally) wait for it
+         to reach one.
+      operationId: GetActivityExecutionResult
       parameters:
         - name: namespace
           in: path
@@ -4545,7 +4583,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetActivityResultResponse'
+                $ref: '#/components/schemas/GetActivityExecutionResultResponse'
         default:
           description: Default error response
           content:
@@ -8638,6 +8676,12 @@ components:
       properties:
         info:
           $ref: '#/components/schemas/ActivityExecutionInfo'
+        longPollToken:
+          type: string
+          description: |-
+            A token that can be passed in via a subsequent `DescribeActivityExecutionRequest` to long poll on the activity
+             state as it makes progress.
+          format: bytes
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -9172,7 +9216,7 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerConfig'
           description: The worker configuration.
-    GetActivityResultResponse:
+    GetActivityExecutionResultResponse:
       type: object
       properties:
         runId:

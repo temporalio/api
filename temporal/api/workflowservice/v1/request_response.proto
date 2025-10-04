@@ -524,7 +524,8 @@ message RecordActivityTaskHeartbeatByIdRequest {
     string namespace = 1;
     // Id of the workflow which scheduled this activity, leave empty to target a standalone activity
     string workflow_id = 2;
-    // Run Id of the workflow which scheduled this activity
+    // For a workflow activity - the run ID of the workflow which scheduled this activity.
+    // For a standalone activity - the run ID of the activity.
     string run_id = 3;
     // Id of the activity we're heartbeating
     string activity_id = 4;
@@ -1888,6 +1889,7 @@ message ExecuteMultiOperationResponse {
 }
 
 // NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions
+// Deprecated. Use UpdateActivityExecutionOptionsRequest.
 message UpdateActivityOptionsRequest {
     // Namespace of the workflow which scheduled this activity
     string namespace = 1;
@@ -1921,11 +1923,13 @@ message UpdateActivityOptionsRequest {
     bool restore_original = 8;
 }
 
+// Deprecated. See UpdateActivityExecutionOptionsResponse.
 message UpdateActivityOptionsResponse {
     // Activity options after an update
     temporal.api.activity.v1.ActivityOptions activity_options = 1;
 }
 
+// Deprecated. See PauseActivityExecutionRequest.
 message PauseActivityRequest {
     // Namespace of the workflow which scheduled this activity.
     string namespace = 1;
@@ -1948,9 +1952,11 @@ message PauseActivityRequest {
     string reason = 6;
 }
 
+// Deprecated. See PauseActivityExecutionResponse.
 message PauseActivityResponse {
 }
 
+// Deprecated. See UnpauseActivityExecutionRequest.
 message UnpauseActivityRequest {
     // Namespace of the workflow which scheduled this activity.
     string namespace = 1;
@@ -1980,10 +1986,12 @@ message UnpauseActivityRequest {
     google.protobuf.Duration jitter = 9;
 }
 
+// Deprecated. See UnpauseActivityExecutionResponse.
 message UnpauseActivityResponse {
 }
 
 // NOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities
+// Deprecated. See ResetActivityExecutionRequest.
 message ResetActivityRequest {
     // Namespace of the workflow which scheduled this activity.
     string namespace = 1;
@@ -2021,6 +2029,7 @@ message ResetActivityRequest {
 
 }
 
+// Deprecated. See ResetActivityExecutionResponse.
 message ResetActivityResponse {
 }
 
@@ -2662,16 +2671,17 @@ message StartActivityExecutionResponse {
 
 message DescribeActivityExecutionRequest {
     string namespace = 1;
-    // Activity execution, targets the latest run if run_id is empty.
-    temporal.api.activity.v1.ActivityExecution execution = 2;
+    string activity_id = 2;
+    // Activity run ID, targets the latest run if run_id is empty.
+    string run_id = 3;
 
     // If true, the activity input is returned in the response.
-    bool include_input = 3;
+    bool include_input = 4;
 
     // If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
     // the token was returned.
     // This token is returned as part of the `DescribeActivityExecutionResponse`.
-    bytes long_poll_token = 4;
+    bytes long_poll_token = 5;
 }
 
 message DescribeActivityExecutionResponse {
@@ -2724,12 +2734,13 @@ message CountActivityExecutionsResponse {
 
 message GetActivityExecutionResultRequest {
     string namespace = 1;
-    // Activity execution, targets the latest run if run_id is empty.
-    temporal.api.activity.v1.ActivityExecution execution = 2;
+    string activity_id = 2;
+    // Activity run ID, targets the latest run if run_id is empty.
+    string run_id = 3;
     // If set, turns this request into a long poll that is unblocked when the activity reaches a terminal status.
     // The wait duration is capped by the request's context deadline or by the maximum enforced long poll interval
     // allowed by the server.
-    bool wait = 3;
+    bool wait = 4;
 }
 
 message GetActivityExecutionResultResponse {
@@ -2746,15 +2757,16 @@ message GetActivityExecutionResultResponse {
 
 message RequestCancelActivityExecutionRequest {
     string namespace = 1;
-    // Activity execution, targets the latest run if run_id is empty.
-    temporal.api.activity.v1.ActivityExecution execution = 2;
+    string activity_id = 2;
+    // Activity run ID, targets the latest run if run_id is empty.
+    string run_id = 3;
     // The identity of the worker/client.
-    string identity = 3;
+    string identity = 4;
     // Used to de-dupe cancellation requests.
-    string request_id = 4;
+    string request_id = 5;
     // Reason for requesting the cancellation, recorded and available via the DescribeActivityExecution API.
     // Not propagated to a worker if an activity attempt is currently running.
-    string reason = 5;
+    string reason = 6;
 }
 
 message RequestCancelActivityExecutionResponse {
@@ -2762,12 +2774,13 @@ message RequestCancelActivityExecutionResponse {
 
 message TerminateActivityExecutionRequest {
     string namespace = 1;
-    // Activity execution, targets the latest run if run_id is empty.
-    temporal.api.activity.v1.ActivityExecution execution = 2;
+    string activity_id = 2;
+    // Activity run ID, targets the latest run if run_id is empty.
+    string run_id = 3;
     // Reason for requesting the termination, recorded in in the activity's result failure outcome.
-    string reason = 3;
+    string reason = 4;
     // The identity of the worker/client.
-    string identity = 4;
+    string identity = 5;
 }
 
 message TerminateActivityExecutionResponse {
@@ -2775,9 +2788,185 @@ message TerminateActivityExecutionResponse {
 
 message DeleteActivityExecutionRequest {
     string namespace = 1;
-    // Activity execution, targets the latest run if run_id is empty.
-    temporal.api.activity.v1.ActivityExecution execution = 2;
+    string activity_id = 2;
+    // Activity run ID, targets the latest run if run_id is empty.
+    string run_id = 3;
 }
 
 message DeleteActivityExecutionResponse {
+}
+
+// TODO: update batch
+// NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions
+message UpdateActivityExecutionOptionsRequest {
+    // Namespace of the workflow which scheduled this activity
+    string namespace = 1;
+
+    // If provided, update options for a workflow activity (or activities) for the given workflow ID. If empty, target a
+    // standalone activity.
+    string workflow_id = 2;
+    // Update options for an activity with this ID. Must be provided for a standalone activity.
+    // Mutually exclusive with workflow_activity_type and all_workflow_activities.
+    string activity_id = 3;
+    // Run ID of the workflow or standalone activity.
+    string run_id = 4;
+
+    // The identity of the client who initiated this request
+    string identity = 5;
+
+    // Update all pending workflow activities of this type.
+    // Only available if workflow_id is provided.
+    // Mutually exclusive with activity_id and all_workflow_activities.
+    //
+    // Note: Experimental - the behavior of updating by activity type may change or be removed in a future release.
+    string workflow_activity_type = 6;
+    // Update all pending workflow activities.
+    // Only available if workflow_id is provided.
+    // Mutually exclusive with activity_id and workflow_activity_type.
+    //
+    // Note: Experimental - the behavior of updating all activities may change or be removed in a future release.
+    bool all_workflow_activities = 7;
+
+    // Activity options. Partial updates are accepted and controlled by update_mask
+    // Mutually exclusive with restore_original.
+    temporal.api.activity.v1.ActivityOptions activity_options = 8;
+
+    // Controls which fields from `activity_options` will be applied
+    google.protobuf.FieldMask update_mask = 9;
+
+    // If set, the activity options will be restored to the defaults.
+    // Default options are then options activity was originally created with.
+    // For workflow activities the original options are restored from first ActivityTaskScheduled event.
+    // Mutually exclusive with activity_options.
+    bool restore_original = 10;
+}
+
+message UpdateActivityExecutionOptionsResponse {
+    // Activity options after an update
+    temporal.api.activity.v1.ActivityOptions activity_options = 1;
+}
+
+message PauseActivityExecutionRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+
+    // If provided, pause a workflow activity (or activities) for the given workflow ID.
+    // If empty, target a standalone activity.
+    string workflow_id = 2;
+    // Pause an activity with this ID. Must be provided for a standalone activity.
+    // Mutually exclusive with workflow_activity_type.
+    string activity_id = 3;
+    // Run ID of the workflow or standalone activity.
+    string run_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Pause all pending activities of this type.
+    // Only available if workflow_id is provided.
+    // Mutually exclusive with activity_id.
+    //
+    // Note: Experimental - the behavior of pausing by activity type might change or be removed in a future release.
+    string workflow_activity_type = 6;
+
+    // Reason to pause the activity.
+    string reason = 7;
+}
+
+message PauseActivityExecutionResponse {
+}
+
+// TODO: update batch
+message UnpauseActivityExecutionRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+
+    // If provided, unpause a workflow activity (or activities) for the given workflow ID.
+    // If empty, target a standalone activity.
+    string workflow_id = 2;
+    // Unpause an activity with this ID. Must be provided for a standalone activity.
+    // Mutually exclusive with workflow_activity_type and all_workflow_activities.
+    string activity_id = 3;
+    // Run ID of the workflow or standalone activity.
+    string run_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Unpause all currently paused workflow activities of this type.
+    // Only available if workflow_id is provided.
+    // Mutually exclusive with activity_id and all_workflow_activities.
+    //
+    // Note: Experimental - the behavior of unpausing by activity type may change or be removed in a future release.
+    string workflow_activity_type = 6;
+    // Unpause all paused workflow activities.
+    // Only available if workflow_id is provided.
+    // Mutually exclusive with activity_id and workflow_activity_type.
+    //
+    // Note: Experimental - the behavior of unpausing all activities may change or be removed in a future release.
+    bool all_workflow_activities = 7;
+
+    // Providing this flag will also reset the number of attempts.
+    bool reset_attempts = 8;
+
+    // Providing this flag will also reset the heartbeat details.
+    bool reset_heartbeat = 9;
+
+    // If set, the activity will start at a random time within the specified jitter duration.
+    google.protobuf.Duration jitter = 10;
+}
+
+message UnpauseActivityExecutionResponse {
+}
+
+// TODO: update batch
+// NOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities
+message ResetActivityExecutionRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+
+    // If provided, reset a workflow activity (or activities) for the given workflow ID.
+    // If empty, target a standalone activity.
+    string workflow_id = 2;
+    // Reset an activity with this ID. Must be provided for a standalone activity.
+    // Mutually exclusive with workflow_activity_type and all_workflow_activities.
+    string activity_id = 3;
+    // Run ID of the workflow or standalone activity.
+    string run_id = 4;
+
+    // The identity of the client who initiated this request.
+    string identity = 5;
+
+    // Reset all pending workflow activities of this type.
+    // Only available if workflow_id is provided.
+    // Mutually exclusive with activity_id and all_workflow_activities.
+    //
+    // Note: Experimental - the behavior of resetting by activity type may change or be removed in a future release.
+    string workflow_activity_type = 6;
+    // Reset all pending workflow activities.
+    // Only available if workflow_id is provided.
+    // Mutually exclusive with activity_id and workflow_activity_type.
+    //
+    // Note: Experimental - the behavior of resetting all activities may change or be removed in a future release.
+    bool all_workflow_activities = 7;
+
+    // Indicates that activity should reset heartbeat details.
+    // This flag will be applied only to the new instance of the activity.
+    bool reset_heartbeat = 8;
+
+    // If activity is paused, it will remain paused after reset
+    bool keep_paused = 9;
+
+    // If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.
+    // (unless it is paused and keep_paused is set)
+    google.protobuf.Duration jitter = 10;
+
+    // If set, the activity options will be restored to the defaults.
+    // Default options are then options activity was originally created with.
+    // For workflow activities the original options are restored from first ActivityTaskScheduled event.
+    bool restore_original_options = 11;
+
+}
+
+message ResetActivityExecutionResponse {
 }

@@ -20,15 +20,6 @@ import "temporal/api/failure/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
 
-// Identifies a specific activity within a namespace. Practically speaking, because run_id is a
-// uuid, a workflow execution is globally unique. Note that many commands allow specifying an empty
-// run id as a way of saying "target the latest run of the activity".
-// TODO: Make this a generic EntityExecution?
-message ActivityExecution {
-    string activity_id = 1;
-    string run_id = 2;
-}
-
 // When StartActivityExecution uses the ID_CONFLICT_POLICY_USE_EXISTING and there is already an existing running
 // activity, OnConflictOptions defines actions to be taken on the existing running activity, updating its state.
 message OnConflictOptions {
@@ -72,33 +63,34 @@ message ActivityOptions {
 
 // Info for a standalone activity.
 message ActivityExecutionInfo {
-    // Unique identifier of this activity within its namespace.
-    ActivityExecution activity_execution = 1;
+    // Unique identifier of this activity within its namespace along with run ID (below).
+    string activity_id = 1;
+    string run_id = 2;
 
     // The type of the activity, a string that maps to a registered activity on a worker.
-    temporal.api.common.v1.ActivityType activity_type = 2;
+    temporal.api.common.v1.ActivityType activity_type = 3;
     // A general status for this activity, indicates whether it is currently running or in one of the terminal statuses.
-    temporal.api.enums.v1.ActivityExecutionStatus status = 3;
+    temporal.api.enums.v1.ActivityExecutionStatus status = 4;
     // More detailed breakdown of ACTIVITY_EXECUTION_STATUS_RUNNING.
-    temporal.api.enums.v1.PendingActivityState run_state = 4;
+    temporal.api.enums.v1.PendingActivityState run_state = 5;
     // Details provided in the last recorded activity heartbeat.
-    temporal.api.common.v1.Payloads heartbeat_details = 5;
+    temporal.api.common.v1.Payloads heartbeat_details = 6;
     // Time the last heartbeat was recorded.
-    google.protobuf.Timestamp last_heartbeat_time = 6;
+    google.protobuf.Timestamp last_heartbeat_time = 7;
     // Time the last attempt was started.
-    google.protobuf.Timestamp last_started_time = 7;
+    google.protobuf.Timestamp last_started_time = 8;
     // The attempt this activity is currently on.
     // Incremented each time a new attempt is started.
     // TODO: Confirm if this is on scheduled or started.
-    int32 attempt = 8;
-    int32 maximum_attempts = 9;
+    int32 attempt = 9;
+    int32 maximum_attempts = 10;
     // Time the activity was originally scheduled via a StartActivityExecution request.
-    google.protobuf.Timestamp scheduled_time = 10;
+    google.protobuf.Timestamp scheduled_time = 11;
     // Scheduled time + schedule to close timeout.
-    google.protobuf.Timestamp expiration_time = 11;
+    google.protobuf.Timestamp expiration_time = 12;
     // Failure details from the last failed attempt.
-    temporal.api.failure.v1.Failure last_failure = 12;
-    string last_worker_identity = 13;
+    temporal.api.failure.v1.Failure last_failure = 13;
+    string last_worker_identity = 14;
 
     // Time from the last attempt failure to the next activity retry.
     // If the activity is currently running, this represents the next retry interval in case the attempt fails.
@@ -106,41 +98,21 @@ message ActivityExecutionInfo {
     // If there is no next retry allowed, this field will be null.
     // This interval is typically calculated from the specified retry policy, but may be modified if an activity fails
     // with a retryable application failure specifying a retry delay.
-    google.protobuf.Duration current_retry_interval = 14;
+    google.protobuf.Duration current_retry_interval = 15;
 
     // The time when the last activity attempt completed. If activity has not been completed yet, it will be null.
-    google.protobuf.Timestamp last_attempt_complete_time = 15;
+    google.protobuf.Timestamp last_attempt_complete_time = 16;
 
     // The time when the next activity attempt will be scheduled.
     // If activity is currently scheduled or started, this field will be null.
-    google.protobuf.Timestamp next_attempt_schedule_time = 16;
+    google.protobuf.Timestamp next_attempt_schedule_time = 17;
 
     // The Worker Deployment Version this activity was dispatched to most recently.
     // If nil, the activity has not yet been dispatched or was last dispatched to an unversioned worker.
-    temporal.api.deployment.v1.WorkerDeploymentVersion last_deployment_version = 17;
+    temporal.api.deployment.v1.WorkerDeploymentVersion last_deployment_version = 18;
 
     // Priority metadata.
-    temporal.api.common.v1.Priority priority = 18;
-
-    // TODO: Move this to a common package?
-    message PauseInfo {
-        // The time when the activity was paused.
-        google.protobuf.Timestamp pause_time = 1;
-
-        message Manual {
-            // The identity of the actor that paused the activity.
-            string identity = 1;
-            // Reason for pausing the activity.
-            string reason = 2;
-        }
-
-        oneof paused_by {
-            // The activity was paused by direct API invocation.
-            Manual manual = 2;
-        }
-    }
-
-    PauseInfo pause_info = 19;
+    temporal.api.common.v1.Priority priority = 19;
 
     // Current activity options. May be different from the one used to start the activity.
     temporal.api.activity.v1.ActivityOptions activity_options = 20;
@@ -166,37 +138,62 @@ message ActivityExecutionInfo {
     repeated temporal.api.common.v1.Link links = 28;
 
     // Set if activity cancelation was requested.
-    string canceled_reason = 31;
+    string canceled_reason = 29;
+
+    // TODO: Move this to a common package?
+    message PauseInfo {
+        // The time when the activity was paused.
+        google.protobuf.Timestamp pause_time = 1;
+
+        message Manual {
+            // The identity of the actor that paused the activity.
+            string identity = 1;
+            // Reason for pausing the activity.
+            string reason = 2;
+        }
+
+        oneof paused_by {
+            // The activity was paused by direct API invocation.
+            Manual manual = 2;
+        }
+    }
+
+    PauseInfo pause_info = 30;
 }
 
 // Limited activity information returned in the list response.
 message ActivityListInfo {
-    // Unique identifier of this activity within its namespace.
-    ActivityExecution activity_execution = 1;
+    // For standalone activity - a unique identifier of this activity within its namespace along with run ID (below).
+    string activity_id = 1;
+    // The run ID of the workflow or standalone activity.
+    string run_id = 2;
+    // Workflow that contains this activity - only present for workflow activity.
+    string workflow_id = 3;
+
     // The type of the activity, a string that maps to a registered activity on a worker.
-    temporal.api.common.v1.ActivityType activity_type = 2;
+    temporal.api.common.v1.ActivityType activity_type = 4;
     // Time the activity was originally scheduled via a StartActivityExecution request.
     // TODO: Workflows call this schedule_time but it's scheduled_time in PendingActivityInfo, what should we choose for
     // consistency?
-    google.protobuf.Timestamp scheduled_time = 3;
+    google.protobuf.Timestamp scheduled_time = 5;
     // If the activity is in a terminal status, this field represents the time the activity transitioned to that status.
-    google.protobuf.Timestamp close_time = 4;
+    google.protobuf.Timestamp close_time = 6;
     // Only scheduled and terminal statuses appear here. More detailed information in PendingActivityInfo but not
     // available in the list response.
-    temporal.api.enums.v1.ActivityExecutionStatus status = 5;
+    temporal.api.enums.v1.ActivityExecutionStatus status = 7;
 
     // Search attributes from the start request.
-    temporal.api.common.v1.SearchAttributes search_attributes = 6;
+    temporal.api.common.v1.SearchAttributes search_attributes = 8;
 
     // The task queue this activity was scheduled on when it was originally started, updated on activity options update.
-    string task_queue = 7;
+    string task_queue = 9;
     // Updated on terminal status.
-    int64 state_transition_count = 8;
+    int64 state_transition_count = 10;
     // Updated once on scheduled and once on terminal status.
-    int64 state_size_bytes = 9;
+    int64 state_size_bytes = 11;
     // The difference between close time and scheduled time.
     // This field is only populated if the activity is closed.
-    google.protobuf.Duration execution_duration = 10;
+    google.protobuf.Duration execution_duration = 12;
 
     // TODO: pause_info
 }

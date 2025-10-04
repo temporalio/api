@@ -479,6 +479,7 @@ paths:
          - The activity should respond to the cancellation accordingly.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID or type
+         Deprecated. See PauseActivityExecution.
       operationId: PauseActivity
       parameters:
         - name: namespace
@@ -528,6 +529,7 @@ paths:
          'keep_paused': if the activity is paused, it will remain paused.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID or type.
+         Deprecated. See ResetActivityExecution.
       operationId: ResetActivity
       parameters:
         - name: namespace
@@ -573,6 +575,7 @@ paths:
          'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID or type
+         Deprecated. See UnpauseActivityExecution.
       operationId: UnpauseActivity
       parameters:
         - name: namespace
@@ -607,6 +610,7 @@ paths:
       description: |-
         UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.
          If there are multiple pending activities of the provided type - all of them will be updated.
+         Deprecated. See UpdateActivityExecutionOptions.
       operationId: UpdateActivityOptions
       parameters:
         - name: namespace
@@ -635,6 +639,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activities/{activityId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeActivityExecution returns information about the specified activity execution.
+         Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
+         progress.
+         In case the activity has not made progress by the time the long poll request times out, an empty response is
+         returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
+      operationId: DescribeActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Activity run ID, targets the latest run if run_id is empty.
+          schema:
+            type: string
+        - name: includeInput
+          in: query
+          description: If true, the activity input is returned in the response.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
+             the token was returned.
+             This token is returned as part of the `DescribeActivityExecutionResponse`.
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
     post:
       tags:
         - WorkflowService
@@ -674,64 +731,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/{execution.activity_id}:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        DescribeActivityExecution returns information about the specified activity execution.
-         Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
-         progress.
-         In case the activity has not made progress by the time the long poll request times out, an empty response is
-         returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
-      operationId: DescribeActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: execution.activity_id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: execution.activityId
-          in: query
-          schema:
-            type: string
-        - name: execution.runId
-          in: query
-          schema:
-            type: string
-        - name: includeInput
-          in: query
-          description: If true, the activity input is returned in the response.
-          schema:
-            type: boolean
-        - name: longPollToken
-          in: query
-          description: |-
-            If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
-             the token was returned.
-             This token is returned as part of the `DescribeActivityExecutionResponse`.
-          schema:
-            type: string
-            format: bytes
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/{execution.activity_id}/cancel:
+  /api/v1/namespaces/{namespace}/activities/{activityId}/cancel:
     post:
       tags:
         - WorkflowService
@@ -743,7 +743,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: execution.activity_id
+        - name: activityId
           in: path
           required: true
           schema:
@@ -767,7 +767,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/{execution.activity_id}/result:
+  /api/v1/namespaces/{namespace}/activities/{activityId}/result:
     get:
       tags:
         - WorkflowService
@@ -781,17 +781,14 @@ paths:
           required: true
           schema:
             type: string
-        - name: execution.activity_id
+        - name: activityId
           in: path
           required: true
           schema:
             type: string
-        - name: execution.activityId
+        - name: runId
           in: query
-          schema:
-            type: string
-        - name: execution.runId
-          in: query
+          description: Activity run ID, targets the latest run if run_id is empty.
           schema:
             type: string
         - name: wait
@@ -815,7 +812,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/{execution.activity_id}/terminate:
+  /api/v1/namespaces/{namespace}/activities/{activityId}/terminate:
     post:
       tags:
         - WorkflowService
@@ -831,7 +828,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: execution.activity_id
+        - name: activityId
           in: path
           required: true
           schema:
@@ -4255,6 +4252,7 @@ paths:
          - The activity should respond to the cancellation accordingly.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID or type
+         Deprecated. See PauseActivityExecution.
       operationId: PauseActivity
       parameters:
         - name: namespace
@@ -4304,6 +4302,7 @@ paths:
          'keep_paused': if the activity is paused, it will remain paused.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID or type.
+         Deprecated. See ResetActivityExecution.
       operationId: ResetActivity
       parameters:
         - name: namespace
@@ -4349,6 +4348,7 @@ paths:
          'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID or type
+         Deprecated. See UnpauseActivityExecution.
       operationId: UnpauseActivity
       parameters:
         - name: namespace
@@ -4383,6 +4383,7 @@ paths:
       description: |-
         UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.
          If there are multiple pending activities of the provided type - all of them will be updated.
+         Deprecated. See UpdateActivityExecutionOptions.
       operationId: UpdateActivityOptions
       parameters:
         - name: namespace
@@ -4411,6 +4412,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/activities/{activityId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeActivityExecution returns information about the specified activity execution.
+         Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
+         progress.
+         In case the activity has not made progress by the time the long poll request times out, an empty response is
+         returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
+      operationId: DescribeActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Activity run ID, targets the latest run if run_id is empty.
+          schema:
+            type: string
+        - name: includeInput
+          in: query
+          description: If true, the activity input is returned in the response.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
+             the token was returned.
+             This token is returned as part of the `DescribeActivityExecutionResponse`.
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
     post:
       tags:
         - WorkflowService
@@ -4450,64 +4504,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/{execution.activity_id}:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        DescribeActivityExecution returns information about the specified activity execution.
-         Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
-         progress.
-         In case the activity has not made progress by the time the long poll request times out, an empty response is
-         returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
-      operationId: DescribeActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: execution.activity_id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: execution.activityId
-          in: query
-          schema:
-            type: string
-        - name: execution.runId
-          in: query
-          schema:
-            type: string
-        - name: includeInput
-          in: query
-          description: If true, the activity input is returned in the response.
-          schema:
-            type: boolean
-        - name: longPollToken
-          in: query
-          description: |-
-            If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
-             the token was returned.
-             This token is returned as part of the `DescribeActivityExecutionResponse`.
-          schema:
-            type: string
-            format: bytes
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/{execution.activity_id}/cancel:
+  /namespaces/{namespace}/activities/{activityId}/cancel:
     post:
       tags:
         - WorkflowService
@@ -4519,7 +4516,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: execution.activity_id
+        - name: activityId
           in: path
           required: true
           schema:
@@ -4543,7 +4540,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/{execution.activity_id}/result:
+  /namespaces/{namespace}/activities/{activityId}/result:
     get:
       tags:
         - WorkflowService
@@ -4557,17 +4554,14 @@ paths:
           required: true
           schema:
             type: string
-        - name: execution.activity_id
+        - name: activityId
           in: path
           required: true
           schema:
             type: string
-        - name: execution.activityId
+        - name: runId
           in: query
-          schema:
-            type: string
-        - name: execution.runId
-          in: query
+          description: Activity run ID, targets the latest run if run_id is empty.
           schema:
             type: string
         - name: wait
@@ -4591,7 +4585,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/{execution.activity_id}/terminate:
+  /namespaces/{namespace}/activities/{activityId}/terminate:
     post:
       tags:
         - WorkflowService
@@ -4607,7 +4601,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: execution.activity_id
+        - name: activityId
           in: path
           required: true
           schema:
@@ -7201,25 +7195,14 @@ paths:
                 $ref: '#/components/schemas/Status'
 components:
   schemas:
-    ActivityExecution:
+    ActivityExecutionInfo:
       type: object
       properties:
         activityId:
           type: string
+          description: Unique identifier of this activity within its namespace along with run ID (below).
         runId:
           type: string
-      description: |-
-        Identifies a specific activity within a namespace. Practically speaking, because run_id is a
-         uuid, a workflow execution is globally unique. Note that many commands allow specifying an empty
-         run id as a way of saying "target the latest run of the activity".
-         TODO: Make this a generic EntityExecution?
-    ActivityExecutionInfo:
-      type: object
-      properties:
-        activityExecution:
-          allOf:
-            - $ref: '#/components/schemas/ActivityExecution'
-          description: Unique identifier of this activity within its namespace.
         activityType:
           allOf:
             - $ref: '#/components/schemas/ActivityType'
@@ -7313,8 +7296,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata.
-        pauseInfo:
-          $ref: '#/components/schemas/ActivityExecutionInfo_PauseInfo'
         activityOptions:
           allOf:
             - $ref: '#/components/schemas/ActivityOptions'
@@ -7354,6 +7335,8 @@ components:
         canceledReason:
           type: string
           description: Set if activity cancelation was requested.
+        pauseInfo:
+          $ref: '#/components/schemas/ActivityExecutionInfo_PauseInfo'
       description: Info for a standalone activity.
     ActivityExecutionInfo_PauseInfo:
       type: object
@@ -7395,10 +7378,15 @@ components:
     ActivityListInfo:
       type: object
       properties:
-        activityExecution:
-          allOf:
-            - $ref: '#/components/schemas/ActivityExecution'
-          description: Unique identifier of this activity within its namespace.
+        activityId:
+          type: string
+          description: For standalone activity - a unique identifier of this activity within its namespace along with run ID (below).
+        runId:
+          type: string
+          description: The run ID of the workflow or standalone activity.
+        workflowId:
+          type: string
+          description: Workflow that contains this activity - only present for workflow activity.
         activityType:
           allOf:
             - $ref: '#/components/schemas/ActivityType'
@@ -10654,9 +10642,11 @@ components:
         reason:
           type: string
           description: Reason to pause the activity.
+      description: Deprecated. See PauseActivityExecutionRequest.
     PauseActivityResponse:
       type: object
       properties: {}
+      description: Deprecated. See PauseActivityExecutionResponse.
     PauseInfo_Manual:
       type: object
       properties:
@@ -11427,7 +11417,9 @@ components:
           description: Id of the workflow which scheduled this activity, leave empty to target a standalone activity
         runId:
           type: string
-          description: Run Id of the workflow which scheduled this activity
+          description: |-
+            For a workflow activity - the run ID of the workflow which scheduled this activity.
+             For a standalone activity - the run ID of the activity.
         activityId:
           type: string
           description: Id of the activity we're heartbeating
@@ -11576,10 +11568,11 @@ components:
       properties:
         namespace:
           type: string
-        execution:
-          allOf:
-            - $ref: '#/components/schemas/ActivityExecution'
-          description: Activity execution, targets the latest run if run_id is empty.
+        activityId:
+          type: string
+        runId:
+          type: string
+          description: Activity run ID, targets the latest run if run_id is empty.
         identity:
           type: string
           description: The identity of the worker/client.
@@ -11802,10 +11795,13 @@ components:
             If set, the activity options will be restored to the defaults.
              Default options are then options activity was created with.
              They are part of the first SCHEDULE event.
-      description: 'NOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities'
+      description: |-
+        NOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities
+         Deprecated. See ResetActivityExecutionRequest.
     ResetActivityResponse:
       type: object
       properties: {}
+      description: Deprecated. See ResetActivityExecutionResponse.
     ResetOptions:
       type: object
       properties:
@@ -13847,10 +13843,11 @@ components:
       properties:
         namespace:
           type: string
-        execution:
-          allOf:
-            - $ref: '#/components/schemas/ActivityExecution'
-          description: Activity execution, targets the latest run if run_id is empty.
+        activityId:
+          type: string
+        runId:
+          type: string
+          description: Activity run ID, targets the latest run if run_id is empty.
         reason:
           type: string
           description: Reason for requesting the termination, recorded in in the activity's result failure outcome.
@@ -14041,9 +14038,11 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: If set, the activity will start at a random time within the specified jitter duration.
+      description: Deprecated. See UnpauseActivityExecutionRequest.
     UnpauseActivityResponse:
       type: object
       properties: {}
+      description: Deprecated. See UnpauseActivityExecutionResponse.
     UnpauseWorkflowExecutionRequest:
       type: object
       properties:
@@ -14107,7 +14106,9 @@ components:
              They are part of the first SCHEDULE event.
              This flag cannot be combined with any other option; if you supply
              restore_original together with other options, the request will be rejected.
-      description: 'NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions'
+      description: |-
+        NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions
+         Deprecated. Use UpdateActivityExecutionOptionsRequest.
     UpdateActivityOptionsResponse:
       type: object
       properties:
@@ -14115,6 +14116,7 @@ components:
           allOf:
             - $ref: '#/components/schemas/ActivityOptions'
           description: Activity options after an update
+      description: Deprecated. See UpdateActivityExecutionOptionsResponse.
     UpdateDeploymentMetadata:
       type: object
       properties:

@@ -2716,10 +2716,22 @@ message DescribeActivityExecutionRequest {
     string namespace = 1;
     // Activity execution, targets the latest run if run_id is empty.
     temporal.api.activity.v1.ActivityExecution execution = 2;
+
+    // If true, the activity input is returned in the response.
+    bool include_input = 3;
+
+    // If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
+    // the token was returned.
+    // This token is returned as part of the `DescribeActivityExecutionResponse`.
+    bytes long_poll_token = 4;
 }
 
 message DescribeActivityExecutionResponse {
     temporal.api.activity.v1.ActivityExecutionInfo info = 1;
+
+    // A token that can be passed in via a subsequent `DescribeActivityExecutionRequest` to long poll on the activity
+    // state as it makes progress.
+    bytes long_poll_token = 2;
 }
 
 message ListActivityExecutionsRequest {
@@ -2762,7 +2774,7 @@ message CountActivityExecutionsResponse {
     }
 }
 
-message GetActivityResultRequest {
+message GetActivityExecutionResultRequest {
     string namespace = 1;
     // Activity execution, targets the latest run if run_id is empty.
     temporal.api.activity.v1.ActivityExecution execution = 2;
@@ -2772,7 +2784,7 @@ message GetActivityResultRequest {
     bool wait = 3;
 }
 
-message GetActivityResultResponse {
+message GetActivityExecutionResultResponse {
     // The run ID of the completed activity, may be used in case a run ID was not specified in the request.
     string run_id = 1;
 

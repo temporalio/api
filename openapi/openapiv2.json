@@ -742,7 +742,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/{execution.activityId}": {
       "get": {
-        "summary": "DescribeActivityExecution returns information about the specified activity execution.",
+        "summary": "DescribeActivityExecution returns information about the specified activity execution.\nPass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes\nprogress.\nIn case the activity has not made progress by the time the long poll request times out, an empty response is\nreturned and the caller may issue an identical DescribeActivityExecution request to continue polling.",
         "operationId": "DescribeActivityExecution2",
         "responses": {
           "200": {
@@ -776,6 +776,21 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "includeInput",
+            "description": "If true, the activity input is returned in the response.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "longPollToken",
+            "description": "If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time\nthe token was returned.\nThis token is returned as part of the `DescribeActivityExecutionResponse`.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
           }
         ],
         "tags": [
@@ -831,13 +846,13 @@
     },
     "/api/v1/namespaces/{namespace}/activities/{execution.activityId}/result": {
       "get": {
-        "summary": "GetActivityResult returns the activity result if it is in a terminal status or (optionally) wait for it to reach\none.",
-        "operationId": "GetActivityResult2",
+        "summary": "GetActivityExecutionResult returns the activity result if it is in a terminal status or (optionally) wait for it\nto reach one.",
+        "operationId": "GetActivityExecutionResult2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetActivityResultResponse"
+              "$ref": "#/definitions/v1GetActivityExecutionResultResponse"
             }
           },
           "default": {
@@ -4960,7 +4975,7 @@
     },
     "/namespaces/{namespace}/activities/{execution.activityId}": {
       "get": {
-        "summary": "DescribeActivityExecution returns information about the specified activity execution.",
+        "summary": "DescribeActivityExecution returns information about the specified activity execution.\nPass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes\nprogress.\nIn case the activity has not made progress by the time the long poll request times out, an empty response is\nreturned and the caller may issue an identical DescribeActivityExecution request to continue polling.",
         "operationId": "DescribeActivityExecution",
         "responses": {
           "200": {
@@ -4994,6 +5009,21 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "includeInput",
+            "description": "If true, the activity input is returned in the response.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "longPollToken",
+            "description": "If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time\nthe token was returned.\nThis token is returned as part of the `DescribeActivityExecutionResponse`.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
           }
         ],
         "tags": [
@@ -5049,13 +5079,13 @@
     },
     "/namespaces/{namespace}/activities/{execution.activityId}/result": {
       "get": {
-        "summary": "GetActivityResult returns the activity result if it is in a terminal status or (optionally) wait for it to reach\none.",
-        "operationId": "GetActivityResult",
+        "summary": "GetActivityExecutionResult returns the activity result if it is in a terminal status or (optionally) wait for it\nto reach one.",
+        "operationId": "GetActivityExecutionResult",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetActivityResultResponse"
+              "$ref": "#/definitions/v1GetActivityExecutionResultResponse"
             }
           },
           "default": {
@@ -12151,6 +12181,11 @@
       "properties": {
         "info": {
           "$ref": "#/definitions/v1ActivityExecutionInfo"
+        },
+        "longPollToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "A token that can be passed in via a subsequent `DescribeActivityExecutionRequest` to long poll on the activity\nstate as it makes progress."
         }
       }
     },
@@ -12652,7 +12687,7 @@
         }
       }
     },
-    "v1GetActivityResultResponse": {
+    "v1GetActivityExecutionResultResponse": {
       "type": "object",
       "properties": {
         "runId": {

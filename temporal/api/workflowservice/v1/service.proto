@@ -1021,8 +1021,15 @@ service WorkflowService {
     rpc RespondNexusTaskFailed(RespondNexusTaskFailedRequest) returns (RespondNexusTaskFailedResponse) {
     }
 
+    // TODO(bergundy): Document me. Figure out how to expose over HTTP without breaking compatibility.
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: We do not expose worker API to HTTP. --)
+    rpc UpdateActivityExecutionOptions (UpdateActivityExecutionOptionsRequest) returns (UpdateActivityExecutionOptionsResponse) {
+    }
+
     // UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.
     // If there are multiple pending activities of the provided type - all of them will be updated.
+    // Deprecated. See UpdateActivityExecutionOptions.
     rpc UpdateActivityOptions (UpdateActivityOptionsRequest) returns (UpdateActivityOptionsResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/update-options"
@@ -1046,6 +1053,12 @@ service WorkflowService {
         };
     }
 
+    // TODO(bergundy): Document me. Figure out how to expose over HTTP without breaking compatibility.
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: We do not expose worker API to HTTP. --)
+    rpc PauseActivityExecution (PauseActivityExecutionRequest) returns (PauseActivityExecutionResponse) {
+    }
+
     // PauseActivity pauses the execution of an activity specified by its ID or type.
     // If there are multiple pending activities of the provided type - all of them will be paused
     //
@@ -1062,6 +1075,7 @@ service WorkflowService {
     // - The activity should respond to the cancellation accordingly.
     //
     // Returns a `NotFound` error if there is no pending activity with the provided ID or type
+    // Deprecated. See PauseActivityExecution.
     rpc PauseActivity (PauseActivityRequest) returns (PauseActivityResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/pause"
@@ -1071,6 +1085,12 @@ service WorkflowService {
                 body: "*"
             }
         };
+    }
+
+    // TODO(bergundy): Document me. Figure out how to expose over HTTP without breaking compatibility.
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: We do not expose worker API to HTTP. --)
+    rpc UnpauseActivityExecution (UnpauseActivityExecutionRequest) returns (UnpauseActivityExecutionResponse) {
     }
 
     // UnpauseActivity unpauses the execution of an activity specified by its ID or type.
@@ -1086,6 +1106,7 @@ service WorkflowService {
     // 'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
     //
     // Returns a `NotFound` error if there is no pending activity with the provided ID or type
+    // Deprecated. See UnpauseActivityExecution.
     rpc UnpauseActivity (UnpauseActivityRequest) returns (UnpauseActivityResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/unpause"
@@ -1095,6 +1116,12 @@ service WorkflowService {
                 body: "*"
             }
         };
+    }
+
+    // TODO(bergundy): Document me. Figure out how to expose over HTTP without breaking compatibility.
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: We do not expose worker API to HTTP. --)
+    rpc ResetActivityExecution (ResetActivityExecutionRequest) returns (ResetActivityExecutionResponse) {
     }
 
     // ResetActivity resets the execution of an activity specified by its ID or type.
@@ -1114,6 +1141,7 @@ service WorkflowService {
     // 'keep_paused': if the activity is paused, it will remain paused.
     //
     // Returns a `NotFound` error if there is no pending activity with the provided ID or type.
+    // Deprecated. See ResetActivityExecution.
     rpc ResetActivity (ResetActivityRequest) returns (ResetActivityResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/reset"
@@ -1282,9 +1310,9 @@ service WorkflowService {
     // returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
     rpc DescribeActivityExecution (DescribeActivityExecutionRequest) returns (DescribeActivityExecutionResponse) {
         option (google.api.http) = {
-            get: "/namespaces/{namespace}/activities/{execution.activity_id}"
+            get: "/namespaces/{namespace}/activities/{activity_id}"
             additional_bindings {
-                get: "/api/v1/namespaces/{namespace}/activities/{execution.activity_id}"
+                get: "/api/v1/namespaces/{namespace}/activities/{activity_id}"
             }
         };
     }
@@ -1313,9 +1341,9 @@ service WorkflowService {
     // to reach one.
     rpc GetActivityExecutionResult (GetActivityExecutionResultRequest) returns (GetActivityExecutionResultResponse) {
         option (google.api.http) = {
-            get: "/namespaces/{namespace}/activities/{execution.activity_id}/result"
+            get: "/namespaces/{namespace}/activities/{activity_id}/result"
             additional_bindings {
-                get: "/api/v1/namespaces/{namespace}/activities/{execution.activity_id}/result"
+                get: "/api/v1/namespaces/{namespace}/activities/{activity_id}/result"
             }
         };
     }
@@ -1331,10 +1359,10 @@ service WorkflowService {
     // TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?
     rpc RequestCancelActivityExecution (RequestCancelActivityExecutionRequest) returns (RequestCancelActivityExecutionResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/{execution.activity_id}/cancel"
+            post: "/namespaces/{namespace}/activities/{activity_id}/cancel"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/{execution.activity_id}/cancel"
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}/cancel"
                 body: "*"
             }
         };
@@ -1346,10 +1374,10 @@ service WorkflowService {
     // running attempt and will be requested to be canceled by the server when it heartbeats.
     rpc TerminateActivityExecution (TerminateActivityExecutionRequest) returns (TerminateActivityExecutionResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/{execution.activity_id}/terminate"
+            post: "/namespaces/{namespace}/activities/{activity_id}/terminate"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/{execution.activity_id}/terminate"
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}/terminate"
                 body: "*"
             }
         };

@@ -194,6 +194,8 @@ message StartWorkflowExecutionRequest {
     temporal.api.workflow.v1.OnConflictOptions on_conflict_options = 26;
     // Priority metadata
     temporal.api.common.v1.Priority priority = 27;
+    // Deployment Options of the worker who will process the eager task. Passed when `request_eager_execution=true`.
+    temporal.api.deployment.v1.WorkerDeploymentOptions eager_worker_deployment_options = 28;
 }
 
 message StartWorkflowExecutionResponse {
@@ -1933,6 +1935,7 @@ message PauseActivityRequest {
         // Only the activity with this ID will be paused.
         string id = 4;
         // Pause all running activities of this type.
+        // Note: Experimental - the behavior of pause by activity type might change in a future release.
         string type = 5;
     }
 
@@ -2158,6 +2161,10 @@ message SetWorkerDeploymentCurrentVersionRequest {
     // pollers have not reached to the server yet. Only set this if you expect those pollers to
     // never arrive.
     bool ignore_missing_task_queues = 6;
+    // Optional. By default this request will be rejected if no pollers have been seen for the proposed
+    // Current Version, in order to protect users from routing tasks to pollers that do not exist, leading
+    // to possible timeouts. Pass `true` here to bypass this protection.
+    bool allow_no_pollers = 9;
 }
 
 message SetWorkerDeploymentCurrentVersionResponse {
@@ -2210,6 +2217,10 @@ message SetWorkerDeploymentRampingVersionRequest {
     // that the percentage changes. Also note that the check is against the deployment's Current
     // Version, not the previous Ramping Version.
     bool ignore_missing_task_queues = 7;
+    // Optional. By default this request will be rejected if no pollers have been seen for the proposed
+    // Current Version, in order to protect users from routing tasks to pollers that do not exist, leading
+    // to possible timeouts. Pass `true` here to bypass this protection.
+    bool allow_no_pollers = 10;
 }
 
 message SetWorkerDeploymentRampingVersionResponse {
@@ -2243,8 +2254,8 @@ message ListWorkerDeploymentsResponse {
         google.protobuf.Timestamp create_time = 2;
         temporal.api.deployment.v1.RoutingConfig routing_config = 3;
         // Summary of the version that was added most recently in the Worker Deployment.
-        temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary latest_version_summary = 4; 
-        // Summary of the current version of the Worker Deployment. 
+        temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary latest_version_summary = 4;
+        // Summary of the current version of the Worker Deployment.
         temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary current_version_summary = 5;
         // Summary of the ramping version of the Worker Deployment.
         temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary ramping_version_summary = 6;
@@ -2304,6 +2315,39 @@ message UpdateWorkerDeploymentVersionMetadataResponse {
     temporal.api.deployment.v1.VersionMetadata metadata = 1;
 }
 
+// Update the ManagerIdentity of a Worker Deployment.
+message SetWorkerDeploymentManagerRequest {
+    string namespace = 1;
+    string deployment_name = 2;
+
+    oneof new_manager_identity {
+      // Arbitrary value for `manager_identity`.
+      // Empty will unset the field.
+      string manager_identity = 3;
+
+      // True will set `manager_identity` to `identity`.
+      bool self = 4;
+    }
+
+    // Optional. This can be the value of conflict_token from a Describe, or another Worker
+    // Deployment API. Passing a non-nil conflict token will cause this request to fail if the
+    // Deployment's configuration has been modified between the API call that generated the
+    // token and this one.
+    bytes conflict_token = 5;
+
+    // Required. The identity of the client who initiated this request.
+    string identity = 6;
+}
+
+message SetWorkerDeploymentManagerResponse {
+    // This value is returned so that it can be optionally passed to APIs
+    // that write to the Worker Deployment state to ensure that the state
+    // did not change between this API call and a future write.
+    bytes conflict_token = 1;
+
+    // What the `manager_identity` field was before this change.
+    string previous_manager_identity = 2;
+}
 
 // Returns the Current Deployment of a deployment series.
 // [cleanup-wv-pre-release] Pre-release deployment APIs, clean up later
@@ -2477,6 +2521,13 @@ message UpdateTaskQueueConfigRequest {
     // If not set, this configuration is unchanged.
     // If the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit.
     RateLimitUpdate update_fairness_key_rate_limit_default = 6;
+    // If set, overrides the fairness weight for each specified fairness key.
+    // Fairness keys not listed in this map will keep their existing overrides (if any).
+    map<string, float> set_fairness_weight_overrides = 7;
+    // If set, removes any existing fairness weight overrides for each specified fairness key.
+    // Fairness weights for corresponding keys fall back to the values set during task creation (if any),
+    // or to the default weight of 1.0.
+    repeated string unset_fairness_weight_overrides = 8;
 }
 
 message UpdateTaskQueueConfigResponse {

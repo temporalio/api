@@ -827,11 +827,11 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        DescribeActivityExecution returns information about the specified activity execution.
-         Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
-         progress.
-         In case the activity has not made progress by the time the long poll request times out, an empty response is
-         returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
+        DescribeActivityExecution returns the status and/or outcome of an activity execution.
+         Supported use cases include
+         - Get current activity info without waiting
+         - Wait for next state change and return activity info
+         - Wait for completion and return outcome
       operationId: DescribeActivityExecution
       parameters:
         - name: namespace
@@ -846,20 +846,27 @@ paths:
             type: string
         - name: runId
           in: query
-          description: Activity run ID, targets the latest run if run_id is empty.
+          description: Activity run ID. If empty the request targets the latest run.
           schema:
             type: string
-        - name: includeInput
+        - name: excludeInfo
           in: query
-          description: If true, the activity input is returned in the response.
+          description: Exclude the info field from the response.
           schema:
             type: boolean
-        - name: longPollToken
+        - name: includeInput
           in: query
-          description: |-
-            If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
-             the token was returned.
-             This token is returned as part of the `DescribeActivityExecutionResponse`.
+          description: Include the input field in the response.
+          schema:
+            type: boolean
+        - name: includeOutcome
+          in: query
+          description: Include the outcome field in the response.
+          schema:
+            type: boolean
+        - name: waitAnyStateChange.longPollToken
+          in: query
+          description: If present, run_id must also be present.
           schema:
             type: string
             format: bytes
@@ -919,7 +926,16 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: "RequestCancelActivityExecution requests cancellation of an activity execution.\n\n Requesting to cancel an activity does not automatically transition the activity to canceled status. If the\n activity has a currently running attempt, the activity will only transition to canceled status if the current\n attempt is unsuccessful.\n TODO: Clarify what happens if there are no more allowed retries after the current attempt.\n \n It returns success if the requested activity is already closed.\n TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?"
+      description: |-
+        RequestCancelActivityExecution requests cancellation of an activity execution.
+
+         Requesting to cancel an activity does not automatically transition the activity to canceled status. If the
+         activity has a currently running attempt, the activity will only transition to canceled status if the current
+         attempt is unsuccessful.
+         TODO: Clarify what happens if there are no more allowed retries after the current attempt.
+
+         It returns success if the requested activity is already closed.
+         TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?
       operationId: RequestCancelActivityExecution
       parameters:
         - name: namespace
@@ -945,51 +961,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RequestCancelActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/{activityId}/result:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        GetActivityExecutionResult returns the activity result if it is in a terminal status or (optionally) wait for it
-         to reach one.
-      operationId: GetActivityExecutionResult
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: runId
-          in: query
-          description: Activity run ID, targets the latest run if run_id is empty.
-          schema:
-            type: string
-        - name: wait
-          in: query
-          description: |-
-            If set, turns this request into a long poll that is unblocked when the activity reaches a terminal status.
-             The wait duration is capped by the request's context deadline or by the maximum enforced long poll interval
-             allowed by the server.
-          schema:
-            type: boolean
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetActivityExecutionResultResponse'
         default:
           description: Default error response
           content:
@@ -5024,11 +4995,11 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        DescribeActivityExecution returns information about the specified activity execution.
-         Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
-         progress.
-         In case the activity has not made progress by the time the long poll request times out, an empty response is
-         returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
+        DescribeActivityExecution returns the status and/or outcome of an activity execution.
+         Supported use cases include
+         - Get current activity info without waiting
+         - Wait for next state change and return activity info
+         - Wait for completion and return outcome
       operationId: DescribeActivityExecution
       parameters:
         - name: namespace
@@ -5043,20 +5014,27 @@ paths:
             type: string
         - name: runId
           in: query
-          description: Activity run ID, targets the latest run if run_id is empty.
+          description: Activity run ID. If empty the request targets the latest run.
           schema:
             type: string
-        - name: includeInput
+        - name: excludeInfo
           in: query
-          description: If true, the activity input is returned in the response.
+          description: Exclude the info field from the response.
           schema:
             type: boolean
-        - name: longPollToken
+        - name: includeInput
           in: query
-          description: |-
-            If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
-             the token was returned.
-             This token is returned as part of the `DescribeActivityExecutionResponse`.
+          description: Include the input field in the response.
+          schema:
+            type: boolean
+        - name: includeOutcome
+          in: query
+          description: Include the outcome field in the response.
+          schema:
+            type: boolean
+        - name: waitAnyStateChange.longPollToken
+          in: query
+          description: If present, run_id must also be present.
           schema:
             type: string
             format: bytes
@@ -5116,7 +5094,16 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: "RequestCancelActivityExecution requests cancellation of an activity execution.\n\n Requesting to cancel an activity does not automatically transition the activity to canceled status. If the\n activity has a currently running attempt, the activity will only transition to canceled status if the current\n attempt is unsuccessful.\n TODO: Clarify what happens if there are no more allowed retries after the current attempt.\n \n It returns success if the requested activity is already closed.\n TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?"
+      description: |-
+        RequestCancelActivityExecution requests cancellation of an activity execution.
+
+         Requesting to cancel an activity does not automatically transition the activity to canceled status. If the
+         activity has a currently running attempt, the activity will only transition to canceled status if the current
+         attempt is unsuccessful.
+         TODO: Clarify what happens if there are no more allowed retries after the current attempt.
+
+         It returns success if the requested activity is already closed.
+         TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?
       operationId: RequestCancelActivityExecution
       parameters:
         - name: namespace
@@ -5142,51 +5129,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RequestCancelActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/{activityId}/result:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        GetActivityExecutionResult returns the activity result if it is in a terminal status or (optionally) wait for it
-         to reach one.
-      operationId: GetActivityExecutionResult
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: runId
-          in: query
-          description: Activity run ID, targets the latest run if run_id is empty.
-          schema:
-            type: string
-        - name: wait
-          in: query
-          description: |-
-            If set, turns this request into a long poll that is unblocked when the activity reaches a terminal status.
-             The wait duration is capped by the request's context deadline or by the maximum enforced long poll interval
-             allowed by the server.
-          schema:
-            type: boolean
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetActivityExecutionResultResponse'
         default:
           description: Default error response
           content:
@@ -8148,10 +8090,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/ActivityOptions'
           description: Current activity options. May be different from the one used to start the activity.
-        input:
-          allOf:
-            - $ref: '#/components/schemas/Payloads'
-          description: Serialized activity input, passed as arguments to the activity function.
         stateTransitionCount:
           type: string
           description: Incremented each time the activity's state is mutated in persistence.
@@ -9607,13 +9545,30 @@ components:
     DescribeActivityExecutionResponse:
       type: object
       properties:
+        runId:
+          type: string
+          description: The run ID of the activity, useful when run_id was not specified in the request.
         info:
-          $ref: '#/components/schemas/ActivityExecutionInfo'
-        longPollToken:
+          allOf:
+            - $ref: '#/components/schemas/ActivityExecutionInfo'
+          description: Only set if include_info was true in the request.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: Serialized activity input, passed as arguments to the activity function.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: The result if the activity completed successfully.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The failure if the activity completed unsuccessfully.
+        stateChangeLongPollToken:
           type: string
           description: |-
-            A token that can be passed in via a subsequent `DescribeActivityExecutionRequest` to long poll on the activity
-             state as it makes progress.
+            Token to use for a follow-on request using wait_any_state_change.
+             Only set if wait_policy was wait_any_state_change and the activity is not complete.
           format: bytes
     DescribeBatchOperationResponse:
       type: object
@@ -10149,20 +10104,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerConfig'
           description: The worker configuration.
-    GetActivityExecutionResultResponse:
-      type: object
-      properties:
-        runId:
-          type: string
-          description: The run ID of the completed activity, may be used in case a run ID was not specified in the request.
-        result:
-          allOf:
-            - $ref: '#/components/schemas/Payloads'
-          description: The result if the activity completed successfully.
-        failure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: The failure if the activity completed unsuccessfully.
     GetClusterInfoResponse:
       type: object
       properties:

@@ -1431,11 +1431,11 @@ service WorkflowService {
         };
     }
 
-    // DescribeActivityExecution returns information about the specified activity execution.
-    // Pass in a long_poll_token to turn this request into a long poll that gets unblocked when the activity makes
-    // progress.
-    // In case the activity has not made progress by the time the long poll request times out, an empty response is
-    // returned and the caller may issue an identical DescribeActivityExecution request to continue polling.
+    // DescribeActivityExecution returns the status and/or outcome of an activity execution.
+    // Supported use cases include
+    // - Get current activity info without waiting
+    // - Wait for next state change and return activity info
+    // - Wait for completion and return outcome
     rpc DescribeActivityExecution (DescribeActivityExecutionRequest) returns (DescribeActivityExecutionResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/activities/{activity_id}"
@@ -1465,24 +1465,13 @@ service WorkflowService {
         };
     }
 
-    // GetActivityExecutionResult returns the activity result if it is in a terminal status or (optionally) wait for it
-    // to reach one.
-    rpc GetActivityExecutionResult (GetActivityExecutionResultRequest) returns (GetActivityExecutionResultResponse) {
-        option (google.api.http) = {
-            get: "/namespaces/{namespace}/activities/{activity_id}/result"
-            additional_bindings {
-                get: "/api/v1/namespaces/{namespace}/activities/{activity_id}/result"
-            }
-        };
-    }
-
     // RequestCancelActivityExecution requests cancellation of an activity execution.
     //
     // Requesting to cancel an activity does not automatically transition the activity to canceled status. If the
     // activity has a currently running attempt, the activity will only transition to canceled status if the current
     // attempt is unsuccessful.
     // TODO: Clarify what happens if there are no more allowed retries after the current attempt.
-    // 
+    //
     // It returns success if the requested activity is already closed.
     // TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?
     rpc RequestCancelActivityExecution (RequestCancelActivityExecutionRequest) returns (RequestCancelActivityExecutionResponse) {

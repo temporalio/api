@@ -10280,12 +10280,12 @@
           "description": "Serialized arguments to the activity. These are passed as arguments to the activity function."
         },
         "idReusePolicy": {
-          "$ref": "#/definitions/v1IdReusePolicy",
-          "description": "Defines whether to allow re-using the activity id from a previously *closed* activity.\nThe default policy is ID_REUSE_POLICY_ALLOW_DUPLICATE."
+          "$ref": "#/definitions/v1ActivityIdReusePolicy",
+          "description": "Defines whether to allow re-using the activity id from a previously *closed* activity.\nThe default policy is ACTIVITY_ID_REUSE_POLICY_ALLOW_DUPLICATE."
         },
         "idConflictPolicy": {
-          "$ref": "#/definitions/v1IdConflictPolicy",
-          "description": "Defines how to resolve an activity id conflict with a *running* activity.\nThe default policy is ID_CONFLICT_POLICY_FAIL."
+          "$ref": "#/definitions/v1ActivityIdConflictPolicy",
+          "description": "Defines how to resolve an activity id conflict with a *running* activity.\nThe default policy is ACTIVITY_ID_CONFLICT_POLICY_FAIL."
         },
         "memo": {
           "$ref": "#/definitions/v1Memo",
@@ -10325,7 +10325,7 @@
         },
         "onConflictOptions": {
           "$ref": "#/definitions/apiactivityv1OnConflictOptions",
-          "description": "Defines actions to be done to the existing running activity when ID_CONFLICT_POLICY_USE_EXISTING is used. If not\nset or empty, it won't do anything to the existing running activity."
+          "description": "Defines actions to be done to the existing running activity when ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING is used. If not\nset or empty, it won't do anything to the existing running activity."
         },
         "priority": {
           "$ref": "#/definitions/v1Priority",
@@ -10985,7 +10985,7 @@
           "description": "Attaches the links to the WorkflowExecutionOptionsUpdatedEvent history event."
         }
       },
-      "description": "When StartActivityExecution uses the ID_CONFLICT_POLICY_USE_EXISTING and there is already an existing running\nactivity, OnConflictOptions defines actions to be taken on the existing running activity, updating its state."
+      "description": "When StartActivityExecution uses the ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING and there is already an existing running\nactivity, OnConflictOptions defines actions to be taken on the existing running activity, updating its state."
     },
     "apicommonv1Link": {
       "type": "object",
@@ -11385,6 +11385,28 @@
           "$ref": "#/definitions/v1RetryState"
         }
       }
+    },
+    "v1ActivityIdConflictPolicy": {
+      "type": "string",
+      "enum": [
+        "ACTIVITY_ID_CONFLICT_POLICY_UNSPECIFIED",
+        "ACTIVITY_ID_CONFLICT_POLICY_FAIL",
+        "ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING",
+        "ACTIVITY_ID_CONFLICT_POLICY_TERMINATE_EXISTING"
+      ],
+      "default": "ACTIVITY_ID_CONFLICT_POLICY_UNSPECIFIED",
+      "description": "Defines what to do when trying to start an activity with the same ID as a *running* activity.\nNote that it is *never* valid to have two running instances of the same activity ID.\n\nSee `ActivityIdReusePolicy` for handling activity ID duplication with a *closed* activity.\n\n - ACTIVITY_ID_CONFLICT_POLICY_FAIL: Don't start a new activity; instead return `ActivityExecutionAlreadyStarted` error.\n - ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING: Don't start a new activity; instead return a handle for the running activity.\n - ACTIVITY_ID_CONFLICT_POLICY_TERMINATE_EXISTING: Terminate the running activity before starting a new one."
+    },
+    "v1ActivityIdReusePolicy": {
+      "type": "string",
+      "enum": [
+        "ACTIVITY_ID_REUSE_POLICY_UNSPECIFIED",
+        "ACTIVITY_ID_REUSE_POLICY_ALLOW_DUPLICATE",
+        "ACTIVITY_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY",
+        "ACTIVITY_ID_REUSE_POLICY_REJECT_DUPLICATE"
+      ],
+      "default": "ACTIVITY_ID_REUSE_POLICY_UNSPECIFIED",
+      "description": "Defines whether to allow re-using an activity ID from a previously *closed* activity.\nIf the request is denied, the server returns an `ActivityExecutionAlreadyStarted` error.\n\nSee `ActivityIdConflictPolicy` for handling ID duplication with a *running* activity.\n\n - ACTIVITY_ID_REUSE_POLICY_ALLOW_DUPLICATE: Always allow starting an activity using the same activity ID.\n - ACTIVITY_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY: Allow starting an activity using the same ID only when the last activity's final state is one\nof {failed, canceled, terminated, timed out}.\n - ACTIVITY_ID_REUSE_POLICY_REJECT_DUPLICATE: Do not permit re-use of the ID for this activity. Future start requests could potentially change the policy,\nallowing re-use of the ID."
     },
     "v1ActivityListInfo": {
       "type": "object",
@@ -14032,28 +14054,6 @@
         "HISTORY_EVENT_FILTER_TYPE_CLOSE_EVENT"
       ],
       "default": "HISTORY_EVENT_FILTER_TYPE_UNSPECIFIED"
-    },
-    "v1IdConflictPolicy": {
-      "type": "string",
-      "enum": [
-        "ID_CONFLICT_POLICY_UNSPECIFIED",
-        "ID_CONFLICT_POLICY_FAIL",
-        "ID_CONFLICT_POLICY_USE_EXISTING",
-        "ID_CONFLICT_POLICY_TERMINATE_EXISTING"
-      ],
-      "default": "ID_CONFLICT_POLICY_UNSPECIFIED",
-      "description": "Defines what to do when trying to start an execution with the same ID as a *running* execution.\nNote that it is *never* valid to have two actively running instances of the same execution ID.\n\nSee `IdReusePolicy` for handling execution ID duplication with a *closed* execution.\n\n - ID_CONFLICT_POLICY_FAIL: Don't start a new execution; instead return `ExecutionAlreadyStarted` error.\n - ID_CONFLICT_POLICY_USE_EXISTING: Don't start a new execution; instead return a handle for the running execution.\n - ID_CONFLICT_POLICY_TERMINATE_EXISTING: Terminate the running execution before starting a new one."
-    },
-    "v1IdReusePolicy": {
-      "type": "string",
-      "enum": [
-        "ID_REUSE_POLICY_UNSPECIFIED",
-        "ID_REUSE_POLICY_ALLOW_DUPLICATE",
-        "ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY",
-        "ID_REUSE_POLICY_REJECT_DUPLICATE"
-      ],
-      "default": "ID_REUSE_POLICY_UNSPECIFIED",
-      "description": "Defines whether to allow re-using an ID from a previously *closed* execution.\nIf the request is denied, the server returns an `ExecutionAlreadyStarted` error.\n\nSee `IdConflictPolicy` for handling ID duplication with a *running* execution.\n\n - ID_REUSE_POLICY_ALLOW_DUPLICATE: Always allow starting an execution using the same entity ID.\n - ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY: Allow starting an execution using the same ID, only when the last execution's final state is one of [terminated,\ncancelled, timed out, failed].\n - ID_REUSE_POLICY_REJECT_DUPLICATE: Do not permit re-use of the ID for this execution. Future start requests could potentially change the policy,\nallowing re-use of the ID."
     },
     "v1IndexedValueType": {
       "type": "string",
@@ -17008,7 +17008,7 @@
       "properties": {
         "runId": {
           "type": "string",
-          "description": "The run ID of the activity that was started - or used (via ID_CONFLICT_POLICY_USE_EXISTING)."
+          "description": "The run ID of the activity that was started - or used (via ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING)."
         },
         "started": {
           "type": "boolean",

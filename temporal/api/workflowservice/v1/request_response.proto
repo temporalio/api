@@ -45,6 +45,7 @@ import "temporal/api/nexus/v1/message.proto";
 import "temporal/api/worker/v1/message.proto";
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -2667,28 +2668,61 @@ message StartActivityExecutionResponse {
     temporal.api.common.v1.Link link = 4;
 }
 
+// Get the status and/or outcome of an activity execution.
+// Supported use cases include
+// - Get current activity info without waiting
+// - Wait for next state change and return activity info
+// - Wait for result and return outcome, optionally with info
 message DescribeActivityExecutionRequest {
     string namespace = 1;
     string activity_id = 2;
-    // Activity run ID, targets the latest run if run_id is empty.
     string run_id = 3;
 
-    // If true, the activity input is returned in the response.
-    bool include_input = 4;
+    message IncludeInfoOptions {
+        bool include_input = 1;
+    }
+    IncludeInfoOptions include_info = 4;
 
-    // If not empty, turns this request into a long poll that is unblocked when the activity state changes from the time
-    // the token was returned.
-    // This token is returned as part of the `DescribeActivityExecutionResponse`.
-    bytes long_poll_token = 5;
+    message IncludeOutcomeOptions {}
+    IncludeOutcomeOptions include_outcome = 5;
+
+    message NoWaitOptions {}
+    message StateChangeWaitOptions {
+        bytes long_poll_token = 1;
+    }
+    message CompletionWaitOptions {}
+
+    oneof wait_policy {
+        NoWaitOptions no_wait = 6;
+        StateChangeWaitOptions wait_any_state_change = 7;
+        // long_poll_token is currently ignored when waiting for completion
+        CompletionWaitOptions wait_completion = 8;
+    }
 }
 
 message DescribeActivityExecutionResponse {
-    temporal.api.activity.v1.ActivityExecutionInfo info = 1;
+    // The run ID of the activity, useful when run_id was not specified in the request.
+    string run_id = 1;
 
-    // A token that can be passed in via a subsequent `DescribeActivityExecutionRequest` to long poll on the activity
-    // state as it makes progress.
-    bytes long_poll_token = 2;
+    // Only set if include_info was present in the request.
+    temporal.api.activity.v1.ActivityExecutionInfo info = 2;
+
+    // Only set if the activity is completed and include_outcome was present in the request.
+    oneof outcome {
+        // The result if the activity completed successfully.
+        temporal.api.common.v1.Payloads result = 3;
+        // The failure if the activity completed unsuccessfully.
+        temporal.api.failure.v1.Failure failure = 4;
+    }
+
+    // Token to use for a follow-on request using wait_any_state_change.
+    // Only set if wait_policy was wait_any_state_change and the activity is not complete.
+    bytes state_change_long_poll_token = 5;
 }
+
+
+
+
 
 message ListActivityExecutionsRequest {
     string namespace = 1;
@@ -2727,29 +2761,6 @@ message CountActivityExecutionsResponse {
     message AggregationGroup {
         repeated temporal.api.common.v1.Payload group_values = 1;
         int64 count = 2;
-    }
-}
-
-message GetActivityExecutionResultRequest {
-    string namespace = 1;
-    string activity_id = 2;
-    // Activity run ID, targets the latest run if run_id is empty.
-    string run_id = 3;
-    // If set, turns this request into a long poll that is unblocked when the activity reaches a terminal status.
-    // The wait duration is capped by the request's context deadline or by the maximum enforced long poll interval
-    // allowed by the server.
-    bool wait = 4;
-}
-
-message GetActivityExecutionResultResponse {
-    // The run ID of the completed activity, may be used in case a run ID was not specified in the request.
-    string run_id = 1;
-
-    oneof outcome {
-        // The result if the activity completed successfully.
-        temporal.api.common.v1.Payloads result = 2;
-        // The failure if the activity completed unsuccessfully.
-        temporal.api.failure.v1.Failure failure = 3;
     }
 }
 

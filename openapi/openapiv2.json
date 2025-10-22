@@ -859,14 +859,14 @@
     },
     "/api/v1/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "GetActivityExecutionStatus returns the status and/or outcome of an activity execution.\nThis unified endpoint can:\n- Get current activity info synchronously (when include_info is true)\n- Long poll for activity info updates (when wait_info is true)\n- Get activity outcome synchronously if completed (when include_outcome is true)\n- Long poll for activity completion (when wait_outcome is true)",
+        "summary": "DescribeActivityExecution returns the status and/or outcome of an activity execution.\nThis unified endpoint can:\n- Get current activity info synchronously (when include_info is true)\n- Long poll for activity info updates (when wait_info is true)\n- Get activity outcome synchronously if completed (when include_outcome is true)\n- Long poll for activity completion (when wait_outcome is true)",
         "description": "This replaces both DescribeActivityExecution and GetActivityExecutionResult with a single\nflexible endpoint that can handle both synchronous queries and long polling for both\ninfo updates and completion.",
-        "operationId": "GetActivityExecutionStatus2",
+        "operationId": "DescribeActivityExecution2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetActivityExecutionStatusResponse"
+              "$ref": "#/definitions/v1DescribeActivityExecutionResponse"
             }
           },
           "default": {
@@ -896,26 +896,25 @@
             "type": "string"
           },
           {
-            "name": "includeInfo.includeInput",
+            "name": "includeInfo",
             "in": "query",
             "required": false,
             "type": "boolean"
           },
           {
-            "name": "noWait",
+            "name": "includeInput",
             "in": "query",
             "required": false,
-            "type": "object"
+            "type": "boolean"
+          },
+          {
+            "name": "includeOutcome",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           },
           {
             "name": "waitAnyStateChange.longPollToken",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "byte"
-          },
-          {
-            "name": "waitCompletion.longPollToken",
             "in": "query",
             "required": false,
             "type": "string",
@@ -5434,14 +5433,14 @@
     },
     "/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "GetActivityExecutionStatus returns the status and/or outcome of an activity execution.\nThis unified endpoint can:\n- Get current activity info synchronously (when include_info is true)\n- Long poll for activity info updates (when wait_info is true)\n- Get activity outcome synchronously if completed (when include_outcome is true)\n- Long poll for activity completion (when wait_outcome is true)",
+        "summary": "DescribeActivityExecution returns the status and/or outcome of an activity execution.\nThis unified endpoint can:\n- Get current activity info synchronously (when include_info is true)\n- Long poll for activity info updates (when wait_info is true)\n- Get activity outcome synchronously if completed (when include_outcome is true)\n- Long poll for activity completion (when wait_outcome is true)",
         "description": "This replaces both DescribeActivityExecution and GetActivityExecutionResult with a single\nflexible endpoint that can handle both synchronous queries and long polling for both\ninfo updates and completion.",
-        "operationId": "GetActivityExecutionStatus",
+        "operationId": "DescribeActivityExecution",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetActivityExecutionStatusResponse"
+              "$ref": "#/definitions/v1DescribeActivityExecutionResponse"
             }
           },
           "default": {
@@ -5471,26 +5470,25 @@
             "type": "string"
           },
           {
-            "name": "includeInfo.includeInput",
+            "name": "includeInfo",
             "in": "query",
             "required": false,
             "type": "boolean"
           },
           {
-            "name": "noWait",
+            "name": "includeInput",
             "in": "query",
             "required": false,
-            "type": "object"
+            "type": "boolean"
+          },
+          {
+            "name": "includeOutcome",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           },
           {
             "name": "waitAnyStateChange.longPollToken",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "byte"
-          },
-          {
-            "name": "waitCompletion.longPollToken",
             "in": "query",
             "required": false,
             "type": "string",
@@ -8710,6 +8708,21 @@
         }
       }
     },
+    "DescribeActivityExecutionRequestCompletionWaitOptions": {
+      "type": "object"
+    },
+    "DescribeActivityExecutionRequestNoWaitOptions": {
+      "type": "object"
+    },
+    "DescribeActivityExecutionRequestStateChangeWaitOptions": {
+      "type": "object",
+      "properties": {
+        "longPollToken": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
     "DescribeTaskQueueResponseEffectiveRateLimit": {
       "type": "object",
       "properties": {
@@ -8780,26 +8793,6 @@
         "updateWorkflow": {
           "$ref": "#/definitions/v1UpdateWorkflowExecutionRequest",
           "title": "Additional restrictions:\n- setting `first_execution_run_id` is invalid\n- setting `workflow_execution.run_id` is invalid"
-        }
-      }
-    },
-    "GetActivityExecutionStatusRequestIncludeInfoOptions": {
-      "type": "object",
-      "properties": {
-        "includeInput": {
-          "type": "boolean"
-        }
-      }
-    },
-    "GetActivityExecutionStatusRequestIncludeOutcomeOptions": {
-      "type": "object"
-    },
-    "GetActivityExecutionStatusRequestWaitOptions": {
-      "type": "object",
-      "properties": {
-        "longPollToken": {
-          "type": "string",
-          "format": "byte"
         }
       }
     },
@@ -11082,10 +11075,6 @@
           "$ref": "#/definitions/v1ActivityOptions",
           "description": "Current activity options. May be different from the one used to start the activity."
         },
-        "input": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "Serialized activity input, passed as arguments to the activity function."
-        },
         "stateTransitionCount": {
           "type": "string",
           "format": "int64",
@@ -12798,6 +12787,36 @@
       "type": "object",
       "description": "Deprecated."
     },
+    "v1DescribeActivityExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The run ID of the activity, useful when run_id was not specified in the request."
+        },
+        "info": {
+          "$ref": "#/definitions/v1ActivityExecutionInfo",
+          "description": "Only set if include_info was present in the request."
+        },
+        "input": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "Serialized activity input, passed as arguments to the activity function."
+        },
+        "result": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "The result if the activity completed successfully."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "The failure if the activity completed unsuccessfully."
+        },
+        "stateChangeLongPollToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Token to use for a follow-on request using wait_any_state_change.\nOnly set if wait_policy was wait_any_state_change and the activity is not complete."
+        }
+      }
+    },
     "v1DescribeBatchOperationResponse": {
       "type": "object",
       "properties": {
@@ -13291,32 +13310,6 @@
         "workerConfig": {
           "$ref": "#/definitions/v1WorkerConfig",
           "description": "The worker configuration."
-        }
-      }
-    },
-    "v1GetActivityExecutionStatusResponse": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "The run ID of the activity, useful when run_id was not specified in the request."
-        },
-        "info": {
-          "$ref": "#/definitions/v1ActivityExecutionInfo",
-          "description": "Only set if include_info was present in the request."
-        },
-        "result": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "The result if the activity completed successfully."
-        },
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "The failure if the activity completed unsuccessfully."
-        },
-        "stateChangeLongPollToken": {
-          "type": "string",
-          "format": "byte",
-          "description": "Token to use for a follow-on request using wait_any_state_change.\nOnly set if wait_policy was wait_any_state_change and the activity is not complete."
         }
       }
     },

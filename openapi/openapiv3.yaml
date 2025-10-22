@@ -827,7 +827,7 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        GetActivityExecutionStatus returns the status and/or outcome of an activity execution.
+        DescribeActivityExecution returns the status and/or outcome of an activity execution.
          This unified endpoint can:
          - Get current activity info synchronously (when include_info is true)
          - Long poll for activity info updates (when wait_info is true)
@@ -837,7 +837,7 @@ paths:
          This replaces both DescribeActivityExecution and GetActivityExecutionResult with a single
          flexible endpoint that can handle both synchronous queries and long polling for both
          info updates and completion.
-      operationId: GetActivityExecutionStatus
+      operationId: DescribeActivityExecution
       parameters:
         - name: namespace
           in: path
@@ -853,16 +853,19 @@ paths:
           in: query
           schema:
             type: string
-        - name: includeInfo.includeInput
+        - name: includeInfo
+          in: query
+          schema:
+            type: boolean
+        - name: includeInput
+          in: query
+          schema:
+            type: boolean
+        - name: includeOutcome
           in: query
           schema:
             type: boolean
         - name: waitAnyStateChange.longPollToken
-          in: query
-          schema:
-            type: string
-            format: bytes
-        - name: waitCompletion.longPollToken
           in: query
           schema:
             type: string
@@ -873,7 +876,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetActivityExecutionStatusResponse'
+                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -4991,7 +4994,7 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        GetActivityExecutionStatus returns the status and/or outcome of an activity execution.
+        DescribeActivityExecution returns the status and/or outcome of an activity execution.
          This unified endpoint can:
          - Get current activity info synchronously (when include_info is true)
          - Long poll for activity info updates (when wait_info is true)
@@ -5001,7 +5004,7 @@ paths:
          This replaces both DescribeActivityExecution and GetActivityExecutionResult with a single
          flexible endpoint that can handle both synchronous queries and long polling for both
          info updates and completion.
-      operationId: GetActivityExecutionStatus
+      operationId: DescribeActivityExecution
       parameters:
         - name: namespace
           in: path
@@ -5017,16 +5020,19 @@ paths:
           in: query
           schema:
             type: string
-        - name: includeInfo.includeInput
+        - name: includeInfo
+          in: query
+          schema:
+            type: boolean
+        - name: includeInput
+          in: query
+          schema:
+            type: boolean
+        - name: includeOutcome
           in: query
           schema:
             type: boolean
         - name: waitAnyStateChange.longPollToken
-          in: query
-          schema:
-            type: string
-            format: bytes
-        - name: waitCompletion.longPollToken
           in: query
           schema:
             type: string
@@ -5037,7 +5043,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetActivityExecutionStatusResponse'
+                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -7993,10 +7999,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/ActivityOptions'
           description: Current activity options. May be different from the one used to start the activity.
-        input:
-          allOf:
-            - $ref: '#/components/schemas/Payloads'
-          description: Serialized activity input, passed as arguments to the activity function.
         stateTransitionCount:
           type: string
           description: Incremented each time the activity's state is mutated in persistence.
@@ -9443,6 +9445,34 @@ components:
         Holds information about ongoing transition of a workflow execution from one worker
          deployment version to another.
          Experimental. Might change in the future.
+    DescribeActivityExecutionResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run ID of the activity, useful when run_id was not specified in the request.
+        info:
+          allOf:
+            - $ref: '#/components/schemas/ActivityExecutionInfo'
+          description: Only set if include_info was present in the request.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: Serialized activity input, passed as arguments to the activity function.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: The result if the activity completed successfully.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The failure if the activity completed unsuccessfully.
+        stateChangeLongPollToken:
+          type: string
+          description: |-
+            Token to use for a follow-on request using wait_any_state_change.
+             Only set if wait_policy was wait_any_state_change and the activity is not complete.
+          format: bytes
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -9977,30 +10007,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerConfig'
           description: The worker configuration.
-    GetActivityExecutionStatusResponse:
-      type: object
-      properties:
-        runId:
-          type: string
-          description: The run ID of the activity, useful when run_id was not specified in the request.
-        info:
-          allOf:
-            - $ref: '#/components/schemas/ActivityExecutionInfo'
-          description: Only set if include_info was present in the request.
-        result:
-          allOf:
-            - $ref: '#/components/schemas/Payloads'
-          description: The result if the activity completed successfully.
-        failure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: The failure if the activity completed unsuccessfully.
-        stateChangeLongPollToken:
-          type: string
-          description: |-
-            Token to use for a follow-on request using wait_any_state_change.
-             Only set if wait_policy was wait_any_state_change and the activity is not complete.
-          format: bytes
     GetClusterInfoResponse:
       type: object
       properties:

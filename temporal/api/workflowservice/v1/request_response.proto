@@ -45,7 +45,6 @@ import "temporal/api/nexus/v1/message.proto";
 import "temporal/api/worker/v1/message.proto";
 
 import "google/protobuf/duration.proto";
-import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -2678,13 +2677,9 @@ message DescribeActivityExecutionRequest {
     string activity_id = 2;
     string run_id = 3;
 
-    message IncludeInfoOptions {
-        bool include_input = 1;
-    }
-    IncludeInfoOptions include_info = 4;
-
-    message IncludeOutcomeOptions {}
-    IncludeOutcomeOptions include_outcome = 5;
+    bool include_info = 4;
+    bool include_input = 5;
+    bool include_outcome = 6;
 
     message NoWaitOptions {}
     message StateChangeWaitOptions {
@@ -2693,10 +2688,13 @@ message DescribeActivityExecutionRequest {
     message CompletionWaitOptions {}
 
     oneof wait_policy {
-        NoWaitOptions no_wait = 6;
-        StateChangeWaitOptions wait_any_state_change = 7;
+        NoWaitOptions no_wait = 7;
+        // The state may change multiple times between requests and the API returns the current
+        // state. Therefore it is not guaranteed that a client making a sequence of long-poll
+        // requests will see a complete sequence of state changes.
+        StateChangeWaitOptions wait_any_state_change = 8;
         // long_poll_token is currently ignored when waiting for completion
-        CompletionWaitOptions wait_completion = 8;
+        CompletionWaitOptions wait_completion = 9;
     }
 }
 
@@ -2704,20 +2702,23 @@ message DescribeActivityExecutionResponse {
     // The run ID of the activity, useful when run_id was not specified in the request.
     string run_id = 1;
 
-    // Only set if include_info was present in the request.
+    // Only set if include_info was true in the request.
     temporal.api.activity.v1.ActivityExecutionInfo info = 2;
 
-    // Only set if the activity is completed and include_outcome was present in the request.
+    // Serialized activity input, passed as arguments to the activity function.
+    temporal.api.common.v1.Payloads input = 3;
+
+    // Only set if the activity is completed and include_outcome was true in the request.
     oneof outcome {
         // The result if the activity completed successfully.
-        temporal.api.common.v1.Payloads result = 3;
+        temporal.api.common.v1.Payloads result = 4;
         // The failure if the activity completed unsuccessfully.
-        temporal.api.failure.v1.Failure failure = 4;
+        temporal.api.failure.v1.Failure failure = 5;
     }
 
     // Token to use for a follow-on request using wait_any_state_change.
     // Only set if wait_policy was wait_any_state_change and the activity is not complete.
-    bytes state_change_long_poll_token = 5;
+    bytes state_change_long_poll_token = 6;
 }
 
 

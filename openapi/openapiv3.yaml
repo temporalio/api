@@ -2610,7 +2610,10 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: "GetWorkflowExecutionHistoryReverse returns the history of specified workflow execution in reverse \n order (starting from last event). Fails with`NotFound` if the specified workflow execution is \n unknown to the service."
+      description: |-
+        GetWorkflowExecutionHistoryReverse returns the history of specified workflow execution in reverse
+         order (starting from last event). Fails with`NotFound` if the specified workflow execution is
+         unknown to the service.
       operationId: GetWorkflowExecutionHistoryReverse
       parameters:
         - name: namespace
@@ -6031,7 +6034,10 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: "GetWorkflowExecutionHistoryReverse returns the history of specified workflow execution in reverse \n order (starting from last event). Fails with`NotFound` if the specified workflow execution is \n unknown to the service."
+      description: |-
+        GetWorkflowExecutionHistoryReverse returns the history of specified workflow execution in reverse
+         order (starting from last event). Fails with`NotFound` if the specified workflow execution is
+         unknown to the service.
       operationId: GetWorkflowExecutionHistoryReverse
       parameters:
         - name: namespace
@@ -9207,6 +9213,9 @@ components:
         workerHeartbeats:
           type: boolean
           description: True if the namespace supports worker heartbeats
+        reportedProblemsSearchAttribute:
+          type: boolean
+          description: True if the namespace supports reported problems search attribute
       description: Namespace capability details. Should contain what features are enabled in a namespace.
     NamespaceReplicationConfig:
       type: object
@@ -9613,7 +9622,9 @@ components:
           description: Only the activity with this ID will be paused.
         type:
           type: string
-          description: Pause all running activities of this type.
+          description: |-
+            Pause all running activities of this type.
+             Note: Experimental - the behavior of pause by activity type might change in a future release.
         reason:
           type: string
           description: Reason to pause the activity.
@@ -12175,6 +12186,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata
+        eagerWorkerDeploymentOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentOptions'
+          description: Deployment Options of the worker who will process the eager task. Passed when `request_eager_execution=true`.
     StartWorkflowExecutionResponse:
       type: object
       properties:
@@ -12335,6 +12350,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/RateLimitConfig'
           description: If set, each individual fairness key will be limited to this rate, scaled by the weight of the fairness key.
+        fairnessWeightOverrides:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          description: If set, overrides the fairness weights for the corresponding fairness keys.
     TaskQueueReachability:
       type: object
       properties:
@@ -12915,6 +12936,22 @@ components:
             Update to the default fairness key rate limit.
              If not set, this configuration is unchanged.
              If the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit.
+        setFairnessWeightOverrides:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          description: |-
+            If set, overrides the fairness weight for each specified fairness key.
+             Fairness keys not listed in this map will keep their existing overrides (if any).
+        unsetFairnessWeightOverrides:
+          type: array
+          items:
+            type: string
+          description: |-
+            If set, removes any existing fairness weight overrides for each specified fairness key.
+             Fairness weights for corresponding keys fall back to the values set during task creation (if any),
+             or to the default weight of 1.0.
     UpdateTaskQueueConfigRequest_RateLimitUpdate:
       type: object
       properties:
@@ -13622,18 +13659,16 @@ components:
         hostName:
           type: string
           description: Worker host identifier.
-        processKey:
+        workerGroupingKey:
           type: string
           description: |-
-            Worker process identifier. This id should be unique for all _processes_
-             running workers in the namespace, and should be shared by all workers
-             in the same process.
+            Worker grouping identifier. A key to group workers that share the same client+namespace+process.
              This will be used to build the worker command nexus task queue name:
-             "temporal-sys/worker-commands/{process_key}"
+             "temporal-sys/worker-commands/{worker_grouping_key}"
         processId:
           type: string
           description: |-
-            Worker process identifier. Unlike process_key, this id only needs to be unique
+            Worker process identifier. This id only needs to be unique
              within one host (so using e.g. a unix pid would be appropriate).
         currentHostCpuUsage:
           type: number

@@ -2906,7 +2906,7 @@
     },
     "/api/v1/namespaces/{namespace}/workflows/{execution.workflowId}/history-reverse": {
       "get": {
-        "summary": "GetWorkflowExecutionHistoryReverse returns the history of specified workflow execution in reverse \norder (starting from last event). Fails with`NotFound` if the specified workflow execution is \nunknown to the service.",
+        "summary": "GetWorkflowExecutionHistoryReverse returns the history of specified workflow execution in reverse\norder (starting from last event). Fails with`NotFound` if the specified workflow execution is\nunknown to the service.",
         "operationId": "GetWorkflowExecutionHistoryReverse2",
         "responses": {
           "200": {
@@ -6731,7 +6731,7 @@
     },
     "/namespaces/{namespace}/workflows/{execution.workflowId}/history-reverse": {
       "get": {
-        "summary": "GetWorkflowExecutionHistoryReverse returns the history of specified workflow execution in reverse \norder (starting from last event). Fails with`NotFound` if the specified workflow execution is \nunknown to the service.",
+        "summary": "GetWorkflowExecutionHistoryReverse returns the history of specified workflow execution in reverse\norder (starting from last event). Fails with`NotFound` if the specified workflow execution is\nunknown to the service.",
         "operationId": "GetWorkflowExecutionHistoryReverse",
         "responses": {
           "200": {
@@ -8029,7 +8029,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Pause all running activities of this type."
+          "description": "Pause all running activities of this type.\nNote: Experimental - the behavior of pause by activity type might change in a future release."
         },
         "reason": {
           "type": "string",
@@ -8842,6 +8842,10 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "title": "Priority metadata"
+        },
+        "eagerWorkerDeploymentOptions": {
+          "$ref": "#/definitions/v1WorkerDeploymentOptions",
+          "description": "Deployment Options of the worker who will process the eager task. Passed when `request_eager_execution=true`."
         }
       }
     },
@@ -9061,6 +9065,21 @@
         "updateFairnessKeyRateLimitDefault": {
           "$ref": "#/definitions/UpdateTaskQueueConfigRequestRateLimitUpdate",
           "description": "Update to the default fairness key rate limit.\nIf not set, this configuration is unchanged.\nIf the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit."
+        },
+        "setFairnessWeightOverrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "float"
+          },
+          "description": "If set, overrides the fairness weight for each specified fairness key.\nFairness keys not listed in this map will keep their existing overrides (if any)."
+        },
+        "unsetFairnessWeightOverrides": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "If set, removes any existing fairness weight overrides for each specified fairness key.\nFairness weights for corresponding keys fall back to the values set during task creation (if any),\nor to the default weight of 1.0."
         }
       }
     },
@@ -9307,6 +9326,10 @@
         },
         "cancelOperation": {
           "$ref": "#/definitions/v1CancelOperationRequest"
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "The endpoint this request was addressed to before forwarding to the worker.\nSupported from server version 1.30.0."
         }
       },
       "description": "A Nexus request."
@@ -12386,6 +12409,10 @@
         "workerHeartbeats": {
           "type": "boolean",
           "title": "True if the namespace supports worker heartbeats"
+        },
+        "reportedProblemsSearchAttribute": {
+          "type": "boolean",
+          "title": "True if the namespace supports reported problems search attribute"
         }
       },
       "description": "Namespace capability details. Should contain what features are enabled in a namespace."
@@ -15139,6 +15166,10 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "title": "Priority metadata"
+        },
+        "eagerWorkerDeploymentOptions": {
+          "$ref": "#/definitions/v1WorkerDeploymentOptions",
+          "description": "Deployment Options of the worker who will process the eager task. Passed when `request_eager_execution=true`."
         }
       }
     },
@@ -15295,6 +15326,14 @@
         "fairnessKeysRateLimitDefault": {
           "$ref": "#/definitions/v1RateLimitConfig",
           "description": "If set, each individual fairness key will be limited to this rate, scaled by the weight of the fairness key."
+        },
+        "fairnessWeightOverrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "float"
+          },
+          "description": "If set, overrides the fairness weights for the corresponding fairness keys."
         }
       }
     },
@@ -16287,13 +16326,13 @@
           "type": "string",
           "description": "Worker host identifier."
         },
-        "processKey": {
+        "workerGroupingKey": {
           "type": "string",
-          "title": "Worker process identifier. This id should be unique for all _processes_\nrunning workers in the namespace, and should be shared by all workers\nin the same process.\nThis will be used to build the worker command nexus task queue name:\n\"temporal-sys/worker-commands/{process_key}\""
+          "title": "Worker grouping identifier. A key to group workers that share the same client+namespace+process.\nThis will be used to build the worker command nexus task queue name:\n\"temporal-sys/worker-commands/{worker_grouping_key}\""
         },
         "processId": {
           "type": "string",
-          "description": "Worker process identifier. Unlike process_key, this id only needs to be unique\nwithin one host (so using e.g. a unix pid would be appropriate)."
+          "description": "Worker process identifier. This id only needs to be unique\nwithin one host (so using e.g. a unix pid would be appropriate)."
         },
         "currentHostCpuUsage": {
           "type": "number",

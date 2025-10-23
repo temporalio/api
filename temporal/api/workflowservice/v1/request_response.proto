@@ -194,6 +194,8 @@ message StartWorkflowExecutionRequest {
     temporal.api.workflow.v1.OnConflictOptions on_conflict_options = 26;
     // Priority metadata
     temporal.api.common.v1.Priority priority = 27;
+    // Deployment Options of the worker who will process the eager task. Passed when `request_eager_execution=true`.
+    temporal.api.deployment.v1.WorkerDeploymentOptions eager_worker_deployment_options = 28;
 }
 
 message StartWorkflowExecutionResponse {
@@ -267,9 +269,6 @@ message PollWorkflowTaskQueueRequest {
     // Worker deployment options that user has set in the worker.
     // Experimental. Worker Deployments are experimental and might significantly change in the future.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
-
-    // Worker info to be sent to the server.
-    temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat = 7;
 }
 
 message PollWorkflowTaskQueueResponse {
@@ -441,10 +440,6 @@ message PollActivityTaskQueueRequest {
     temporal.api.common.v1.WorkerVersionCapabilities worker_version_capabilities = 5 [deprecated = true];
     // Worker deployment options that user has set in the worker.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
-
-    // Worker info to be sent to the server.
-    temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat = 7;
-
 }
 
 message PollActivityTaskQueueResponse {
@@ -1940,6 +1935,7 @@ message PauseActivityRequest {
         // Only the activity with this ID will be paused.
         string id = 4;
         // Pause all running activities of this type.
+        // Note: Experimental - the behavior of pause by activity type might change in a future release.
         string type = 5;
     }
 
@@ -2258,8 +2254,8 @@ message ListWorkerDeploymentsResponse {
         google.protobuf.Timestamp create_time = 2;
         temporal.api.deployment.v1.RoutingConfig routing_config = 3;
         // Summary of the version that was added most recently in the Worker Deployment.
-        temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary latest_version_summary = 4; 
-        // Summary of the current version of the Worker Deployment. 
+        temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary latest_version_summary = 4;
+        // Summary of the current version of the Worker Deployment.
         temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary current_version_summary = 5;
         // Summary of the ramping version of the Worker Deployment.
         temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary ramping_version_summary = 6;
@@ -2525,6 +2521,13 @@ message UpdateTaskQueueConfigRequest {
     // If not set, this configuration is unchanged.
     // If the `rate_limit` field in the `RateLimitUpdate` is missing, remove the existing rate limit.
     RateLimitUpdate update_fairness_key_rate_limit_default = 6;
+    // If set, overrides the fairness weight for each specified fairness key.
+    // Fairness keys not listed in this map will keep their existing overrides (if any).
+    map<string, float> set_fairness_weight_overrides = 7;
+    // If set, removes any existing fairness weight overrides for each specified fairness key.
+    // Fairness weights for corresponding keys fall back to the values set during task creation (if any),
+    // or to the default weight of 1.0.
+    repeated string unset_fairness_weight_overrides = 8;
 }
 
 message UpdateTaskQueueConfigResponse {

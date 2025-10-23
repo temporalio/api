@@ -6931,7 +6931,7 @@
     },
     "/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/pause": {
       "post": {
-        "summary": "PauseWorkflowExecution pauses the workflow execution specified in the request.",
+        "summary": "Note: This is an experimental API and the behavior may change in a future release.\nPauseWorkflowExecution pauses the workflow execution specified in the request. Pausing a workflow execution results in\n- The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history\n- No new workflow tasks or activity tasks are dispatched.\n  - Any workflow task currently executing on the worker will be allowed to complete.\n  - Any activity task currently executing will be allowed to complete. But the heartbeat response will be annotated with 'activity_paused=true'.\n- Signals, child workflows, timers & timeouts, activity completion etc will continue to be processed by the server. No completed work is lost during pause.\n- Queries & Updates on a paused workflow will be rejected.",
         "operationId": "PauseWorkflowExecution",
         "responses": {
           "200": {
@@ -7120,7 +7120,7 @@
     },
     "/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/unpause": {
       "post": {
-        "summary": "UnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.",
+        "summary": "Note: This is an experimental API and the behavior may change in a future release.\nUnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.\nUnpausing a workflow execution results in\n- The workflow execution status changes to `RUNNING` and a new WORKFLOW_EXECUTION_UNPAUSED event is added to the history\n- New workflow task and activity tasks are dispatched (if required).",
         "operationId": "UnpauseWorkflowExecution",
         "responses": {
           "200": {
@@ -12042,6 +12042,12 @@
         },
         "nexusOperationCancelRequestFailedEventAttributes": {
           "$ref": "#/definitions/v1NexusOperationCancelRequestFailedEventAttributes"
+        },
+        "workflowExecutionPausedEventAttributes": {
+          "$ref": "#/definitions/v1WorkflowExecutionPausedEventAttributes"
+        },
+        "workflowExecutionUnpausedEventAttributes": {
+          "$ref": "#/definitions/v1WorkflowExecutionUnpausedEventAttributes"
         }
       },
       "description": "History events are the method by which Temporal SDKs advance (or recreate) workflow state.\nSee the `EventType` enum for more info about what each event is for."
@@ -16987,6 +16993,24 @@
         }
       }
     },
+    "v1WorkflowExecutionPausedEventAttributes": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the client who paused the workflow execution."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason for pausing the workflow execution."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "The request ID of the request that paused the workflow execution."
+        }
+      },
+      "description": "Attributes for an event marking that a workflow execution was paused."
+    },
     "v1WorkflowExecutionSignaledEventAttributes": {
       "type": "object",
       "properties": {
@@ -17210,6 +17234,29 @@
           "description": "If another run is started by cron or retry, this contains the new run id."
         }
       }
+    },
+    "v1WorkflowExecutionUnpausedEventAttributes": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the client who unpaused the workflow execution."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason for unpausing the workflow execution."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "The request ID of the request that unpaused the workflow execution."
+        },
+        "pausedEventId": {
+          "type": "string",
+          "format": "int64",
+          "description": "The ID of the `WORKFLOW_EXECUTION_PAUSED` event that this unpause corresponds to."
+        }
+      },
+      "description": "Attributes for an event marking that a workflow execution was unpaused."
     },
     "v1WorkflowExecutionUpdateAcceptedEventAttributes": {
       "type": "object",

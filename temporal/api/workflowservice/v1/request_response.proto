@@ -2737,19 +2737,24 @@ message DescribeActivityExecutionRequest {
     // Include the outcome field in the response.
     bool include_outcome = 6;
 
-    message NoWaitOptions {}
     message StateChangeWaitOptions {
-        // If present, run_id must also be present.
+        // Token from a previous DescribeActivityExecutionResponse used to inform the server of the
+        // last state seen by the caller. If present, run_id must also be present.
         bytes long_poll_token = 1;
     }
     message CompletionWaitOptions {}
 
+    // If present, the request will be handled as a long-poll. If absent, a response will be
+    // returned immediately containing the current activity state.
     oneof wait_policy {
-        NoWaitOptions no_wait = 7;
-        // The state may change multiple times between requests and the API returns the current
-        // state. Therefore it is not guaranteed that a client making a sequence of long-poll
+        // Wait for any change in activity state before responding. If long_poll_token is absent
+        // then the current state will be returned immediately without any wait. Otherwise the
+        // server will wait until activity state differs from that encoded in the token before
+        // returning the new state. Note that activity state may change multiple times between
+        // requests, therefore it is not guaranteed that a client making a sequence of long-poll
         // requests will see a complete sequence of state changes.
         StateChangeWaitOptions wait_any_state_change = 8;
+        // Wait for the activity to complete before responding.
         // long_poll_token is currently ignored when waiting for completion
         CompletionWaitOptions wait_completion = 9;
     }

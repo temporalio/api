@@ -11333,6 +11333,64 @@
         }
       }
     },
+    "v1ActivityExecutionListInfo": {
+      "type": "object",
+      "properties": {
+        "activityId": {
+          "type": "string",
+          "description": "For standalone activity - a unique identifier of this activity within its namespace along with run ID (below)."
+        },
+        "runId": {
+          "type": "string",
+          "description": "The run ID of the workflow or standalone activity."
+        },
+        "workflowId": {
+          "type": "string",
+          "description": "Workflow that contains this activity - only present for workflow activity."
+        },
+        "activityType": {
+          "$ref": "#/definitions/v1ActivityType",
+          "description": "The type of the activity, a string that maps to a registered activity on a worker."
+        },
+        "scheduledTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "Time the activity was originally scheduled via a StartActivityExecution request.\nTODO: Workflows call this schedule_time but it's scheduled_time in PendingActivityInfo, what should we choose for\nconsistency?"
+        },
+        "closeTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "If the activity is in a terminal status, this field represents the time the activity transitioned to that status."
+        },
+        "status": {
+          "$ref": "#/definitions/v1ActivityExecutionStatus",
+          "description": "Only scheduled and terminal statuses appear here. More detailed information in PendingActivityInfo but not\navailable in the list response."
+        },
+        "searchAttributes": {
+          "$ref": "#/definitions/v1SearchAttributes",
+          "description": "Search attributes from the start request."
+        },
+        "taskQueue": {
+          "type": "string",
+          "description": "The task queue this activity was scheduled on when it was originally started, updated on activity options update."
+        },
+        "stateTransitionCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Updated on terminal status."
+        },
+        "stateSizeBytes": {
+          "type": "string",
+          "format": "int64",
+          "description": "Updated once on scheduled and once on terminal status."
+        },
+        "executionDuration": {
+          "type": "string",
+          "description": "The difference between close time and scheduled time.\nThis field is only populated if the activity is closed."
+        }
+      },
+      "description": "Limited activity information returned in the list response."
+    },
     "v1ActivityExecutionStatus": {
       "type": "string",
       "enum": [
@@ -11393,64 +11451,6 @@
       ],
       "default": "ACTIVITY_ID_REUSE_POLICY_UNSPECIFIED",
       "description": "Defines whether to allow re-using an activity ID from a previously *closed* activity.\nIf the request is denied, the server returns an `ActivityExecutionAlreadyStarted` error.\n\nSee `ActivityIdConflictPolicy` for handling ID duplication with a *running* activity.\n\n - ACTIVITY_ID_REUSE_POLICY_ALLOW_DUPLICATE: Always allow starting an activity using the same activity ID.\n - ACTIVITY_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY: Allow starting an activity using the same ID only when the last activity's final state is one\nof {failed, canceled, terminated, timed out}.\n - ACTIVITY_ID_REUSE_POLICY_REJECT_DUPLICATE: Do not permit re-use of the ID for this activity. Future start requests could potentially change the policy,\nallowing re-use of the ID."
-    },
-    "v1ActivityListInfo": {
-      "type": "object",
-      "properties": {
-        "activityId": {
-          "type": "string",
-          "description": "For standalone activity - a unique identifier of this activity within its namespace along with run ID (below)."
-        },
-        "runId": {
-          "type": "string",
-          "description": "The run ID of the workflow or standalone activity."
-        },
-        "workflowId": {
-          "type": "string",
-          "description": "Workflow that contains this activity - only present for workflow activity."
-        },
-        "activityType": {
-          "$ref": "#/definitions/v1ActivityType",
-          "description": "The type of the activity, a string that maps to a registered activity on a worker."
-        },
-        "scheduledTime": {
-          "type": "string",
-          "format": "date-time",
-          "title": "Time the activity was originally scheduled via a StartActivityExecution request.\nTODO: Workflows call this schedule_time but it's scheduled_time in PendingActivityInfo, what should we choose for\nconsistency?"
-        },
-        "closeTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "If the activity is in a terminal status, this field represents the time the activity transitioned to that status."
-        },
-        "status": {
-          "$ref": "#/definitions/v1ActivityExecutionStatus",
-          "description": "Only scheduled and terminal statuses appear here. More detailed information in PendingActivityInfo but not\navailable in the list response."
-        },
-        "searchAttributes": {
-          "$ref": "#/definitions/v1SearchAttributes",
-          "description": "Search attributes from the start request."
-        },
-        "taskQueue": {
-          "type": "string",
-          "description": "The task queue this activity was scheduled on when it was originally started, updated on activity options update."
-        },
-        "stateTransitionCount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Updated on terminal status."
-        },
-        "stateSizeBytes": {
-          "type": "string",
-          "format": "int64",
-          "description": "Updated once on scheduled and once on terminal status."
-        },
-        "executionDuration": {
-          "type": "string",
-          "description": "The difference between close time and scheduled time.\nThis field is only populated if the activity is closed."
-        }
-      },
-      "description": "Limited activity information returned in the list response."
     },
     "v1ActivityOptions": {
       "type": "object",
@@ -14072,7 +14072,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1ActivityListInfo"
+            "$ref": "#/definitions/v1ActivityExecutionListInfo"
           }
         },
         "nextPageToken": {

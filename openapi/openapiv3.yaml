@@ -6310,8 +6310,8 @@ paths:
          - The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history
          - No new workflow tasks or activity tasks are dispatched.
            - Any workflow task currently executing on the worker will be allowed to complete.
-           - Any activity task currently executing will be allowed to complete. But the heartbeat response will be annotated with 'activity_paused=true'.
-         - Signals, child workflows, timers & timeouts, activity completion etc will continue to be processed by the server. No completed work is lost during pause.
+           - Any activity task currently executing will be paused.
+         - All server-side events will continue to be processed by the server.
          - Queries & Updates on a paused workflow will be rejected.
       operationId: PauseWorkflowExecution
       parameters:
@@ -6480,7 +6480,7 @@ paths:
          UnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.
          Unpausing a workflow execution results in
          - The workflow execution status changes to `RUNNING` and a new WORKFLOW_EXECUTION_UNPAUSED event is added to the history
-         - New workflow task and activity tasks are dispatched (if required).
+         - Workflow tasks and activity tasks are resumed.
       operationId: UnpauseWorkflowExecution
       parameters:
         - name: namespace
@@ -14399,6 +14399,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata
+        pauseInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionPauseInfo'
+          description: Information about the workflow execution pause operation.
       description: |-
         Hold basic information about a workflow execution.
          This structure is a part of visibility, and thus contain a limited subset of information.

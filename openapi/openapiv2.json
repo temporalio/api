@@ -6931,7 +6931,7 @@
     },
     "/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/pause": {
       "post": {
-        "summary": "Note: This is an experimental API and the behavior may change in a future release.\nPauseWorkflowExecution pauses the workflow execution specified in the request. Pausing a workflow execution results in\n- The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history\n- No new workflow tasks or activity tasks are dispatched.\n  - Any workflow task currently executing on the worker will be allowed to complete.\n  - Any activity task currently executing will be allowed to complete. But the heartbeat response will be annotated with 'activity_paused=true'.\n- Signals, child workflows, timers & timeouts, activity completion etc will continue to be processed by the server. No completed work is lost during pause.\n- Queries & Updates on a paused workflow will be rejected.",
+        "summary": "Note: This is an experimental API and the behavior may change in a future release.\nPauseWorkflowExecution pauses the workflow execution specified in the request. Pausing a workflow execution results in\n- The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history\n- No new workflow tasks or activity tasks are dispatched.\n  - Any workflow task currently executing on the worker will be allowed to complete.\n  - Any activity task currently executing will be paused.\n- All server-side events will continue to be processed by the server.\n- Queries & Updates on a paused workflow will be rejected.",
         "operationId": "PauseWorkflowExecution",
         "responses": {
           "200": {
@@ -7120,7 +7120,7 @@
     },
     "/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/unpause": {
       "post": {
-        "summary": "Note: This is an experimental API and the behavior may change in a future release.\nUnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.\nUnpausing a workflow execution results in\n- The workflow execution status changes to `RUNNING` and a new WORKFLOW_EXECUTION_UNPAUSED event is added to the history\n- New workflow task and activity tasks are dispatched (if required).",
+        "summary": "Note: This is an experimental API and the behavior may change in a future release.\nUnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.\nUnpausing a workflow execution results in\n- The workflow execution status changes to `RUNNING` and a new WORKFLOW_EXECUTION_UNPAUSED event is added to the history\n- Workflow tasks and activity tasks are resumed.",
         "operationId": "UnpauseWorkflowExecution",
         "responses": {
           "200": {
@@ -16951,6 +16951,10 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "title": "Priority metadata"
+        },
+        "pauseInfo": {
+          "$ref": "#/definitions/v1WorkflowExecutionPauseInfo",
+          "description": "Information about the workflow execution pause operation."
         }
       },
       "description": "Hold basic information about a workflow execution.\nThis structure is a part of visibility, and thus contain a limited subset of information."
@@ -16992,6 +16996,25 @@
           "description": "Optional. The identity of the client who initiated the request that created this event."
         }
       }
+    },
+    "v1WorkflowExecutionPauseInfo": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the client who paused the workflow execution."
+        },
+        "pausedTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the workflow execution was paused."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason for pausing the workflow execution."
+        }
+      },
+      "description": "WorkflowExecutionPauseInfo contains the information about a workflow execution pause."
     },
     "v1WorkflowExecutionPausedEventAttributes": {
       "type": "object",

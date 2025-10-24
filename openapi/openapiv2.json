@@ -859,13 +859,13 @@
     },
     "/api/v1/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "DescribeActivityExecution returns the status and/or outcome of an activity execution.\nSupported use cases include\n- Get current activity info without waiting\n- Wait for next state change and return activity info\n- Wait for completion and return outcome",
-        "operationId": "DescribeActivityExecution2",
+        "summary": "PollActivityExecution returns the status and/or outcome of an activity execution.\nSupported use cases include\n- Get current activity info without waiting\n- Wait for next state change and return activity info\n- Wait for completion and return outcome",
+        "operationId": "PollActivityExecution2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1DescribeActivityExecutionResponse"
+              "$ref": "#/definitions/v1PollActivityExecutionResponse"
             }
           },
           "default": {
@@ -918,7 +918,7 @@
           },
           {
             "name": "waitAnyStateChange.longPollToken",
-            "description": "Token from a previous DescribeActivityExecutionResponse used to inform the server of the\nlast state seen by the caller. If present, run_id must also be present.",
+            "description": "Token from a previous PollActivityExecutionResponse used to inform the server of the\nlast state seen by the caller. If present, run_id must also be present.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -5437,13 +5437,13 @@
     },
     "/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "DescribeActivityExecution returns the status and/or outcome of an activity execution.\nSupported use cases include\n- Get current activity info without waiting\n- Wait for next state change and return activity info\n- Wait for completion and return outcome",
-        "operationId": "DescribeActivityExecution",
+        "summary": "PollActivityExecution returns the status and/or outcome of an activity execution.\nSupported use cases include\n- Get current activity info without waiting\n- Wait for next state change and return activity info\n- Wait for completion and return outcome",
+        "operationId": "PollActivityExecution",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1DescribeActivityExecutionResponse"
+              "$ref": "#/definitions/v1PollActivityExecutionResponse"
             }
           },
           "default": {
@@ -5496,7 +5496,7 @@
           },
           {
             "name": "waitAnyStateChange.longPollToken",
-            "description": "Token from a previous DescribeActivityExecutionResponse used to inform the server of the\nlast state seen by the caller. If present, run_id must also be present.",
+            "description": "Token from a previous PollActivityExecutionResponse used to inform the server of the\nlast state seen by the caller. If present, run_id must also be present.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -8810,19 +8810,6 @@
         }
       }
     },
-    "DescribeActivityExecutionRequestCompletionWaitOptions": {
-      "type": "object"
-    },
-    "DescribeActivityExecutionRequestStateChangeWaitOptions": {
-      "type": "object",
-      "properties": {
-        "longPollToken": {
-          "type": "string",
-          "format": "byte",
-          "description": "Token from a previous DescribeActivityExecutionResponse used to inform the server of the\nlast state seen by the caller. If present, run_id must also be present."
-        }
-      }
-    },
     "DescribeTaskQueueResponseEffectiveRateLimit": {
       "type": "object",
       "properties": {
@@ -9010,6 +8997,19 @@
         "reason": {
           "type": "string",
           "description": "Reason why rule was created. Populated from rule description."
+        }
+      }
+    },
+    "PollActivityExecutionRequestCompletionWaitOptions": {
+      "type": "object"
+    },
+    "PollActivityExecutionRequestStateChangeWaitOptions": {
+      "type": "object",
+      "properties": {
+        "longPollToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Token from a previous PollActivityExecutionResponse used to inform the server of the\nlast state seen by the caller. If present, run_id must also be present."
         }
       }
     },
@@ -9645,7 +9645,7 @@
         },
         "reason": {
           "type": "string",
-          "description": "Reason for requesting the cancellation, recorded and available via the DescribeActivityExecution API.\nNot propagated to a worker if an activity attempt is currently running."
+          "description": "Reason for requesting the cancellation, recorded and available via the PollActivityExecution API.\nNot propagated to a worker if an activity attempt is currently running."
         }
       }
     },
@@ -12994,36 +12994,6 @@
       "type": "object",
       "description": "Deprecated."
     },
-    "v1DescribeActivityExecutionResponse": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "The run ID of the activity, useful when run_id was not specified in the request."
-        },
-        "info": {
-          "$ref": "#/definitions/v1ActivityExecutionInfo",
-          "description": "Only set if include_info was true in the request."
-        },
-        "input": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "Serialized activity input, passed as arguments to the activity function."
-        },
-        "result": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "The result if the activity completed successfully."
-        },
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "The failure if the activity completed unsuccessfully."
-        },
-        "stateChangeLongPollToken": {
-          "type": "string",
-          "format": "byte",
-          "description": "Token to use for a follow-on request using wait_any_state_change.\nOnly set if wait_policy was wait_any_state_change and the activity is not complete."
-        }
-      }
-    },
     "v1DescribeBatchOperationResponse": {
       "type": "object",
       "properties": {
@@ -15330,6 +15300,36 @@
         "version": {
           "type": "string",
           "description": "The version of the plugin, may be empty."
+        }
+      }
+    },
+    "v1PollActivityExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The run ID of the activity, useful when run_id was not specified in the request."
+        },
+        "info": {
+          "$ref": "#/definitions/v1ActivityExecutionInfo",
+          "description": "Only set if include_info was true in the request."
+        },
+        "input": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "Serialized activity input, passed as arguments to the activity function."
+        },
+        "result": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "The result if the activity completed successfully."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "The failure if the activity completed unsuccessfully."
+        },
+        "stateChangeLongPollToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Token to use for a follow-on request using wait_any_state_change.\nOnly set if wait_policy was wait_any_state_change and the activity is not complete."
         }
       }
     },

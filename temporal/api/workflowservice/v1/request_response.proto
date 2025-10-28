@@ -13,6 +13,7 @@ import "temporal/api/enums/v1/batch_operation.proto";
 import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/enums/v1/namespace.proto";
+import "temporal/api/enums/v1/nexus.proto";
 import "temporal/api/enums/v1/failed_cause.proto";
 import "temporal/api/enums/v1/query.proto";
 import "temporal/api/enums/v1/reset.proto";
@@ -1112,7 +1113,7 @@ message DescribeTaskQueueResponse {
     temporal.api.taskqueue.v1.TaskQueueVersioningInfo versioning_info = 4;
 
     // Only populated if report_task_queue_config is set to true.
-    temporal.api.taskqueue.v1.TaskQueueConfig config  = 6;
+    temporal.api.taskqueue.v1.TaskQueueConfig config = 6;
 
     message EffectiveRateLimit {
         // The effective rate limit for the task queue.
@@ -1144,7 +1145,7 @@ message GetClusterInfoRequest {
 message GetClusterInfoResponse {
     // Key is client name i.e "temporal-go", "temporal-java", or "temporal-cli".
     // Value is ranges of supported versions of this client i.e ">1.1.1 <=1.4.0 || ^5.0.0".
-    map<string,string> supported_clients = 1;
+    map<string, string> supported_clients = 1;
     string server_version = 2;
     string cluster_id = 3;
     temporal.api.version.v1.VersionInfo version_info = 4;
@@ -2321,12 +2322,12 @@ message SetWorkerDeploymentManagerRequest {
     string deployment_name = 2;
 
     oneof new_manager_identity {
-      // Arbitrary value for `manager_identity`.
-      // Empty will unset the field.
-      string manager_identity = 3;
+        // Arbitrary value for `manager_identity`.
+        // Empty will unset the field.
+        string manager_identity = 3;
 
-      // True will set `manager_identity` to `identity`.
-      bool self = 4;
+        // True will set `manager_identity` to `identity`.
+        bool self = 4;
     }
 
     // Optional. This can be the value of conflict_token from a Describe, or another Worker
@@ -2594,4 +2595,267 @@ message DescribeWorkerRequest {
 
 message DescribeWorkerResponse {
     temporal.api.worker.v1.WorkerInfo worker_info = 1;
+}
+
+message StartNexusOperationRequest {
+    // The identity of the client who initiated this request.
+    string identity = 1;
+    // The caller namespace. The endpoint below may point to a different namespace.
+    string namespace = 2;
+
+    // A registered endpoint name. Indicates where the requests affecting this operation should be routed.
+    string endpoint = 3;
+    // Service name.
+    string service = 4;
+    // Operation name.
+    string operation = 5;
+
+    // Input to the operation.
+    temporal.api.common.v1.Payload payload = 6;
+    // Request headers to forward to the operation Handler.
+    map<string, string> header = 7;
+
+    // A UUID used for deduplicating client retries. The request ID sent to the operation handler will be different.
+    string request_id = 8;
+    // An optional reference for addressing this durable operation in the caller namespace. If unset, request_id will be used.
+    // NB: This is for the CALLER namespace ONLY. This reference is not passed to the operation handler.
+    temporal.api.nexus.v1.CallerOperationReference operation_ref = 9;
+
+    // Defines whether to allow re-using the caller operation ref from a previously *completed* operation.
+    // The default policy is NEXUS_CALLER_OPERATION_REF_REUSE_POLICY_ALLOW_DUPLICATE.
+    // See `operation_ref_conflict_policy` for handling a caller operation ref duplication with a *running* operation.
+    temporal.api.enums.v1.NexusCallerOperationRefReusePolicy operation_ref_reuse_policy = 10;
+    // Defines how to resolve a caller operation ref conflict with a *running* operation.
+    // The default policy is NEXUS_CALLER_OPERATION_REF_CONFLICT_POLICY_FAIL.
+    // See `operation_ref_reuse_policy` for handling a caller operation ref duplication with a *completed* operation.
+    temporal.api.enums.v1.WorkflowIdConflictPolicy operation_ref_conflict_policy = 11;
+
+    // Total time for the operation to complete.
+    google.protobuf.Duration operation_timeout = 12;
+    // The retry policy for the start operation request. Will never exceed `operation_timeout`.
+    temporal.api.common.v1.RetryPolicy retry_policy = 13;
+
+    // Callback URL to call upon completion if the started operation is async.
+    string callback_url = 14;
+    // Serialized object containing information about how to route the callback and metadata to send with it.
+    bytes callback_context = 15;
+
+    // Links contain caller information and can be attached to the operations started by the handler.
+    repeated temporal.api.nexus.v1.Link links = 16;
+}
+
+message StartNexusOperationResponse {
+    // An operation ref which can be used to reference this operation in the caller namespace.
+    temporal.api.nexus.v1.CallerOperationReference caller_operation_ref = 1;
+}
+
+message RequestCancelNexusOperationRequest {
+    // The identity of the client who initiated this request.
+    string identity = 1;
+    // The caller namespace.
+    string namespace = 2;
+
+    // A UUID used for deduplicating client retries. The request ID sent to the operation handler will be different.
+    string request_id = 3;
+    // Caller operation reference as returned in the StartNexusOperationResponse. `run_id` is optional and defaults to latest run.
+    temporal.api.nexus.v1.CallerOperationReference caller_operation_ref = 4;
+
+    // The retry policy for the cancellation request. Will never exceed the original `operation_timeout`.
+    temporal.api.common.v1.RetryPolicy retry_policy = 5;
+
+    // Request headers to forward to the operation handler.
+    map<string, string> header = 6;
+    // Links to be associated with the cancellation in the handler namespace.
+    repeated temporal.api.nexus.v1.Link links = 7;
+}
+
+// If this response is returned, the cancellation request was successfully recorded in the caller namespace for this
+// operation and the server guarantees the cancellation request will be delivered to the operation handler. The
+// operation handler may ignore the cancellation request and the operation may end up in any terminal state.
+message RequestCancelNexusOperationResponse {
+}
+
+message FetchNexusOperationResultRequest {
+    // The identity of the client who initiated this request.
+    string identity = 1;
+    // The caller namespace.
+    string namespace = 2;
+
+    // Caller operation reference as returned in the StartNexusOperationResponse. `run_id` is optional and defaults to latest run.
+    temporal.api.nexus.v1.CallerOperationReference caller_operation_ref = 3;
+
+    // If true, the caller has indicated that it wants to wait for operation completion, turning the request into a long poll.
+    // The server will wait the minimum duration from among the operation timeout, the request context deadline, and the
+    // servers configured maximum long poll request timeout.
+    bool wait = 4;
+}
+
+message FetchNexusOperationResultResponse {
+    message Successful {
+        temporal.api.common.v1.Payload result = 1;
+    }
+
+    message Unsuccessful {
+        temporal.api.nexus.v1.UnsuccessfulOperationError operation_error = 1;
+    }
+
+    message StillRunning {
+    }
+
+    oneof variant {
+        // The operation has finished successfully.
+        Successful successful = 1;
+        // The operation has finished unsuccessfully.
+        Unsuccessful unsuccessful = 2;
+        // The operation is still running, When waiting for completion, the caller may re-issue this request to start a
+        // new long poll.
+        StillRunning still_running = 3;
+    }
+}
+
+message TerminateNexusOperationRequest {
+    // The identity of the client who initiated this request.
+    string identity = 1;
+    // The caller namespace.
+    string namespace = 2;
+
+    // A UUID used for deduplicating client retries. The request ID sent to the operation handler will be different.
+    string request_id = 3;
+    // Caller operation reference as returned in the StartNexusOperationResponse. `run_id` is optional and defaults to latest run.
+    temporal.api.nexus.v1.CallerOperationReference caller_operation_ref = 4;
+
+    // An optional reason for terminating this operation.
+    string reason = 5;
+    // Serialized additional information to attach to the termination.
+    temporal.api.common.v1.Payloads details = 6;
+}
+
+// If this response is returned, the termination request was successfully processed by the caller server.
+// The server will propagate a cancellation request to the operation handler. Regardless of whether the handler
+// respects that cancellation request, the caller server will record the operation as Terminated and will
+// ignore any future completion requests.
+message TerminateNexusOperationResponse {
+}
+
+message DeleteNexusOperationRequest {
+    // The identity of the client who initiated this request.
+    string identity = 1;
+    // The caller namespace.
+    string namespace = 2;
+
+    // A UUID used for deduplicating client retries. The request ID sent to the operation handler will be different.
+    string request_id = 3;
+    // Caller operation reference as returned in the StartNexusOperationResponse. `run_id` is optional and defaults to latest run.
+    temporal.api.nexus.v1.CallerOperationReference caller_operation_ref = 4;
+}
+
+// If this response is returned, the deletion request was successfully processed by the caller server.
+message DeleteNexusOperationResponse {
+}
+
+message CompleteNexusOperationRequest {
+    // The identity of the client who initiated this request.
+    string identity = 1;
+    // The operation handler namespace.
+    string namespace = 2;
+
+    // A UUID used to deduplicate client requests.
+    string request_id = 3;
+    // The callback token as provided in the StartOperation call.
+    bytes callback_token = 4;
+
+    oneof outcome {
+        // The operation completed successfully.
+        temporal.api.common.v1.Payload result = 5;
+        // The operation completed unsuccessfully (failed or canceled).
+        temporal.api.nexus.v1.UnsuccessfulOperationError operation_error = 6;
+    }
+
+    // Request headers to send with the completion request.
+    map<string, string> header = 7;
+    // Links to be associated with the completion in the caller namespace.
+    repeated temporal.api.nexus.v1.Link links = 8;
+
+    // Total time for the operation callback to complete.
+    google.protobuf.Duration callback_timeout = 9;
+    // The retry policy for the complete operation request. Will never exceed `callback_timeout`.
+    temporal.api.common.v1.RetryPolicy retry_policy = 10;
+}
+
+message CompleteNexusOperationResponse {
+}
+
+message FetchCallbackResultRequest {
+    // The identity of the client who initiated this request.
+    string identity = 1;
+    // The namespace that invoked the callback.
+    string namespace = 2;
+
+    // The token referencing this callback as originally generated by the server.
+    bytes callback_token = 3;
+
+    // If true, the caller has indicated that it wants to wait for callback completion, turning the request
+    // into a long poll. The server will wait the minimum duration from among the callback timeout, the request context
+    // deadline, and the servers configured maximum long poll request timeout.
+    bool wait = 4;
+}
+
+message FetchCallbackResultResponse {
+    message Successful {
+    }
+
+    message Unsuccessful {
+        temporal.api.failure.v1.Failure failure = 1;
+    }
+
+    message StillRunning {
+    }
+
+    oneof variant {
+        // The callback has finished successfully.
+        Successful successful = 1;
+        // The callback has finished unsuccessfully.
+        Unsuccessful unsuccessful = 2;
+        // The operation is still running, When waiting for completion, the caller may re-issue this request to start a
+        // new long poll.
+        StillRunning still_running = 3;
+    }
+}
+
+message TerminateCallbackRequest {
+    // The identity of the client who initiated this request.
+    string identity = 1;
+    // The namespace that invoked the callback.
+    string namespace = 2;
+
+    // A UUID used to deduplicate client requests.
+    string request_id = 3;
+    // The token referencing this callback as originally generated by the server.
+    string callback_token = 4;
+
+    // An optional reason for terminating this Callback.
+    string reason = 5;
+    // Serialized additional information to attach to the termination.
+    temporal.api.common.v1.Payloads details = 6;
+}
+
+// If this response is returned, the server successfully processed the termination request and no more attempts to
+// deliver the callback will be made.
+message TerminateCallbackResponse {
+}
+
+message DeleteCallbackRequest {
+    // The identity of the client who initiated this request.
+    string identity = 1;
+    // The namespace that invoked the callback.
+    string namespace = 2;
+
+    // A UUID used to deduplicate client requests.
+    string request_id = 3;
+    // The token referencing this callback as originally generated by the server.
+    string callback_token = 4;
+}
+
+// If this response is returned, the server successfully processed the deletion request.
+message DeleteCallbackResponse {
 }

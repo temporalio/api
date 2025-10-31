@@ -133,9 +133,15 @@ enum VersioningBehavior {
     // User needs to use Patching to keep the new code compatible with prior versions when dealing
     // with Unversioned workflows.
     VERSIONING_BEHAVIOR_UNSPECIFIED = 0;
-    // Workflow will start on the Current Deployment Version of its Task Queue, and then
-    // will be pinned to that same Deployment Version until completion (the Version that
-    // this Workflow is pinned to is specified in `versioning_info.version`).
+    // Workflow will start on its Target Version and then will be pinned to that same Deployment
+    // Version until completion (the Version that this Workflow is pinned to is specified in
+    // `versioning_info.version` and is the Pinned Version of the Workflow).
+    //
+    // The workflow's Target Version is the Current Version of its Task Queue, or, if the
+    // Task Queue has a Ramping Version with non-zero Ramp Percentage `P`, the workflow's Target
+    // Version has a P% chance of being the Ramping Version. Whether a workflow falls into the
+    // Ramping group depends on it's Workflow ID and and the Ramp Percentage.
+    //
     // This behavior eliminates most of compatibility concerns users face when changing their code.
     // Patching is not needed when pinned workflows code change.
     // Can be overridden explicitly via `UpdateWorkflowExecutionOptions` API to move the
@@ -146,10 +152,12 @@ enum VersioningBehavior {
     // task queue.
     VERSIONING_BEHAVIOR_PINNED = 1;
     // Workflow will automatically move to its Target Version when the next workflow task is dispatched.
+    //
     // The workflow's Target Version is the Current Version of its Task Queue, or, if the
     // Task Queue has a Ramping Version with non-zero Ramp Percentage `P`, the workflow's Target
     // Version has a P% chance of being the Ramping Version. Whether a workflow falls into the
     // Ramping group depends on it's Workflow ID and and the Ramp Percentage.
+    //
     // AutoUpgrade behavior is suitable for long-running workflows as it allows them to move to the
     // latest Deployment Version, but the user still needs to use Patching to keep the new code
     // compatible with prior versions for changed workflow types.
@@ -157,11 +165,10 @@ enum VersioningBehavior {
     // execution (as specified in versioning_info.version based on the last completed
     // workflow task). Exception to this would be when the activity Task Queue workers are not
     // present in the workflow's Deployment Version, in which case, the activity will be sent to a
-    // different Deployment Version according to the Current Deployment Version of its own task
-    // queue.
-    // Workflows stuck on a backlogged activity will still auto-upgrade if the Current Deployment
-    // Version of their Task Queue changes, without having to wait for the backlogged activity to
-    // complete on the old Version.
+    // different Deployment Version according to the Current or Ramping Deployment Version of its own
+    // Task Queue.
+    // Workflows stuck on a backlogged activity will still auto-upgrade if their Target Version
+    // changes, without having to wait for the backlogged activity to complete on the old Version.
     VERSIONING_BEHAVIOR_AUTO_UPGRADE = 2;
     // The same semantics as PINNED, with the exception of Continue-As-New.
     // When a PINNED_UNTIL_CONTINUE_AS_NEW workflow continues-as-new, the new execution

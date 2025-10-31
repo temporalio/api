@@ -13225,6 +13225,7 @@ components:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
           type: string
           description: |-
             Required.
@@ -14604,6 +14605,7 @@ components:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
           type: string
           description: |-
             Versioning behavior determines how the server should treat this execution when workers are
@@ -14890,6 +14892,7 @@ components:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
           type: string
           description: |-
             Versioning behavior sent by the worker that completed this task for this particular workflow
@@ -15084,8 +15087,10 @@ components:
         suggestContinueAsNew:
           type: boolean
           description: |-
-            True if this workflow should continue-as-new soon because its history size (in
-             either event count or bytes) is getting large.
+            True if this workflow should continue-as-new soon. Reasons for this could be:
+               - History size (in either event count or bytes) is getting large
+               - Update registry size is getting large
+               - Workflow's Target Version is different from its Pinned Version, and the Versioning Behavior is PinnedUntilContinueAsNew
         historySizeBytes:
           type: string
           description: |-
@@ -15104,6 +15109,17 @@ components:
             Used by server internally to properly reapply build ID redirects to an execution
              when rebuilding it from events.
              Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
+        continueAsNewSuggestedReason:
+          enum:
+            - CONTINUE_AS_NEW_SUGGESTED_REASON_UNSPECIFIED
+            - CONTINUE_AS_NEW_SUGGESTED_REASON_HISTORY_SIZE_TOO_LARGE
+            - CONTINUE_AS_NEW_SUGGESTED_REASON_UPDATE_REGISTRY_TOO_LARGE
+            - CONTINUE_AS_NEW_SUGGESTED_REASON_WORKER_DEPLOYMENT_VERSION_CHANGED
+          type: string
+          description: |-
+            The reason that suggest_continue_as_new is true, if it is.
+             Unspecified if suggest_continue_as_new is false or if the reason is unknown.
+          format: enum
     WorkflowTaskTimedOutEventAttributes:
       type: object
       properties:

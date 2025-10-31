@@ -145,8 +145,11 @@ enum VersioningBehavior {
     // Version, in which case the activity will be sent to the Current Deployment Version of its own
     // task queue.
     VERSIONING_BEHAVIOR_PINNED = 1;
-    // Workflow will automatically move to the Current Deployment Version of its Task Queue when the
-    // next workflow task is dispatched.
+    // Workflow will automatically move to its Target Version when the next workflow task is dispatched.
+    // The workflow's Target Version is the Current Version of its Task Queue, or, if the
+    // Task Queue has a Ramping Version with non-zero Ramp Percentage `P`, the workflow's Target
+    // Version has a P% chance of being the Ramping Version. Whether a workflow falls into the
+    // P% group depends on it's Workflow ID.
     // AutoUpgrade behavior is suitable for long-running workflows as it allows them to move to the
     // latest Deployment Version, but the user still needs to use Patching to keep the new code
     // compatible with prior versions for changed workflow types.
@@ -160,6 +163,10 @@ enum VersioningBehavior {
     // Version of their Task Queue changes, without having to wait for the backlogged activity to
     // complete on the old Version.
     VERSIONING_BEHAVIOR_AUTO_UPGRADE = 2;
+    // The same semantics as PINNED, with the exception of Continue-As-New.
+    // When a PINNED_UNTIL_CONTINUE_AS_NEW workflow continues-as-new, the new execution
+    // will start on the workflow's Target Version, just like an AUTO_UPGRADE workflow.
+    VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW = 3;
 }
 
 // ContinueAsNewSuggestedReason specifies why SuggestContinueAsNew is true.
@@ -175,7 +182,7 @@ enum ContinueAsNewSuggestedReason {
   // Workflow Update registry is getting too large.
   CONTINUE_AS_NEW_SUGGESTED_REASON_UPDATE_REGISTRY_TOO_LARGE = 2;
 
-  // Workflow's Worker Deployment  has a new Ramping Version, and the workflow's
+  // Workflow's Worker Deployment has a new Ramping Version, and the workflow's
   // Versioning Behavior is PinnedUntilContinueAsNew.
   CONTINUE_AS_NEW_SUGGESTED_REASON_WORKER_DEPLOYMENT_VERSION_CHANGED = 3;
 }

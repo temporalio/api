@@ -195,9 +195,9 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     google.protobuf.Duration workflow_task_timeout = 6;
     // The `WORKFLOW_TASK_COMPLETED` event which this command was reported with
     int64 workflow_task_completed_event_id = 7;
-    // How long the server will wait before scheduling the new run. Used for cron, retry,
-    // and backoff semantics when the continue-as-new is initiated by the service rather
-    // than directly from workflow code.
+    // How long the server will wait before scheduling the first workflow task for the new run.
+    // Used for cron, retry, and other continue-as-new cases that server may enforce some minimal
+    // delay between new runs for system protection purpose.
     google.protobuf.Duration backoff_start_interval = 8;
     temporal.api.enums.v1.ContinueAsNewInitiator initiator = 9;
     // Deprecated. If a workflow's retry policy would cause a new run to start when the current one
@@ -235,8 +235,8 @@ message WorkflowTaskStartedEventAttributes {
     int64 scheduled_event_id = 1;
     // Identity of the worker who picked up this task
     string identity = 2;
-    // Opaque identifier carried over from the matching service to deduplicate start requests.
-    string request_id = 3;
+    // Deprecated.
+    string request_id = 3 [deprecated = true];
     // True if this workflow should continue-as-new soon because its history size (in
     // either event count or bytes) is getting large.
     bool suggest_continue_as_new = 4;
@@ -316,7 +316,7 @@ message WorkflowTaskFailedEventAttributes {
     // The failure details
     temporal.api.failure.v1.Failure failure = 4;
     // If a worker explicitly failed this task, it's identity. When the server generates the failure
-    // internally this field is left empty.
+    // internally this field is set as 'history-service'.
     string identity = 5;
     // The original run id of the workflow. For reset workflow.
     string base_run_id = 6;
@@ -387,8 +387,8 @@ message ActivityTaskStartedEventAttributes {
     int64 scheduled_event_id = 1;
     // id of the worker that picked up this task
     string identity = 2;
-    // Opaque identifier from the matching service used to deduplicate activity start requests.
-    string request_id = 3;
+    // Deprecated.
+    string request_id = 3 [deprecated = true];
     // Starting at 1, the number of times this task has been attempted
     int32 attempt = 4;
     // Will be set to the most recent failure details, if this task has previously failed and then

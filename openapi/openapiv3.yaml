@@ -6163,6 +6163,95 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{id}/pause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Note: This is an experimental API and the behavior may change in a future release.
+         PauseWorkflowExecution pauses the workflow execution specified in the request. Pausing a workflow execution results in
+         - The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history
+         - No new workflow tasks or activity tasks are dispatched.
+           - Any workflow task currently executing on the worker will be allowed to complete.
+           - Any activity task currently executing will be paused.
+         - All server-side events will continue to be processed by the server.
+         - Queries & Updates on a paused workflow will be rejected.
+      operationId: PauseWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow to pause.
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: ID of the workflow execution to be paused. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PauseWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{id}/unpause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Note: This is an experimental API and the behavior may change in a future release.
+         UnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.
+         Unpausing a workflow execution results in
+         - The workflow execution status changes to `RUNNING` and a new WORKFLOW_EXECUTION_UNPAUSED event is added to the history
+         - Workflow tasks and activity tasks are resumed.
+      operationId: UnpauseWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow to unpause.
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: ID of the workflow execution to be paused. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnpauseWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnpauseWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{workflowId}:
     post:
       tags:
@@ -6300,51 +6389,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/pause:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        Note: This is an experimental API and the behavior may change in a future release.
-         PauseWorkflowExecution pauses the workflow execution specified in the request. Pausing a workflow execution results in
-         - The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history
-         - No new workflow tasks or activity tasks are dispatched.
-           - Any workflow task currently executing on the worker will be allowed to complete.
-           - Any activity task currently executing will be paused.
-         - All server-side events will continue to be processed by the server.
-         - Queries & Updates on a paused workflow will be rejected.
-      operationId: PauseWorkflowExecution
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace of the workflow to pause.
-          required: true
-          schema:
-            type: string
-        - name: workflow_execution.workflow_id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PauseWorkflowExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PauseWorkflowExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/reset:
     post:
       tags:
@@ -6465,48 +6509,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TerminateWorkflowExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/unpause:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        Note: This is an experimental API and the behavior may change in a future release.
-         UnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.
-         Unpausing a workflow execution results in
-         - The workflow execution status changes to `RUNNING` and a new WORKFLOW_EXECUTION_UNPAUSED event is added to the history
-         - Workflow tasks and activity tasks are resumed.
-      operationId: UnpauseWorkflowExecution
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace of the workflow to unpause.
-          required: true
-          schema:
-            type: string
-        - name: workflow_execution.workflow_id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UnpauseWorkflowExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnpauseWorkflowExecutionResponse'
         default:
           description: Default error response
           content:
@@ -9763,10 +9765,12 @@ components:
         namespace:
           type: string
           description: Namespace of the workflow to pause.
-        workflowExecution:
-          allOf:
-            - $ref: '#/components/schemas/WorkflowExecution'
-          description: Execution info of the workflow to pause.
+        id:
+          type: string
+          description: ID of the workflow execution to be paused. Required.
+        runId:
+          type: string
+          description: Run ID of the workflow execution to be paused. Optional. If not provided, the current run of the workflow will be paused.
         identity:
           type: string
           description: The identity of the client who initiated this request.
@@ -12847,10 +12851,12 @@ components:
         namespace:
           type: string
           description: Namespace of the workflow to unpause.
-        workflowExecution:
-          allOf:
-            - $ref: '#/components/schemas/WorkflowExecution'
-          description: Execution info of the workflow to unpause.
+        id:
+          type: string
+          description: ID of the workflow execution to be paused. Required.
+        runId:
+          type: string
+          description: Run ID of the workflow execution to be paused. Optional. If not provided, the current run of the workflow will be paused.
         identity:
           type: string
           description: The identity of the client who initiated this request.
@@ -14438,6 +14444,33 @@ components:
         identity:
           type: string
           description: Optional. The identity of the client who initiated the request that created this event.
+    WorkflowExecutionPauseInfo:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the client who paused the workflow execution.
+        pausedTime:
+          type: string
+          description: The time when the workflow execution was paused.
+          format: date-time
+        reason:
+          type: string
+          description: The reason for pausing the workflow execution.
+      description: WorkflowExecutionPauseInfo contains the information about a workflow execution pause.
+    WorkflowExecutionPausedEventAttributes:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the client who paused the workflow execution.
+        reason:
+          type: string
+          description: The reason for pausing the workflow execution.
+        requestId:
+          type: string
+          description: The request ID of the request that paused the workflow execution.
+      description: Attributes for an event marking that a workflow execution was paused.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:

@@ -390,8 +390,9 @@ service WorkflowService {
 
     // ResetWorkflowExecution will reset an existing workflow execution to a specified
     // `WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current
-    // execution instance.
-    // TODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?
+    // execution instance. "Exclusive" means the identified completed event itself is not replayed
+    // in the reset history; the preceding `WORKFLOW_TASK_STARTED` event remains and will be marked as failed
+    // immediately, and a new workflow task will be scheduled to retry it.
     rpc ResetWorkflowExecution (ResetWorkflowExecutionRequest) returns (ResetWorkflowExecutionResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/reset"

@@ -13,6 +13,7 @@ import "temporal/api/enums/v1/batch_operation.proto";
 import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/enums/v1/namespace.proto";
+import "temporal/api/enums/v1/nexus.proto";
 import "temporal/api/enums/v1/failed_cause.proto";
 import "temporal/api/enums/v1/query.proto";
 import "temporal/api/enums/v1/reset.proto";
@@ -2597,4 +2598,193 @@ message DescribeWorkerRequest {
 
 message DescribeWorkerResponse {
     temporal.api.worker.v1.WorkerInfo worker_info = 1;
+}
+
+message StartNexusOperationRequest {
+    // The caller namespace. Note the endpoint below may target a different namespace.
+    string namespace = 1;
+    // The identity of the client who initiated this request
+    string identity = 2;
+    // A unique identifier for this start request. Typically UUIDv4.
+    string request_id = 3;
+
+    // A caller-set ID for referencing this operation in the caller namespace ONLY. This ID will not be propagated to
+    // the operation handler.
+    string operation_id = 4;
+    // A registered Nexus endpoint name.
+    string endpoint = 5;
+    // Name of the service to which this operation belongs.
+    string service = 6;
+    // Operation name as registered with the Temporal worker.
+    string operation = 7;
+    // Serialized input to the operation.
+    temporal.api.common.v1.Payload input = 8;
+    // Request headers to forward to the operation handler.
+    temporal.api.common.v1.Header header = 9;
+
+    // Defines whether to allow re-using the operation id from a previously *closed* operation.
+    // The default policy is NEXUS_OPERATION_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    temporal.api.enums.v1.NexusOperationIdReusePolicy id_reuse_policy = 10;
+    // Defines how to resolve an operation id conflict with a *running* operation.
+    // The default policy is NEXUS_OPERATION_ID_CONFLICT_POLICY_FAIL.
+    temporal.api.enums.v1.NexusOperationIdConflictPolicy id_conflict_policy = 11;
+    // Defines actions to be done to the existing running operation when NEXUS_OPERATION_ID_CONFLICT_POLICY_USE_EXISTING
+    // is used. If not set or empty, it won't do anything to the existing running operation.
+    temporal.api.nexus.v1.OnConflictOptions on_conflict_options = 12;
+
+    // Arbitrary structured data that can be attached to the operation and made available via the list and describe APIs.
+    temporal.api.common.v1.Memo memo = 13;
+    // Search attributes for indexing.
+    temporal.api.common.v1.SearchAttributes search_attributes = 14;
+    // Callbacks to be called by the server when this operation reaches a terminal status.
+    // Callback addresses must be whitelisted in the server's dynamic configuration.
+    repeated temporal.api.common.v1.Callback completion_callbacks = 15;
+    // Links to be associated with the operation.
+    repeated temporal.api.common.v1.Link links = 16;
+}
+
+message StartNexusOperationResponse {
+    // The run ID of the operation that was started - or used (via NEXUS_OPERATION_ID_CONFLICT_POLICY_USE_EXISTING).
+    string run_id = 1;
+    // If true, a new operation was started.
+    bool started = 2;
+}
+
+message PollNexusOperationRequest {
+    string namespace = 1;
+    string operation_id = 2;
+    // Operation run ID. If empty the request targets the latest run.
+    string run_id = 3;
+    // Include the info field from the response.
+    bool include_info = 4;
+    // Include the input field in the response.
+    bool include_input = 5;
+    // Include the outcome field in the response.
+    bool include_outcome = 6;
+
+    message StateChangeWaitOptions {
+        // Token from a previous PollNexusOperationResponse used to inform the server of the
+        // last state seen by the caller. If present, run_id must also be present.
+        bytes long_poll_token = 1;
+    }
+
+    message CompletionWaitOptions {}
+
+    // If present, the request will be handled as a long-poll. If absent, a response will be
+    // returned immediately containing the current operation state.
+    oneof wait_policy {
+        // Wait for any change in operation state before responding. If long_poll_token is absent
+        // then the current state will be returned immediately without any wait. Otherwise the
+        // server will wait until operation state differs from that encoded in the token before
+        // returning the new state. Note that operation state may change multiple times between
+        // requests, therefore it is not guaranteed that a client making a sequence of long-poll
+        // requests will see a complete sequence of state changes.
+        StateChangeWaitOptions wait_any_state_change = 7;
+        // Wait for the operation to complete before responding.
+        // long_poll_token is currently ignored when waiting for completion
+        CompletionWaitOptions wait_completion = 8;
+    }
+}
+
+message PollNexusOperationResponse {
+    // The run ID of the operation, useful when run_id was not specified in the request.
+    string run_id = 1;
+
+    // Only set if include_info was true in the request.
+    temporal.api.nexus.v1.NexusOperationInfo info = 2;
+
+    // Serialized operation input.
+    temporal.api.common.v1.Payload input = 3;
+
+    // Only set if the operation is completed and include_outcome was true in the request.
+    oneof outcome {
+        // The result if the operation completed successfully.
+        temporal.api.common.v1.Payload result = 4;
+        // The failure if the operation completed unsuccessfully.
+        temporal.api.failure.v1.Failure failure = 5;
+    }
+
+    // Token to use for a follow-on request using wait_any_state_change.
+    // Only set if wait_policy was wait_any_state_change and the operation is not complete.
+    bytes state_change_long_poll_token = 6;
+}
+
+message ListNexusOperationsRequest {
+    string namespace = 1;
+    // Max number of operations to return per page.
+    int32 page_size = 2;
+    // Token returned in ListNexusOperationsResponse.
+    bytes next_page_token = 3;
+    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+    string query = 4;
+}
+
+message ListNexusOperationsResponse {
+    repeated temporal.api.nexus.v1.NexusOperationListInfo operations = 1;
+    // Token to use to fetch the next page. If empty, there is no next page.
+    bytes next_page_token = 2;
+}
+
+message CountNexusOperationsRequest {
+    string namespace = 1;
+    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+    string query = 2;
+}
+
+message CountNexusOperationsResponse {
+    // If `query` is not grouping by any field, the count is an approximate number
+    // of operations that match the query.
+    // If `query` is grouping by a field, the count is simply the sum of the counts
+    // of the groups returned in the response. This number can be smaller than the
+    // total number of operations matching the query.
+    int64 count = 1;
+
+    // Contains the groups if the request is grouping by a field.
+    // The list might not be complete, and the counts of each group is approximate.
+    repeated AggregationGroup groups = 2;
+
+    message AggregationGroup {
+        repeated temporal.api.common.v1.Payload group_values = 1;
+        int64 count = 2;
+    }
+}
+
+message RequestCancelNexusOperationRequest {
+    string namespace = 1;
+    string operation_id = 2;
+    // Operation run ID, targets the latest run if run_id is empty.
+    string run_id = 3;
+    // The identity of the worker/client.
+    string identity = 4;
+    // Used to de-dupe cancellation requests.
+    string request_id = 5;
+    // Reason for requesting the cancellation, recorded and available via the PollNexusOperation API.
+    string reason = 6;
+}
+
+message RequestCancelNexusOperationResponse {
+}
+
+message TerminateNexusOperationRequest {
+    string namespace = 1;
+    string operation_id = 2;
+    // Operation run ID, targets the latest run if run_id is empty.
+    string run_id = 3;
+    // Reason for requesting the termination, recorded in in the operation's result failure outcome.
+    string reason = 4;
+    // The identity of the worker/client.
+    string identity = 5;
+}
+
+message TerminateNexusOperationResponse {
+}
+
+message DeleteNexusOperationRequest {
+    string namespace = 1;
+    string operation_id = 2;
+    // Operation run ID, targets the latest run if run_id is empty.
+    string run_id = 3;
+}
+
+message DeleteNexusOperationResponse {
 }

@@ -1259,4 +1259,87 @@ service WorkflowService {
             }
         };
     }
+
+    // StartNexusOperation starts a new Nexus operation.
+    //
+    // Returns a `NexusOperationAlreadyStarted` error if an instance already exists with same operation ID in this namespace
+    // unless permitted by the specified ID conflict policy.
+    //
+    // TODO: clarify the different semantics between Durable and Direct calls. TBD exactly how Direct calls will be exposed.
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: Nexus has a separately defined StartOperation HTTP API. --)
+    rpc StartNexusOperation (StartNexusOperationRequest) returns (StartNexusOperationResponse) {
+    }
+
+    // PollNexusOperation returns the status and/or outcome of a Nexus operation.
+    // Supported use cases include
+    // - Get current operation info without waiting
+    // - Wait for next state change and return operation info
+    // - Wait for completion and return outcome
+    rpc PollNexusOperation (PollNexusOperationRequest) returns (PollNexusOperationResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus/operations/{operation_id}"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus/operations/{operation_id}"
+            }
+        };
+    }
+
+    // ListNexusOperations is a visibility API to list Nexus operations in a specific namespace.
+    rpc ListNexusOperations (ListNexusOperationsRequest) returns (ListNexusOperationsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus/operations"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus/operations"
+            }
+        };
+    }
+
+    // CountNexusOperations is a visibility API to count of Nexus operations in a specific namespace.
+    rpc CountNexusOperations (CountNexusOperationsRequest) returns (CountNexusOperationsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus/operation-count"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus/operation-count"
+            }
+        };
+    }
+
+    // RequestCancelNexusOperation requests cancellation of a Nexus operation.
+    //
+    // Requesting to cancel an operation does not automatically transition the operation to canceled status. The
+    // operation handler may choose to ignore the cancellation request and the operation may end in any terminal state.
+    // The operation handler must invoke the operation completion callback with a failure indicating the operation was
+    // cancelled for the operation to transition to canceled status.
+    //
+    // It returns success if the requested operation is already completed.
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: Nexus has a separately defined CancelOperation HTTP API. --)
+    rpc RequestCancelNexusOperation (RequestCancelNexusOperationRequest) returns (RequestCancelNexusOperationResponse) {
+    }
+
+    // TerminateNexusOperation terminates an existing Nexus operation immediately.
+    //
+    // Termination does not reach the operation handler and the handler cannot react to it. A terminated operation may
+    // have a running attempt and will be requested to be canceled by the server.
+    rpc TerminateNexusOperation (TerminateNexusOperationRequest) returns (TerminateNexusOperationResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/nexus/operations/{operation_id}/terminate"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/nexus/operations/{operation_id}/terminate"
+                body: "*"
+            }
+        };
+    }
+
+    // DeleteNexusOperation asynchronously deletes a specific Nexus operation (when run_id is provided) or the latest
+    // activity execution (when run_id is not provided). If the Nexus operation is running, it will be terminated
+    // before deletion.
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: Nexus operation deletion not exposed to HTTP, users should use cancel or terminate. --)
+    rpc DeleteNexusOperation (DeleteNexusOperationRequest) returns (DeleteNexusOperationResponse) {}
 }

@@ -9,9 +9,12 @@ option java_outer_classname = "MessageProto";
 option ruby_package = "Temporalio::Api::Nexus::V1";
 option csharp_namespace = "Temporalio.Api.Nexus.V1";
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "temporal/api/common/v1/message.proto";
+import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/nexus.proto";
+import "temporal/api/failure/v1/message.proto";
 
 // A general purpose failure message.
 // See: https://github.com/nexus-rpc/api/blob/main/SPEC.md#failure
@@ -40,6 +43,17 @@ message Link {
     // See https://github.com/nexus-rpc/api/blob/main/SPEC.md#links.
     string url = 1;
     string type = 2;
+}
+
+// When StartNexusOperation uses the OPERATION_ID_CONFLICT_POLICY_USE_EXISTING and there is already an existing running
+// operation, OnConflictOptions defines actions to be taken on the existing running operation, updating its state.
+message OnConflictOptions {
+    // Attaches the request ID to the running operation.
+    bool attach_request_id = 1;
+    // Attaches the completion callbacks to the running operation.
+    bool attach_completion_callbacks = 2;
+    // Attaches the links to the running operation.
+    bool attach_links = 3;
 }
 
 // A request to start an operation.
@@ -197,4 +211,97 @@ message EndpointTarget {
         Worker worker = 1;
         External external = 2;
     }
+}
+
+// Information about a Nexus operation.
+message NexusOperationInfo {
+    // Unique identifier of this operation within its caller namespace along with run ID (below).
+    string operation_id = 1;
+    string run_id = 2;
+
+    // Endpoint name associated with this operation.
+    string endpoint = 3;
+    // Name of the service to which this operation belongs.
+    string service = 4;
+    // Name of the operation as registered with the Temporal worker.
+    string operation = 5;
+    // A general status for this operation, indicates whether it is currently running or in one of the terminal statuses.
+    temporal.api.enums.v1.NexusOperationStatus status = 6;
+    // More detailed breakdown of NEXUS_OPERATION_EXECUTION_STATUS_RUNNING.
+    temporal.api.enums.v1.PendingNexusOperationState run_state = 7;
+
+    // Time the operation transitioned to started, if the operation is asynchronous.
+    google.protobuf.Timestamp started_time = 8;
+    // The attempt this operation is currently on.
+    // Incremented each time a new attempt is made to send a StartOperation or RequestCancelOperation request to the
+    // operation handler.
+    int32 attempt = 9;
+    int32 maximum_attempts = 10;
+    // Time the activity was originally scheduled via a StartNexusOperation request.
+    google.protobuf.Timestamp scheduled_time = 11;
+    // Scheduled time + schedule to close timeout.
+    google.protobuf.Timestamp expiration_time = 12;
+    // Failure details from the last failed attempt.
+    temporal.api.failure.v1.Failure last_failure = 13;
+    // Time from the last attempt failure to the next retry. Calculated from the specified retry policy.
+    // If operation is currently backing off between attempts, this represents the current retry interval.
+    // If there is no next retry allowed, this field will be null.
+    google.protobuf.Duration current_retry_interval = 14;
+    // The time when the last request attempt completed. If the StartOperation request has not been completed yet, it will be null.
+    google.protobuf.Timestamp last_attempt_complete_time = 15;
+    // The time when the next request attempt will be scheduled.
+    // If operation is currently started, this field will be null.
+    google.protobuf.Timestamp next_attempt_schedule_time = 16;
+
+    // Incremented each time the operation's state is mutated in persistence.
+    int64 state_transition_count = 17;
+
+    temporal.api.common.v1.SearchAttributes search_attributes = 18;
+    temporal.api.common.v1.Header header = 19;
+
+    // Callbacks to be called by the server when this operation reaches a terminal status.
+    // Callback addresses must be whitelisted in the server's dynamic configuration.
+    repeated temporal.api.common.v1.Callback completion_callbacks = 20;
+    // Links to be associated with the operation.
+    repeated temporal.api.common.v1.Link links = 21;
+
+    // Set if operation cancellation was requested.
+    string canceled_reason = 22;
+}
+
+// Limited Nexus operation information returned in the list response.
+// When adding fields here, ensure that it is also present in NexusOperationInfo (note that it
+// may already be present in NexusOperationInfo but not at the top-level).
+message NexusOperationListInfo {
+    // For standalone operations - a unique identifier of this operation within its namespace along with run ID (below).
+    string operation_id = 1;
+    // The run ID of the workflow or standalone operation.
+    string run_id = 2;
+    // Workflow that contains this operation - only present for workflow operations.
+    string workflow_id = 3;
+
+    // Endpoint name associated with this operation.
+    string endpoint = 4;
+    // Name of the service to which this operation belongs.
+    string service = 5;
+    // Name of the operation as registered with the Temporal worker.
+    string operation = 6;
+    // Time the operation was originally scheduled via a StartNexusOperation request.
+    google.protobuf.Timestamp scheduled_time = 7;
+    // If the operation is in a terminal status, this field represents the time the operation transitioned to that status.
+    google.protobuf.Timestamp close_time = 8;
+    // Only scheduled and terminal statuses appear here. More detailed information in PendingNexusOperationInfo but not
+    // available in the list response.
+    temporal.api.enums.v1.NexusOperationStatus status = 9;
+
+    // Search attributes from the start request.
+    temporal.api.common.v1.SearchAttributes search_attributes = 10;
+
+    // Updated on terminal status.
+    int64 state_transition_count = 11;
+    // Updated once on scheduled and once on terminal status.
+    int64 state_size_bytes = 12;
+    // The difference between close time and scheduled time.
+    // This field is only populated if the operation is closed.
+    google.protobuf.Duration execution_duration = 13;
 }

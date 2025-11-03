@@ -3106,7 +3106,7 @@
     },
     "/api/v1/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/reset": {
       "post": {
-        "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance.\nTODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?",
+        "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance. \"Exclusive\" means the identified completed event itself is not replayed\nin the reset history; the preceding `WORKFLOW_TASK_STARTED` event remains and will be marked as failed\nimmediately, and a new workflow task will be scheduled to retry it.",
         "operationId": "ResetWorkflowExecution2",
         "responses": {
           "200": {
@@ -6931,7 +6931,7 @@
     },
     "/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/reset": {
       "post": {
-        "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance.\nTODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?",
+        "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance. \"Exclusive\" means the identified completed event itself is not replayed\nin the reset history; the preceding `WORKFLOW_TASK_STARTED` event remains and will be marked as failed\nimmediately, and a new workflow task will be scheduled to retry it.",
         "operationId": "ResetWorkflowExecution",
         "responses": {
           "200": {
@@ -9630,7 +9630,7 @@
         },
         "requestId": {
           "type": "string",
-          "title": "TODO ??"
+          "description": "This field is populated from the RecordActivityTaskStartedRequest. Matching service would\nset the request_id on the RecordActivityTaskStartedRequest to a new UUID. This is useful\nin case a RecordActivityTaskStarted call succeed but matching doesn't get that response,\nso matching could retry and history service would return success if the request_id matches.\nIn that case, matching will continue to deliver the task to worker. Without this field, history\nservice would return AlreadyStarted error, and matching would drop the task."
         },
         "attempt": {
           "type": "integer",
@@ -11700,12 +11700,12 @@
         "version": {
           "type": "string",
           "format": "int64",
-          "title": "TODO: What is this? Appears unused by SDKs"
+          "description": "Failover version of the event, used by the server for multi-cluster replication and history\nversioning. SDKs generally ignore this field."
         },
         "taskId": {
           "type": "string",
           "format": "int64",
-          "title": "TODO: What is this? Appears unused by SDKs"
+          "description": "Identifier used by the service to order replication and transfer tasks associated with this\nevent. SDKs generally ignore this field."
         },
         "workerMayIgnore": {
           "type": "boolean",
@@ -15288,7 +15288,7 @@
           "description": "Free-form comment describing the intention of this spec."
         }
       },
-      "title": "StructuredCalendarSpec describes an event specification relative to the\ncalendar, in a form that's easy to work with programmatically. Each field can\nbe one or more ranges.\nA timestamp matches if at least one range of each field matches the\ncorresponding fields of the timestamp, except for year: if year is missing,\nthat means all years match. For all fields besides year, at least one Range\nmust be present to match anything.\nTODO: add relative-to-end-of-month\nTODO: add nth day-of-week in month"
+      "description": "StructuredCalendarSpec describes an event specification relative to the\ncalendar, in a form that's easy to work with programmatically. Each field can\nbe one or more ranges.\nA timestamp matches if at least one range of each field matches the\ncorresponding fields of the timestamp, except for year: if year is missing,\nthat means all years match. For all fields besides year, at least one Range\nmust be present to match anything.\nRelative expressions such as \"last day of the month\" or \"third Monday\" are not currently\nrepresentable; callers must enumerate the concrete days they require."
     },
     "v1TaskIdBlock": {
       "type": "object",
@@ -16499,12 +16499,12 @@
       "properties": {
         "cause": {
           "type": "string",
-          "title": "User provided reason for requesting cancellation\nTODO: shall we create a new field with name \"reason\" and deprecate this one?"
+          "title": "User provided reason for requesting cancellation"
         },
         "externalInitiatedEventId": {
           "type": "string",
           "format": "int64",
-          "title": "TODO: Is this the ID of the event in the workflow which initiated this cancel, if there was one?"
+          "description": "The ID of the `REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED` event in the external\nworkflow history when the cancellation was requested by another workflow."
         },
         "externalWorkflowExecution": {
           "$ref": "#/definitions/v1WorkflowExecution"
@@ -16598,18 +16598,18 @@
         },
         "backoffStartInterval": {
           "type": "string",
-          "title": "TODO: How and is this used?"
+          "description": "How long the server will wait before scheduling the first workflow task for the new run.\nUsed for cron, retry, and other continue-as-new cases that server may enforce some minimal\ndelay between new runs for system protection purpose."
         },
         "initiator": {
           "$ref": "#/definitions/v1ContinueAsNewInitiator"
         },
         "failure": {
           "$ref": "#/definitions/apifailurev1Failure",
-          "description": "TODO: David are these right?\nDeprecated. If a workflow's retry policy would cause a new run to start when the current one\nhas failed, this field would be populated with that failure. Now (when supported by server\nand sdk) the final event will be `WORKFLOW_EXECUTION_FAILED` with `new_execution_run_id` set."
+          "description": "Deprecated. If a workflow's retry policy would cause a new run to start when the current one\nhas failed, this field would be populated with that failure. Now (when supported by server\nand sdk) the final event will be `WORKFLOW_EXECUTION_FAILED` with `new_execution_run_id` set."
         },
         "lastCompletionResult": {
           "$ref": "#/definitions/v1Payloads",
-          "title": "TODO: Is this the result of *this* workflow as it continued-as-new?"
+          "description": "The result from the most recent completed run of this workflow. The SDK surfaces this to the\nnew run via APIs such as `GetLastCompletionResult`."
         },
         "header": {
           "$ref": "#/definitions/v1Header"
@@ -17485,7 +17485,7 @@
         },
         "identity": {
           "type": "string",
-          "title": "If a worker explicitly failed this task, it's identity. TODO: What is this set to if server fails the task?"
+          "description": "If a worker explicitly failed this task, this field contains the worker's identity. \nWhen the server generates the failure internally this field is set as 'history-service'."
         },
         "baseRunId": {
           "type": "string",
@@ -17498,7 +17498,7 @@
         "forkEventVersion": {
           "type": "string",
           "format": "int64",
-          "title": "TODO: ?"
+          "description": "Version of the event where the history branch was forked. Used by multi-cluster replication\nduring resets to identify the correct history branch."
         },
         "binaryChecksum": {
           "type": "string",
@@ -17542,7 +17542,7 @@
         },
         "requestId": {
           "type": "string",
-          "title": "TODO: ? Appears unused?"
+          "description": "This field is populated from the RecordWorkflowTaskStartedRequest. Matching service would\nset the request_id on the RecordWorkflowTaskStartedRequest to a new UUID. This is useful\nin case a RecordWorkflowTaskStarted call succeed but matching doesn't get that response,\nso matching could retry and history service would return success if the request_id matches.\nIn that case, matching will continue to deliver the task to worker. Without this field, history\nservice would return AlreadyStarted error, and matching would drop the task."
         },
         "suggestContinueAsNew": {
           "type": "boolean",

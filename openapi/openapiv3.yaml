@@ -2882,8 +2882,9 @@ paths:
       description: |-
         ResetWorkflowExecution will reset an existing workflow execution to a specified
          `WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current
-         execution instance.
-         TODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?
+         execution instance. "Exclusive" means the identified completed event itself is not replayed
+         in the reset history; the preceding `WORKFLOW_TASK_STARTED` event remains and will be marked as failed
+         immediately, and a new workflow task will be scheduled to retry it.
       operationId: ResetWorkflowExecution
       parameters:
         - name: namespace
@@ -6306,8 +6307,9 @@ paths:
       description: |-
         ResetWorkflowExecution will reset an existing workflow execution to a specified
          `WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current
-         execution instance.
-         TODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?
+         execution instance. "Exclusive" means the identified completed event itself is not replayed
+         in the reset history; the preceding `WORKFLOW_TASK_STARTED` event remains and will be marked as failed
+         immediately, and a new workflow task will be scheduled to retry it.
       operationId: ResetWorkflowExecution
       parameters:
         - name: namespace
@@ -6775,7 +6777,13 @@ components:
           description: id of the worker that picked up this task
         requestId:
           type: string
-          description: TODO ??
+          description: |-
+            This field is populated from the RecordActivityTaskStartedRequest. Matching service would
+             set the request_id on the RecordActivityTaskStartedRequest to a new UUID. This is useful
+             in case a RecordActivityTaskStarted call succeed but matching doesn't get that response,
+             so matching could retry and history service would return success if the request_id matches.
+             In that case, matching will continue to deliver the task to worker. Without this field, history
+             service would return AlreadyStarted error, and matching would drop the task.
         attempt:
           type: integer
           description: Starting at 1, the number of times this task has been attempted
@@ -8666,10 +8674,14 @@ components:
           format: enum
         version:
           type: string
-          description: 'TODO: What is this? Appears unused by SDKs'
+          description: |-
+            Failover version of the event, used by the server for multi-cluster replication and history
+             versioning. SDKs generally ignore this field.
         taskId:
           type: string
-          description: 'TODO: What is this? Appears unused by SDKs'
+          description: |-
+            Identifier used by the service to order replication and transfer tasks associated with this
+             event. SDKs generally ignore this field.
         workerMayIgnore:
           type: boolean
           description: |-
@@ -12303,8 +12315,8 @@ components:
          corresponding fields of the timestamp, except for year: if year is missing,
          that means all years match. For all fields besides year, at least one Range
          must be present to match anything.
-         TODO: add relative-to-end-of-month
-         TODO: add nth day-of-week in month
+         Relative expressions such as "last day of the month" or "third Monday" are not currently
+         representable; callers must enumerate the concrete days they require.
     TaskIdBlock:
       type: object
       properties:
@@ -13942,12 +13954,12 @@ components:
       properties:
         cause:
           type: string
-          description: |-
-            User provided reason for requesting cancellation
-             TODO: shall we create a new field with name "reason" and deprecate this one?
+          description: User provided reason for requesting cancellation
         externalInitiatedEventId:
           type: string
-          description: 'TODO: Is this the ID of the event in the workflow which initiated this cancel, if there was one?'
+          description: |-
+            The ID of the `REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED` event in the external
+             workflow history when the cancellation was requested by another workflow.
         externalWorkflowExecution:
           $ref: '#/components/schemas/WorkflowExecution'
         identity:
@@ -14018,7 +14030,10 @@ components:
         backoffStartInterval:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: 'TODO: How and is this used?'
+          description: |-
+            How long the server will wait before scheduling the first workflow task for the new run.
+             Used for cron, retry, and other continue-as-new cases that server may enforce some minimal
+             delay between new runs for system protection purpose.
         initiator:
           enum:
             - CONTINUE_AS_NEW_INITIATOR_UNSPECIFIED
@@ -14031,14 +14046,15 @@ components:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: |-
-            TODO: David are these right?
-             Deprecated. If a workflow's retry policy would cause a new run to start when the current one
+            Deprecated. If a workflow's retry policy would cause a new run to start when the current one
              has failed, this field would be populated with that failure. Now (when supported by server
              and sdk) the final event will be `WORKFLOW_EXECUTION_FAILED` with `new_execution_run_id` set.
         lastCompletionResult:
           allOf:
             - $ref: '#/components/schemas/Payloads'
-          description: 'TODO: Is this the result of *this* workflow as it continued-as-new?'
+          description: |-
+            The result from the most recent completed run of this workflow. The SDK surfaces this to the
+             new run via APIs such as `GetLastCompletionResult`.
         header:
           $ref: '#/components/schemas/Header'
         memo:
@@ -15027,7 +15043,7 @@ components:
           description: The failure details
         identity:
           type: string
-          description: 'If a worker explicitly failed this task, it''s identity. TODO: What is this set to if server fails the task?'
+          description: "If a worker explicitly failed this task, this field contains the worker's identity. \n When the server generates the failure internally this field is set as 'history-service'."
         baseRunId:
           type: string
           description: The original run id of the workflow. For reset workflow.
@@ -15036,7 +15052,9 @@ components:
           description: If the workflow is being reset, the new run id.
         forkEventVersion:
           type: string
-          description: 'TODO: ?'
+          description: |-
+            Version of the event where the history branch was forked. Used by multi-cluster replication
+             during resets to identify the correct history branch.
         binaryChecksum:
           type: string
           description: |-
@@ -15080,7 +15098,13 @@ components:
           description: Identity of the worker who picked up this task
         requestId:
           type: string
-          description: 'TODO: ? Appears unused?'
+          description: |-
+            This field is populated from the RecordWorkflowTaskStartedRequest. Matching service would
+             set the request_id on the RecordWorkflowTaskStartedRequest to a new UUID. This is useful
+             in case a RecordWorkflowTaskStarted call succeed but matching doesn't get that response,
+             so matching could retry and history service would return success if the request_id matches.
+             In that case, matching will continue to deliver the task to worker. Without this field, history
+             service would return AlreadyStarted error, and matching would drop the task.
         suggestContinueAsNew:
           type: boolean
           description: |-

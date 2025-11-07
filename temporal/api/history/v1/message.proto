@@ -195,15 +195,17 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     google.protobuf.Duration workflow_task_timeout = 6;
     // The `WORKFLOW_TASK_COMPLETED` event which this command was reported with
     int64 workflow_task_completed_event_id = 7;
-    // TODO: How and is this used?
+    // How long the server will wait before scheduling the first workflow task for the new run.
+    // Used for cron, retry, and other continue-as-new cases that server may enforce some minimal
+    // delay between new runs for system protection purpose.
     google.protobuf.Duration backoff_start_interval = 8;
     temporal.api.enums.v1.ContinueAsNewInitiator initiator = 9;
-    // TODO: David are these right?
     // Deprecated. If a workflow's retry policy would cause a new run to start when the current one
     // has failed, this field would be populated with that failure. Now (when supported by server
     // and sdk) the final event will be `WORKFLOW_EXECUTION_FAILED` with `new_execution_run_id` set.
     temporal.api.failure.v1.Failure failure = 10 [deprecated = true];
-    // TODO: Is this the result of *this* workflow as it continued-as-new?
+    // The result from the most recent completed run of this workflow. The SDK surfaces this to the
+    // new run via APIs such as `GetLastCompletionResult`.
     temporal.api.common.v1.Payloads last_completion_result = 11;
     temporal.api.common.v1.Header header = 12;
     temporal.api.common.v1.Memo memo = 13;
@@ -233,7 +235,12 @@ message WorkflowTaskStartedEventAttributes {
     int64 scheduled_event_id = 1;
     // Identity of the worker who picked up this task
     string identity = 2;
-    // TODO: ? Appears unused?
+    // This field is populated from the RecordWorkflowTaskStartedRequest. Matching service would
+    // set the request_id on the RecordWorkflowTaskStartedRequest to a new UUID. This is useful
+    // in case a RecordWorkflowTaskStarted call succeed but matching doesn't get that response,
+    // so matching could retry and history service would return success if the request_id matches.
+    // In that case, matching will continue to deliver the task to worker. Without this field, history
+    // service would return AlreadyStarted error, and matching would drop the task.
     string request_id = 3;
     // True if this workflow should continue-as-new soon because its history size (in
     // either event count or bytes) is getting large.
@@ -313,13 +320,15 @@ message WorkflowTaskFailedEventAttributes {
     temporal.api.enums.v1.WorkflowTaskFailedCause cause = 3;
     // The failure details
     temporal.api.failure.v1.Failure failure = 4;
-    // If a worker explicitly failed this task, it's identity. TODO: What is this set to if server fails the task?
+    // If a worker explicitly failed this task, this field contains the worker's identity. 
+    // When the server generates the failure internally this field is set as 'history-service'.
     string identity = 5;
     // The original run id of the workflow. For reset workflow.
     string base_run_id = 6;
     // If the workflow is being reset, the new run id.
     string new_run_id = 7;
-    // TODO: ?
+    // Version of the event where the history branch was forked. Used by multi-cluster replication
+    // during resets to identify the correct history branch.
     int64 fork_event_version = 8;
     // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     // If a worker explicitly failed this task, its binary id
@@ -383,7 +392,12 @@ message ActivityTaskStartedEventAttributes {
     int64 scheduled_event_id = 1;
     // id of the worker that picked up this task
     string identity = 2;
-    // TODO ??
+    // This field is populated from the RecordActivityTaskStartedRequest. Matching service would
+    // set the request_id on the RecordActivityTaskStartedRequest to a new UUID. This is useful
+    // in case a RecordActivityTaskStarted call succeed but matching doesn't get that response,
+    // so matching could retry and history service would return success if the request_id matches.
+    // In that case, matching will continue to deliver the task to worker. Without this field, history
+    // service would return AlreadyStarted error, and matching would drop the task.
     string request_id = 3;
     // Starting at 1, the number of times this task has been attempted
     int32 attempt = 4;
@@ -495,9 +509,9 @@ message TimerCanceledEventAttributes {
 
 message WorkflowExecutionCancelRequestedEventAttributes {
     // User provided reason for requesting cancellation
-    // TODO: shall we create a new field with name "reason" and deprecate this one?
     string cause = 1;
-    // TODO: Is this the ID of the event in the workflow which initiated this cancel, if there was one?
+    // The ID of the `REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED` event in the external
+    // workflow history when the cancellation was requested by another workflow.
     int64 external_initiated_event_id = 2;
     temporal.api.common.v1.WorkflowExecution external_workflow_execution = 3;
     // id of the worker or client who requested this cancel
@@ -797,6 +811,8 @@ message WorkflowExecutionOptionsUpdatedEventAttributes {
     string attached_request_id = 3;
     // Completion callbacks attached to the running workflow execution.
     repeated temporal.api.common.v1.Callback attached_completion_callbacks = 4;
+    // Optional. The identity of the client who initiated the request that created this event.
+    string identity = 5;
 }
 
 // Not used anywhere. Use case is replaced by WorkflowExecutionOptionsUpdatedEventAttributes
@@ -1006,9 +1022,11 @@ message HistoryEvent {
     int64 event_id = 1;
     google.protobuf.Timestamp event_time = 2;
     temporal.api.enums.v1.EventType event_type = 3;
-    // TODO: What is this? Appears unused by SDKs
+    // Failover version of the event, used by the server for multi-cluster replication and history
+    // versioning. SDKs generally ignore this field.
     int64 version = 4;
-    // TODO: What is this? Appears unused by SDKs
+    // Identifier used by the service to order replication and transfer tasks associated with this
+    // event. SDKs generally ignore this field.
     int64 task_id = 5;
     // Set to true when the SDK may ignore the event as it does not impact workflow state or
     // information in any way that the SDK need be concerned with. If an SDK encounters an event

@@ -2490,9 +2490,19 @@ message RecordWorkerHeartbeatRequest {
 
     repeated temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat = 3;
 
-    // Duration for which the worker lease should be valid.
+    // Duration for which the worker lease should be valid. During this time, the server considers the worker to be active.
+    // The worker is expected to send periodic heartbeats to renew its lease before it expires.
+    //
     // Server will calculate the actual expiration time based on when it receives this request.
     // If not specified or zero, the server will use a default lease duration (typically 60 seconds).
+    //
+    // There are 3 states for a worker: Active, Inactive, and CleanedUp.
+    // Lifecycle transitions:
+    // - Active->Active: Each time the server receives a heartbeat from the worker, it will renew the lease and keep the worker in the active state.
+    // - Active->Inactive: When the lease expires, the server will consider the worker to be inactive, and reschedule activities that were known to be running as of that time.
+    // - Inactive->Active: If the server receives subsequent heartbeat from this worker, then it will transition it back to the active state.
+    // - Inactive->CleanedUp: If the worker remains inactive for a prolonged period, the server will cleanup the worker state. This is a terminal state.
+    //   If the server receives subsequent heartbeat from this worker, then it will return an error.
     google.protobuf.Duration lease_duration = 4;
 }
 

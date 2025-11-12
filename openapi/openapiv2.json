@@ -8128,7 +8128,7 @@
         },
         "leaseDuration": {
           "type": "string",
-          "description": "Duration for which the worker lease should be valid.\nServer will calculate the actual expiration time based on when it receives this request.\nIf not specified or zero, the server will use a default lease duration (typically 60 seconds)."
+          "description": "Duration for which the worker lease should be valid. During this time, the server considers the worker to be active.\nThe worker is expected to send periodic heartbeats to renew its lease before it expires.\n\nServer will calculate the actual expiration time based on when it receives this request.\nIf not specified or zero, the server will use a default lease duration (typically 60 seconds).\n\nThere are 3 states for a worker: Active, Inactive, and CleanedUp.\nLifecycle transitions:\n- Active->Active: Each time the server receives a heartbeat from the worker, it will renew the lease and keep the worker in the active state.\n- Active->Inactive: When the lease expires, the server will consider the worker to be inactive, and reschedule activities that were known to be running as of that time.\n- Inactive->Active: If the server receives subsequent heartbeat from this worker, then it will transition it back to the active state.\n- Inactive->CleanedUp: If the worker remains inactive for a prolonged period, the server will cleanup the worker state. This is a terminal state.\n  If the server receives subsequent heartbeat from this worker, then it will return an error."
         }
       }
     },

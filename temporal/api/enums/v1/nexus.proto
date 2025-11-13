@@ -20,3 +20,58 @@ enum NexusHandlerErrorRetryBehavior {
     NEXUS_HANDLER_ERROR_RETRY_BEHAVIOR_NON_RETRYABLE = 2;
 }
 
+// Status of a standalone Nexus operation.
+// The status is updated once, when the operation is originally scheduled, and again when the operation reaches a terminal
+// status.
+// (-- api-linter: core::0216::synonyms=disabled
+//     aip.dev/not-precedent: Named consistently with WorkflowExecutionStatus. --)
+enum NexusOperationStatus {
+    NEXUS_OPERATION_STATUS_UNSPECIFIED = 0;
+    // The operation is not in a terminal status. This does not necessarily mean that there is a currently running
+    // attempt. The operation may be backing off between attempts or waiting for a response from the operation handler.
+    NEXUS_OPERATION_STATUS_RUNNING = 1;
+    // The operation completed successfully.
+    NEXUS_OPERATION_STATUS_COMPLETED = 2;
+    // The operation completed with failure.
+    NEXUS_OPERATION_STATUS_FAILED = 3;
+    // The operation completed as canceled.
+    // Requesting to cancel an operation does not automatically transition the activity to canceled status. The
+    // operation handler may choose to ignore the cancellation request and the operation may end in any terminal state.
+    // The operation is only cancelled if the operation handler sends a completion with a cancelled failure.
+    NEXUS_OPERATION_STATUS_CANCELED = 4;
+    // The operation was terminated. Termination does not reach the worker and the operation handler code cannot react to it.
+    // A terminated operation may have a running attempt and will be requested to be canceled by the server.
+    NEXUS_OPERATION_STATUS_TERMINATED = 5;
+    // The operation has timed out by reaching the specified schedule-to-start or schedule-to-close timeouts.
+    NEXUS_OPERATION_STATUS_TIMED_OUT = 6;
+}
+
+// Defines whether to allow re-using a Nexus operation ID from a previously *closed* operation.
+// If the request is denied, the server returns a `NexusOperationAlreadyStarted` error.
+//
+// See `NexusOperationIdConflictPolicy` for handling ID duplication with a *running* operation.
+enum NexusOperationIdReusePolicy {
+    NEXUS_OPERATION_ID_REUSE_POLICY_UNSPECIFIED = 0;
+    // Always allow starting an operation using the same operation ID.
+    NEXUS_OPERATION_ID_REUSE_POLICY_ALLOW_DUPLICATE = 1;
+    // Allow starting an operation using the same ID only when the last operation's final state is one
+    // of {failed, canceled, terminated, timed out}.
+    NEXUS_OPERATION_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY = 2;
+    // Do not permit re-use of the ID for this operation. Future start requests could potentially change the policy,
+    // allowing re-use of the ID.
+    NEXUS_OPERATION_ID_REUSE_POLICY_REJECT_DUPLICATE = 3;
+}
+
+// Defines what to do when trying to start a Nexus operation with the same ID as a *running* operation.
+// Note that it is *never* valid to have two running instances of the same operation ID.
+//
+// See `NexusOperationIdReusePolicy` for handling operation ID duplication with a *closed* operation.
+enum NexusOperationIdConflictPolicy {
+    NEXUS_OPERATION_ID_CONFLICT_POLICY_UNSPECIFIED = 0;
+    // Don't start a new operation; instead return `NexusOperationAlreadyStarted` error.
+    NEXUS_OPERATION_ID_CONFLICT_POLICY_FAIL = 1;
+    // Don't start a new operation; instead return a handle for the running operation.
+    NEXUS_OPERATION_ID_CONFLICT_POLICY_USE_EXISTING = 2;
+    // Terminate the running operation before starting a new one.
+    NEXUS_OPERATION_ID_CONFLICT_POLICY_TERMINATE_EXISTING = 3;
+}

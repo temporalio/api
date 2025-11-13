@@ -2472,15 +2472,19 @@ message RecordWorkerHeartbeatRequest {
     // The worker is expected to send periodic heartbeats to renew its lease before it expires.
     //
     // Server will calculate the actual expiration time based on when it receives this request.
-    // If not specified or zero, the server will use a default lease duration (typically 60 seconds).
+    // If not specified or zero, the server will use a default lease duration of 1 minute.
     //
     // There are 3 states for a worker: Active, Inactive, and CleanedUp.
     // Lifecycle transitions:
     // - Active->Active: Each time the server receives a heartbeat from the worker, it will renew the lease and keep the worker in the active state.
+    //
     // - Active->Inactive: When the lease expires, the server will consider the worker to be inactive, and reschedule activities that were known to be running as of that time.
+    //
     // - Inactive->Active: If the server receives subsequent heartbeat from this worker, then it will transition it back to the active state.
+    //
     // - Inactive->CleanedUp: If the worker remains inactive for a prolonged period, the server will cleanup the worker state. This is a terminal state.
-    //   If the server receives subsequent heartbeat from this worker, then it will return an error.
+    //   If the server receives subsequent heartbeat from this worker, then it will always return an non-retryable FailedPrecondition error.
+    //   The worker will need to shutdown and re-register using a different WorkerInstanceKey to become active again.
     google.protobuf.Duration lease_duration = 4;
 }
 

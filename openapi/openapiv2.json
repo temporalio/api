@@ -3106,7 +3106,7 @@
     },
     "/api/v1/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/reset": {
       "post": {
-        "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance.\nTODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?",
+        "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance. \"Exclusive\" means the identified completed event itself is not replayed\nin the reset history; the preceding `WORKFLOW_TASK_STARTED` event remains and will be marked as failed\nimmediately, and a new workflow task will be scheduled to retry it.",
         "operationId": "ResetWorkflowExecution2",
         "responses": {
           "200": {
@@ -6931,7 +6931,7 @@
     },
     "/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/reset": {
       "post": {
-        "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance.\nTODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?",
+        "summary": "ResetWorkflowExecution will reset an existing workflow execution to a specified\n`WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current\nexecution instance. \"Exclusive\" means the identified completed event itself is not replayed\nin the reset history; the preceding `WORKFLOW_TASK_STARTED` event remains and will be marked as failed\nimmediately, and a new workflow task will be scheduled to retry it.",
         "operationId": "ResetWorkflowExecution",
         "responses": {
           "200": {
@@ -9210,6 +9210,10 @@
         "updateMask": {
           "type": "string",
           "description": "Controls which fields from `workflow_execution_options` will be applied.\nTo unset a field, set it to null and use the update mask to indicate that it should be mutated."
+        },
+        "identity": {
+          "type": "string",
+          "description": "Optional. The identity of the client who initiated this request."
         }
       },
       "description": "Keep the parameters in sync with:\n  - temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions.\n  - temporal.api.workflow.v1.PostResetOperation.UpdateWorkflowOptions."
@@ -9630,7 +9634,7 @@
         },
         "requestId": {
           "type": "string",
-          "title": "TODO ??"
+          "description": "This field is populated from the RecordActivityTaskStartedRequest. Matching service would\nset the request_id on the RecordActivityTaskStartedRequest to a new UUID. This is useful\nin case a RecordActivityTaskStarted call succeed but matching doesn't get that response,\nso matching could retry and history service would return success if the request_id matches.\nIn that case, matching will continue to deliver the task to worker. Without this field, history\nservice would return AlreadyStarted error, and matching would drop the task."
         },
         "attempt": {
           "type": "integer",
@@ -11700,12 +11704,12 @@
         "version": {
           "type": "string",
           "format": "int64",
-          "title": "TODO: What is this? Appears unused by SDKs"
+          "description": "Failover version of the event, used by the server for multi-cluster replication and history\nversioning. SDKs generally ignore this field."
         },
         "taskId": {
           "type": "string",
           "format": "int64",
-          "title": "TODO: What is this? Appears unused by SDKs"
+          "description": "Identifier used by the service to order replication and transfer tasks associated with this\nevent. SDKs generally ignore this field."
         },
         "workerMayIgnore": {
           "type": "boolean",
@@ -14114,8 +14118,23 @@
           "type": "string",
           "format": "date-time",
           "description": "Last time ramping version percentage was changed.\nIf ramping version is changed, this is also updated, even if the percentage stays the same."
+        },
+        "revisionNumber": {
+          "type": "string",
+          "format": "int64",
+          "description": "Monotonically increasing value which is incremented on every mutation \nto any field of this message to achieve eventual consistency between task queues and their partitions."
         }
       }
+    },
+    "v1RoutingConfigUpdateState": {
+      "type": "string",
+      "enum": [
+        "ROUTING_CONFIG_UPDATE_STATE_UNSPECIFIED",
+        "ROUTING_CONFIG_UPDATE_STATE_IN_PROGRESS",
+        "ROUTING_CONFIG_UPDATE_STATE_COMPLETED"
+      ],
+      "default": "ROUTING_CONFIG_UPDATE_STATE_UNSPECIFIED",
+      "description": "Indicates whether a change to the Routing Config has been\npropagated to all relevant Task Queues and their partitions.\n\n - ROUTING_CONFIG_UPDATE_STATE_IN_PROGRESS: Update to the RoutingConfig is currently in progress.\n - ROUTING_CONFIG_UPDATE_STATE_COMPLETED: Update to the RoutingConfig has completed successfully."
     },
     "v1ScanWorkflowExecutionsResponse": {
       "type": "object",
@@ -15273,7 +15292,7 @@
           "description": "Free-form comment describing the intention of this spec."
         }
       },
-      "title": "StructuredCalendarSpec describes an event specification relative to the\ncalendar, in a form that's easy to work with programmatically. Each field can\nbe one or more ranges.\nA timestamp matches if at least one range of each field matches the\ncorresponding fields of the timestamp, except for year: if year is missing,\nthat means all years match. For all fields besides year, at least one Range\nmust be present to match anything.\nTODO: add relative-to-end-of-month\nTODO: add nth day-of-week in month"
+      "description": "StructuredCalendarSpec describes an event specification relative to the\ncalendar, in a form that's easy to work with programmatically. Each field can\nbe one or more ranges.\nA timestamp matches if at least one range of each field matches the\ncorresponding fields of the timestamp, except for year: if year is missing,\nthat means all years match. For all fields besides year, at least one Range\nmust be present to match anything.\nRelative expressions such as \"last day of the month\" or \"third Monday\" are not currently\nrepresentable; callers must enumerate the concrete days they require."
     },
     "v1TaskIdBlock": {
       "type": "object",
@@ -16092,6 +16111,10 @@
         "managerIdentity": {
           "type": "string",
           "description": "Identity of the client that has the exclusive right to make changes to this Worker Deployment.\nEmpty by default.\nIf this is set, clients whose identity does not match `manager_identity` will not be able to make changes\nto this Worker Deployment. They can either set their own identity as the manager or unset the field to proceed."
+        },
+        "routingConfigUpdateState": {
+          "$ref": "#/definitions/v1RoutingConfigUpdateState",
+          "description": "Indicates whether the routing_config has been fully propagated to all\nrelevant task queues and their partitions."
         }
       },
       "description": "A Worker Deployment (Deployment, for short) represents all workers serving \na shared set of Task Queues. Typically, a Deployment represents one service or \napplication.\nA Deployment contains multiple Deployment Versions, each representing a different \nversion of workers. (see documentation of WorkerDeploymentVersionInfo)\nDeployment records are created in Temporal server automatically when their\nfirst poller arrives to the server.\nExperimental. Worker Deployments are experimental and might significantly change in the future."
@@ -16480,12 +16503,12 @@
       "properties": {
         "cause": {
           "type": "string",
-          "title": "User provided reason for requesting cancellation\nTODO: shall we create a new field with name \"reason\" and deprecate this one?"
+          "title": "User provided reason for requesting cancellation"
         },
         "externalInitiatedEventId": {
           "type": "string",
           "format": "int64",
-          "title": "TODO: Is this the ID of the event in the workflow which initiated this cancel, if there was one?"
+          "description": "The ID of the `REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED` event in the external\nworkflow history when the cancellation was requested by another workflow."
         },
         "externalWorkflowExecution": {
           "$ref": "#/definitions/v1WorkflowExecution"
@@ -16579,18 +16602,18 @@
         },
         "backoffStartInterval": {
           "type": "string",
-          "title": "TODO: How and is this used?"
+          "description": "How long the server will wait before scheduling the first workflow task for the new run.\nUsed for cron, retry, and other continue-as-new cases that server may enforce some minimal\ndelay between new runs for system protection purpose."
         },
         "initiator": {
           "$ref": "#/definitions/v1ContinueAsNewInitiator"
         },
         "failure": {
           "$ref": "#/definitions/apifailurev1Failure",
-          "description": "TODO: David are these right?\nDeprecated. If a workflow's retry policy would cause a new run to start when the current one\nhas failed, this field would be populated with that failure. Now (when supported by server\nand sdk) the final event will be `WORKFLOW_EXECUTION_FAILED` with `new_execution_run_id` set."
+          "description": "Deprecated. If a workflow's retry policy would cause a new run to start when the current one\nhas failed, this field would be populated with that failure. Now (when supported by server\nand sdk) the final event will be `WORKFLOW_EXECUTION_FAILED` with `new_execution_run_id` set."
         },
         "lastCompletionResult": {
           "$ref": "#/definitions/v1Payloads",
-          "title": "TODO: Is this the result of *this* workflow as it continued-as-new?"
+          "description": "The result from the most recent completed run of this workflow. The SDK surfaces this to the\nnew run via APIs such as `GetLastCompletionResult`."
         },
         "header": {
           "$ref": "#/definitions/v1Header"
@@ -16804,6 +16827,10 @@
             "$ref": "#/definitions/v1Callback"
           },
           "description": "Completion callbacks attached to the running workflow execution."
+        },
+        "identity": {
+          "type": "string",
+          "description": "Optional. The identity of the client who initiated the request that created this event."
         }
       }
     },
@@ -17139,6 +17166,11 @@
         "versionTransition": {
           "$ref": "#/definitions/v1DeploymentVersionTransition",
           "description": "When present, indicates the workflow is transitioning to a different deployment version\n(which may belong to the same deployment name or another). Can indicate one of the following\ntransitions: unversioned -> versioned, versioned -> versioned\non a different deployment version, or versioned -> unversioned.\nNot applicable to workflows with PINNED behavior.\nWhen a workflow with AUTO_UPGRADE behavior creates a new workflow task, it will automatically\nstart a transition to the task queue's current version if the task queue's current version is\ndifferent from the workflow's current deployment version.\nIf the AUTO_UPGRADE workflow is stuck due to backlogged activity or workflow tasks, those\ntasks will be redirected to the task queue's current version. As soon as a poller from\nthat deployment version is available to receive the task, the workflow will automatically\nstart a transition to that version and continue execution there.\nA version transition can only exist while there is a pending or started workflow task.\nOnce the pending workflow task completes on the transition's target version, the\ntransition completes and the workflow's `behavior`, and `deployment_version` fields are updated per the\nworker's task completion response.\nPending activities will not start new attempts during a transition. Once the transition is\ncompleted, pending activities will start their next attempt on the new version."
+        },
+        "revisionNumber": {
+          "type": "string",
+          "format": "int64",
+          "description": "Monotonic counter reflecting the latest routing decision for this workflow execution.\nUsed for staleness detection between history and matching when dispatching tasks to workers.\nIncremented when a workflow execution routes to a new deployment version, which happens \nwhen a worker of the new deployment version completes a workflow task.\nNote: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not\nface the problem of inconsistent dispatching that arises from eventual consistency between \ntask queues and their partitions."
         }
       },
       "description": "Holds all the information about worker versioning for a particular workflow execution.\nExperimental. Versioning info is experimental and might change in the future."
@@ -17457,7 +17489,7 @@
         },
         "identity": {
           "type": "string",
-          "title": "If a worker explicitly failed this task, it's identity. TODO: What is this set to if server fails the task?"
+          "description": "If a worker explicitly failed this task, this field contains the worker's identity. \nWhen the server generates the failure internally this field is set as 'history-service'."
         },
         "baseRunId": {
           "type": "string",
@@ -17470,7 +17502,7 @@
         "forkEventVersion": {
           "type": "string",
           "format": "int64",
-          "title": "TODO: ?"
+          "description": "Version of the event where the history branch was forked. Used by multi-cluster replication\nduring resets to identify the correct history branch."
         },
         "binaryChecksum": {
           "type": "string",
@@ -17514,7 +17546,7 @@
         },
         "requestId": {
           "type": "string",
-          "title": "TODO: ? Appears unused?"
+          "description": "This field is populated from the RecordWorkflowTaskStartedRequest. Matching service would\nset the request_id on the RecordWorkflowTaskStartedRequest to a new UUID. This is useful\nin case a RecordWorkflowTaskStarted call succeed but matching doesn't get that response,\nso matching could retry and history service would return success if the request_id matches.\nIn that case, matching will continue to deliver the task to worker. Without this field, history\nservice would return AlreadyStarted error, and matching would drop the task."
         },
         "suggestContinueAsNew": {
           "type": "boolean",

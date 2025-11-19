@@ -6204,6 +6204,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{workflowId}/pause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Note: This is an experimental API and the behavior may change in a future release.
+         PauseWorkflowExecution pauses the workflow execution specified in the request. Pausing a workflow execution results in
+         - The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history
+         - No new workflow tasks or activity tasks are dispatched.
+           - Any workflow task currently executing on the worker will be allowed to complete.
+           - Any activity task currently executing will be paused.
+         - All server-side events will continue to be processed by the server.
+         - Queries & Updates on a paused workflow will be rejected.
+      operationId: PauseWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow to pause.
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          description: ID of the workflow execution to be paused. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PauseWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{workflowId}/signal-with-start/{signalName}:
     post:
       tags:
@@ -6252,6 +6298,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SignalWithStartWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{workflowId}/unpause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Note: This is an experimental API and the behavior may change in a future release.
+         UnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.
+         Unpausing a workflow execution results in
+         - The workflow execution status changes to `RUNNING` and a new WORKFLOW_EXECUTION_UNPAUSED event is added to the history
+         - Workflow tasks and activity tasks are resumed.
+      operationId: UnpauseWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow to unpause.
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          description: ID of the workflow execution to be paused. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnpauseWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnpauseWorkflowExecutionResponse'
         default:
           description: Default error response
           content:
@@ -8670,6 +8759,8 @@ components:
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_PAUSED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UNPAUSED
           type: string
           format: enum
         version:
@@ -8820,6 +8911,10 @@ components:
           $ref: '#/components/schemas/NexusOperationCancelRequestCompletedEventAttributes'
         nexusOperationCancelRequestFailedEventAttributes:
           $ref: '#/components/schemas/NexusOperationCancelRequestFailedEventAttributes'
+        workflowExecutionPausedEventAttributes:
+          $ref: '#/components/schemas/WorkflowExecutionPausedEventAttributes'
+        workflowExecutionUnpausedEventAttributes:
+          $ref: '#/components/schemas/WorkflowExecutionUnpausedEventAttributes'
       description: |-
         History events are the method by which Temporal SDKs advance (or recreate) workflow state.
          See the `EventType` enum for more info about what each event is for.
@@ -9664,6 +9759,32 @@ components:
         reason:
           type: string
           description: Reason why rule was created. Populated from rule description.
+    PauseWorkflowExecutionRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace of the workflow to pause.
+        workflowId:
+          type: string
+          description: ID of the workflow execution to be paused. Required.
+        runId:
+          type: string
+          description: Run ID of the workflow execution to be paused. Optional. If not provided, the current run of the workflow will be paused.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        reason:
+          type: string
+          description: Reason to pause the workflow execution.
+        requestId:
+          type: string
+          description: A unique identifier for this pause request for idempotence. Typically UUIDv4.
+      description: Request to pause a workflow execution.
+    PauseWorkflowExecutionResponse:
+      type: object
+      properties: {}
+      description: Response to a successful PauseWorkflowExecution request.
     Payload:
       description: |-
         Represents some binary (byte array) data (ex: activity input parameters or workflow result) with
@@ -10202,6 +10323,7 @@ components:
             - WORKFLOW_EXECUTION_STATUS_TERMINATED
             - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
             - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           format: enum
     QueryWorkflowRequest:
@@ -10576,6 +10698,8 @@ components:
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_PAUSED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UNPAUSED
           type: string
           description: The event type of the history event generated by the request.
           format: enum
@@ -11134,6 +11258,7 @@ components:
             - WORKFLOW_EXECUTION_STATUS_TERMINATED
             - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
             - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           description: |-
             If the action was start_workflow, this field will reflect an
@@ -12216,6 +12341,7 @@ components:
             - WORKFLOW_EXECUTION_STATUS_TERMINATED
             - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
             - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           description: |-
             Current execution status of the workflow. Typically remains WORKFLOW_EXECUTION_STATUS_RUNNING
@@ -12722,6 +12848,31 @@ components:
     UnpauseActivityResponse:
       type: object
       properties: {}
+    UnpauseWorkflowExecutionRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace of the workflow to unpause.
+        workflowId:
+          type: string
+          description: ID of the workflow execution to be paused. Required.
+        runId:
+          type: string
+          description: Run ID of the workflow execution to be paused. Optional. If not provided, the current run of the workflow will be paused.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        reason:
+          type: string
+          description: Reason to unpause the workflow execution.
+        requestId:
+          type: string
+          description: A unique identifier for this unpause request for idempotence. Typically UUIDv4.
+    UnpauseWorkflowExecutionResponse:
+      type: object
+      properties: {}
+      description: Response to a successful UnpauseWorkflowExecution request.
     UpdateActivityOptionsRequest:
       type: object
       properties:
@@ -13870,6 +14021,8 @@ components:
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_PAUSED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UNPAUSED
           type: string
           format: enum
       description: EventReference is a direct reference to a history event through the event ID.
@@ -13938,6 +14091,8 @@ components:
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_PAUSED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UNPAUSED
           type: string
           format: enum
       description: RequestIdReference is a indirect reference to a history event through the request ID.
@@ -14155,6 +14310,7 @@ components:
             - WORKFLOW_EXECUTION_STATUS_TERMINATED
             - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
             - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           format: enum
         historyLength:
@@ -14252,6 +14408,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata
+        pauseInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionPauseInfo'
+          description: Information about the workflow execution pause operation.
       description: |-
         Hold basic information about a workflow execution.
          This structure is a part of visibility, and thus contain a limited subset of information.
@@ -14287,6 +14447,33 @@ components:
         identity:
           type: string
           description: Optional. The identity of the client who initiated the request that created this event.
+    WorkflowExecutionPauseInfo:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the client who paused the workflow execution.
+        pausedTime:
+          type: string
+          description: The time when the workflow execution was paused.
+          format: date-time
+        reason:
+          type: string
+          description: The reason for pausing the workflow execution.
+      description: WorkflowExecutionPauseInfo contains the information about a workflow execution pause.
+    WorkflowExecutionPausedEventAttributes:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the client who paused the workflow execution.
+        reason:
+          type: string
+          description: The reason for pausing the workflow execution.
+        requestId:
+          type: string
+          description: The request ID of the request that paused the workflow execution.
+      description: Attributes for an event marking that a workflow execution was paused.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:
@@ -14541,6 +14728,19 @@ components:
         newExecutionRunId:
           type: string
           description: If another run is started by cron or retry, this contains the new run id.
+    WorkflowExecutionUnpausedEventAttributes:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the client who unpaused the workflow execution.
+        reason:
+          type: string
+          description: The reason for unpausing the workflow execution.
+        requestId:
+          type: string
+          description: The request ID of the request that unpaused the workflow execution.
+      description: Attributes for an event marking that a workflow execution was unpaused.
     WorkflowExecutionUpdateAcceptedEventAttributes:
       type: object
       properties:
@@ -15046,7 +15246,9 @@ components:
           description: The failure details
         identity:
           type: string
-          description: "If a worker explicitly failed this task, this field contains the worker's identity. \n When the server generates the failure internally this field is set as 'history-service'."
+          description: |-
+            If a worker explicitly failed this task, this field contains the worker's identity.
+             When the server generates the failure internally this field is set as 'history-service'.
         baseRunId:
           type: string
           description: The original run id of the workflow. For reset workflow.

@@ -7994,20 +7994,6 @@
       },
       "description": "RequestIdReference is a indirect reference to a history event through the request ID."
     },
-    "WorkflowExecutionStartedEventAttributesInheritedAutoUpgradeInfo": {
-      "type": "object",
-      "properties": {
-        "sourceDeploymentVersion": {
-          "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "The source deployment version of the parent workflow."
-        },
-        "sourceDeploymentRevisionNumber": {
-          "type": "string",
-          "format": "int64",
-          "description": "The revision number of the source deployment version of the parent workflow."
-        }
-      }
-    },
     "WorkflowRuleActionActionActivityPause": {
       "type": "object"
     },
@@ -12083,6 +12069,21 @@
         "INDEXED_VALUE_TYPE_KEYWORD_LIST"
       ],
       "default": "INDEXED_VALUE_TYPE_UNSPECIFIED"
+    },
+    "v1InheritedAutoUpgradeInfo": {
+      "type": "object",
+      "properties": {
+        "sourceDeploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
+          "description": "The source deployment version of the parent workflow."
+        },
+        "sourceDeploymentRevisionNumber": {
+          "type": "string",
+          "format": "int64",
+          "description": "The revision number of the source deployment version of the parent workflow."
+        }
+      },
+      "description": "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version \nto a workflow execution whose parent workflow has an AutoUpgrade behavior."
     },
     "v1Input": {
       "type": "object",
@@ -17222,7 +17223,7 @@
           "description": "If present, the new workflow should start on this version with pinned base behavior.\nChild of pinned parent will inherit the parent's version if the Child's Task Queue belongs to that version.\n\nNew run initiated by workflow ContinueAsNew of pinned run, will inherit the previous run's version if the\nnew run's Task Queue belongs to that version.\n\nNew run initiated by workflow Cron will never inherit.\n\nNew run initiated by workflow Retry will only inherit if the retried run is effectively pinned at the time\nof retry, and the retried run inherited a pinned version when it started (ie. it is a child of a pinned\nparent, or a CaN of a pinned run, and is running on a Task Queue in the inherited version).\n\nPinned override is inherited if Task Queue of new run is compatible with the override version.\nOverride is inherited separately and takes precedence over inherited base version.\n\nNote: This field is mutually exclusive with inherited_auto_upgrade_info."
         },
         "inheritedAutoUpgradeInfo": {
-          "$ref": "#/definitions/WorkflowExecutionStartedEventAttributesInheritedAutoUpgradeInfo",
+          "$ref": "#/definitions/v1InheritedAutoUpgradeInfo",
           "description": "If present, the new workflow will commence with AutoUpgrade behavior on the current version of it's Task Queue's Deployment. \nUserData inconsistencies put forward by the eventual consistencies of the matching partitions shall be resolved with the help\nof the revision number and source deployment version passed in this field. This shall schedule the first workflow task of the new run\non the source deployment version or the current deployment version of the Task Queue's Deployment.\nAfter the first workflow task, the effective behavior of the workflow depends on worker sent values in subsequent workflow tasks.\nNote: This field is only populated if the Task Queue on which the new run is scheduled belongs to a deployment on which the parent run is running.\n\nNew run initiated by workflow ContinueAsNew of an AutoUpgrade run, or a child workflow of an AutoUpgrade parent, will inherit the \nprevious run's AutoUpgrade behavior and the source deployment version passed in this field.\nBoth Matching and History service shall then use the revision number to determine the deployment version on which the new run will \ndispatch its first workflow task. This deployment version shall either be the source deployment version, passed down from the parent run,\nor the current deployment version of the Task Queue's Deployment.\n\nNew run initiated by workflow Cron will never inherit the AutoUpgrade behavior.\n\nNew run initiated by workflow Retry will only inherit this field if the retried run is effectively AutoUpgrade at the time\nof retry, and the retried run inherited AutoUpgrade behavior when it started (ie. it is a child of a AutoUpgrade\nparent, or a CaN of a AutoUpgrade run, and is running on the same deployment as that of the parent). \n\nNote: This field is mutually exclusive with `inherited_pinned_version."
         },
         "eagerExecutionAccepted": {

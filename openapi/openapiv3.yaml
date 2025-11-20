@@ -8918,6 +8918,17 @@ components:
       description: |-
         History events are the method by which Temporal SDKs advance (or recreate) workflow state.
          See the `EventType` enum for more info about what each event is for.
+    InheritedAutoUpgradeInfo:
+      type: object
+      properties:
+        sourceDeploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: The source deployment version of the parent workflow.
+        sourceDeploymentRevisionNumber:
+          type: string
+          description: The revision number of the source deployment version of the parent workflow.
+      description: "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version \n to a workflow execution whose parent workflow has an AutoUpgrade behavior."
     Input:
       type: object
       properties:
@@ -14696,7 +14707,7 @@ components:
              Note: This field is mutually exclusive with inherited_auto_upgrade_info.
         inheritedAutoUpgradeInfo:
           allOf:
-            - $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes_InheritedAutoUpgradeInfo'
+            - $ref: '#/components/schemas/InheritedAutoUpgradeInfo'
           description: "If present, the new workflow will commence with AutoUpgrade behavior on the current version of it's Task Queue's Deployment. \n UserData inconsistencies put forward by the eventual consistencies of the matching partitions shall be resolved with the help\n of the revision number and source deployment version passed in this field. This shall schedule the first workflow task of the new run\n on the source deployment version or the current deployment version of the Task Queue's Deployment.\n After the first workflow task, the effective behavior of the workflow depends on worker sent values in subsequent workflow tasks.\n Note: This field is only populated if the Task Queue on which the new run is scheduled belongs to a deployment on which the parent run is running.\n\n New run initiated by workflow ContinueAsNew of an AutoUpgrade run, or a child workflow of an AutoUpgrade parent, will inherit the \n previous run's AutoUpgrade behavior and the source deployment version passed in this field.\n Both Matching and History service shall then use the revision number to determine the deployment version on which the new run will \n dispatch its first workflow task. This deployment version shall either be the source deployment version, passed down from the parent run,\n or the current deployment version of the Task Queue's Deployment.\n\n New run initiated by workflow Cron will never inherit the AutoUpgrade behavior.\n\n New run initiated by workflow Retry will only inherit this field if the retried run is effectively AutoUpgrade at the time\n of retry, and the retried run inherited AutoUpgrade behavior when it started (ie. it is a child of a AutoUpgrade\n parent, or a CaN of a AutoUpgrade run, and is running on the same deployment as that of the parent). \n \n Note: This field is mutually exclusive with `inherited_pinned_version."
         eagerExecutionAccepted:
           type: boolean
@@ -14705,16 +14716,6 @@ components:
              eager execution was accepted by the server.
              Only populated by server with version >= 1.29.0.
       description: Always the first event in workflow history
-    WorkflowExecutionStartedEventAttributes_InheritedAutoUpgradeInfo:
-      type: object
-      properties:
-        sourceDeploymentVersion:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: The source deployment version of the parent workflow.
-        sourceDeploymentRevisionNumber:
-          type: string
-          description: The revision number of the source deployment version of the parent workflow.
     WorkflowExecutionTerminatedEventAttributes:
       type: object
       properties:

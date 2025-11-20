@@ -14692,6 +14692,12 @@ components:
 
              Pinned override is inherited if Task Queue of new run is compatible with the override version.
              Override is inherited separately and takes precedence over inherited base version.
+
+             Note: This field is mutually exclusive with inherited_auto_upgrade_info.
+        inheritedAutoUpgradeInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes_InheritedAutoUpgradeInfo'
+          description: "If present, the new workflow will commence with AutoUpgrade behavior on the current version of it's Task Queue's Deployment. \n UserData inconsistencies put forward by the eventual consistencies of the matching partitions shall be resolved with the help\n of the revision number and source deployment version passed in this field. This shall schedule the first workflow task of the new run\n on the source deployment version or the current deployment version of the Task Queue's Deployment.\n After the first workflow task, the effective behavior of the workflow depends on worker sent values in subsequent workflow tasks.\n Note: This field is only populated if the Task Queue on which the new run is scheduled belongs to a deployment on which the parent run is running.\n\n New run initiated by workflow ContinueAsNew of an AutoUpgrade run, or a child workflow of an AutoUpgrade parent, will inherit the \n previous run's AutoUpgrade behavior and the source deployment version passed in this field.\n Both Matching and History service shall then use the revision number to determine the deployment version on which the new run will \n dispatch its first workflow task. This deployment version shall either be the source deployment version, passed down from the parent run,\n or the current deployment version of the Task Queue's Deployment.\n\n New run initiated by workflow Cron will never inherit the AutoUpgrade behavior.\n\n New run initiated by workflow Retry will only inherit this field if the retried run is effectively AutoUpgrade at the time\n of retry, and the retried run inherited AutoUpgrade behavior when it started (ie. it is a child of a AutoUpgrade\n parent, or a CaN of a AutoUpgrade run, and is running on the same deployment as that of the parent). \n \n Note: This field is mutually exclusive with `inherited_pinned_version."
         eagerExecutionAccepted:
           type: boolean
           description: |-
@@ -14699,6 +14705,16 @@ components:
              eager execution was accepted by the server.
              Only populated by server with version >= 1.29.0.
       description: Always the first event in workflow history
+    WorkflowExecutionStartedEventAttributes_InheritedAutoUpgradeInfo:
+      type: object
+      properties:
+        sourceDeploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: The source deployment version of the parent workflow.
+        sourceDeploymentRevisionNumber:
+          type: string
+          description: The revision number of the source deployment version of the parent workflow.
     WorkflowExecutionTerminatedEventAttributes:
       type: object
       properties:
@@ -14854,16 +14870,7 @@ components:
         deploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: |-
-            The Worker Deployment Version that completed the last workflow task of this workflow execution.
-             An absent value means no workflow task is completed, or the workflow is unversioned.
-             If present, and `behavior` is UNSPECIFIED, the last task of this workflow execution was completed
-             by a worker that is not using versioning but _is_ passing Deployment Name and Build ID.
-
-             For child workflows of Pinned parents, this will be set to the parent's Pinned Version when
-             the child starts, so that the child's first workflow task goes to the same Version as the parent.
-             Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
-             will override this value.
+          description: "The Worker Deployment Version that completed the last workflow task of this workflow execution.\n An absent value means no workflow task is completed, or the workflow is unversioned.\n If present, and `behavior` is UNSPECIFIED, the last task of this workflow execution was completed\n by a worker that is not using versioning but _is_ passing Deployment Name and Build ID.\n\n For child workflows of Pinned parents, this will be set to the parent's Pinned Version when\n the child starts, so that the child's first workflow task goes to the same Version as the parent.\n\n For child workflows of AutoUpgrade parents, this will be set to the deployment version on which the parent\n is running prior to the dispatching of the child's first workflow task. The child's first workflow task \n will finally be dispatched to either this source deployment version or the current deployment version of it's \n Task Queue's Deployment.\n\n Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`\n will override this value."
         versioningOverride:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride'

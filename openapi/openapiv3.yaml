@@ -8924,11 +8924,11 @@ components:
         sourceDeploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: The source deployment version of the parent workflow.
+          description: The source deployment version of the parent/previous workflow.
         sourceDeploymentRevisionNumber:
           type: string
-          description: The revision number of the source deployment version of the parent workflow.
-      description: "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version \n to a workflow execution whose parent workflow has an AutoUpgrade behavior."
+          description: The revision number of the source deployment version of the parent/previous workflow.
+      description: "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version \n to a workflow execution whose parent/previous workflow has an AutoUpgrade behavior."
     Input:
       type: object
       properties:
@@ -14849,6 +14849,16 @@ components:
              the the child starts so that child's first workflow task goes to the same Version as the
              parent. After the first workflow task, it depends on the child workflow itself if it wants
              to stay pinned or become unpinned (according to Versioning Behavior set in the worker).
+
+             For child workflows of AutoUpgrade parents: before dispatching the child's first workflow
+             task, this field is set to AutoUpgrade behavior. This occurs only if the child
+             workflow’s task queue belongs to the same deployment version as the parent workflow’s
+             task queue.
+
+             For continue-as-new runs of AutoUpgrade executions: before dispatching the first workflow
+             task of the next run, this field is set to AutoUpgrade behavior. This occurs only
+             if the next run’s workflow task queue belongs to the same deployment version as the
+             previous run’s workflow task queue.
              Note that `behavior` is overridden by `versioning_override` if the latter is present.
           format: enum
         deployment:
@@ -14868,7 +14878,33 @@ components:
         deploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: "The Worker Deployment Version that completed the last workflow task of this workflow execution.\n An absent value means no workflow task is completed, or the workflow is unversioned.\n If present, and `behavior` is UNSPECIFIED, the last task of this workflow execution was completed\n by a worker that is not using versioning but _is_ passing Deployment Name and Build ID.\n\n For child workflows of Pinned parents, this will be set to the parent's Pinned Version when\n the child starts, so that the child's first workflow task goes to the same Version as the parent.\n\n For child workflows of AutoUpgrade parents, this will be set to the deployment version on which the parent\n is running prior to the dispatching of the child's first workflow task. The child's first workflow task \n will finally be dispatched to either this source deployment version or the current deployment version of it's \n Task Queue's Deployment.\n\n Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`\n will override this value."
+          description: |-
+            The Worker Deployment Version that completed the last workflow task of this workflow execution.
+             An absent value means no workflow task is completed, or the workflow is unversioned.
+             If present, and `behavior` is UNSPECIFIED, the last task of this workflow execution was completed
+             by a worker that is not using versioning but _is_ passing Deployment Name and Build ID.
+
+             For child workflows of Pinned parents, this will be set to the parent's Pinned Version when
+             the child starts, so that the child's first workflow task goes to the same Version as the parent.
+
+             For child workflows of AutoUpgrade parent workflows:
+             Before dispatching the child's first workflow task, this field is set to the deployment
+             version on which the parent is running. This happens only when the child workflow's task
+             queue belongs to the same deployment version as the parent workflow's task queue. The
+             first workflow task of the child workflow will then be dispatched to either:
+               - this deployment version that is passed down from the parent, or
+               - the current deployment version of the task queue's Deployment.
+
+             For continue-as-new workflow runs of an AutoUpgrade execution:
+             Before dispatching the new run's first workflow task, this field is set to the deployment
+             version on which the previous run was operating. This happens only when the task queue for
+             the next run belongs to the same deployment version as the previous run's task queue. The
+             first workflow task of the next run will then be dispatched to either:
+               - this deployment version that is passed down from the previous execution, or
+               - the current deployment version of the task queue's Deployment.
+
+             Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
+             will override this value.
         versioningOverride:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride'

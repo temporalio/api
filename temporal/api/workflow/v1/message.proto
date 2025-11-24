@@ -144,6 +144,16 @@ message WorkflowExecutionVersioningInfo {
     // the the child starts so that child's first workflow task goes to the same Version as the
     // parent. After the first workflow task, it depends on the child workflow itself if it wants
     // to stay pinned or become unpinned (according to Versioning Behavior set in the worker).
+    //
+    // For child workflows of AutoUpgrade parents: before dispatching the child's first workflow
+    // task, this field is set to AutoUpgrade behavior. This occurs only if the child
+    // workflow’s task queue belongs to the same deployment version as the parent workflow’s
+    // task queue.
+    //
+    // For continue-as-new runs of AutoUpgrade executions: before dispatching the first workflow
+    // task of the next run, this field is set to AutoUpgrade behavior. This occurs only
+    // if the next run’s workflow task queue belongs to the same deployment version as the
+    // previous run’s workflow task queue.
     // Note that `behavior` is overridden by `versioning_override` if the latter is present.
     temporal.api.enums.v1.VersioningBehavior behavior = 1;
     // The worker deployment that completed the last workflow task of this workflow execution. Must
@@ -164,10 +174,21 @@ message WorkflowExecutionVersioningInfo {
     // For child workflows of Pinned parents, this will be set to the parent's Pinned Version when
     // the child starts, so that the child's first workflow task goes to the same Version as the parent.
     //
-    // For child workflows of AutoUpgrade parents, this will be set to the deployment version on which the parent
-    // is running prior to the dispatching of the child's first workflow task. The child's first workflow task 
-    // will finally be dispatched to either this source deployment version or the current deployment version of it's 
-    // Task Queue's Deployment.
+    // For child workflows of AutoUpgrade parent workflows:
+    // Before dispatching the child's first workflow task, this field is set to the deployment
+    // version on which the parent is running. This happens only when the child workflow's task
+    // queue belongs to the same deployment version as the parent workflow's task queue. The
+    // first workflow task of the child workflow will then be dispatched to either:
+    //   - this deployment version that is passed down from the parent, or
+    //   - the current deployment version of the task queue's Deployment.
+    //
+    // For continue-as-new workflow runs of an AutoUpgrade execution:
+    // Before dispatching the new run's first workflow task, this field is set to the deployment
+    // version on which the previous run was operating. This happens only when the task queue for
+    // the next run belongs to the same deployment version as the previous run's task queue. The
+    // first workflow task of the next run will then be dispatched to either:
+    //   - this deployment version that is passed down from the previous execution, or
+    //   - the current deployment version of the task queue's Deployment.
     //
     // Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
     // will override this value. 

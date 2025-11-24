@@ -1490,7 +1490,7 @@
           },
           {
             "name": "taskQueue.kind",
-            "description": "Default: TASK_QUEUE_KIND_NORMAL.\n\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.",
+            "description": "Default: TASK_QUEUE_KIND_NORMAL.\n\n - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -5354,7 +5354,7 @@
           },
           {
             "name": "taskQueue.kind",
-            "description": "Default: TASK_QUEUE_KIND_NORMAL.\n\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.",
+            "description": "Default: TASK_QUEUE_KIND_NORMAL.\n\n - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -15523,8 +15523,7 @@
         "TASK_QUEUE_KIND_STICKY"
       ],
       "default": "TASK_QUEUE_KIND_UNSPECIFIED",
-      "description": "The task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.",
-      "title": "- TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history"
+      "description": " - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities."
     },
     "v1TaskQueueMetadata": {
       "type": "object",
@@ -16841,6 +16840,10 @@
             "$ref": "#/definitions/v1RequestIdInfo"
           },
           "description": "Request ID information (eg: history event information associated with the request ID).\nNote: It only contains request IDs from StartWorkflowExecution requests, including indirect\ncalls (eg: if SignalWithStartWorkflowExecution starts a new workflow, then the request ID is\nused in the StartWorkflowExecution request)."
+        },
+        "pauseInfo": {
+          "$ref": "#/definitions/v1WorkflowExecutionPauseInfo",
+          "description": "Information about the workflow execution pause operation."
         }
       },
       "description": "Holds all the extra information about workflow execution that is not part of Visibility."
@@ -16966,10 +16969,6 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "title": "Priority metadata"
-        },
-        "pauseInfo": {
-          "$ref": "#/definitions/v1WorkflowExecutionPauseInfo",
-          "description": "Information about the workflow execution pause operation."
         }
       },
       "description": "Hold basic information about a workflow execution.\nThis structure is a part of visibility, and thus contain a limited subset of information."
@@ -17408,7 +17407,7 @@
         "revisionNumber": {
           "type": "string",
           "format": "int64",
-          "description": "Monotonic counter reflecting the latest routing decision for this workflow execution.\nUsed for staleness detection between history and matching when dispatching tasks to workers.\nIncremented when a workflow execution routes to a new deployment version, which happens \nwhen a worker of the new deployment version completes a workflow task.\nNote: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not\nface the problem of inconsistent dispatching that arises from eventual consistency between \ntask queues and their partitions."
+          "description": "Monotonic counter reflecting the latest routing decision for this workflow execution.\nUsed for staleness detection between history and matching when dispatching tasks to workers.\nIncremented when a workflow execution routes to a new deployment version, which happens\nwhen a worker of the new deployment version completes a workflow task.\nNote: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not\nface the problem of inconsistent dispatching that arises from eventual consistency between\ntask queues and their partitions."
         }
       },
       "description": "Holds all the information about worker versioning for a particular workflow execution.\nExperimental. Versioning info is experimental and might change in the future."

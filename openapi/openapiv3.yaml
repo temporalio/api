@@ -14689,12 +14689,12 @@ components:
             If present, the new workflow should start on this version with pinned base behavior.
              Child of pinned parent will inherit the parent's version if the Child's Task Queue belongs to that version.
 
-             New run initiated by workflow ContinueAsNew of pinned run, will inherit the previous run's version if the
+             A new run initiated by workflow ContinueAsNew of pinned run, will inherit the previous run's version if the
              new run's Task Queue belongs to that version.
 
-             New run initiated by workflow Cron will never inherit.
+             A new run initiated by workflow Cron will never inherit.
 
-             New run initiated by workflow Retry will only inherit if the retried run is effectively pinned at the time
+             A new run initiated by workflow Retry will only inherit if the retried run is effectively pinned at the time
              of retry, and the retried run inherited a pinned version when it started (ie. it is a child of a pinned
              parent, or a CaN of a pinned run, and is running on a Task Queue in the inherited version).
 
@@ -14705,7 +14705,7 @@ components:
         inheritedAutoUpgradeInfo:
           allOf:
             - $ref: '#/components/schemas/InheritedAutoUpgradeInfo'
-          description: "If present, the new workflow will commence with AutoUpgrade behavior on the current version of it's Task Queue's Deployment. \n UserData inconsistencies put forward by the eventual consistencies of the matching partitions shall be resolved with the help\n of the revision number and source deployment version passed in this field. This shall schedule the first workflow task of the new run\n on the source deployment version or the current deployment version of the Task Queue's Deployment.\n After the first workflow task, the effective behavior of the workflow depends on worker sent values in subsequent workflow tasks.\n Note: This field is only populated if the Task Queue on which the new run is scheduled belongs to a deployment on which the parent run is running.\n\n New run initiated by workflow ContinueAsNew of an AutoUpgrade run, or a child workflow of an AutoUpgrade parent, will inherit the \n previous run's AutoUpgrade behavior and the source deployment version passed in this field.\n Both Matching and History service shall then use the revision number to determine the deployment version on which the new run will \n dispatch its first workflow task. This deployment version shall either be the source deployment version, passed down from the parent run,\n or the current deployment version of the Task Queue's Deployment.\n\n New run initiated by workflow Cron will never inherit the AutoUpgrade behavior.\n\n New run initiated by workflow Retry will only inherit this field if the retried run is effectively AutoUpgrade at the time\n of retry, and the retried run inherited AutoUpgrade behavior when it started (ie. it is a child of a AutoUpgrade\n parent, or a CaN of a AutoUpgrade run, and is running on the same deployment as that of the parent). \n \n Note: This field is mutually exclusive with `inherited_pinned_version."
+          description: "If present, the new workflow commences with AutoUpgrade behavior. Before dispatching the\n first workflow task, this field is set to the deployment version on which the parent/\n previous run was operating. This inheritance only happens when the task queues belong to\n the same deployment version. The first workflow task will then be dispatched to either\n this inherited deployment version, or the current deployment version of the task queue's\n Deployment. After the first workflow task, the effective behavior depends on worker-sent\n values in subsequent workflow tasks.\n\n Inheritance rules:\n   - ContinueAsNew and child workflows: inherit AutoUpgrade behavior and deployment version\n   - Cron: never inherits\n   - Retry: inherits only if the retried run is effectively AutoUpgrade at the time of\n     retry, and inherited AutoUpgrade behavior when it started (i.e. it is a child of an\n     AutoUpgrade parent or ContinueAsNew of an AutoUpgrade run, running on the same\n     deployment as the parent/previous run)\n \n Note: This field is mutually exclusive with `inherited_pinned_version."
         eagerExecutionAccepted:
           type: boolean
           description: |-
@@ -14838,28 +14838,7 @@ components:
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
           type: string
-          description: |-
-            Versioning behavior determines how the server should treat this execution when workers are
-             upgraded. When present it means this workflow execution is versioned; UNSPECIFIED means
-             unversioned. See the comments in `VersioningBehavior` enum for more info about different
-             behaviors.
-             This field is first set after an execution completes its first workflow task on a versioned
-             worker, and set again on completion of every subsequent workflow task.
-             For child workflows of Pinned parents, this will be set to Pinned (along with `deployment_version`) when
-             the the child starts so that child's first workflow task goes to the same Version as the
-             parent. After the first workflow task, it depends on the child workflow itself if it wants
-             to stay pinned or become unpinned (according to Versioning Behavior set in the worker).
-
-             For child workflows of AutoUpgrade parents: before dispatching the child's first workflow
-             task, this field is set to AutoUpgrade behavior. This occurs only if the child
-             workflow’s task queue belongs to the same deployment version as the parent workflow’s
-             task queue.
-
-             For continue-as-new runs of AutoUpgrade executions: before dispatching the first workflow
-             task of the next run, this field is set to AutoUpgrade behavior. This occurs only
-             if the next run’s workflow task queue belongs to the same deployment version as the
-             previous run’s workflow task queue.
-             Note that `behavior` is overridden by `versioning_override` if the latter is present.
+          description: "Versioning behavior determines how the server should treat this execution when workers are\n upgraded. When present it means this workflow execution is versioned; UNSPECIFIED means\n unversioned. See the comments in `VersioningBehavior` enum for more info about different\n behaviors.\n This field is first set after an execution completes its first workflow task on a versioned\n worker, and set again on completion of every subsequent workflow task.\n For child workflows of Pinned parents, this will be set to Pinned (along with `deployment_version`) when\n the the child starts so that child's first workflow task goes to the same Version as the\n parent. After the first workflow task, it depends on the child workflow itself if it wants\n to stay pinned or become unpinned (according to Versioning Behavior set in the worker).\n\n For child workflows and continue-as-new runs of AutoUpgrade parents/executions: before\n dispatching the first workflow task, this field is set to AutoUpgrade behavior. This\n occurs only if the child's/next run's task queue belongs to the same deployment version \n as the parent's/previous run's task queue.\n \n Note that `behavior` is overridden by `versioning_override` if the latter is present."
           format: enum
         deployment:
           allOf:
@@ -14887,21 +14866,12 @@ components:
              For child workflows of Pinned parents, this will be set to the parent's Pinned Version when
              the child starts, so that the child's first workflow task goes to the same Version as the parent.
 
-             For child workflows of AutoUpgrade parent workflows:
-             Before dispatching the child's first workflow task, this field is set to the deployment
-             version on which the parent is running. This happens only when the child workflow's task
-             queue belongs to the same deployment version as the parent workflow's task queue. The
-             first workflow task of the child workflow will then be dispatched to either:
-               - this deployment version that is passed down from the parent, or
-               - the current deployment version of the task queue's Deployment.
-
-             For continue-as-new workflow runs of an AutoUpgrade execution:
-             Before dispatching the new run's first workflow task, this field is set to the deployment
-             version on which the previous run was operating. This happens only when the task queue for
-             the next run belongs to the same deployment version as the previous run's task queue. The
-             first workflow task of the next run will then be dispatched to either:
-               - this deployment version that is passed down from the previous execution, or
-               - the current deployment version of the task queue's Deployment.
+             For child workflows and continue-as-new runs of AutoUpgrade parents, before dispatching
+             the first workflow task, this field is set to the deployment version on which the
+             parent/previous run was operating. This inheritance only happens when the task queues
+             belong to the same deployment version. The first workflow task will then be dispatched
+             to either this inherited deployment version, or the current deployment version of the
+             task queue's Deployment.
 
              Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
              will override this value.

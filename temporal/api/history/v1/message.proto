@@ -140,12 +140,12 @@ message WorkflowExecutionStartedEventAttributes {
     // If present, the new workflow should start on this version with pinned base behavior.
     // Child of pinned parent will inherit the parent's version if the Child's Task Queue belongs to that version.
     //
-    // New run initiated by workflow ContinueAsNew of pinned run, will inherit the previous run's version if the
+    // A new run initiated by workflow ContinueAsNew of pinned run, will inherit the previous run's version if the
     // new run's Task Queue belongs to that version.
     //
-    // New run initiated by workflow Cron will never inherit.
+    // A new run initiated by workflow Cron will never inherit.
     //
-    // New run initiated by workflow Retry will only inherit if the retried run is effectively pinned at the time
+    // A new run initiated by workflow Retry will only inherit if the retried run is effectively pinned at the time
     // of retry, and the retried run inherited a pinned version when it started (ie. it is a child of a pinned
     // parent, or a CaN of a pinned run, and is running on a Task Queue in the inherited version).
     //
@@ -155,24 +155,21 @@ message WorkflowExecutionStartedEventAttributes {
     // Note: This field is mutually exclusive with inherited_auto_upgrade_info. 
     temporal.api.deployment.v1.WorkerDeploymentVersion inherited_pinned_version = 37;
 
-    // If present, the new workflow will commence with AutoUpgrade behavior on the current version of it's Task Queue's Deployment. 
-    // UserData inconsistencies put forward by the eventual consistencies of the matching partitions shall be resolved with the help
-    // of the revision number and source deployment version passed in this field. This shall schedule the first workflow task of the new run
-    // on the source deployment version or the current deployment version of the Task Queue's Deployment.
-    // After the first workflow task, the effective behavior of the workflow depends on worker sent values in subsequent workflow tasks.
-    // Note: This field is only populated if the Task Queue on which the new run is scheduled belongs to a deployment on which the parent run is running.
+    // If present, the new workflow commences with AutoUpgrade behavior. Before dispatching the
+    // first workflow task, this field is set to the deployment version on which the parent/
+    // previous run was operating. This inheritance only happens when the task queues belong to
+    // the same deployment version. The first workflow task will then be dispatched to either
+    // this inherited deployment version, or the current deployment version of the task queue's
+    // Deployment. After the first workflow task, the effective behavior depends on worker-sent
+    // values in subsequent workflow tasks.
     //
-    // New run initiated by workflow ContinueAsNew of an AutoUpgrade run, or a child workflow of an AutoUpgrade parent, will inherit the 
-    // previous run's AutoUpgrade behavior and the source deployment version passed in this field.
-    // Both Matching and History service shall then use the revision number to determine the deployment version on which the new run will 
-    // dispatch its first workflow task. This deployment version shall either be the source deployment version, passed down from the parent run,
-    // or the current deployment version of the Task Queue's Deployment.
-    //
-    // New run initiated by workflow Cron will never inherit the AutoUpgrade behavior.
-    //
-    // New run initiated by workflow Retry will only inherit this field if the retried run is effectively AutoUpgrade at the time
-    // of retry, and the retried run inherited AutoUpgrade behavior when it started (ie. it is a child of a AutoUpgrade
-    // parent, or a CaN of a AutoUpgrade run, and is running on the same deployment as that of the parent). 
+    // Inheritance rules:
+    //   - ContinueAsNew and child workflows: inherit AutoUpgrade behavior and deployment version
+    //   - Cron: never inherits
+    //   - Retry: inherits only if the retried run is effectively AutoUpgrade at the time of
+    //     retry, and inherited AutoUpgrade behavior when it started (i.e. it is a child of an
+    //     AutoUpgrade parent or ContinueAsNew of an AutoUpgrade run, running on the same
+    //     deployment as the parent/previous run)
     // 
     // Note: This field is mutually exclusive with `inherited_pinned_version. 
     temporal.api.deployment.v1.InheritedAutoUpgradeInfo inherited_auto_upgrade_info = 39;

@@ -138,12 +138,14 @@ message WorkflowExecutionVersioningInfo {
     // upgraded. When present it means this workflow execution is versioned; UNSPECIFIED means
     // unversioned. See the comments in `VersioningBehavior` enum for more info about different
     // behaviors.
-    // This field is first set after an execution completes its first workflow task on a versioned
-    // worker, and set again on completion of every subsequent workflow task.
-    // For child workflows of Pinned parents, this will be set to Pinned (along with `deployment_version`) when
-    // the the child starts so that child's first workflow task goes to the same Version as the
-    // parent. After the first workflow task, it depends on the child workflow itself if it wants
-    // to stay pinned or become unpinned (according to Versioning Behavior set in the worker).
+    //
+    // Child workflows or CaN executions **inherit** their parent/previous run's effective Versioning 
+    // Behavior and Version (except when the new execution runs on a task queue not belonging to the 
+    // same deployment version as the parent/previous run's task queue). The first workflow task will
+    // be dispatched according to the inherited behavior (or to the current version of the task-queue's 
+    // deployment in the case of AutoUpgrade.) After completion of their first workflow task the 
+    // Deployment Version and Behavior of the execution will update according to configuration on the worker.
+    // 
     // Note that `behavior` is overridden by `versioning_override` if the latter is present.
     temporal.api.enums.v1.VersioningBehavior behavior = 1;
     // The worker deployment that completed the last workflow task of this workflow execution. Must
@@ -161,10 +163,15 @@ message WorkflowExecutionVersioningInfo {
     // If present, and `behavior` is UNSPECIFIED, the last task of this workflow execution was completed
     // by a worker that is not using versioning but _is_ passing Deployment Name and Build ID.
     //
-    // For child workflows of Pinned parents, this will be set to the parent's Pinned Version when
-    // the child starts, so that the child's first workflow task goes to the same Version as the parent.
+    // Child workflows or CaN executions **inherit** their parent/previous run's effective Versioning 
+    // Behavior and Version (except when the new execution runs on a task queue not belonging to the 
+    // same deployment version as the parent/previous run's task queue). The first workflow task will
+    // be dispatched according to the inherited behavior (or to the current version of the task-queue's 
+    // deployment in the case of AutoUpgrade.) After completion of their first workflow task the 
+    // Deployment Version and Behavior of the execution will update according to configuration on the worker.
+    //
     // Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
-    // will override this value.
+    // will override this value. 
     temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 7;
     // Present if user has set an execution-specific versioning override. This override takes
     // precedence over SDK-sent `behavior` (and `version` when override is PINNED). An

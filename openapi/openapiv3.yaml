@@ -13436,6 +13436,7 @@ components:
          to indicate that it should be mutated.
          Pinned overrides are automatically inherited by child workflows, continue-as-new workflows,
          workflow retries, and cron workflows.
+         TODO(carlydf): How should other types of pinned overrides be inherited? when a PUCAN-override wf continues-as-new, if it inherits an override that is both version and behavior, then it doesn't actually upgrade, which doesn't make sense
     VersioningOverride_PinnedOverride:
       type: object
       properties:
@@ -13443,6 +13444,9 @@ components:
           enum:
             - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED
             - PINNED_OVERRIDE_BEHAVIOR_PINNED
+            - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
+            - PINNED_OVERRIDE_BEHAVIOR_PINNED_OR_KEEP_EXISTING
+            - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW_OR_KEEP_EXISTING
           type: string
           description: |-
             Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
@@ -15342,8 +15346,20 @@ components:
           description: |-
             True if this workflow should continue-as-new soon. Reasons for this could be:
                - History size (in either event count or bytes) is getting large
-               - Update registry size is getting large
+               - Total number of completed and in-flight updates on the workflow is too large
                - Workflow's Target Version is different from its Pinned Version, and the Versioning Behavior is PinnedUntilContinueAsNew
+        suggestContinueAsNewReason:
+          enum:
+            - SUGGEST_CONTINUE_AS_NEW_REASON_UNSPECIFIED
+            - SUGGEST_CONTINUE_AS_NEW_REASON_HISTORY_SIZE_TOO_LARGE
+            - SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_HISTORY_EVENTS
+            - SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_UPDATES
+            - SUGGEST_CONTINUE_AS_NEW_REASON_TARGET_WORKER_DEPLOYMENT_VERSION_CHANGED
+          type: string
+          description: |-
+            The reason that suggest_continue_as_new is true, if it is.
+             Unspecified if suggest_continue_as_new is false or if the reason is unknown.
+          format: enum
         historySizeBytes:
           type: string
           description: |-
@@ -15362,17 +15378,6 @@ components:
             Used by server internally to properly reapply build ID redirects to an execution
              when rebuilding it from events.
              Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
-        continueAsNewSuggestedReason:
-          enum:
-            - CONTINUE_AS_NEW_SUGGESTED_REASON_UNSPECIFIED
-            - CONTINUE_AS_NEW_SUGGESTED_REASON_HISTORY_SIZE_TOO_LARGE
-            - CONTINUE_AS_NEW_SUGGESTED_REASON_UPDATE_REGISTRY_TOO_LARGE
-            - CONTINUE_AS_NEW_SUGGESTED_REASON_WORKER_DEPLOYMENT_VERSION_CHANGED
-          type: string
-          description: |-
-            The reason that suggest_continue_as_new is true, if it is.
-             Unspecified if suggest_continue_as_new is false or if the reason is unknown.
-          format: enum
     WorkflowTaskTimedOutEventAttributes:
       type: object
       properties:

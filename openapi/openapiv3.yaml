@@ -14822,7 +14822,7 @@ components:
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
           type: string
-          description: "Versioning behavior determines how the server should treat this execution when workers are\n upgraded. When present it means this workflow execution is versioned; UNSPECIFIED means\n unversioned. See the comments in `VersioningBehavior` enum for more info about different\n behaviors.\n This field is first set after an execution completes its first workflow task on a versioned\n worker, and set again on completion of every subsequent workflow task.\n For child workflows of Pinned parents, this will be set to Pinned (along with `deployment_version`) when\n the the child starts so that child's first workflow task goes to the same Version as the\n parent. After the first workflow task, it depends on the child workflow itself if it wants\n to stay pinned or become unpinned (according to Versioning Behavior set in the worker).\n\n For child workflows and continue-as-new runs of AutoUpgrade parents/executions: before\n dispatching the first workflow task, this field is set to AutoUpgrade behavior. This\n occurs only if the child's/next run's task queue belongs to the same deployment version \n as the parent's/previous run's task queue.\n \n Note that `behavior` is overridden by `versioning_override` if the latter is present."
+          description: "Versioning behavior determines how the server should treat this execution when workers are\n upgraded. When present it means this workflow execution is versioned; UNSPECIFIED means\n unversioned. See the comments in `VersioningBehavior` enum for more info about different\n behaviors.\n\n Child workflows or CaN executions **inherit** their parent/previous run's effective Versioning \n Behavior and Version (except when the new execution runs on a task queue not belonging to the \n same deployment version as the parent/previous run's task queue). The first workflow task will\n be dispatched according to the inherited behavior (or to the current version of the task-queue's \n deployment in the case of AutoUpgrade.) After completion of their first workflow task the \n Deployment Version and Behavior of the execution will update according to configuration on the worker.\n \n Note that `behavior` is overridden by `versioning_override` if the latter is present."
           format: enum
         deployment:
           allOf:
@@ -14841,24 +14841,7 @@ components:
         deploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: |-
-            The Worker Deployment Version that completed the last workflow task of this workflow execution.
-             An absent value means no workflow task is completed, or the workflow is unversioned.
-             If present, and `behavior` is UNSPECIFIED, the last task of this workflow execution was completed
-             by a worker that is not using versioning but _is_ passing Deployment Name and Build ID.
-
-             For child workflows of Pinned parents, this will be set to the parent's Pinned Version when
-             the child starts, so that the child's first workflow task goes to the same Version as the parent.
-
-             For child workflows and continue-as-new runs of AutoUpgrade parents, before dispatching
-             the first workflow task, this field is set to the deployment version on which the
-             parent/previous run was operating. This inheritance only happens when the task queues
-             belong to the same deployment version. The first workflow task will then be dispatched
-             to either this inherited deployment version, or the current deployment version of the
-             task queue's Deployment.
-
-             Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`
-             will override this value.
+          description: "The Worker Deployment Version that completed the last workflow task of this workflow execution.\n An absent value means no workflow task is completed, or the workflow is unversioned.\n If present, and `behavior` is UNSPECIFIED, the last task of this workflow execution was completed\n by a worker that is not using versioning but _is_ passing Deployment Name and Build ID.\n\n Child workflows or CaN executions **inherit** their parent/previous run's effective Versioning \n Behavior and Version (except when the new execution runs on a task queue not belonging to the \n same deployment version as the parent/previous run's task queue). The first workflow task will\n be dispatched according to the inherited behavior (or to the current version of the task-queue's \n deployment in the case of AutoUpgrade.) After completion of their first workflow task the \n Deployment Version and Behavior of the execution will update according to configuration on the worker.\n\n Note that if `versioning_override.behavior` is PINNED then `versioning_override.pinned_version`\n will override this value."
         versioningOverride:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride'

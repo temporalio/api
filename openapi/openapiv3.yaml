@@ -389,7 +389,7 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        See `RecordActivityTaskCanceled`. This version allows clients to record failures by
+        See `RespondActivityTaskCanceled`. This version allows clients to record failures by
          namespace/workflow id/activity id instead of task token.
 
          (-- api-linter: core::0136::prepositions=disabled
@@ -463,7 +463,7 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        See `RecordActivityTaskCompleted`. This version allows clients to record completions by
+        See `RespondActivityTaskCompleted`. This version allows clients to record completions by
          namespace/workflow id/activity id instead of task token.
 
          (-- api-linter: core::0136::prepositions=disabled
@@ -827,11 +827,11 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        PollActivityExecution returns the status and/or outcome of an activity execution.
-         Supported use cases include
+        PollActivityExecution returns information about an activity execution.
+         Supported use cases include:
          - Get current activity info without waiting
-         - Wait for next state change and return activity info
-         - Wait for completion and return outcome
+         - Long-poll for next state change and return new activity info
+         Response can optionally include activity input or result (if the activity has completed)
       operationId: PollActivityExecution
       parameters:
         - name: namespace
@@ -849,11 +849,6 @@ paths:
           description: Activity run ID. If empty the request targets the latest run.
           schema:
             type: string
-        - name: includeInfo
-          in: query
-          description: Include the info field from the response.
-          schema:
-            type: boolean
         - name: includeInput
           in: query
           description: Include the input field in the response.
@@ -861,14 +856,18 @@ paths:
             type: boolean
         - name: includeOutcome
           in: query
-          description: Include the outcome field in the response.
+          description: Include the outcome (result/failure) in the response if the activity has completed.
           schema:
             type: boolean
-        - name: waitAnyStateChange.longPollToken
+        - name: longPollToken
           in: query
           description: |-
-            Token from a previous PollActivityExecutionResponse used to inform the server of the
-             last state seen by the caller. If present, run_id must also be present.
+            Token from a previous PollActivityExecutionResponse. If present, long-poll until activity
+             state changes from the state encoded in this token. If absent, return current state immediately.
+             If present, run_id must also be present.
+             Note that activity state may change multiple times between requests, therefore it is not
+             guaranteed that a client making a sequence of long-poll requests will see a complete
+             sequence of state changes.
           schema:
             type: string
             format: bytes
@@ -963,6 +962,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RequestCancelActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/{activityId}/outcome:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollActivityExecutionOutcome long-polls for an activity execution to complete and returns
+         the outcome (result or failure).
+      operationId: PollActivityExecutionOutcome
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Activity run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollActivityExecutionOutcomeResponse'
         default:
           description: Default error response
           content:
@@ -4558,7 +4594,7 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        See `RecordActivityTaskCanceled`. This version allows clients to record failures by
+        See `RespondActivityTaskCanceled`. This version allows clients to record failures by
          namespace/workflow id/activity id instead of task token.
 
          (-- api-linter: core::0136::prepositions=disabled
@@ -4632,7 +4668,7 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        See `RecordActivityTaskCompleted`. This version allows clients to record completions by
+        See `RespondActivityTaskCompleted`. This version allows clients to record completions by
          namespace/workflow id/activity id instead of task token.
 
          (-- api-linter: core::0136::prepositions=disabled
@@ -4996,11 +5032,11 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        PollActivityExecution returns the status and/or outcome of an activity execution.
-         Supported use cases include
+        PollActivityExecution returns information about an activity execution.
+         Supported use cases include:
          - Get current activity info without waiting
-         - Wait for next state change and return activity info
-         - Wait for completion and return outcome
+         - Long-poll for next state change and return new activity info
+         Response can optionally include activity input or result (if the activity has completed)
       operationId: PollActivityExecution
       parameters:
         - name: namespace
@@ -5018,11 +5054,6 @@ paths:
           description: Activity run ID. If empty the request targets the latest run.
           schema:
             type: string
-        - name: includeInfo
-          in: query
-          description: Include the info field from the response.
-          schema:
-            type: boolean
         - name: includeInput
           in: query
           description: Include the input field in the response.
@@ -5030,14 +5061,18 @@ paths:
             type: boolean
         - name: includeOutcome
           in: query
-          description: Include the outcome field in the response.
+          description: Include the outcome (result/failure) in the response if the activity has completed.
           schema:
             type: boolean
-        - name: waitAnyStateChange.longPollToken
+        - name: longPollToken
           in: query
           description: |-
-            Token from a previous PollActivityExecutionResponse used to inform the server of the
-             last state seen by the caller. If present, run_id must also be present.
+            Token from a previous PollActivityExecutionResponse. If present, long-poll until activity
+             state changes from the state encoded in this token. If absent, return current state immediately.
+             If present, run_id must also be present.
+             Note that activity state may change multiple times between requests, therefore it is not
+             guaranteed that a client making a sequence of long-poll requests will see a complete
+             sequence of state changes.
           schema:
             type: string
             format: bytes
@@ -5132,6 +5167,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RequestCancelActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/{activityId}/outcome:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollActivityExecutionOutcome long-polls for an activity execution to complete and returns
+         the outcome (result or failure).
+      operationId: PollActivityExecutionOutcome
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Activity run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollActivityExecutionOutcomeResponse'
         default:
           description: Default error response
           content:
@@ -11589,6 +11661,20 @@ components:
         version:
           type: string
           description: The version of the plugin, may be empty.
+    PollActivityExecutionOutcomeResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run ID of the activity, useful when run_id was not specified in the request.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: The result if the activity completed successfully.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The failure if the activity completed unsuccessfully.
     PollActivityExecutionResponse:
       type: object
       properties:
@@ -11598,11 +11684,13 @@ components:
         info:
           allOf:
             - $ref: '#/components/schemas/ActivityExecutionInfo'
-          description: Only set if include_info was true in the request.
+          description: Information about the activity execution.
         input:
           allOf:
             - $ref: '#/components/schemas/Payloads'
-          description: Serialized activity input, passed as arguments to the activity function.
+          description: |-
+            Serialized activity input, passed as arguments to the activity function.
+             Only set if include_input was true in the request.
         result:
           allOf:
             - $ref: '#/components/schemas/Payloads'
@@ -11611,11 +11699,9 @@ components:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: The failure if the activity completed unsuccessfully.
-        stateChangeLongPollToken:
+        longPollToken:
           type: string
-          description: |-
-            Token to use for a follow-on request using wait_any_state_change.
-             Only set if wait_policy was wait_any_state_change and the activity is not complete.
+          description: Token for follow-on long-poll requests. Absent only if the activity is complete.
           format: bytes
     PollActivityTaskQueueResponse:
       type: object
@@ -13792,8 +13878,47 @@ components:
           type: string
         activityType:
           $ref: '#/components/schemas/ActivityType'
-        options:
-          $ref: '#/components/schemas/ActivityOptions'
+        taskQueue:
+          allOf:
+            - $ref: '#/components/schemas/TaskQueue'
+          description: Task queue to schedule this activity on.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Indicates how long the caller is willing to wait for an activity completion. Limits how long
+             retries will be attempted. Either this or `start_to_close_timeout` must be specified.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        scheduleToStartTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Limits time an activity task can stay in a task queue before a worker picks it up. This
+             timeout is always non retryable, as all a retry would achieve is to put it back into the same
+             queue. Defaults to `schedule_to_close_timeout` if not specified.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        startToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Maximum time an activity is allowed to execute after being picked up by a worker. This
+             timeout is always retryable. Either this or `schedule_to_close_timeout` must be
+             specified.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        heartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Maximum permitted time between successful worker heartbeats.
+        retryPolicy:
+          allOf:
+            - $ref: '#/components/schemas/RetryPolicy'
+          description: The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
         input:
           allOf:
             - $ref: '#/components/schemas/Payloads'
@@ -14823,33 +14948,74 @@ components:
              Mutually exclusive with activity_id and workflow_activity_type.
 
              Note: Experimental - the behavior of updating all activities may change or be removed in a future release.
-        activityOptions:
-          allOf:
-            - $ref: '#/components/schemas/ActivityOptions'
-          description: |-
-            Activity options. Partial updates are accepted and controlled by update_mask
-             Mutually exclusive with restore_original.
-        updateMask:
-          type: string
-          description: Controls which fields from `activity_options` will be applied
-          format: field-mask
         restoreOriginal:
           type: boolean
           description: |-
-            If set, the activity options will be restored to the defaults.
-             Default options are then options activity was originally created with.
-             For workflow activities the original options are restored from first ActivityTaskScheduled event.
-             Mutually exclusive with activity_options.
+            If set, the activity options will be restored to the options the activity was originally
+             created with. For workflow activities the original options are restored from first
+             ActivityTaskScheduled event. Mutually exclusive with the activity options fields below.
+        taskQueue:
+          allOf:
+            - $ref: '#/components/schemas/TaskQueue'
+          description: |-
+            Activity options. Partial updates are accepted and controlled by update_mask.
+             Mutually exclusive with restore_original.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        scheduleToStartTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        startToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        heartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+        retryPolicy:
+          $ref: '#/components/schemas/RetryPolicy'
       description: |-
         TODO: update batch
          NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions
     UpdateActivityExecutionOptionsResponse:
       type: object
       properties:
-        activityOptions:
+        taskQueue:
           allOf:
-            - $ref: '#/components/schemas/ActivityOptions'
-          description: Activity options after an update
+            - $ref: '#/components/schemas/TaskQueue'
+          description: Activity options after the update.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        scheduleToStartTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        startToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        heartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+        retryPolicy:
+          $ref: '#/components/schemas/RetryPolicy'
     UpdateActivityOptionsRequest:
       type: object
       properties:

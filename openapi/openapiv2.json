@@ -416,7 +416,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/cancel-by-id": {
       "post": {
-        "summary": "See `RecordActivityTaskCanceled`. This version allows clients to record failures by\nnamespace/workflow id/activity id instead of task token.",
+        "summary": "See `RespondActivityTaskCanceled`. This version allows clients to record failures by\nnamespace/workflow id/activity id instead of task token.",
         "operationId": "RespondActivityTaskCanceledById2",
         "responses": {
           "200": {
@@ -496,7 +496,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/complete-by-id": {
       "post": {
-        "summary": "See `RecordActivityTaskCompleted`. This version allows clients to record completions by\nnamespace/workflow id/activity id instead of task token.",
+        "summary": "See `RespondActivityTaskCompleted`. This version allows clients to record completions by\nnamespace/workflow id/activity id instead of task token.",
         "operationId": "RespondActivityTaskCompletedById2",
         "responses": {
           "200": {
@@ -859,13 +859,13 @@
     },
     "/api/v1/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "PollActivityExecution returns the status and/or outcome of an activity execution.\nSupported use cases include\n- Get current activity info without waiting\n- Wait for next state change and return activity info\n- Wait for completion and return outcome",
-        "operationId": "PollActivityExecution2",
+        "summary": "DescribeActivityExecution returns information about an activity execution.\nSupported use cases include:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or outcome (if the activity has completed).",
+        "operationId": "DescribeActivityExecution2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1PollActivityExecutionResponse"
+              "$ref": "#/definitions/v1DescribeActivityExecutionResponse"
             }
           },
           "default": {
@@ -896,13 +896,6 @@
             "type": "string"
           },
           {
-            "name": "includeInfo",
-            "description": "Include the info field from the response.",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          },
-          {
             "name": "includeInput",
             "description": "Include the input field in the response.",
             "in": "query",
@@ -911,14 +904,14 @@
           },
           {
             "name": "includeOutcome",
-            "description": "Include the outcome field in the response.",
+            "description": "Include the outcome (result/failure) in the response if the activity has completed.",
             "in": "query",
             "required": false,
             "type": "boolean"
           },
           {
-            "name": "waitAnyStateChange.longPollToken",
-            "description": "Token from a previous PollActivityExecutionResponse used to inform the server of the\nlast state seen by the caller. If present, run_id must also be present.",
+            "name": "longPollToken",
+            "description": "Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity\nstate changes from the state encoded in this token. If absent, return current state immediately.\nIf present, run_id must also be present.\nNote that activity state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1013,6 +1006,50 @@
             "schema": {
               "$ref": "#/definitions/WorkflowServiceRequestCancelActivityExecutionBody"
             }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/activities/{activityId}/outcome": {
+      "get": {
+        "summary": "GetActivityExecutionOutcome long-polls for an activity execution to complete and returns\nthe outcome (result or failure).",
+        "operationId": "GetActivityExecutionOutcome2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetActivityExecutionOutcomeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "activityId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "runId",
+            "description": "Activity run ID. If empty the request targets the latest run.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -4994,7 +5031,7 @@
     },
     "/namespaces/{namespace}/activities/cancel-by-id": {
       "post": {
-        "summary": "See `RecordActivityTaskCanceled`. This version allows clients to record failures by\nnamespace/workflow id/activity id instead of task token.",
+        "summary": "See `RespondActivityTaskCanceled`. This version allows clients to record failures by\nnamespace/workflow id/activity id instead of task token.",
         "operationId": "RespondActivityTaskCanceledById",
         "responses": {
           "200": {
@@ -5074,7 +5111,7 @@
     },
     "/namespaces/{namespace}/activities/complete-by-id": {
       "post": {
-        "summary": "See `RecordActivityTaskCompleted`. This version allows clients to record completions by\nnamespace/workflow id/activity id instead of task token.",
+        "summary": "See `RespondActivityTaskCompleted`. This version allows clients to record completions by\nnamespace/workflow id/activity id instead of task token.",
         "operationId": "RespondActivityTaskCompletedById",
         "responses": {
           "200": {
@@ -5437,13 +5474,13 @@
     },
     "/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "PollActivityExecution returns the status and/or outcome of an activity execution.\nSupported use cases include\n- Get current activity info without waiting\n- Wait for next state change and return activity info\n- Wait for completion and return outcome",
-        "operationId": "PollActivityExecution",
+        "summary": "DescribeActivityExecution returns information about an activity execution.\nSupported use cases include:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or outcome (if the activity has completed).",
+        "operationId": "DescribeActivityExecution",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1PollActivityExecutionResponse"
+              "$ref": "#/definitions/v1DescribeActivityExecutionResponse"
             }
           },
           "default": {
@@ -5474,13 +5511,6 @@
             "type": "string"
           },
           {
-            "name": "includeInfo",
-            "description": "Include the info field from the response.",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
-          },
-          {
             "name": "includeInput",
             "description": "Include the input field in the response.",
             "in": "query",
@@ -5489,14 +5519,14 @@
           },
           {
             "name": "includeOutcome",
-            "description": "Include the outcome field in the response.",
+            "description": "Include the outcome (result/failure) in the response if the activity has completed.",
             "in": "query",
             "required": false,
             "type": "boolean"
           },
           {
-            "name": "waitAnyStateChange.longPollToken",
-            "description": "Token from a previous PollActivityExecutionResponse used to inform the server of the\nlast state seen by the caller. If present, run_id must also be present.",
+            "name": "longPollToken",
+            "description": "Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity\nstate changes from the state encoded in this token. If absent, return current state immediately.\nIf present, run_id must also be present.\nNote that activity state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -5591,6 +5621,50 @@
             "schema": {
               "$ref": "#/definitions/WorkflowServiceRequestCancelActivityExecutionBody"
             }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/activities/{activityId}/outcome": {
+      "get": {
+        "summary": "GetActivityExecutionOutcome long-polls for an activity execution to complete and returns\nthe outcome (result or failure).",
+        "operationId": "GetActivityExecutionOutcome",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetActivityExecutionOutcomeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "activityId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "runId",
+            "description": "Activity run ID. If empty the request targets the latest run.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -9011,19 +9085,6 @@
       },
       "description": "Describes an externally stored object referenced by this payload."
     },
-    "PollActivityExecutionRequestCompletionWaitOptions": {
-      "type": "object"
-    },
-    "PollActivityExecutionRequestStateChangeWaitOptions": {
-      "type": "object",
-      "properties": {
-        "longPollToken": {
-          "type": "string",
-          "format": "byte",
-          "description": "Token from a previous PollActivityExecutionResponse used to inform the server of the\nlast state seen by the caller. If present, run_id must also be present."
-        }
-      }
-    },
     "PostResetOperationSignalWorkflow": {
       "type": "object",
       "properties": {
@@ -10269,8 +10330,29 @@
         "activityType": {
           "$ref": "#/definitions/v1ActivityType"
         },
-        "options": {
-          "$ref": "#/definitions/v1ActivityOptions"
+        "taskQueue": {
+          "$ref": "#/definitions/v1TaskQueue",
+          "description": "Task queue to schedule this activity on."
+        },
+        "scheduleToCloseTimeout": {
+          "type": "string",
+          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted. Either this or `start_to_close_timeout` must be specified.\n"
+        },
+        "scheduleToStartTimeout": {
+          "type": "string",
+          "description": "Limits time an activity task can stay in a task queue before a worker picks it up. This\ntimeout is always non retryable, as all a retry would achieve is to put it back into the same\nqueue. Defaults to `schedule_to_close_timeout` if not specified.\n"
+        },
+        "startToCloseTimeout": {
+          "type": "string",
+          "description": "Maximum time an activity is allowed to execute after being picked up by a worker. This\ntimeout is always retryable. Either this or `schedule_to_close_timeout` must be\nspecified.\n"
+        },
+        "heartbeatTimeout": {
+          "type": "string",
+          "description": "Maximum permitted time between successful worker heartbeats."
+        },
+        "retryPolicy": {
+          "$ref": "#/definitions/v1RetryPolicy",
+          "description": "The retry policy for the activity. Will never exceed `schedule_to_close_timeout`."
         },
         "input": {
           "$ref": "#/definitions/v1Payloads",
@@ -10698,17 +10780,28 @@
           "type": "boolean",
           "description": "Update all pending workflow activities.\nOnly available if workflow_id is provided.\nMutually exclusive with activity_id and workflow_activity_type.\n\nNote: Experimental - the behavior of updating all activities may change or be removed in a future release."
         },
-        "activityOptions": {
-          "$ref": "#/definitions/v1ActivityOptions",
-          "description": "Activity options. Partial updates are accepted and controlled by update_mask\nMutually exclusive with restore_original."
-        },
-        "updateMask": {
-          "type": "string",
-          "title": "Controls which fields from `activity_options` will be applied"
-        },
         "restoreOriginal": {
           "type": "boolean",
-          "description": "If set, the activity options will be restored to the defaults.\nDefault options are then options activity was originally created with.\nFor workflow activities the original options are restored from first ActivityTaskScheduled event.\nMutually exclusive with activity_options."
+          "description": "If set, the activity options will be restored to the options the activity was originally\ncreated with. For workflow activities the original options are restored from first\nActivityTaskScheduled event. Mutually exclusive with the activity options fields below."
+        },
+        "taskQueue": {
+          "$ref": "#/definitions/v1TaskQueue",
+          "description": "Activity options. Mutually exclusive with restore_original."
+        },
+        "scheduleToCloseTimeout": {
+          "type": "string"
+        },
+        "scheduleToStartTimeout": {
+          "type": "string"
+        },
+        "startToCloseTimeout": {
+          "type": "string"
+        },
+        "heartbeatTimeout": {
+          "type": "string"
+        },
+        "retryPolicy": {
+          "$ref": "#/definitions/v1RetryPolicy"
         }
       },
       "title": "TODO: update batch\nNOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions"
@@ -13013,6 +13106,36 @@
       "type": "object",
       "description": "Deprecated."
     },
+    "v1DescribeActivityExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The run ID of the activity, useful when run_id was not specified in the request."
+        },
+        "info": {
+          "$ref": "#/definitions/v1ActivityExecutionInfo",
+          "description": "Information about the activity execution."
+        },
+        "input": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "Serialized activity input, passed as arguments to the activity function.\nOnly set if include_input was true in the request."
+        },
+        "result": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "The result if the activity completed successfully."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "The failure if the activity completed unsuccessfully."
+        },
+        "longPollToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Token for follow-on long-poll requests. Absent only if the activity is complete."
+        }
+      }
+    },
     "v1DescribeBatchOperationResponse": {
       "type": "object",
       "properties": {
@@ -13508,6 +13631,23 @@
         "workerConfig": {
           "$ref": "#/definitions/v1WorkerConfig",
           "description": "The worker configuration."
+        }
+      }
+    },
+    "v1GetActivityExecutionOutcomeResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The run ID of the activity, useful when run_id was not specified in the request."
+        },
+        "result": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "The result if the activity completed successfully."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "The failure if the activity completed unsuccessfully."
         }
       }
     },
@@ -15323,36 +15463,6 @@
         "version": {
           "type": "string",
           "description": "The version of the plugin, may be empty."
-        }
-      }
-    },
-    "v1PollActivityExecutionResponse": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "The run ID of the activity, useful when run_id was not specified in the request."
-        },
-        "info": {
-          "$ref": "#/definitions/v1ActivityExecutionInfo",
-          "description": "Only set if include_info was true in the request."
-        },
-        "input": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "Serialized activity input, passed as arguments to the activity function."
-        },
-        "result": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "The result if the activity completed successfully."
-        },
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "The failure if the activity completed unsuccessfully."
-        },
-        "stateChangeLongPollToken": {
-          "type": "string",
-          "format": "byte",
-          "description": "Token to use for a follow-on request using wait_any_state_change.\nOnly set if wait_policy was wait_any_state_change and the activity is not complete."
         }
       }
     },
@@ -17941,9 +18051,24 @@
     "v1UpdateActivityExecutionOptionsResponse": {
       "type": "object",
       "properties": {
-        "activityOptions": {
-          "$ref": "#/definitions/v1ActivityOptions",
-          "title": "Activity options after an update"
+        "taskQueue": {
+          "$ref": "#/definitions/v1TaskQueue",
+          "description": "Activity options after the update."
+        },
+        "scheduleToCloseTimeout": {
+          "type": "string"
+        },
+        "scheduleToStartTimeout": {
+          "type": "string"
+        },
+        "startToCloseTimeout": {
+          "type": "string"
+        },
+        "heartbeatTimeout": {
+          "type": "string"
+        },
+        "retryPolicy": {
+          "$ref": "#/definitions/v1RetryPolicy"
         }
       }
     },

@@ -2619,41 +2619,68 @@ message StartActivityExecutionRequest {
 
     string activity_id = 4;
     temporal.api.common.v1.ActivityType activity_type = 5;
-    temporal.api.activity.v1.ActivityOptions options = 6;
+
+    // Task queue to schedule this activity on.
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 6;
+    // Indicates how long the caller is willing to wait for an activity completion. Limits how long
+    // retries will be attempted. Either this or `start_to_close_timeout` must be specified.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 7;
+    // Limits time an activity task can stay in a task queue before a worker picks it up. This
+    // timeout is always non retryable, as all a retry would achieve is to put it back into the same
+    // queue. Defaults to `schedule_to_close_timeout` if not specified.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_start_timeout = 8;
+    // Maximum time an activity is allowed to execute after being picked up by a worker. This
+    // timeout is always retryable. Either this or `schedule_to_close_timeout` must be
+    // specified.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 9;
+    // Maximum permitted time between successful worker heartbeats.
+    google.protobuf.Duration heartbeat_timeout = 10;
+    // The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+    temporal.api.common.v1.RetryPolicy retry_policy = 11;
+
     // Serialized arguments to the activity. These are passed as arguments to the activity function.
-    temporal.api.common.v1.Payloads input = 7;
+    temporal.api.common.v1.Payloads input = 12;
 
     // Defines whether to allow re-using the activity id from a previously *closed* activity.
     // The default policy is ACTIVITY_ID_REUSE_POLICY_ALLOW_DUPLICATE.
-    temporal.api.enums.v1.ActivityIdReusePolicy id_reuse_policy = 8;
+    temporal.api.enums.v1.ActivityIdReusePolicy id_reuse_policy = 13;
     // Defines how to resolve an activity id conflict with a *running* activity.
     // The default policy is ACTIVITY_ID_CONFLICT_POLICY_FAIL.
-    temporal.api.enums.v1.ActivityIdConflictPolicy id_conflict_policy = 9;
+    temporal.api.enums.v1.ActivityIdConflictPolicy id_conflict_policy = 14;
 
     // Arbitrary structured data that can be attached to the activity execution and made available via the list and
     // describe APIs.
-    temporal.api.common.v1.Memo memo = 10;
+    temporal.api.common.v1.Memo memo = 15;
     // Search attributes for indexing.
-    temporal.api.common.v1.SearchAttributes search_attributes = 11;
+    temporal.api.common.v1.SearchAttributes search_attributes = 16;
     // Header for context propagation and tracing purposes.
-    temporal.api.common.v1.Header header = 12;
+    temporal.api.common.v1.Header header = 17;
     // Request to get the first activity task inline in the response bypassing matching service and worker polling.
     // If set to `true` the caller is expected to have a worker available and capable of processing the task.
     // The returned task will be marked as started and is expected to be completed by the specified
     // `schedule_to_close_timeout`.
-    bool request_eager_execution = 13;
+    bool request_eager_execution = 18;
     // Callbacks to be called by the server when this activity reaches a terminal status.
     // Callback addresses must be whitelisted in the server's dynamic configuration.
-    repeated temporal.api.common.v1.Callback completion_callbacks = 14;
+    repeated temporal.api.common.v1.Callback completion_callbacks = 19;
     // Metadata for use by user interfaces to display the fixed as-of-start summary and details of the activity.
-    temporal.api.sdk.v1.UserMetadata user_metadata = 15;
+    temporal.api.sdk.v1.UserMetadata user_metadata = 20;
     // Links to be associated with the activity.
-    repeated temporal.api.common.v1.Link links = 16;
+    repeated temporal.api.common.v1.Link links = 21;
     // Defines actions to be done to the existing running activity when ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING is used. If not
     // set or empty, it won't do anything to the existing running activity.
-    temporal.api.activity.v1.OnConflictOptions on_conflict_options = 17;
+    temporal.api.activity.v1.OnConflictOptions on_conflict_options = 22;
     // Priority metadata
-    temporal.api.common.v1.Priority priority = 18;
+    temporal.api.common.v1.Priority priority = 23;
 }
 
 message StartActivityExecutionResponse {
@@ -2845,23 +2872,41 @@ message UpdateActivityExecutionOptionsRequest {
     // Note: Experimental - the behavior of updating all activities may change or be removed in a future release.
     bool all_workflow_activities = 7;
 
-    // Activity options. Partial updates are accepted and controlled by update_mask
+    // If set, the activity options will be restored to the options the activity was originally
+    // created with. For workflow activities the original options are restored from first
+    // ActivityTaskScheduled event. Mutually exclusive with the activity options fields below.
+    bool restore_original = 8;
+
+    // Activity options. Partial updates are accepted and controlled by update_mask.
     // Mutually exclusive with restore_original.
-    temporal.api.activity.v1.ActivityOptions activity_options = 8;
-
-    // Controls which fields from `activity_options` will be applied
-    google.protobuf.FieldMask update_mask = 9;
-
-    // If set, the activity options will be restored to the defaults.
-    // Default options are then options activity was originally created with.
-    // For workflow activities the original options are restored from first ActivityTaskScheduled event.
-    // Mutually exclusive with activity_options.
-    bool restore_original = 10;
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 9;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 10;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_start_timeout = 11;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 12;
+    google.protobuf.Duration heartbeat_timeout = 13;
+    temporal.api.common.v1.RetryPolicy retry_policy = 14;
 }
 
 message UpdateActivityExecutionOptionsResponse {
-    // Activity options after an update
-    temporal.api.activity.v1.ActivityOptions activity_options = 1;
+    // Activity options after the update.
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 1;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 2;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_start_timeout = 3;
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 4;
+    google.protobuf.Duration heartbeat_timeout = 5;
+    temporal.api.common.v1.RetryPolicy retry_policy = 6;
 }
 
 message PauseActivityExecutionRequest {

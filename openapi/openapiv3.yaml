@@ -2882,8 +2882,9 @@ paths:
       description: |-
         ResetWorkflowExecution will reset an existing workflow execution to a specified
          `WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current
-         execution instance.
-         TODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?
+         execution instance. "Exclusive" means the identified completed event itself is not replayed
+         in the reset history; the preceding `WORKFLOW_TASK_STARTED` event remains and will be marked as failed
+         immediately, and a new workflow task will be scheduled to retry it.
       operationId: ResetWorkflowExecution
       parameters:
         - name: namespace
@@ -6203,6 +6204,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{workflowId}/pause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Note: This is an experimental API and the behavior may change in a future release.
+         PauseWorkflowExecution pauses the workflow execution specified in the request. Pausing a workflow execution results in
+         - The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history
+         - No new workflow tasks or activity tasks are dispatched.
+           - Any workflow task currently executing on the worker will be allowed to complete.
+           - Any activity task currently executing will be paused.
+         - All server-side events will continue to be processed by the server.
+         - Queries & Updates on a paused workflow will be rejected.
+      operationId: PauseWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow to pause.
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          description: ID of the workflow execution to be paused. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PauseWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{workflowId}/signal-with-start/{signalName}:
     post:
       tags:
@@ -6251,6 +6298,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SignalWithStartWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{workflowId}/unpause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Note: This is an experimental API and the behavior may change in a future release.
+         UnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.
+         Unpausing a workflow execution results in
+         - The workflow execution status changes to `RUNNING` and a new WORKFLOW_EXECUTION_UNPAUSED event is added to the history
+         - Workflow tasks and activity tasks are resumed.
+      operationId: UnpauseWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow to unpause.
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          description: ID of the workflow execution to be paused. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnpauseWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnpauseWorkflowExecutionResponse'
         default:
           description: Default error response
           content:
@@ -6306,8 +6396,9 @@ paths:
       description: |-
         ResetWorkflowExecution will reset an existing workflow execution to a specified
          `WORKFLOW_TASK_COMPLETED` event (exclusive). It will immediately terminate the current
-         execution instance.
-         TODO: Does exclusive here mean *just* the completed event, or also WFT started? Otherwise the task is doomed to time out?
+         execution instance. "Exclusive" means the identified completed event itself is not replayed
+         in the reset history; the preceding `WORKFLOW_TASK_STARTED` event remains and will be marked as failed
+         immediately, and a new workflow task will be scheduled to retry it.
       operationId: ResetWorkflowExecution
       parameters:
         - name: namespace
@@ -6775,7 +6866,13 @@ components:
           description: id of the worker that picked up this task
         requestId:
           type: string
-          description: TODO ??
+          description: |-
+            This field is populated from the RecordActivityTaskStartedRequest. Matching service would
+             set the request_id on the RecordActivityTaskStartedRequest to a new UUID. This is useful
+             in case a RecordActivityTaskStarted call succeed but matching doesn't get that response,
+             so matching could retry and history service would return success if the request_id matches.
+             In that case, matching will continue to deliver the task to worker. Without this field, history
+             service would return AlreadyStarted error, and matching would drop the task.
         attempt:
           type: integer
           description: Starting at 1, the number of times this task has been attempted
@@ -8662,14 +8759,20 @@ components:
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_PAUSED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UNPAUSED
           type: string
           format: enum
         version:
           type: string
-          description: 'TODO: What is this? Appears unused by SDKs'
+          description: |-
+            Failover version of the event, used by the server for multi-cluster replication and history
+             versioning. SDKs generally ignore this field.
         taskId:
           type: string
-          description: 'TODO: What is this? Appears unused by SDKs'
+          description: |-
+            Identifier used by the service to order replication and transfer tasks associated with this
+             event. SDKs generally ignore this field.
         workerMayIgnore:
           type: boolean
           description: |-
@@ -8808,6 +8911,10 @@ components:
           $ref: '#/components/schemas/NexusOperationCancelRequestCompletedEventAttributes'
         nexusOperationCancelRequestFailedEventAttributes:
           $ref: '#/components/schemas/NexusOperationCancelRequestFailedEventAttributes'
+        workflowExecutionPausedEventAttributes:
+          $ref: '#/components/schemas/WorkflowExecutionPausedEventAttributes'
+        workflowExecutionUnpausedEventAttributes:
+          $ref: '#/components/schemas/WorkflowExecutionUnpausedEventAttributes'
       description: |-
         History events are the method by which Temporal SDKs advance (or recreate) workflow state.
          See the `EventType` enum for more info about what each event is for.
@@ -9652,6 +9759,32 @@ components:
         reason:
           type: string
           description: Reason why rule was created. Populated from rule description.
+    PauseWorkflowExecutionRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace of the workflow to pause.
+        workflowId:
+          type: string
+          description: ID of the workflow execution to be paused. Required.
+        runId:
+          type: string
+          description: Run ID of the workflow execution to be paused. Optional. If not provided, the current run of the workflow will be paused.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        reason:
+          type: string
+          description: Reason to pause the workflow execution.
+        requestId:
+          type: string
+          description: A unique identifier for this pause request for idempotence. Typically UUIDv4.
+      description: Request to pause a workflow execution.
+    PauseWorkflowExecutionResponse:
+      type: object
+      properties: {}
+      description: Response to a successful PauseWorkflowExecution request.
     Payload:
       description: |-
         Represents some binary (byte array) data (ex: activity input parameters or workflow result) with
@@ -10190,6 +10323,7 @@ components:
             - WORKFLOW_EXECUTION_STATUS_TERMINATED
             - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
             - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           format: enum
     QueryWorkflowRequest:
@@ -10564,6 +10698,8 @@ components:
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_PAUSED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UNPAUSED
           type: string
           description: The event type of the history event generated by the request.
           format: enum
@@ -11071,6 +11207,9 @@ components:
             Last time ramping version percentage was changed.
              If ramping version is changed, this is also updated, even if the percentage stays the same.
           format: date-time
+        revisionNumber:
+          type: string
+          description: "Monotonically increasing value which is incremented on every mutation \n to any field of this message to achieve eventual consistency between task queues and their partitions."
     Schedule:
       type: object
       properties:
@@ -11119,6 +11258,7 @@ components:
             - WORKFLOW_EXECUTION_STATUS_TERMINATED
             - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
             - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           description: |-
             If the action was start_workflow, this field will reflect an
@@ -11533,7 +11673,12 @@ components:
         previousDeploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: The version that was current before executing this operation.
+          description: |-
+            The version that was current before executing this operation.
+             Deprecated in favor of idempotency of the API. Use `DescribeWorkerDeployment` to get the
+             Current version info before calling this API. By passing the `conflict_token` got from the
+             `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
+             between the two calls.
     SetWorkerDeploymentManagerRequest:
       type: object
       properties:
@@ -11573,7 +11718,12 @@ components:
           format: bytes
         previousManagerIdentity:
           type: string
-          description: What the `manager_identity` field was before this change.
+          description: |-
+            What the `manager_identity` field was before this change.
+             Deprecated in favor of idempotency of the API. Use `DescribeWorkerDeployment` to get the
+             manager identity before calling this API. By passing the `conflict_token` got from the
+             `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
+             between the two calls.
     SetWorkerDeploymentRampingVersionRequest:
       type: object
       properties:
@@ -11647,10 +11797,20 @@ components:
         previousDeploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: The version that was ramping before executing this operation.
+          description: |-
+            The version that was ramping before executing this operation.
+             Deprecated in favor of idempotency of the API. Use `DescribeWorkerDeployment` to get the
+             Ramping version info before calling this API. By passing the `conflict_token` got from the
+             `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
+             between the two calls.
         previousPercentage:
           type: number
-          description: The ramping version percentage before executing this operation.
+          description: |-
+            The ramping version percentage before executing this operation.
+             Deprecated in favor of idempotency of the API. Use `DescribeWorkerDeployment` to get the
+             Ramping version info before calling this API. By passing the `conflict_token` got from the
+             `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
+             between the two calls.
           format: float
     SignalExternalWorkflowExecutionFailedEventAttributes:
       type: object
@@ -12198,6 +12358,7 @@ components:
             - WORKFLOW_EXECUTION_STATUS_TERMINATED
             - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
             - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           description: |-
             Current execution status of the workflow. Typically remains WORKFLOW_EXECUTION_STATUS_RUNNING
@@ -12300,8 +12461,8 @@ components:
          corresponding fields of the timestamp, except for year: if year is missing,
          that means all years match. For all fields besides year, at least one Range
          must be present to match anything.
-         TODO: add relative-to-end-of-month
-         TODO: add nth day-of-week in month
+         Relative expressions such as "last day of the month" or "third Monday" are not currently
+         representable; callers must enumerate the concrete days they require.
     TaskIdBlock:
       type: object
       properties:
@@ -12704,6 +12865,31 @@ components:
     UnpauseActivityResponse:
       type: object
       properties: {}
+    UnpauseWorkflowExecutionRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: Namespace of the workflow to unpause.
+        workflowId:
+          type: string
+          description: ID of the workflow execution to be paused. Required.
+        runId:
+          type: string
+          description: Run ID of the workflow execution to be paused. Optional. If not provided, the current run of the workflow will be paused.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        reason:
+          type: string
+          description: Reason to unpause the workflow execution.
+        requestId:
+          type: string
+          description: A unique identifier for this unpause request for idempotence. Typically UUIDv4.
+    UnpauseWorkflowExecutionResponse:
+      type: object
+      properties: {}
+      description: Response to a successful UnpauseWorkflowExecution request.
     UpdateActivityOptionsRequest:
       type: object
       properties:
@@ -13348,6 +13534,16 @@ components:
              Empty by default.
              If this is set, clients whose identity does not match `manager_identity` will not be able to make changes
              to this Worker Deployment. They can either set their own identity as the manager or unset the field to proceed.
+        routingConfigUpdateState:
+          enum:
+            - ROUTING_CONFIG_UPDATE_STATE_UNSPECIFIED
+            - ROUTING_CONFIG_UPDATE_STATE_IN_PROGRESS
+            - ROUTING_CONFIG_UPDATE_STATE_COMPLETED
+          type: string
+          description: |-
+            Indicates whether the routing_config has been fully propagated to all
+             relevant task queues and their partitions.
+          format: enum
       description: "A Worker Deployment (Deployment, for short) represents all workers serving \n a shared set of Task Queues. Typically, a Deployment represents one service or \n application.\n A Deployment contains multiple Deployment Versions, each representing a different \n version of workers. (see documentation of WorkerDeploymentVersionInfo)\n Deployment records are created in Temporal server automatically when their\n first poller arrives to the server.\n Experimental. Worker Deployments are experimental and might significantly change in the future."
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object
@@ -13843,6 +14039,8 @@ components:
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_PAUSED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UNPAUSED
           type: string
           format: enum
       description: EventReference is a direct reference to a history event through the event ID.
@@ -13911,6 +14109,8 @@ components:
             - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED
             - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_PAUSED
+            - EVENT_TYPE_WORKFLOW_EXECUTION_UNPAUSED
           type: string
           format: enum
       description: RequestIdReference is a indirect reference to a history event through the request ID.
@@ -13930,12 +14130,12 @@ components:
       properties:
         cause:
           type: string
-          description: |-
-            User provided reason for requesting cancellation
-             TODO: shall we create a new field with name "reason" and deprecate this one?
+          description: User provided reason for requesting cancellation
         externalInitiatedEventId:
           type: string
-          description: 'TODO: Is this the ID of the event in the workflow which initiated this cancel, if there was one?'
+          description: |-
+            The ID of the `REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED` event in the external
+             workflow history when the cancellation was requested by another workflow.
         externalWorkflowExecution:
           $ref: '#/components/schemas/WorkflowExecution'
         identity:
@@ -14006,7 +14206,10 @@ components:
         backoffStartInterval:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: 'TODO: How and is this used?'
+          description: |-
+            How long the server will wait before scheduling the first workflow task for the new run.
+             Used for cron, retry, and other continue-as-new cases that server may enforce some minimal
+             delay between new runs for system protection purpose.
         initiator:
           enum:
             - CONTINUE_AS_NEW_INITIATOR_UNSPECIFIED
@@ -14019,14 +14222,15 @@ components:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: |-
-            TODO: David are these right?
-             Deprecated. If a workflow's retry policy would cause a new run to start when the current one
+            Deprecated. If a workflow's retry policy would cause a new run to start when the current one
              has failed, this field would be populated with that failure. Now (when supported by server
              and sdk) the final event will be `WORKFLOW_EXECUTION_FAILED` with `new_execution_run_id` set.
         lastCompletionResult:
           allOf:
             - $ref: '#/components/schemas/Payloads'
-          description: 'TODO: Is this the result of *this* workflow as it continued-as-new?'
+          description: |-
+            The result from the most recent completed run of this workflow. The SDK surfaces this to the
+             new run via APIs such as `GetLastCompletionResult`.
         header:
           $ref: '#/components/schemas/Header'
         memo:
@@ -14075,6 +14279,10 @@ components:
              Note: It only contains request IDs from StartWorkflowExecution requests, including indirect
              calls (eg: if SignalWithStartWorkflowExecution starts a new workflow, then the request ID is
              used in the StartWorkflowExecution request).
+        pauseInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecutionPauseInfo'
+          description: Information about the workflow execution pause operation.
       description: Holds all the extra information about workflow execution that is not part of Visibility.
     WorkflowExecutionFailedEventAttributes:
       type: object
@@ -14124,6 +14332,7 @@ components:
             - WORKFLOW_EXECUTION_STATUS_TERMINATED
             - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
             - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           format: enum
         historyLength:
@@ -14256,6 +14465,33 @@ components:
         identity:
           type: string
           description: Optional. The identity of the client who initiated the request that created this event.
+    WorkflowExecutionPauseInfo:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the client who paused the workflow execution.
+        pausedTime:
+          type: string
+          description: The time when the workflow execution was paused.
+          format: date-time
+        reason:
+          type: string
+          description: The reason for pausing the workflow execution.
+      description: WorkflowExecutionPauseInfo contains the information about a workflow execution pause.
+    WorkflowExecutionPausedEventAttributes:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the client who paused the workflow execution.
+        reason:
+          type: string
+          description: The reason for pausing the workflow execution.
+        requestId:
+          type: string
+          description: The request ID of the request that paused the workflow execution.
+      description: Attributes for an event marking that a workflow execution was paused.
     WorkflowExecutionSignaledEventAttributes:
       type: object
       properties:
@@ -14510,6 +14746,19 @@ components:
         newExecutionRunId:
           type: string
           description: If another run is started by cron or retry, this contains the new run id.
+    WorkflowExecutionUnpausedEventAttributes:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the client who unpaused the workflow execution.
+        reason:
+          type: string
+          description: The reason for unpausing the workflow execution.
+        requestId:
+          type: string
+          description: The request ID of the request that unpaused the workflow execution.
+      description: Attributes for an event marking that a workflow execution was unpaused.
     WorkflowExecutionUpdateAcceptedEventAttributes:
       type: object
       properties:
@@ -14688,6 +14937,16 @@ components:
              worker's task completion response.
              Pending activities will not start new attempts during a transition. Once the transition is
              completed, pending activities will start their next attempt on the new version.
+        revisionNumber:
+          type: string
+          description: |-
+            Monotonic counter reflecting the latest routing decision for this workflow execution.
+             Used for staleness detection between history and matching when dispatching tasks to workers.
+             Incremented when a workflow execution routes to a new deployment version, which happens
+             when a worker of the new deployment version completes a workflow task.
+             Note: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not
+             face the problem of inconsistent dispatching that arises from eventual consistency between
+             task queues and their partitions.
       description: |-
         Holds all the information about worker versioning for a particular workflow execution.
          Experimental. Versioning info is experimental and might change in the future.
@@ -15014,7 +15273,9 @@ components:
           description: The failure details
         identity:
           type: string
-          description: 'If a worker explicitly failed this task, it''s identity. TODO: What is this set to if server fails the task?'
+          description: |-
+            If a worker explicitly failed this task, this field contains the worker's identity.
+             When the server generates the failure internally this field is set as 'history-service'.
         baseRunId:
           type: string
           description: The original run id of the workflow. For reset workflow.
@@ -15023,7 +15284,9 @@ components:
           description: If the workflow is being reset, the new run id.
         forkEventVersion:
           type: string
-          description: 'TODO: ?'
+          description: |-
+            Version of the event where the history branch was forked. Used by multi-cluster replication
+             during resets to identify the correct history branch.
         binaryChecksum:
           type: string
           description: |-
@@ -15067,7 +15330,13 @@ components:
           description: Identity of the worker who picked up this task
         requestId:
           type: string
-          description: 'TODO: ? Appears unused?'
+          description: |-
+            This field is populated from the RecordWorkflowTaskStartedRequest. Matching service would
+             set the request_id on the RecordWorkflowTaskStartedRequest to a new UUID. This is useful
+             in case a RecordWorkflowTaskStarted call succeed but matching doesn't get that response,
+             so matching could retry and history service would return success if the request_id matches.
+             In that case, matching will continue to deliver the task to worker. Without this field, history
+             service would return AlreadyStarted error, and matching would drop the task.
         suggestContinueAsNew:
           type: boolean
           description: |-

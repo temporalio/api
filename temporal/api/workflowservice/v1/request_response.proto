@@ -2178,7 +2178,11 @@ message SetWorkerDeploymentCurrentVersionResponse {
     // Deprecated. Use `previous_deployment_version`.
     string previous_version = 2 [deprecated = true];
     // The version that was current before executing this operation.
-    temporal.api.deployment.v1.WorkerDeploymentVersion previous_deployment_version = 3;
+    // Deprecated in favor of idempotency of the API. Use `DescribeWorkerDeployment` to get the
+    // Current version info before calling this API. By passing the `conflict_token` got from the
+    // `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
+    // between the two calls.
+    temporal.api.deployment.v1.WorkerDeploymentVersion previous_deployment_version = 3 [deprecated = true];
 }
 
 // Set/unset the Ramping Version of a Worker Deployment and its ramp percentage.
@@ -2234,9 +2238,17 @@ message SetWorkerDeploymentRampingVersionResponse {
     // Deprecated. Use `previous_deployment_version`.
     string previous_version = 2 [deprecated = true];
     // The version that was ramping before executing this operation.
-    temporal.api.deployment.v1.WorkerDeploymentVersion previous_deployment_version = 4;
+    // Deprecated in favor of idempotency of the API. Use `DescribeWorkerDeployment` to get the
+    // Ramping version info before calling this API. By passing the `conflict_token` got from the
+    // `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
+    // between the two calls.
+    temporal.api.deployment.v1.WorkerDeploymentVersion previous_deployment_version = 4 [deprecated = true];
     // The ramping version percentage before executing this operation.
-    float previous_percentage = 3;
+    // Deprecated in favor of idempotency of the API. Use `DescribeWorkerDeployment` to get the
+    // Ramping version info before calling this API. By passing the `conflict_token` got from the
+    // `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
+    // between the two calls.
+    float previous_percentage = 3 [deprecated = true];
 }
 
 message ListWorkerDeploymentsRequest {
@@ -2349,7 +2361,11 @@ message SetWorkerDeploymentManagerResponse {
     bytes conflict_token = 1;
 
     // What the `manager_identity` field was before this change.
-    string previous_manager_identity = 2;
+    // Deprecated in favor of idempotency of the API. Use `DescribeWorkerDeployment` to get the
+    // manager identity before calling this API. By passing the `conflict_token` got from the
+    // `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
+    // between the two calls.
+    string previous_manager_identity = 2 [deprecated = true];
 }
 
 // Returns the Current Deployment of a deployment series.
@@ -2598,3 +2614,40 @@ message DescribeWorkerRequest {
 message DescribeWorkerResponse {
     temporal.api.worker.v1.WorkerInfo worker_info = 1;
 }
+
+// Request to pause a workflow execution.
+message PauseWorkflowExecutionRequest {
+    // Namespace of the workflow to pause.
+    string namespace = 1;
+    // ID of the workflow execution to be paused. Required.
+    string workflow_id = 2;
+    // Run ID of the workflow execution to be paused. Optional. If not provided, the current run of the workflow will be paused.
+    string run_id = 3;
+    // The identity of the client who initiated this request.
+    string identity = 4;
+    // Reason to pause the workflow execution.
+    string reason = 5;
+    // A unique identifier for this pause request for idempotence. Typically UUIDv4.
+    string request_id = 6;
+}
+
+// Response to a successful PauseWorkflowExecution request.
+message PauseWorkflowExecutionResponse { }
+
+message UnpauseWorkflowExecutionRequest {
+    // Namespace of the workflow to unpause.
+    string namespace = 1;
+    // ID of the workflow execution to be paused. Required.
+    string workflow_id = 2;
+    // Run ID of the workflow execution to be paused. Optional. If not provided, the current run of the workflow will be paused.
+    string run_id = 3;
+    // The identity of the client who initiated this request.
+    string identity = 4;
+    // Reason to unpause the workflow execution.
+    string reason = 5;
+    // A unique identifier for this unpause request for idempotence. Typically UUIDv4.
+    string request_id = 6;
+}
+
+// Response to a successful UnpauseWorkflowExecution request.
+message UnpauseWorkflowExecutionResponse { }

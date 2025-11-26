@@ -126,6 +126,9 @@ message WorkflowExecutionExtendedInfo {
     // calls (eg: if SignalWithStartWorkflowExecution starts a new workflow, then the request ID is
     // used in the StartWorkflowExecution request).
     map<string, RequestIdInfo> request_id_infos = 7;
+
+    // Information about the workflow execution pause operation.
+    WorkflowExecutionPauseInfo pause_info = 8;
 }
 
 // Holds all the information about worker versioning for a particular workflow execution.
@@ -208,6 +211,14 @@ message WorkflowExecutionVersioningInfo {
     // Pending activities will not start new attempts during a transition. Once the transition is
     // completed, pending activities will start their next attempt on the new version.
     DeploymentVersionTransition version_transition = 6;
+    // Monotonic counter reflecting the latest routing decision for this workflow execution.
+    // Used for staleness detection between history and matching when dispatching tasks to workers.
+    // Incremented when a workflow execution routes to a new deployment version, which happens
+    // when a worker of the new deployment version completes a workflow task.
+    // Note: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not
+    // face the problem of inconsistent dispatching that arises from eventual consistency between
+    // task queues and their partitions.
+    int64 revision_number = 8;
 }
 
 // Holds information about ongoing transition of a workflow execution from one deployment to another.
@@ -643,5 +654,15 @@ message PostResetOperation {
         SignalWorkflow signal_workflow = 1;
         UpdateWorkflowOptions update_workflow_options = 2;
     }
+}
+
+// WorkflowExecutionPauseInfo contains the information about a workflow execution pause.
+message WorkflowExecutionPauseInfo {
+    // The identity of the client who paused the workflow execution.
+    string identity = 1;
+    // The time when the workflow execution was paused.
+    google.protobuf.Timestamp paused_time = 2;
+    // The reason for pausing the workflow execution.
+    string reason = 3;
 }
 

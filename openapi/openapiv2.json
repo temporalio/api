@@ -859,13 +859,13 @@
     },
     "/api/v1/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "PollActivityExecution returns information about an activity execution.\nSupported use cases include:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or result (if the activity has completed)",
-        "operationId": "PollActivityExecution2",
+        "summary": "DescribeActivityExecution returns information about an activity execution.\nSupported use cases include:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or outcome (if the activity has completed).",
+        "operationId": "DescribeActivityExecution2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1PollActivityExecutionResponse"
+              "$ref": "#/definitions/v1DescribeActivityExecutionResponse"
             }
           },
           "default": {
@@ -911,7 +911,7 @@
           },
           {
             "name": "longPollToken",
-            "description": "Token from a previous PollActivityExecutionResponse. If present, long-poll until activity\nstate changes from the state encoded in this token. If absent, return current state immediately.\nIf present, run_id must also be present.\nNote that activity state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
+            "description": "Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity\nstate changes from the state encoded in this token. If absent, return current state immediately.\nIf present, run_id must also be present.\nNote that activity state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1015,13 +1015,13 @@
     },
     "/api/v1/namespaces/{namespace}/activities/{activityId}/outcome": {
       "get": {
-        "summary": "PollActivityExecutionOutcome long-polls for an activity execution to complete and returns\nthe outcome (result or failure).",
-        "operationId": "PollActivityExecutionOutcome2",
+        "summary": "GetActivityExecutionOutcome long-polls for an activity execution to complete and returns\nthe outcome (result or failure).",
+        "operationId": "GetActivityExecutionOutcome2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1PollActivityExecutionOutcomeResponse"
+              "$ref": "#/definitions/v1GetActivityExecutionOutcomeResponse"
             }
           },
           "default": {
@@ -5474,13 +5474,13 @@
     },
     "/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "PollActivityExecution returns information about an activity execution.\nSupported use cases include:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or result (if the activity has completed)",
-        "operationId": "PollActivityExecution",
+        "summary": "DescribeActivityExecution returns information about an activity execution.\nSupported use cases include:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or outcome (if the activity has completed).",
+        "operationId": "DescribeActivityExecution",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1PollActivityExecutionResponse"
+              "$ref": "#/definitions/v1DescribeActivityExecutionResponse"
             }
           },
           "default": {
@@ -5526,7 +5526,7 @@
           },
           {
             "name": "longPollToken",
-            "description": "Token from a previous PollActivityExecutionResponse. If present, long-poll until activity\nstate changes from the state encoded in this token. If absent, return current state immediately.\nIf present, run_id must also be present.\nNote that activity state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
+            "description": "Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity\nstate changes from the state encoded in this token. If absent, return current state immediately.\nIf present, run_id must also be present.\nNote that activity state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -5630,13 +5630,13 @@
     },
     "/namespaces/{namespace}/activities/{activityId}/outcome": {
       "get": {
-        "summary": "PollActivityExecutionOutcome long-polls for an activity execution to complete and returns\nthe outcome (result or failure).",
-        "operationId": "PollActivityExecutionOutcome",
+        "summary": "GetActivityExecutionOutcome long-polls for an activity execution to complete and returns\nthe outcome (result or failure).",
+        "operationId": "GetActivityExecutionOutcome",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1PollActivityExecutionOutcomeResponse"
+              "$ref": "#/definitions/v1GetActivityExecutionOutcomeResponse"
             }
           },
           "default": {
@@ -12931,6 +12931,36 @@
       "type": "object",
       "description": "Deprecated."
     },
+    "v1DescribeActivityExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The run ID of the activity, useful when run_id was not specified in the request."
+        },
+        "info": {
+          "$ref": "#/definitions/v1ActivityExecutionInfo",
+          "description": "Information about the activity execution."
+        },
+        "input": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "Serialized activity input, passed as arguments to the activity function.\nOnly set if include_input was true in the request."
+        },
+        "result": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "The result if the activity completed successfully."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "The failure if the activity completed unsuccessfully."
+        },
+        "longPollToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Token for follow-on long-poll requests. Absent only if the activity is complete."
+        }
+      }
+    },
     "v1DescribeBatchOperationResponse": {
       "type": "object",
       "properties": {
@@ -13424,6 +13454,23 @@
         "workerConfig": {
           "$ref": "#/definitions/v1WorkerConfig",
           "description": "The worker configuration."
+        }
+      }
+    },
+    "v1GetActivityExecutionOutcomeResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The run ID of the activity, useful when run_id was not specified in the request."
+        },
+        "result": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "The result if the activity completed successfully."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "The failure if the activity completed unsuccessfully."
         }
       }
     },
@@ -15206,53 +15253,6 @@
         "version": {
           "type": "string",
           "description": "The version of the plugin, may be empty."
-        }
-      }
-    },
-    "v1PollActivityExecutionOutcomeResponse": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "The run ID of the activity, useful when run_id was not specified in the request."
-        },
-        "result": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "The result if the activity completed successfully."
-        },
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "The failure if the activity completed unsuccessfully."
-        }
-      }
-    },
-    "v1PollActivityExecutionResponse": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "The run ID of the activity, useful when run_id was not specified in the request."
-        },
-        "info": {
-          "$ref": "#/definitions/v1ActivityExecutionInfo",
-          "description": "Information about the activity execution."
-        },
-        "input": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "Serialized activity input, passed as arguments to the activity function.\nOnly set if include_input was true in the request."
-        },
-        "result": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "The result if the activity completed successfully."
-        },
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "The failure if the activity completed unsuccessfully."
-        },
-        "longPollToken": {
-          "type": "string",
-          "format": "byte",
-          "description": "Token for follow-on long-poll requests. Absent only if the activity is complete."
         }
       }
     },

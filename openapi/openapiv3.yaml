@@ -827,12 +827,12 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        PollActivityExecution returns information about an activity execution.
+        DescribeActivityExecution returns information about an activity execution.
          Supported use cases include:
          - Get current activity info without waiting
          - Long-poll for next state change and return new activity info
-         Response can optionally include activity input or result (if the activity has completed)
-      operationId: PollActivityExecution
+         Response can optionally include activity input or outcome (if the activity has completed).
+      operationId: DescribeActivityExecution
       parameters:
         - name: namespace
           in: path
@@ -862,7 +862,7 @@ paths:
         - name: longPollToken
           in: query
           description: |-
-            Token from a previous PollActivityExecutionResponse. If present, long-poll until activity
+            Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity
              state changes from the state encoded in this token. If absent, return current state immediately.
              If present, run_id must also be present.
              Note that activity state may change multiple times between requests, therefore it is not
@@ -877,7 +877,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PollActivityExecutionResponse'
+                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -973,9 +973,9 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        PollActivityExecutionOutcome long-polls for an activity execution to complete and returns
+        GetActivityExecutionOutcome long-polls for an activity execution to complete and returns
          the outcome (result or failure).
-      operationId: PollActivityExecutionOutcome
+      operationId: GetActivityExecutionOutcome
       parameters:
         - name: namespace
           in: path
@@ -998,7 +998,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PollActivityExecutionOutcomeResponse'
+                $ref: '#/components/schemas/GetActivityExecutionOutcomeResponse'
         default:
           description: Default error response
           content:
@@ -5032,12 +5032,12 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        PollActivityExecution returns information about an activity execution.
+        DescribeActivityExecution returns information about an activity execution.
          Supported use cases include:
          - Get current activity info without waiting
          - Long-poll for next state change and return new activity info
-         Response can optionally include activity input or result (if the activity has completed)
-      operationId: PollActivityExecution
+         Response can optionally include activity input or outcome (if the activity has completed).
+      operationId: DescribeActivityExecution
       parameters:
         - name: namespace
           in: path
@@ -5067,7 +5067,7 @@ paths:
         - name: longPollToken
           in: query
           description: |-
-            Token from a previous PollActivityExecutionResponse. If present, long-poll until activity
+            Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity
              state changes from the state encoded in this token. If absent, return current state immediately.
              If present, run_id must also be present.
              Note that activity state may change multiple times between requests, therefore it is not
@@ -5082,7 +5082,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PollActivityExecutionResponse'
+                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -5178,9 +5178,9 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        PollActivityExecutionOutcome long-polls for an activity execution to complete and returns
+        GetActivityExecutionOutcome long-polls for an activity execution to complete and returns
          the outcome (result or failure).
-      operationId: PollActivityExecutionOutcome
+      operationId: GetActivityExecutionOutcome
       parameters:
         - name: namespace
           in: path
@@ -5203,7 +5203,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PollActivityExecutionOutcomeResponse'
+                $ref: '#/components/schemas/GetActivityExecutionOutcomeResponse'
         default:
           description: Default error response
           content:
@@ -9524,6 +9524,34 @@ components:
         Holds information about ongoing transition of a workflow execution from one worker
          deployment version to another.
          Experimental. Might change in the future.
+    DescribeActivityExecutionResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run ID of the activity, useful when run_id was not specified in the request.
+        info:
+          allOf:
+            - $ref: '#/components/schemas/ActivityExecutionInfo'
+          description: Information about the activity execution.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: |-
+            Serialized activity input, passed as arguments to the activity function.
+             Only set if include_input was true in the request.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: The result if the activity completed successfully.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The failure if the activity completed unsuccessfully.
+        longPollToken:
+          type: string
+          description: Token for follow-on long-poll requests. Absent only if the activity is complete.
+          format: bytes
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -10058,6 +10086,20 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerConfig'
           description: The worker configuration.
+    GetActivityExecutionOutcomeResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run ID of the activity, useful when run_id was not specified in the request.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: The result if the activity completed successfully.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The failure if the activity completed unsuccessfully.
     GetClusterInfoResponse:
       type: object
       properties:
@@ -11661,48 +11703,6 @@ components:
         version:
           type: string
           description: The version of the plugin, may be empty.
-    PollActivityExecutionOutcomeResponse:
-      type: object
-      properties:
-        runId:
-          type: string
-          description: The run ID of the activity, useful when run_id was not specified in the request.
-        result:
-          allOf:
-            - $ref: '#/components/schemas/Payloads'
-          description: The result if the activity completed successfully.
-        failure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: The failure if the activity completed unsuccessfully.
-    PollActivityExecutionResponse:
-      type: object
-      properties:
-        runId:
-          type: string
-          description: The run ID of the activity, useful when run_id was not specified in the request.
-        info:
-          allOf:
-            - $ref: '#/components/schemas/ActivityExecutionInfo'
-          description: Information about the activity execution.
-        input:
-          allOf:
-            - $ref: '#/components/schemas/Payloads'
-          description: |-
-            Serialized activity input, passed as arguments to the activity function.
-             Only set if include_input was true in the request.
-        result:
-          allOf:
-            - $ref: '#/components/schemas/Payloads'
-          description: The result if the activity completed successfully.
-        failure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: The failure if the activity completed unsuccessfully.
-        longPollToken:
-          type: string
-          description: Token for follow-on long-poll requests. Absent only if the activity is complete.
-          format: bytes
     PollActivityTaskQueueResponse:
       type: object
       properties:

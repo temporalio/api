@@ -172,7 +172,11 @@ enum VersioningBehavior {
     VERSIONING_BEHAVIOR_AUTO_UPGRADE = 2;
     // The same semantics as PINNED, with the exception of Continue-As-New.
     // When a PINNED_UNTIL_CONTINUE_AS_NEW workflow continues-as-new, the new execution
-    // will start on the workflow's Target Version, just like an AUTO_UPGRADE workflow.
+    // will start on the workflow's Target Version, with AUTO_UPGRADE behavior.
+    // On the first workflow task completion of the new run, the workflow will assume
+    // the behavior specified for that workflow type on the Target Version. If that
+    // behavior is also PINNED_UNTIL_CONTINUE_AS_NEW, the new run will now be pinned to
+    // that version until the next time it continues-as-new.
     //
     // When the Target Version of a PINNED_UNTIL_CONTINUE_AS_NEW workflow is different
     // from its Pinned Version, the workflow's continue_as_new_suggested flag will be true,
@@ -180,20 +184,20 @@ enum VersioningBehavior {
     VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW = 3;
 }
 
-// ContinueAsNewSuggestedReason specifies why SuggestContinueAsNew is true.
-enum ContinueAsNewSuggestedReason {
-  // Reason will be Unspecified if the server is not configured to suggest continue as new,
-  // if the server is not configured to provide a reason for continue as new suggested,
-  // if continue as new is not suggested, or if the reason is unknown.
-  CONTINUE_AS_NEW_SUGGESTED_REASON_UNSPECIFIED = 0;
+// SuggestContinueAsNewReason specifies why SuggestContinueAsNew is true.
+enum SuggestContinueAsNewReason {
+    SUGGEST_CONTINUE_AS_NEW_REASON_UNSPECIFIED = 0;
 
-  // Workflow History size is getting too large.
-  CONTINUE_AS_NEW_SUGGESTED_REASON_HISTORY_SIZE_TOO_LARGE = 1;
+    // Workflow History size is getting too large.
+    SUGGEST_CONTINUE_AS_NEW_REASON_HISTORY_SIZE_TOO_LARGE = 1;
 
-  // Workflow Update registry is getting too large.
-  CONTINUE_AS_NEW_SUGGESTED_REASON_UPDATE_REGISTRY_TOO_LARGE = 2;
+    // Workflow History event count is getting too large.
+    SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_HISTORY_EVENTS = 2;
 
-  // Workflow's Target Worker Deployment Version is different from its
-  // Pinned Version and the workflow's Versioning Behavior is PinnedUntilContinueAsNew.
-  CONTINUE_AS_NEW_SUGGESTED_REASON_WORKER_DEPLOYMENT_VERSION_CHANGED = 3;
+    // Workflow's count of completed plus in-flight updates is too large.
+    SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_UPDATES = 3;
+
+    // Workflow's Target Worker Deployment Version is different from its
+    // Pinned Version and the workflow's Versioning Behavior is PinnedUntilContinueAsNew.
+    SUGGEST_CONTINUE_AS_NEW_REASON_TARGET_WORKER_DEPLOYMENT_VERSION_CHANGED = 4;
 }

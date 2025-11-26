@@ -538,8 +538,9 @@ message WorkflowExecutionOptions {
 // to indicate that it should be mutated.
 // Pinned overrides are automatically inherited by child workflows, continue-as-new workflows,
 // workflow retries, and cron workflows.
+// TODO(carlydf): How should other types of pinned overrides be inherited? when a PUCAN-override wf continues-as-new, if it inherits an override that is both version and behavior, then it doesn't actually upgrade, which doesn't make sense
 message VersioningOverride {
-    // Indicates whether to override the workflow to be AutoUpgrade or Pinned.
+    // Indicates whether to override the workflow to be AutoUpgrade, Pinned, or PinnedUntilContinueAsNew.
     oneof override {
         // Send the next workflow task to the Version specified in the override.
         PinnedOverride pinned = 3;
@@ -576,6 +577,14 @@ message VersioningOverride {
         PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED = 0;
         // Override workflow behavior to be Pinned.
         PINNED_OVERRIDE_BEHAVIOR_PINNED = 1;
+        // Override workflow behavior to be PinnedUntilContinueAsNew.
+        PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW = 2;
+      // If workflow is AutoUpgrade or Unversioned, override workflow behavior to Pinned.
+      // If workflow is already Pinned or PinnedUntilContinueAsNew, keep existing behavior.
+        PINNED_OVERRIDE_BEHAVIOR_PINNED_OR_KEEP_EXISTING = 3;
+      // If workflow is AutoUpgrade or Unversioned, override workflow behavior to PinnedUntilContinueAsNew.
+      // If workflow is already Pinned or PinnedUntilContinueAsNew, keep existing behavior.
+        PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW_OR_KEEP_EXISTING = 4;
     }
 }
 

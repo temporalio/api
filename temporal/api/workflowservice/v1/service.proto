@@ -1403,16 +1403,27 @@ service WorkflowService {
         };
     }
 
-    // PollActivityExecution returns the status and/or outcome of an activity execution.
-    // Supported use cases include
+    // PollActivityExecution returns information about an activity execution.
+    // Supported use cases include:
     // - Get current activity info without waiting
-    // - Wait for next state change and return activity info
-    // - Wait for completion and return outcome
+    // - Long-poll for next state change and return new activity info
+    // Response can optionally include activity input or result (if the activity has completed)
     rpc PollActivityExecution (PollActivityExecutionRequest) returns (PollActivityExecutionResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/activities/{activity_id}"
             additional_bindings {
                 get: "/api/v1/namespaces/{namespace}/activities/{activity_id}"
+            }
+        };
+    }
+
+    // PollActivityExecutionOutcome long-polls for an activity execution to complete and returns
+    // the outcome (result or failure).
+    rpc PollActivityExecutionOutcome (PollActivityExecutionOutcomeRequest) returns (PollActivityExecutionOutcomeResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/activities/{activity_id}/outcome"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/activities/{activity_id}/outcome"
             }
         };
     }

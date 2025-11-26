@@ -2674,44 +2674,28 @@ message PollActivityExecutionRequest {
     string activity_id = 2;
     // Activity run ID. If empty the request targets the latest run.
     string run_id = 3;
-    // Include the info field from the response.
-    bool include_info = 4;
     // Include the input field in the response.
-    bool include_input = 5;
-    // Include the outcome field in the response.
-    bool include_outcome = 6;
-
-    message StateChangeWaitOptions {
-        // Token from a previous PollActivityExecutionResponse used to inform the server of the
-        // last state seen by the caller. If present, run_id must also be present.
-        bytes long_poll_token = 1;
-    }
-    message CompletionWaitOptions {}
-
-    // If present, the request will be handled as a long-poll. If absent, a response will be
-    // returned immediately containing the current activity state.
-    oneof wait_policy {
-        // Wait for any change in activity state before responding. If long_poll_token is absent
-        // then the current state will be returned immediately without any wait. Otherwise the
-        // server will wait until activity state differs from that encoded in the token before
-        // returning the new state. Note that activity state may change multiple times between
-        // requests, therefore it is not guaranteed that a client making a sequence of long-poll
-        // requests will see a complete sequence of state changes.
-        StateChangeWaitOptions wait_any_state_change = 8;
-        // Wait for the activity to complete before responding.
-        // long_poll_token is currently ignored when waiting for completion
-        CompletionWaitOptions wait_completion = 9;
-    }
+    bool include_input = 4;
+    // Include the outcome (result/failure) in the response if the activity has completed.
+    bool include_outcome = 5;
+    // Token from a previous PollActivityExecutionResponse. If present, long-poll until activity
+    // state changes from the state encoded in this token. If absent, return current state immediately.
+    // If present, run_id must also be present.
+    // Note that activity state may change multiple times between requests, therefore it is not
+    // guaranteed that a client making a sequence of long-poll requests will see a complete
+    // sequence of state changes.
+    bytes long_poll_token = 6;
 }
 
 message PollActivityExecutionResponse {
     // The run ID of the activity, useful when run_id was not specified in the request.
     string run_id = 1;
 
-    // Only set if include_info was true in the request.
+    // Information about the activity execution.
     temporal.api.activity.v1.ActivityExecutionInfo info = 2;
 
     // Serialized activity input, passed as arguments to the activity function.
+    // Only set if include_input was true in the request.
     temporal.api.common.v1.Payloads input = 3;
 
     // Only set if the activity is completed and include_outcome was true in the request.
@@ -2722,9 +2706,27 @@ message PollActivityExecutionResponse {
         temporal.api.failure.v1.Failure failure = 5;
     }
 
-    // Token to use for a follow-on request using wait_any_state_change.
-    // Only set if wait_policy was wait_any_state_change and the activity is not complete.
-    bytes state_change_long_poll_token = 6;
+    // Token for follow-on long-poll requests. Absent only if the activity is complete.
+    bytes long_poll_token = 6;
+}
+
+message PollActivityExecutionOutcomeRequest {
+    string namespace = 1;
+    string activity_id = 2;
+    // Activity run ID. If empty the request targets the latest run.
+    string run_id = 3;
+}
+
+message PollActivityExecutionOutcomeResponse {
+    // The run ID of the activity, useful when run_id was not specified in the request.
+    string run_id = 1;
+
+    oneof outcome {
+        // The result if the activity completed successfully.
+        temporal.api.common.v1.Payloads result = 2;
+        // The failure if the activity completed unsuccessfully.
+        temporal.api.failure.v1.Failure failure = 3;
+    }
 }
 
 

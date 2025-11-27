@@ -120,169 +120,6 @@
         ]
       }
     },
-    "/api/v1/namespaces/activities/{activityId}/pause": {
-      "post": {
-        "summary": "PauseActivityExecution pauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be paused",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type",
-        "operationId": "PauseActivityExecution2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1PauseActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "activityId",
-            "description": "Pause an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServicePauseActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/activities/{activityId}/reset": {
-      "post": {
-        "summary": "ResetActivityExecution resets the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be reset.",
-        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type.",
-        "operationId": "ResetActivityExecution2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ResetActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "activityId",
-            "description": "Reset an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceResetActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/activities/{activityId}/unpause": {
-      "post": {
-        "summary": "UnpauseActivityExecution unpauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be unpaused.",
-        "description": "If activity is not paused, this call will have no effect.\nIf the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpaused, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type",
-        "operationId": "UnpauseActivityExecution2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UnpauseActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "activityId",
-            "description": "Unpause an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUnpauseActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/activities/{activityId}/update-options": {
-      "post": {
-        "summary": "UpdateActivityExecutionOptions is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.",
-        "operationId": "UpdateActivityExecutionOptions2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateActivityExecutionOptionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "activityId",
-            "description": "Update options for an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUpdateActivityExecutionOptionsBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/api/v1/namespaces/{namespace}": {
       "get": {
         "summary": "DescribeNamespace returns the information and configuration for a registered namespace.",
@@ -697,7 +534,7 @@
     "/api/v1/namespaces/{namespace}/activities/pause": {
       "post": {
         "summary": "PauseActivity pauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be paused",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type\nDeprecated. See PauseActivityExecution.",
+        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type\nThis API will be deprecated soon and replaced with a newer PauseActivityExecution that is better named and\nstructured to work well for standalone activities.",
         "operationId": "PauseActivity2",
         "responses": {
           "200": {
@@ -738,7 +575,7 @@
     "/api/v1/namespaces/{namespace}/activities/reset": {
       "post": {
         "summary": "ResetActivity resets the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be reset.",
-        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type.\nDeprecated. See ResetActivityExecution.",
+        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type.\nThis API will be deprecated soon and replaced with a newer ResetActivityExecution that is better named and\nstructured to work well for standalone activities.",
         "operationId": "ResetActivity2",
         "responses": {
           "200": {
@@ -779,7 +616,7 @@
     "/api/v1/namespaces/{namespace}/activities/unpause": {
       "post": {
         "summary": "UnpauseActivity unpauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be unpaused.",
-        "description": "If activity is not paused, this call will have no effect.\nIf the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpaused, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type\nDeprecated. See UnpauseActivityExecution.",
+        "description": "If activity is not paused, this call will have no effect.\nIf the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpaused, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type\nThis API will be deprecated soon and replaced with a newer UnpauseActivityExecution that is better named and\nstructured to work well for standalone activities.",
         "operationId": "UnpauseActivity2",
         "responses": {
           "200": {
@@ -819,7 +656,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/update-options": {
       "post": {
-        "summary": "UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.\nDeprecated. See UpdateActivityExecutionOptions.",
+        "summary": "UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.\nThis API will be deprecated soon and replaced with a newer UpdateActivityExecutionOptions that is better named and\nstructured to work well for standalone activities.",
         "operationId": "UpdateActivityOptions2",
         "responses": {
           "200": {
@@ -3893,225 +3730,6 @@
         ]
       }
     },
-    "/api/v1/namespaces/{namespace}/workflows/{workflowId}/activities/{activityId}/pause": {
-      "post": {
-        "summary": "PauseActivityExecution pauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be paused",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type",
-        "operationId": "PauseActivityExecution4",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1PauseActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "workflowId",
-            "description": "If provided, pause a workflow activity (or activities) for the given workflow ID.\nIf empty, target a standalone activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "activityId",
-            "description": "Pause an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServicePauseActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/{namespace}/workflows/{workflowId}/activities/{activityId}/reset": {
-      "post": {
-        "summary": "ResetActivityExecution resets the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be reset.",
-        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type.",
-        "operationId": "ResetActivityExecution4",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ResetActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "workflowId",
-            "description": "If provided, reset a workflow activity (or activities) for the given workflow ID.\nIf empty, target a standalone activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "activityId",
-            "description": "Reset an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceResetActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/{namespace}/workflows/{workflowId}/activities/{activityId}/unpause": {
-      "post": {
-        "summary": "UnpauseActivityExecution unpauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be unpaused.",
-        "description": "If activity is not paused, this call will have no effect.\nIf the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpaused, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type",
-        "operationId": "UnpauseActivityExecution4",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UnpauseActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "workflowId",
-            "description": "If provided, unpause a workflow activity (or activities) for the given workflow ID.\nIf empty, target a standalone activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "activityId",
-            "description": "Unpause an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUnpauseActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/api/v1/namespaces/{namespace}/workflows/{workflowId}/activities/{activityId}/update-options": {
-      "post": {
-        "summary": "UpdateActivityExecutionOptions is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.",
-        "operationId": "UpdateActivityExecutionOptions4",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateActivityExecutionOptionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "workflowId",
-            "description": "If provided, update options for a workflow activity (or activities) for the given workflow ID. If empty, target a\nstandalone activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "activityId",
-            "description": "Update options for an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUpdateActivityExecutionOptionsBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/api/v1/namespaces/{namespace}/workflows/{workflowId}/signal-with-start/{signalName}": {
       "post": {
         "summary": "SignalWithStartWorkflowExecution is used to ensure a signal is sent to a workflow, even if\nit isn't yet started.",
@@ -4772,169 +4390,6 @@
         ]
       }
     },
-    "/namespaces/activities/{activityId}/pause": {
-      "post": {
-        "summary": "PauseActivityExecution pauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be paused",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type",
-        "operationId": "PauseActivityExecution",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1PauseActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "activityId",
-            "description": "Pause an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServicePauseActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/activities/{activityId}/reset": {
-      "post": {
-        "summary": "ResetActivityExecution resets the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be reset.",
-        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type.",
-        "operationId": "ResetActivityExecution",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ResetActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "activityId",
-            "description": "Reset an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceResetActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/activities/{activityId}/unpause": {
-      "post": {
-        "summary": "UnpauseActivityExecution unpauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be unpaused.",
-        "description": "If activity is not paused, this call will have no effect.\nIf the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpaused, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type",
-        "operationId": "UnpauseActivityExecution",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UnpauseActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "activityId",
-            "description": "Unpause an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUnpauseActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/activities/{activityId}/update-options": {
-      "post": {
-        "summary": "UpdateActivityExecutionOptions is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.",
-        "operationId": "UpdateActivityExecutionOptions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateActivityExecutionOptionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "activityId",
-            "description": "Update options for an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUpdateActivityExecutionOptionsBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/namespaces/{namespace}/activities": {
       "get": {
         "summary": "ListActivityExecutions is a visibility API to list activity executions in a specific namespace.",
@@ -5312,7 +4767,7 @@
     "/namespaces/{namespace}/activities/pause": {
       "post": {
         "summary": "PauseActivity pauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be paused",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type\nDeprecated. See PauseActivityExecution.",
+        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type\nThis API will be deprecated soon and replaced with a newer PauseActivityExecution that is better named and\nstructured to work well for standalone activities.",
         "operationId": "PauseActivity",
         "responses": {
           "200": {
@@ -5353,7 +4808,7 @@
     "/namespaces/{namespace}/activities/reset": {
       "post": {
         "summary": "ResetActivity resets the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be reset.",
-        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type.\nDeprecated. See ResetActivityExecution.",
+        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type.\nThis API will be deprecated soon and replaced with a newer ResetActivityExecution that is better named and\nstructured to work well for standalone activities.",
         "operationId": "ResetActivity",
         "responses": {
           "200": {
@@ -5394,7 +4849,7 @@
     "/namespaces/{namespace}/activities/unpause": {
       "post": {
         "summary": "UnpauseActivity unpauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be unpaused.",
-        "description": "If activity is not paused, this call will have no effect.\nIf the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpaused, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type\nDeprecated. See UnpauseActivityExecution.",
+        "description": "If activity is not paused, this call will have no effect.\nIf the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpaused, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type\nThis API will be deprecated soon and replaced with a newer UnpauseActivityExecution that is better named and\nstructured to work well for standalone activities.",
         "operationId": "UnpauseActivity",
         "responses": {
           "200": {
@@ -5434,7 +4889,7 @@
     },
     "/namespaces/{namespace}/activities/update-options": {
       "post": {
-        "summary": "UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.\nDeprecated. See UpdateActivityExecutionOptions.",
+        "summary": "UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.\nThis API will be deprecated soon and replaced with a newer UpdateActivityExecutionOptions that is better named and\nstructured to work well for standalone activities.",
         "operationId": "UpdateActivityOptions",
         "responses": {
           "200": {
@@ -8438,225 +7893,6 @@
         ]
       }
     },
-    "/namespaces/{namespace}/workflows/{workflowId}/activities/{activityId}/pause": {
-      "post": {
-        "summary": "PauseActivityExecution pauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be paused",
-        "description": "Pausing an activity means:\n- If the activity is currently waiting for a retry or is running and subsequently fails,\n  it will not be rescheduled until it is unpaused.\n- If the activity is already paused, calling this method will have no effect.\n- If the activity is running and finishes successfully, the activity will be completed.\n- If the activity is running and finishes with failure:\n  * if there is no retry left - the activity will be completed.\n  * if there are more retries left - the activity will be paused.\nFor long-running activities:\n- activities in paused state will send a cancellation with \"activity_paused\" set to 'true' in response to 'RecordActivityTaskHeartbeat'.\n- The activity should respond to the cancellation accordingly.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type",
-        "operationId": "PauseActivityExecution3",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1PauseActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "workflowId",
-            "description": "If provided, pause a workflow activity (or activities) for the given workflow ID.\nIf empty, target a standalone activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "activityId",
-            "description": "Pause an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServicePauseActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/{namespace}/workflows/{workflowId}/activities/{activityId}/reset": {
-      "post": {
-        "summary": "ResetActivityExecution resets the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be reset.",
-        "description": "Resetting an activity means:\n* number of attempts will be reset to 0.\n* activity timeouts will be reset.\n* if the activity is waiting for retry, and it is not paused or 'keep_paused' is not provided:\n   it will be scheduled immediately (* see 'jitter' flag),\n\nFlags:\n\n'jitter': the activity will be scheduled at a random time within the jitter duration.\nIf the activity currently paused it will be unpaused, unless 'keep_paused' flag is provided.\n'reset_heartbeats': the activity heartbeat timer and heartbeats will be reset.\n'keep_paused': if the activity is paused, it will remain paused.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type.",
-        "operationId": "ResetActivityExecution3",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1ResetActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "workflowId",
-            "description": "If provided, reset a workflow activity (or activities) for the given workflow ID.\nIf empty, target a standalone activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "activityId",
-            "description": "Reset an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceResetActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/{namespace}/workflows/{workflowId}/activities/{activityId}/unpause": {
-      "post": {
-        "summary": "UnpauseActivityExecution unpauses the execution of an activity specified by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be unpaused.",
-        "description": "If activity is not paused, this call will have no effect.\nIf the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).\nOnce the activity is unpaused, all timeout timers will be regenerated.\n\nFlags:\n'jitter': the activity will be scheduled at a random time within the jitter duration.\n'reset_attempts': the number of attempts will be reset.\n'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.\n\nReturns a `NotFound` error if there is no pending activity with the provided ID or type",
-        "operationId": "UnpauseActivityExecution3",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UnpauseActivityExecutionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "workflowId",
-            "description": "If provided, unpause a workflow activity (or activities) for the given workflow ID.\nIf empty, target a standalone activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "activityId",
-            "description": "Unpause an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUnpauseActivityExecutionBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
-    "/namespaces/{namespace}/workflows/{workflowId}/activities/{activityId}/update-options": {
-      "post": {
-        "summary": "UpdateActivityExecutionOptions is called by the client to update the options of an activity by its ID or type.\nIf there are multiple pending activities of the provided type - all of them will be updated.",
-        "operationId": "UpdateActivityExecutionOptions3",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1UpdateActivityExecutionOptionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "namespace",
-            "description": "Namespace of the workflow which scheduled this activity",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "workflowId",
-            "description": "If provided, update options for a workflow activity (or activities) for the given workflow ID. If empty, target a\nstandalone activity.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "activityId",
-            "description": "Update options for an activity with this ID. Must be provided for a standalone activity.\nMutually exclusive with workflow_activity_type and all_workflow_activities.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/WorkflowServiceUpdateActivityExecutionOptionsBody"
-            }
-          }
-        ],
-        "tags": [
-          "WorkflowService"
-        ]
-      }
-    },
     "/namespaces/{namespace}/workflows/{workflowId}/pause": {
       "post": {
         "summary": "Note: This is an experimental API and the behavior may change in a future release.\nPauseWorkflowExecution pauses the workflow execution specified in the request. Pausing a workflow execution results in\n- The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history\n- No new workflow tasks or activity tasks are dispatched.\n  - Any workflow task currently executing on the worker will be allowed to complete.\n  - Any activity task currently executing will be paused.\n- All server-side events will continue to be processed by the server.\n- Queries & Updates on a paused workflow will be rejected.",
@@ -9057,6 +8293,19 @@
         }
       }
     },
+    "PauseInfoManual": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the actor that paused the activity."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for pausing the activity."
+        }
+      }
+    },
     "PauseInfoRule": {
       "type": "object",
       "properties": {
@@ -9071,6 +8320,24 @@
         "reason": {
           "type": "string",
           "description": "Reason why rule was created. Populated from rule description."
+        }
+      }
+    },
+    "PendingActivityInfoPauseInfo": {
+      "type": "object",
+      "properties": {
+        "pauseTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the activity was paused."
+        },
+        "manual": {
+          "$ref": "#/definitions/PauseInfoManual",
+          "title": "activity was paused by the manual intervention"
+        },
+        "rule": {
+          "$ref": "#/definitions/PauseInfoRule",
+          "title": "activity was paused by the rule"
         }
       }
     },
@@ -9552,28 +8819,6 @@
           "type": "string",
           "description": "Reason to pause the activity."
         }
-      },
-      "description": "Deprecated. See PauseActivityExecutionRequest."
-    },
-    "WorkflowServicePauseActivityExecutionBody": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "Run ID of the workflow or standalone activity."
-        },
-        "identity": {
-          "type": "string",
-          "description": "The identity of the client who initiated this request."
-        },
-        "workflowActivityType": {
-          "type": "string",
-          "description": "Pause all pending activities of this type.\nOnly available if workflow_id is provided.\nMutually exclusive with activity_id.\n\nNote: Experimental - the behavior of pausing by activity type might change or be removed in a future release."
-        },
-        "reason": {
-          "type": "string",
-          "description": "Reason to pause the activity."
-        }
       }
     },
     "WorkflowServicePauseWorkflowExecutionBody": {
@@ -9788,45 +9033,7 @@
           "description": "If set, the activity options will be restored to the defaults.\nDefault options are then options activity was created with.\nThey are part of the first SCHEDULE event."
         }
       },
-      "description": "NOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities\nDeprecated. See ResetActivityExecutionRequest."
-    },
-    "WorkflowServiceResetActivityExecutionBody": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "Run ID of the workflow or standalone activity."
-        },
-        "identity": {
-          "type": "string",
-          "description": "The identity of the client who initiated this request."
-        },
-        "workflowActivityType": {
-          "type": "string",
-          "description": "Reset all pending workflow activities of this type.\nOnly available if workflow_id is provided.\nMutually exclusive with activity_id and all_workflow_activities.\n\nNote: Experimental - the behavior of resetting by activity type may change or be removed in a future release."
-        },
-        "allWorkflowActivities": {
-          "type": "boolean",
-          "description": "Reset all pending workflow activities.\nOnly available if workflow_id is provided.\nMutually exclusive with activity_id and workflow_activity_type.\n\nNote: Experimental - the behavior of resetting all activities may change or be removed in a future release."
-        },
-        "resetHeartbeat": {
-          "type": "boolean",
-          "description": "Indicates that activity should reset heartbeat details.\nThis flag will be applied only to the new instance of the activity."
-        },
-        "keepPaused": {
-          "type": "boolean",
-          "title": "If activity is paused, it will remain paused after reset"
-        },
-        "jitter": {
-          "type": "string",
-          "title": "If set, and activity is in backoff, the activity will start at a random time within the specified jitter duration.\n(unless it is paused and keep_paused is set)"
-        },
-        "restoreOriginalOptions": {
-          "type": "boolean",
-          "description": "If set, the activity options will be restored to the defaults.\nDefault options are then options activity was originally created with.\nFor workflow activities the original options are restored from first ActivityTaskScheduled event."
-        }
-      },
-      "title": "TODO: update batch\nNOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities"
+      "title": "NOTE: keep in sync with temporal.api.batch.v1.BatchOperationResetActivities"
     },
     "WorkflowServiceResetWorkflowExecutionBody": {
       "type": "object",
@@ -10355,10 +9562,6 @@
           "$ref": "#/definitions/v1ActivityIdConflictPolicy",
           "description": "Defines how to resolve an activity id conflict with a *running* activity.\nThe default policy is ACTIVITY_ID_CONFLICT_POLICY_FAIL."
         },
-        "memo": {
-          "$ref": "#/definitions/v1Memo",
-          "description": "Arbitrary structured data that can be attached to the activity execution and made available via the list and\ndescribe APIs."
-        },
         "searchAttributes": {
           "$ref": "#/definitions/v1SearchAttributes",
           "description": "Search attributes for indexing."
@@ -10367,37 +9570,13 @@
           "$ref": "#/definitions/v1Header",
           "description": "Header for context propagation and tracing purposes."
         },
-        "requestEagerExecution": {
-          "type": "boolean",
-          "description": "Request to get the first activity task inline in the response bypassing matching service and worker polling.\nIf set to `true` the caller is expected to have a worker available and capable of processing the task.\nThe returned task will be marked as started and is expected to be completed by the specified\n`schedule_to_close_timeout`."
-        },
-        "completionCallbacks": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1Callback"
-          },
-          "description": "Callbacks to be called by the server when this activity reaches a terminal status.\nCallback addresses must be whitelisted in the server's dynamic configuration."
-        },
         "userMetadata": {
           "$ref": "#/definitions/v1UserMetadata",
           "description": "Metadata for use by user interfaces to display the fixed as-of-start summary and details of the activity."
         },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apicommonv1Link"
-          },
-          "description": "Links to be associated with the activity."
-        },
-        "onConflictOptions": {
-          "$ref": "#/definitions/apiactivityv1OnConflictOptions",
-          "description": "Defines actions to be done to the existing running activity when ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING is used. If not\nset or empty, it won't do anything to the existing running activity."
-        },
         "priority": {
           "$ref": "#/definitions/v1Priority",
-          "title": "Priority metadata"
+          "description": "Priority metadata."
         }
       }
     },
@@ -10552,7 +9731,7 @@
           "description": "If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.\nTo unset the override after the workflow is running, use UpdateWorkflowExecutionOptions."
         },
         "onConflictOptions": {
-          "$ref": "#/definitions/apiworkflowv1OnConflictOptions",
+          "$ref": "#/definitions/v1OnConflictOptions",
           "description": "Defines actions to be done to the existing running workflow when the conflict policy\nWORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING is used. If not set (ie., nil value) or set to a\nempty object (ie., all options with default value), it won't do anything to the existing\nrunning workflow. If set, it will add a history event to the running workflow."
         },
         "priority": {
@@ -10692,42 +9871,7 @@
           "type": "string",
           "description": "If set, the activity will start at a random time within the specified jitter duration."
         }
-      },
-      "description": "Deprecated. See UnpauseActivityExecutionRequest."
-    },
-    "WorkflowServiceUnpauseActivityExecutionBody": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "Run ID of the workflow or standalone activity."
-        },
-        "identity": {
-          "type": "string",
-          "description": "The identity of the client who initiated this request."
-        },
-        "workflowActivityType": {
-          "type": "string",
-          "description": "Unpause all currently paused workflow activities of this type.\nOnly available if workflow_id is provided.\nMutually exclusive with activity_id and all_workflow_activities.\n\nNote: Experimental - the behavior of unpausing by activity type may change or be removed in a future release."
-        },
-        "allWorkflowActivities": {
-          "type": "boolean",
-          "description": "Unpause all paused workflow activities.\nOnly available if workflow_id is provided.\nMutually exclusive with activity_id and workflow_activity_type.\n\nNote: Experimental - the behavior of unpausing all activities may change or be removed in a future release."
-        },
-        "resetAttempts": {
-          "type": "boolean",
-          "description": "Providing this flag will also reset the number of attempts."
-        },
-        "resetHeartbeat": {
-          "type": "boolean",
-          "description": "Providing this flag will also reset the heartbeat details."
-        },
-        "jitter": {
-          "type": "string",
-          "description": "If set, the activity will start at a random time within the specified jitter duration."
-        }
-      },
-      "title": "TODO: update batch"
+      }
     },
     "WorkflowServiceUnpauseWorkflowExecutionBody": {
       "type": "object",
@@ -10749,51 +9893,6 @@
           "description": "A unique identifier for this unpause request for idempotence. Typically UUIDv4."
         }
       }
-    },
-    "WorkflowServiceUpdateActivityExecutionOptionsBody": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "Run ID of the workflow or standalone activity."
-        },
-        "identity": {
-          "type": "string",
-          "title": "The identity of the client who initiated this request"
-        },
-        "workflowActivityType": {
-          "type": "string",
-          "description": "Update all pending workflow activities of this type.\nOnly available if workflow_id is provided.\nMutually exclusive with activity_id and all_workflow_activities.\n\nNote: Experimental - the behavior of updating by activity type may change or be removed in a future release."
-        },
-        "allWorkflowActivities": {
-          "type": "boolean",
-          "description": "Update all pending workflow activities.\nOnly available if workflow_id is provided.\nMutually exclusive with activity_id and workflow_activity_type.\n\nNote: Experimental - the behavior of updating all activities may change or be removed in a future release."
-        },
-        "restoreOriginal": {
-          "type": "boolean",
-          "description": "If set, the activity options will be restored to the options the activity was originally\ncreated with. For workflow activities the original options are restored from first\nActivityTaskScheduled event. Mutually exclusive with the activity options fields below."
-        },
-        "taskQueue": {
-          "$ref": "#/definitions/v1TaskQueue",
-          "description": "Activity options. Mutually exclusive with restore_original."
-        },
-        "scheduleToCloseTimeout": {
-          "type": "string"
-        },
-        "scheduleToStartTimeout": {
-          "type": "string"
-        },
-        "startToCloseTimeout": {
-          "type": "string"
-        },
-        "heartbeatTimeout": {
-          "type": "string"
-        },
-        "retryPolicy": {
-          "$ref": "#/definitions/v1RetryPolicy"
-        }
-      },
-      "title": "TODO: update batch\nNOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions"
     },
     "WorkflowServiceUpdateActivityOptionsBody": {
       "type": "object",
@@ -10831,7 +9930,7 @@
           "description": "If set, the activity options will be restored to the default.\nDefault options are then options activity was created with.\nThey are part of the first SCHEDULE event.\nThis flag cannot be combined with any other option; if you supply\nrestore_original together with other options, the request will be rejected."
         }
       },
-      "description": "NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions\nDeprecated. Use UpdateActivityExecutionOptionsRequest."
+      "title": "NOTE: keep in sync with temporal.api.batch.v1.BatchOperationUpdateActivityOptions"
     },
     "WorkflowServiceUpdateNamespaceBody": {
       "type": "object",
@@ -11048,24 +10147,6 @@
       },
       "description": "Keep the parameters in sync with:\n  - temporal.api.batch.v1.BatchOperationUpdateWorkflowExecutionOptions.\n  - temporal.api.workflow.v1.PostResetOperation.UpdateWorkflowOptions."
     },
-    "apiactivityv1OnConflictOptions": {
-      "type": "object",
-      "properties": {
-        "attachRequestId": {
-          "type": "boolean",
-          "description": "Attaches the request ID to the running activity."
-        },
-        "attachCompletionCallbacks": {
-          "type": "boolean",
-          "description": "Attaches the completion callbacks to the running activity."
-        },
-        "attachLinks": {
-          "type": "boolean",
-          "description": "Attaches the links to the running activity."
-        }
-      },
-      "description": "When StartActivityExecution uses the ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING and there is already an existing running\nactivity, OnConflictOptions defines actions to be taken on the existing running activity, updating its state."
-    },
     "apicommonv1Link": {
       "type": "object",
       "properties": {
@@ -11217,24 +10298,6 @@
       },
       "description": "The client request that triggers a Workflow Update."
     },
-    "apiworkflowv1OnConflictOptions": {
-      "type": "object",
-      "properties": {
-        "attachRequestId": {
-          "type": "boolean",
-          "description": "Attaches the request ID to the running workflow."
-        },
-        "attachCompletionCallbacks": {
-          "type": "boolean",
-          "description": "Attaches the completion callbacks to the running workflow."
-        },
-        "attachLinks": {
-          "type": "boolean",
-          "description": "Attaches the links to the WorkflowExecutionOptionsUpdatedEvent history event."
-        }
-      },
-      "description": "When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and\nthere is already an existing running workflow, OnConflictOptions defines actions to be taken on\nthe existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent\nhistory event in the running workflow with the changes requested in this object."
-    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -11304,7 +10367,7 @@
         "attempt": {
           "type": "integer",
           "format": "int32",
-          "description": "The attempt this activity is currently on.\nIncremented each time a new attempt is started.\nTODO: Confirm if this is on scheduled or started."
+          "description": "The attempt this activity is currently on.\nIncremented each time a new attempt is started.\nTODO(dandavison): Confirm if this is on scheduled or started."
         },
         "maximumAttempts": {
           "type": "integer",
@@ -11364,67 +10427,16 @@
         "header": {
           "$ref": "#/definitions/v1Header"
         },
-        "eagerExecutionRequested": {
-          "type": "boolean",
-          "description": "Whether the activity was started with a request_eager_execution flag set to `true`, indicating that the first\ntask was delivered inline in the start response, bypassing matching."
-        },
-        "completionCallbacks": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1Callback"
-          },
-          "description": "Callbacks to be called by the server when this activity reaches a terminal status.\nCallback addresses must be whitelisted in the server's dynamic configuration."
-        },
         "userMetadata": {
           "$ref": "#/definitions/v1UserMetadata",
           "description": "Metadata for use by user interfaces to display the fixed as-of-start summary and details of the activity."
         },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/apicommonv1Link"
-          },
-          "description": "Links to be associated with the activity."
-        },
         "canceledReason": {
           "type": "string",
           "description": "Set if activity cancelation was requested."
-        },
-        "pauseInfo": {
-          "$ref": "#/definitions/v1ActivityExecutionInfoPauseInfo"
         }
       },
       "description": "Information about a standalone activity."
-    },
-    "v1ActivityExecutionInfoPauseInfo": {
-      "type": "object",
-      "properties": {
-        "pauseTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the activity was paused."
-        },
-        "manual": {
-          "$ref": "#/definitions/v1ActivityExecutionInfoPauseInfoManual",
-          "description": "The activity was paused by direct API invocation."
-        }
-      },
-      "title": "TODO: Move this to a common package?"
-    },
-    "v1ActivityExecutionInfoPauseInfoManual": {
-      "type": "object",
-      "properties": {
-        "identity": {
-          "type": "string",
-          "description": "The identity of the actor that paused the activity."
-        },
-        "reason": {
-          "type": "string",
-          "description": "Reason for pausing the activity."
-        }
-      }
     },
     "v1ActivityExecutionListInfo": {
       "type": "object",
@@ -11528,11 +10540,10 @@
       "enum": [
         "ACTIVITY_ID_CONFLICT_POLICY_UNSPECIFIED",
         "ACTIVITY_ID_CONFLICT_POLICY_FAIL",
-        "ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING",
-        "ACTIVITY_ID_CONFLICT_POLICY_TERMINATE_EXISTING"
+        "ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING"
       ],
       "default": "ACTIVITY_ID_CONFLICT_POLICY_UNSPECIFIED",
-      "description": "Defines what to do when trying to start an activity with the same ID as a *running* activity.\nNote that it is *never* valid to have two running instances of the same activity ID.\n\nSee `ActivityIdReusePolicy` for handling activity ID duplication with a *closed* activity.\n\n - ACTIVITY_ID_CONFLICT_POLICY_FAIL: Don't start a new activity; instead return `ActivityExecutionAlreadyStarted` error.\n - ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING: Don't start a new activity; instead return a handle for the running activity.\n - ACTIVITY_ID_CONFLICT_POLICY_TERMINATE_EXISTING: Terminate the running activity before starting a new one."
+      "description": "Defines what to do when trying to start an activity with the same ID as a *running* activity.\nNote that it is *never* valid to have two running instances of the same activity ID.\n\nSee `ActivityIdReusePolicy` for handling activity ID duplication with a *closed* activity.\n\n - ACTIVITY_ID_CONFLICT_POLICY_FAIL: Don't start a new activity; instead return `ActivityExecutionAlreadyStarted` error.\n - ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING: Don't start a new activity; instead return a handle for the running activity."
     },
     "v1ActivityIdReusePolicy": {
       "type": "string",
@@ -15098,6 +14109,24 @@
       },
       "description": "Nexus operation timed out."
     },
+    "v1OnConflictOptions": {
+      "type": "object",
+      "properties": {
+        "attachRequestId": {
+          "type": "boolean",
+          "description": "Attaches the request ID to the running workflow."
+        },
+        "attachCompletionCallbacks": {
+          "type": "boolean",
+          "description": "Attaches the completion callbacks to the running workflow."
+        },
+        "attachLinks": {
+          "type": "boolean",
+          "description": "Attaches the links to the WorkflowExecutionOptionsUpdatedEvent history event."
+        }
+      },
+      "description": "When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and\nthere is already an existing running workflow, OnConflictOptions defines actions to be taken on\nthe existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent\nhistory event in the running workflow with the changes requested in this object."
+    },
     "v1Outcome": {
       "type": "object",
       "properties": {
@@ -15125,12 +14154,8 @@
     "v1PatchScheduleResponse": {
       "type": "object"
     },
-    "v1PauseActivityExecutionResponse": {
-      "type": "object"
-    },
     "v1PauseActivityResponse": {
-      "type": "object",
-      "description": "Deprecated. See PauseActivityExecutionResponse."
+      "type": "object"
     },
     "v1PauseWorkflowExecutionResponse": {
       "type": "object",
@@ -15245,42 +14270,11 @@
           "description": "Priority metadata. If this message is not present, or any fields are not\npresent, they inherit the values from the workflow."
         },
         "pauseInfo": {
-          "$ref": "#/definitions/v1PendingActivityInfoPauseInfo"
+          "$ref": "#/definitions/PendingActivityInfoPauseInfo"
         },
         "activityOptions": {
           "$ref": "#/definitions/v1ActivityOptions",
           "description": "Current activity options. May be different from the one used to start the activity."
-        }
-      }
-    },
-    "v1PendingActivityInfoPauseInfo": {
-      "type": "object",
-      "properties": {
-        "pauseTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the activity was paused."
-        },
-        "manual": {
-          "$ref": "#/definitions/v1PendingActivityInfoPauseInfoManual",
-          "title": "activity was paused by the manual intervention"
-        },
-        "rule": {
-          "$ref": "#/definitions/PauseInfoRule",
-          "title": "activity was paused by the rule"
-        }
-      }
-    },
-    "v1PendingActivityInfoPauseInfoManual": {
-      "type": "object",
-      "properties": {
-        "identity": {
-          "type": "string",
-          "description": "The identity of the actor that paused the activity."
-        },
-        "reason": {
-          "type": "string",
-          "description": "Reason for pausing the activity."
         }
       }
     },
@@ -16107,12 +15101,8 @@
       },
       "description": "RequestIdInfo contains details of a request ID."
     },
-    "v1ResetActivityExecutionResponse": {
-      "type": "object"
-    },
     "v1ResetActivityResponse": {
-      "type": "object",
-      "description": "Deprecated. See ResetActivityExecutionResponse."
+      "type": "object"
     },
     "v1ResetOptions": {
       "type": "object",
@@ -17101,14 +16091,6 @@
         "started": {
           "type": "boolean",
           "description": "If true, a new activity was started."
-        },
-        "eagerTask": {
-          "$ref": "#/definitions/v1PollActivityTaskQueueResponse",
-          "description": "When `request_eager_execution` is set on the `StartActivityExecutionRequest`, the server will return the first\nactivity task to be eagerly executed.\nThe caller is expected to have a worker available to process the task."
-        },
-        "link": {
-          "$ref": "#/definitions/apicommonv1Link",
-          "description": "Link to the activity."
         }
       }
     },
@@ -17490,7 +16472,7 @@
           "description": "If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.\nTo unset the override after the workflow is running, use UpdateWorkflowExecutionOptions."
         },
         "onConflictOptions": {
-          "$ref": "#/definitions/apiworkflowv1OnConflictOptions",
+          "$ref": "#/definitions/v1OnConflictOptions",
           "description": "Defines actions to be done to the existing running workflow when the conflict policy\nWORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING is used. If not set (ie., nil value) or set to a\nempty object (ie., all options with default value), it won't do anything to the existing\nrunning workflow. If set, it will add a history event to the running workflow."
         },
         "priority": {
@@ -18006,12 +16988,8 @@
         }
       }
     },
-    "v1UnpauseActivityExecutionResponse": {
-      "type": "object"
-    },
     "v1UnpauseActivityResponse": {
-      "type": "object",
-      "description": "Deprecated. See UnpauseActivityExecutionResponse."
+      "type": "object"
     },
     "v1UnpauseWorkflowExecutionResponse": {
       "type": "object",
@@ -18029,30 +17007,6 @@
         }
       }
     },
-    "v1UpdateActivityExecutionOptionsResponse": {
-      "type": "object",
-      "properties": {
-        "taskQueue": {
-          "$ref": "#/definitions/v1TaskQueue",
-          "description": "Activity options after the update."
-        },
-        "scheduleToCloseTimeout": {
-          "type": "string"
-        },
-        "scheduleToStartTimeout": {
-          "type": "string"
-        },
-        "startToCloseTimeout": {
-          "type": "string"
-        },
-        "heartbeatTimeout": {
-          "type": "string"
-        },
-        "retryPolicy": {
-          "$ref": "#/definitions/v1RetryPolicy"
-        }
-      }
-    },
     "v1UpdateActivityOptionsResponse": {
       "type": "object",
       "properties": {
@@ -18060,8 +17014,7 @@
           "$ref": "#/definitions/v1ActivityOptions",
           "title": "Activity options after an update"
         }
-      },
-      "description": "Deprecated. See UpdateActivityExecutionOptionsResponse."
+      }
     },
     "v1UpdateAdmittedEventOrigin": {
       "type": "string",

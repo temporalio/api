@@ -20,17 +20,6 @@ import "temporal/api/failure/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
 
-// When StartActivityExecution uses the ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING and there is already an existing running
-// activity, OnConflictOptions defines actions to be taken on the existing running activity, updating its state.
-message OnConflictOptions {
-    // Attaches the request ID to the running activity.
-    bool attach_request_id = 1;
-    // Attaches the completion callbacks to the running activity.
-    bool attach_completion_callbacks = 2;
-    // Attaches the links to the running activity.
-    bool attach_links = 3;
-}
-
 message ActivityOptions {
     temporal.api.taskqueue.v1.TaskQueue task_queue = 1;
 
@@ -85,7 +74,7 @@ message ActivityExecutionInfo {
     google.protobuf.Timestamp last_started_time = 8;
     // The attempt this activity is currently on.
     // Incremented each time a new attempt is started.
-    // TODO: Confirm if this is on scheduled or started.
+    // TODO(dandavison): Confirm if this is on scheduled or started.
     int32 attempt = 9;
     int32 maximum_attempts = 10;
     // Time the activity was originally scheduled via a StartActivityExecution request.
@@ -126,40 +115,11 @@ message ActivityExecutionInfo {
 
     temporal.api.common.v1.SearchAttributes search_attributes = 22;
     temporal.api.common.v1.Header header = 23;
-    // Whether the activity was started with a request_eager_execution flag set to `true`, indicating that the first
-    // task was delivered inline in the start response, bypassing matching.
-    bool eager_execution_requested = 24;
-
-    // Callbacks to be called by the server when this activity reaches a terminal status.
-    // Callback addresses must be whitelisted in the server's dynamic configuration.
-    repeated temporal.api.common.v1.Callback completion_callbacks = 25;
     // Metadata for use by user interfaces to display the fixed as-of-start summary and details of the activity.
-    temporal.api.sdk.v1.UserMetadata user_metadata = 26;
-    // Links to be associated with the activity.
-    repeated temporal.api.common.v1.Link links = 27;
+    temporal.api.sdk.v1.UserMetadata user_metadata = 24;
 
     // Set if activity cancelation was requested.
-    string canceled_reason = 28;
-
-    // TODO: Move this to a common package?
-    message PauseInfo {
-        // The time when the activity was paused.
-        google.protobuf.Timestamp pause_time = 1;
-
-        message Manual {
-            // The identity of the actor that paused the activity.
-            string identity = 1;
-            // Reason for pausing the activity.
-            string reason = 2;
-        }
-
-        oneof paused_by {
-            // The activity was paused by direct API invocation.
-            Manual manual = 2;
-        }
-    }
-
-    PauseInfo pause_info = 29;
+    string canceled_reason = 25;
 }
 
 // Limited activity information returned in the list response.
@@ -197,6 +157,4 @@ message ActivityExecutionListInfo {
     // The difference between close time and scheduled time.
     // This field is only populated if the activity is closed.
     google.protobuf.Duration execution_duration = 12;
-
-    // TODO: pause_info
 }

@@ -7877,18 +7877,24 @@
         },
         "version": {
           "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "Required."
+          "description": "Required if the target workflow is not already pinned to a version.\n\nIf the target workflow is already using a pinning behavior and this field is omitted,\nthe effective pinned version will be the existing pinned version."
         }
-      }
+      },
+      "description": "Describes which pinning behavior to apply and, when needed, which WorkerDeploymentVersion to pin to."
     },
     "VersioningOverridePinnedOverrideBehavior": {
       "type": "string",
       "enum": [
         "PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED",
-        "PINNED_OVERRIDE_BEHAVIOR_PINNED"
+        "PINNED_OVERRIDE_BEHAVIOR_PINNED",
+        "PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW",
+        "PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_REJECT",
+        "PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED",
+        "PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED_UNTIL_CONTINUE_AS_NEW"
       ],
       "default": "PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED",
-      "description": "Used to specify different sub-types of Pinned override that we plan to add in the future.\n\n - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED: Unspecified.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED: Override workflow behavior to be Pinned."
+      "description": "`PinnedOverrideBehavior` controls how the override interacts with existing pinning\nbehaviors and with workflows that are not currently pinned.\n\n - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED: Unspecified behavior.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED: Force the workflow to use the PINNED pinning behavior, regardless of its current\nversioning behavior.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW: Force the workflow to use the PINNED_UNTIL_CONTINUE_AS_NEW pinning behavior,\nregardless of its current versioning behavior.\n - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_REJECT: If the workflow is already using a pinning behavior (PINNED or\nPINNED_UNTIL_CONTINUE_AS_NEW), keep its existing behavior.\nOtherwise, reject the override.\n - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED: If the workflow is already using a pinning behavior, keep its existing behavior.\nOtherwise, apply the PINNED behavior.\n - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED_UNTIL_CONTINUE_AS_NEW: If the workflow is already using a pinning behavior, keep its existing behavior.\nOtherwise, apply the PINNED_UNTIL_CONTINUE_AS_NEW behavior.",
+      "title": "\"Pinning behaviors\" refers to behaviors in which a workflow is explicitly assigned\nto a particular version. Currently, the pinning behaviors are:\n  - PINNED\n  - PINNED_UNTIL_CONTINUE_AS_NEW"
     },
     "WorkerConfigAutoscalingPollerBehavior": {
       "type": "object",
@@ -15477,6 +15483,18 @@
       },
       "description": "StructuredCalendarSpec describes an event specification relative to the\ncalendar, in a form that's easy to work with programmatically. Each field can\nbe one or more ranges.\nA timestamp matches if at least one range of each field matches the\ncorresponding fields of the timestamp, except for year: if year is missing,\nthat means all years match. For all fields besides year, at least one Range\nmust be present to match anything.\nRelative expressions such as \"last day of the month\" or \"third Monday\" are not currently\nrepresentable; callers must enumerate the concrete days they require."
     },
+    "v1SuggestContinueAsNewReason": {
+      "type": "string",
+      "enum": [
+        "SUGGEST_CONTINUE_AS_NEW_REASON_UNSPECIFIED",
+        "SUGGEST_CONTINUE_AS_NEW_REASON_HISTORY_SIZE_TOO_LARGE",
+        "SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_HISTORY_EVENTS",
+        "SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_UPDATES",
+        "SUGGEST_CONTINUE_AS_NEW_REASON_TARGET_WORKER_DEPLOYMENT_VERSION_CHANGED"
+      ],
+      "default": "SUGGEST_CONTINUE_AS_NEW_REASON_UNSPECIFIED",
+      "description": "SuggestContinueAsNewReason specifies why SuggestContinueAsNew is true.\n\n - SUGGEST_CONTINUE_AS_NEW_REASON_HISTORY_SIZE_TOO_LARGE: Workflow History size is getting too large.\n - SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_HISTORY_EVENTS: Workflow History event count is getting too large.\n - SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_UPDATES: Workflow's count of completed plus in-flight updates is too large.\n - SUGGEST_CONTINUE_AS_NEW_REASON_TARGET_WORKER_DEPLOYMENT_VERSION_CHANGED: Workflow's Target Worker Deployment Version is different from its\nPinned Version and the workflow's Versioning Behavior is PinnedUntilContinueAsNew."
+    },
     "v1TaskIdBlock": {
       "type": "object",
       "properties": {
@@ -16212,36 +16230,25 @@
       "enum": [
         "VERSIONING_BEHAVIOR_UNSPECIFIED",
         "VERSIONING_BEHAVIOR_PINNED",
-        "VERSIONING_BEHAVIOR_AUTO_UPGRADE"
+        "VERSIONING_BEHAVIOR_AUTO_UPGRADE",
+        "VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW"
       ],
       "default": "VERSIONING_BEHAVIOR_UNSPECIFIED",
-      "description": "Versioning Behavior specifies if and how a workflow execution moves between Worker Deployment\nVersions. The Versioning Behavior of a workflow execution is typically specified by the worker\nwho completes the first task of the execution, but is also overridable manually for new and\nexisting workflows (see VersioningOverride).\nExperimental. Worker Deployments are experimental and might significantly change in the future.\n\n - VERSIONING_BEHAVIOR_UNSPECIFIED: Workflow execution does not have a Versioning Behavior and is called Unversioned. This is the\nlegacy behavior. An Unversioned workflow's task can go to any Unversioned worker (see\n`WorkerVersioningMode`.)\nUser needs to use Patching to keep the new code compatible with prior versions when dealing\nwith Unversioned workflows.\n - VERSIONING_BEHAVIOR_PINNED: Workflow will start on the Current Deployment Version of its Task Queue, and then\nwill be pinned to that same Deployment Version until completion (the Version that\nthis Workflow is pinned to is specified in `versioning_info.version`).\nThis behavior eliminates most of compatibility concerns users face when changing their code.\nPatching is not needed when pinned workflows code change.\nCan be overridden explicitly via `UpdateWorkflowExecutionOptions` API to move the\nexecution to another Deployment Version.\nActivities of `PINNED` workflows are sent to the same Deployment Version. Exception to this\nwould be when the activity Task Queue workers are not present in the workflow's Deployment\nVersion, in which case the activity will be sent to the Current Deployment Version of its own\ntask queue.\n - VERSIONING_BEHAVIOR_AUTO_UPGRADE: Workflow will automatically move to the Current Deployment Version of its Task Queue when the\nnext workflow task is dispatched.\nAutoUpgrade behavior is suitable for long-running workflows as it allows them to move to the\nlatest Deployment Version, but the user still needs to use Patching to keep the new code\ncompatible with prior versions for changed workflow types.\nActivities of `AUTO_UPGRADE` workflows are sent to the Deployment Version of the workflow\nexecution (as specified in versioning_info.version based on the last completed\nworkflow task). Exception to this would be when the activity Task Queue workers are not\npresent in the workflow's Deployment Version, in which case, the activity will be sent to a\ndifferent Deployment Version according to the Current Deployment Version of its own task\nqueue.\nWorkflows stuck on a backlogged activity will still auto-upgrade if the Current Deployment\nVersion of their Task Queue changes, without having to wait for the backlogged activity to\ncomplete on the old Version."
+      "description": "Versioning Behavior specifies if and how a workflow execution moves between Worker Deployment\nVersions. The Versioning Behavior of a workflow execution is typically specified by the worker\nwho completes the first task of the execution, but is also overridable manually for new and\nexisting workflows (see VersioningOverride).\nExperimental. Worker Deployments are experimental and might significantly change in the future.\n\n - VERSIONING_BEHAVIOR_UNSPECIFIED: Workflow execution does not have a Versioning Behavior and is called Unversioned. This is the\nlegacy behavior. An Unversioned workflow's task can go to any Unversioned worker (see\n`WorkerVersioningMode`.)\nUser needs to use Patching to keep the new code compatible with prior versions when dealing\nwith Unversioned workflows.\n - VERSIONING_BEHAVIOR_PINNED: Workflow will start on its Target Version and then will be pinned to that same Deployment\nVersion until completion (the Version that this Workflow is pinned to is specified in\n`versioning_info.version` and is the Pinned Version of the Workflow).\n\nThe workflow's Target Version is the Current Version of its Task Queue, or, if the\nTask Queue has a Ramping Version with non-zero Ramp Percentage `P`, the workflow's Target\nVersion has a P% chance of being the Ramping Version. Whether a workflow falls into the\nRamping group depends on its Workflow ID and and the Ramp Percentage.\n\nThis behavior eliminates most of compatibility concerns users face when changing their code.\nPatching is not needed when pinned workflows code change.\nCan be overridden explicitly via `UpdateWorkflowExecutionOptions` API to move the\nexecution to another Deployment Version.\nActivities of `PINNED` workflows are sent to the same Deployment Version. Exception to this\nwould be when the activity Task Queue workers are not present in the workflow's Deployment\nVersion, in which case the activity will be sent to the Current Deployment Version of its own\ntask queue.\n - VERSIONING_BEHAVIOR_AUTO_UPGRADE: Workflow will automatically move to its Target Version when the next workflow task is dispatched.\n\nThe workflow's Target Version is the Current Version of its Task Queue, or, if the\nTask Queue has a Ramping Version with non-zero Ramp Percentage `P`, the workflow's Target\nVersion has a P% chance of being the Ramping Version. Whether a workflow falls into the\nRamping group depends on its Workflow ID and and the Ramp Percentage.\n\nAutoUpgrade behavior is suitable for long-running workflows as it allows them to move to the\nlatest Deployment Version, but the user still needs to use Patching to keep the new code\ncompatible with prior versions for changed workflow types.\nActivities of `AUTO_UPGRADE` workflows are sent to the Deployment Version of the workflow\nexecution (as specified in versioning_info.version based on the last completed\nworkflow task). Exception to this would be when the activity Task Queue workers are not\npresent in the workflow's Deployment Version, in which case, the activity will be sent to a\ndifferent Deployment Version according to the Current or Ramping Deployment Version of its own\nTask Queue.\nWorkflows stuck on a backlogged activity will still auto-upgrade if their Target Version\nchanges, without having to wait for the backlogged activity to complete on the old Version.\n - VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW: The same semantics as PINNED, with the exception of Continue-As-New.\nWhen a PINNED_UNTIL_CONTINUE_AS_NEW workflow continues-as-new, the new execution\nwill start on the workflow's Target Version, with AUTO_UPGRADE behavior.\nOn the first workflow task completion of the new run, the workflow will assume\nthe behavior specified for that workflow type on the Target Version. If that\nbehavior is also PINNED_UNTIL_CONTINUE_AS_NEW, the new run will now be pinned to\nthat version until the next time it continues-as-new.\n\nWhen the Target Version of a PINNED_UNTIL_CONTINUE_AS_NEW workflow is different\nfrom its Pinned Version, the workflow's continue_as_new_suggested flag will be true,\nso that these workflows can tell when continuing-as-new would cause a version change."
     },
     "v1VersioningOverride": {
       "type": "object",
       "properties": {
         "pinned": {
           "$ref": "#/definitions/VersioningOverridePinnedOverride",
-          "description": "Send the next workflow task to the Version specified in the override."
+          "description": "Override the workflow to use a pinning behavior, optionally specifying a pinned\ndeployment version."
         },
         "autoUpgrade": {
           "type": "boolean",
-          "description": "Send the next workflow task to the Current Deployment Version\nof its Task Queue when the next workflow task is dispatched."
-        },
-        "behavior": {
-          "$ref": "#/definitions/v1VersioningBehavior",
-          "description": "Required.\nDeprecated. Use `override`."
-        },
-        "deployment": {
-          "$ref": "#/definitions/v1Deployment",
-          "description": "Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.\nIdentifies the worker deployment to pin the workflow to.\nDeprecated. Use `override.pinned.version`."
-        },
-        "pinnedVersion": {
-          "type": "string",
-          "description": "Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.\nIdentifies the worker deployment version to pin the workflow to, in the format\n\"<deployment_name>.<build_id>\".\nDeprecated. Use `override.pinned.version`."
+          "description": "Override the workflow to use AutoUpgrade. The next workflow task will be sent\nto the current deployment version of the workflow's task queue."
         }
       },
-      "description": "Used to override the versioning behavior (and pinned deployment version, if applicable) of a\nspecific workflow execution. If set, takes precedence over the worker-sent values. See\n`WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call\n`UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`\nto indicate that it should be mutated.\nPinned overrides are automatically inherited by child workflows, continue-as-new workflows,\nworkflow retries, and cron workflows."
+      "description": "Used to override the versioning behavior (and pinned deployment version, if applicable) of a\nspecific workflow execution. If set, this override takes precedence over worker-sent values.\nSee `WorkflowExecutionInfo.VersioningInfo` for more information.\n\nTo remove the override, call `UpdateWorkflowExecutionOptions` with a null\n`VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.\n\nPinning behaviors (PINNED and PINNED_UNTIL_CONTINUE_AS_NEW) are automatically inherited\nby child workflows, workflow retries, and cron workflows.\n\nFor continue-as-new:\n  - PINNED overrides are inherited by the new run.\n  - PINNED_UNTIL_CONTINUE_AS_NEW overrides are *not* inherited; after continue-as-new,\n    versioning behavior falls back to worker-sent values."
     },
     "v1WaitPolicy": {
       "type": "object",
@@ -17808,7 +17815,11 @@
         },
         "suggestContinueAsNew": {
           "type": "boolean",
-          "description": "True if this workflow should continue-as-new soon because its history size (in\neither event count or bytes) is getting large."
+          "title": "True if this workflow should continue-as-new soon. Reasons for this could be:\n  - History size (in either event count or bytes) is getting large\n  - Total number of completed and in-flight updates on the workflow is too large\n  - Workflow's Target Version is different from its Pinned Version, and the Versioning Behavior is PinnedUntilContinueAsNew"
+        },
+        "suggestContinueAsNewReason": {
+          "$ref": "#/definitions/v1SuggestContinueAsNewReason",
+          "description": "The reason that suggest_continue_as_new is true, if it is.\nUnspecified if suggest_continue_as_new is false or if the reason is unknown."
         },
         "historySizeBytes": {
           "type": "string",

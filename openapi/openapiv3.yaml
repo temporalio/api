@@ -13432,48 +13432,29 @@ components:
         pinned:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride_PinnedOverride'
-          description: Send the next workflow task to the Version specified in the override.
+          description: |-
+            Override the workflow to use a pinning behavior, optionally specifying a pinned
+             deployment version.
         autoUpgrade:
           type: boolean
           description: |-
-            Send the next workflow task to the Current Deployment Version
-             of its Task Queue when the next workflow task is dispatched.
-        behavior:
-          enum:
-            - VERSIONING_BEHAVIOR_UNSPECIFIED
-            - VERSIONING_BEHAVIOR_PINNED
-            - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-            - VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
-          type: string
-          description: |-
-            Required.
-             Deprecated. Use `override`.
-          format: enum
-        deployment:
-          allOf:
-            - $ref: '#/components/schemas/Deployment'
-          description: |-
-            Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
-             Identifies the worker deployment to pin the workflow to.
-             Deprecated. Use `override.pinned.version`.
-        pinnedVersion:
-          type: string
-          description: |-
-            Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
-             Identifies the worker deployment version to pin the workflow to, in the format
-             "<deployment_name>.<build_id>".
-             Deprecated. Use `override.pinned.version`.
+            Override the workflow to use AutoUpgrade. The next workflow task will be sent
+             to the current deployment version of the workflow's task queue.
       description: |-
         Used to override the versioning behavior (and pinned deployment version, if applicable) of a
-         specific workflow execution. If set, takes precedence over the worker-sent values. See
-         `WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call
-         `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
-         to indicate that it should be mutated.
-         All types of Pinned overrides are automatically inherited by child workflows, continue-as-new workflows,
-         workflow retries, and cron workflows.
-         When a workflow with some type of Pinned override and effect versioning behavior PinnedUntilContinueAsNew
-         continues-as-new, the override version will not be inherited. If you want your workflow to run on the same
-         version across continue-as-new runs, use Pinned behavior, not PinnedUntilContinueAsNew.
+         specific workflow execution. If set, this override takes precedence over worker-sent values.
+         See `WorkflowExecutionInfo.VersioningInfo` for more information.
+
+         To remove the override, call `UpdateWorkflowExecutionOptions` with a null
+         `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
+
+         Pinning behaviors (PINNED and PINNED_UNTIL_CONTINUE_AS_NEW) are automatically inherited
+         by child workflows, workflow retries, and cron workflows.
+
+         For continue-as-new:
+           - PINNED overrides are inherited by the new run.
+           - PINNED_UNTIL_CONTINUE_AS_NEW overrides are *not* inherited; after continue-as-new,
+             versioning behavior falls back to worker-sent values.
     VersioningOverride_PinnedOverride:
       type: object
       properties:
@@ -13482,8 +13463,9 @@ components:
             - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED
             - PINNED_OVERRIDE_BEHAVIOR_PINNED
             - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
-            - PINNED_OVERRIDE_BEHAVIOR_PINNED_OR_KEEP_EXISTING
-            - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW_OR_KEEP_EXISTING
+            - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_REJECT
+            - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED
+            - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED_UNTIL_CONTINUE_AS_NEW
           type: string
           description: |-
             Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
@@ -13494,9 +13476,10 @@ components:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
             Required if the target workflow is not already pinned to a version.
-             If the target workflow is already pinned to a version and this is omitted,
-             the effective Pinned Version of the workflow will be the non-override pinned
-             version.
+
+             If the target workflow is already using a pinning behavior and this field is omitted,
+             the effective pinned version will be the existing pinned version.
+      description: Describes which pinning behavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
     WaitPolicy:
       type: object
       properties:

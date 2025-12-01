@@ -567,103 +567,103 @@ message WorkflowExecutionOptions {
 //   - PINNED_UNTIL_CONTINUE_AS_NEW overrides are *not* inherited; after continue-as-new,
 //     versioning behavior falls back to worker-sent values.
 message VersioningOverride {
-  // Indicates whether to override the workflow to be AutoUpgrade or use a pinning behavior.
-  oneof override {
-    // Override the workflow to use a pinning behavior, optionally specifying a pinned
-    // deployment version.
-    PinnedOverride pinned = 3;
+    // Indicates whether to override the workflow to be AutoUpgrade or use a pinning behavior.
+    oneof override {
+      // Override the workflow to use a pinning behavior, optionally specifying a pinned
+      // deployment version.
+      PinnedOverride pinned = 3;
 
-    // Override the workflow to use AutoUpgrade. The next workflow task will be sent
-    // to the current deployment version of the workflow's task queue.
-    bool auto_upgrade = 4;
-  }
+      // Override the workflow to use AutoUpgrade. The next workflow task will be sent
+      // to the current deployment version of the workflow's task queue.
+      bool auto_upgrade = 4;
+    }
 
-  // Required.
-  // Deprecated. Use `override`.
-  temporal.api.enums.v1.VersioningBehavior behavior = 1 [deprecated = true];
+    // Required.
+    // Deprecated. Use `override`.
+    temporal.api.enums.v1.VersioningBehavior behavior = 1 [deprecated = true];
 
-  // Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
-  // Identifies the worker deployment to pin the workflow to.
-  // Deprecated. Use `override.pinned.version`.
-  temporal.api.deployment.v1.Deployment deployment = 2 [deprecated = true];
+    // Required if behavior is `PINNED`. Must be null if behavior is `AUTO_UPGRADE`.
+    // Identifies the worker deployment to pin the workflow to.
+    // Deprecated. Use `override.pinned.version`.
+    temporal.api.deployment.v1.Deployment deployment = 2 [deprecated = true];
 
-  // Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
-  // Identifies the worker deployment version to pin the workflow to, in the format
-  // "<deployment_name>.<build_id>".
-  // Deprecated. Use `override.pinned.version`.
-  string pinned_version = 9 [deprecated = true];
+    // Required if behavior is `PINNED`. Must be absent if behavior is not `PINNED`.
+    // Identifies the worker deployment version to pin the workflow to, in the format
+    // "<deployment_name>.<build_id>".
+    // Deprecated. Use `override.pinned.version`.
+    string pinned_version = 9 [deprecated = true];
 
-  // Describes which pinning behavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
-  message PinnedOverride {
-    // Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
-    // See `PinnedOverrideBehavior` for details.
-    PinnedOverrideBehavior behavior = 1;
+    // Describes which pinning behavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
+    message PinnedOverride {
+      // Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
+      // See `PinnedOverrideBehavior` for details.
+      PinnedOverrideBehavior behavior = 1;
 
-    // Required if the target workflow is not already pinned to a version.
+      // Required if the target workflow is not already pinned to a version.
+      //
+      // If the target workflow is already using a pinning behavior and this field is omitted,
+      // the effective pinned version will be the existing pinned version.
+      //
+      // If the target workflow is not using a pinning behavior and this field is omitted,
+      // the override request will be rejected.
+      temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+
+      // Required if behavior is PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
+      // Ignored if behavior is not PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
+      // We will reject overrides that have PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING PinnedOverrideBehavior
+      // and UNSPECIFIED NonPinningPolicy before the batch even starts, but if it somehow sneaks in,
+      // UNSPECIFIED will be treated the same as REJECT.
+      NonPinningPolicy if_not_pinning = 3;
+    }
+
+    // "Pinning behaviors" refers to behaviors in which a workflow is explicitly assigned
+    // to a particular version. Currently, the pinning behaviors are:
+    //   - PINNED
+    //   - PINNED_UNTIL_CONTINUE_AS_NEW
     //
-    // If the target workflow is already using a pinning behavior and this field is omitted,
-    // the effective pinned version will be the existing pinned version.
-    //
-    // If the target workflow is not using a pinning behavior and this field is omitted,
-    // the override request will be rejected.
-    temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+    // `PinnedOverrideBehavior` controls how the override interacts with existing pinning
+    // behaviors and with workflows that are not currently pinned.
+    enum PinnedOverrideBehavior {
+      // Unspecified behavior.
+      PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED = 0;
 
-    // Required if behavior is PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
-    // Ignored if behavior is not PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
-    // We will reject overrides that have PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING PinnedOverrideBehavior
-    // and UNSPECIFIED NonPinningPolicy before the batch even starts, but if it somehow sneaks in,
-    // UNSPECIFIED will be treated the same as REJECT.
-    NonPinningPolicy if_not_pinning = 3;
-  }
+      // Force the workflow to use the PINNED pinning behavior, regardless of its current
+      // versioning behavior.
+      PINNED_OVERRIDE_BEHAVIOR_PINNED = 1;
 
-  // "Pinning behaviors" refers to behaviors in which a workflow is explicitly assigned
-  // to a particular version. Currently, the pinning behaviors are:
-  //   - PINNED
-  //   - PINNED_UNTIL_CONTINUE_AS_NEW
-  //
-  // `PinnedOverrideBehavior` controls how the override interacts with existing pinning
-  // behaviors and with workflows that are not currently pinned.
-  enum PinnedOverrideBehavior {
-    // Unspecified behavior.
-    PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED = 0;
+      // Force the workflow to use the PINNED_UNTIL_CONTINUE_AS_NEW pinning behavior,
+      // regardless of its current versioning behavior.
+      PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW = 2;
 
-    // Force the workflow to use the PINNED pinning behavior, regardless of its current
-    // versioning behavior.
-    PINNED_OVERRIDE_BEHAVIOR_PINNED = 1;
+      // If the workflow is already using a pinning behavior (PINNED or
+      // PINNED_UNTIL_CONTINUE_AS_NEW), keep its existing behavior.
+      // Use if_not_pinning to specify how to treat other workflows.
+      PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING = 3;
+    }
 
-    // Force the workflow to use the PINNED_UNTIL_CONTINUE_AS_NEW pinning behavior,
-    // regardless of its current versioning behavior.
-    PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW = 2;
+    // Describes how a Pinning behavior override that keeps original pinning behavior
+    // should be applied to workflows that do not have a pinning behavior.
+    // This applies to all workflows that have not yet completed their first workflow
+    // task, because only after first-workflow-task-completion does the server know the
+    // behavior of a workflow execution.
+    enum NonPinningPolicy {
+      // Unspecified.
+      NON_PINNING_POLICY_UNSPECIFIED = 0;
 
-    // If the workflow is already using a pinning behavior (PINNED or
-    // PINNED_UNTIL_CONTINUE_AS_NEW), keep its existing behavior.
-    // Use if_not_pinning to specify how to treat other workflows.
-    PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING = 3;
-  }
+      // Reject the override at apply time.
+      NON_PINNING_POLICY_REJECT = 1;
 
-  // Describes how a Pinning behavior override that keeps original pinning behavior
-  // should be applied to workflows that do not have a pinning behavior.
-  // This applies to all workflows that have not yet completed their first workflow
-  // task, because only after first-workflow-task-completion does the server know the
-  // behavior of a workflow execution.
-  enum NonPinningPolicy {
-    // Unspecified.
-    NON_PINNING_POLICY_UNSPECIFIED = 0;
+      // Accept the override at apply time, but ignore it for workflows that do not
+      // have a pinning behavior. Once a workflow's behavior is known, the override
+      // will only affect it if that behavior is a pinning behavior.
+      NON_PINNING_POLICY_IGNORE = 2;
 
-    // Reject the override at apply time.
-    NON_PINNING_POLICY_REJECT = 1;
+      // Use Pinned.
+      NON_PINNING_POLICY_PINNED = 3;
 
-    // Accept the override at apply time, but ignore it for workflows that do not
-    // have a pinning behavior. Once a workflow's behavior is known, the override
-    // will only affect it if that behavior is a pinning behavior.
-    NON_PINNING_POLICY_IGNORE = 2;
-
-    // Use Pinned.
-    NON_PINNING_POLICY_PINNED = 3;
-
-    // Use PinnedUntilContinueAsNew.
-    NON_PINNING_POLICY_PINNED_UNTIL_CONTINUE_AS_NEW = 4;
-  }
+      // Use PinnedUntilContinueAsNew.
+      NON_PINNING_POLICY_PINNED_UNTIL_CONTINUE_AS_NEW = 4;
+    }
 }
 
 // When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and

@@ -588,7 +588,17 @@ message VersioningOverride {
     //
     // If the target workflow is already using a pinning behavior and this field is omitted,
     // the effective pinned version will be the existing pinned version.
+    //
+    // If the target workflow is not using a pinning behavior and this field is omitted,
+    // the override request will be rejected.
     temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+
+    // Required if behavior is PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
+    // Ignored if behavior is not PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
+    // We will reject overrides that have PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING PinnedOverrideBehavior
+    // and UNSPECIFIED NonPinningPolicy before the batch even starts, but if it somehow sneaks in,
+    // UNSPECIFIED will be treated the same as REJECT.
+    NonPinningPolicy if_not_pinning = 3;
   }
 
   // "Pinning behaviors" refers to behaviors in which a workflow is explicitly assigned
@@ -612,16 +622,32 @@ message VersioningOverride {
 
     // If the workflow is already using a pinning behavior (PINNED or
     // PINNED_UNTIL_CONTINUE_AS_NEW), keep its existing behavior.
-    // Otherwise, reject the override.
-    PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_REJECT = 3;
+    // Use if_not_pinning to specify how to treat other workflows.
+    PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING = 3;
+  }
 
-    // If the workflow is already using a pinning behavior, keep its existing behavior.
-    // Otherwise, apply the PINNED behavior.
-    PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED = 4;
+  // Describes how a Pinning behavior override that keeps original pinning behavior
+  // should be applied to workflows that do not have a pinning behavior.
+  // This applies to all workflows that have not yet completed their first workflow
+  // task, because only after first-workflow-task-completion does the server know the
+  // behavior of a workflow execution.
+  enum NonPinningPolicy {
+    // Unspecified.
+    NON_PINNING_POLICY_UNSPECIFIED = 0;
 
-    // If the workflow is already using a pinning behavior, keep its existing behavior.
-    // Otherwise, apply the PINNED_UNTIL_CONTINUE_AS_NEW behavior.
-    PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED_UNTIL_CONTINUE_AS_NEW = 5;
+    // Reject the override at apply time.
+    NON_PINNING_POLICY_REJECT = 1;
+
+    // Accept the override at apply time, but ignore it for workflows that do not
+    // have a pinning behavior. Once a workflow's behavior is known, the override
+    // will only affect it if that behavior is a pinning behavior.
+    NON_PINNING_POLICY_IGNORE = 2;
+
+    // Use Pinned.
+    NON_PINNING_POLICY_PINNED = 3;
+
+    // Use PinnedUntilContinueAsNew.
+    NON_PINNING_POLICY_PINNED_UNTIL_CONTINUE_AS_NEW = 4;
   }
 }
 

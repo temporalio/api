@@ -7868,6 +7868,18 @@
       },
       "description": "Replaces the routing rule with the given source Build ID."
     },
+    "VersioningOverrideNonPinningPolicy": {
+      "type": "string",
+      "enum": [
+        "NON_PINNING_POLICY_UNSPECIFIED",
+        "NON_PINNING_POLICY_REJECT",
+        "NON_PINNING_POLICY_IGNORE",
+        "NON_PINNING_POLICY_PINNED",
+        "NON_PINNING_POLICY_PINNED_UNTIL_CONTINUE_AS_NEW"
+      ],
+      "default": "NON_PINNING_POLICY_UNSPECIFIED",
+      "description": "Describes how a Pinning behavior override that keeps original pinning behavior\nshould be applied to workflows that do not have a pinning behavior.\nThis applies to all workflows that have not yet completed their first workflow\ntask, because only after first-workflow-task-completion does the server know the\nbehavior of a workflow execution.\n\n - NON_PINNING_POLICY_UNSPECIFIED: Unspecified.\n - NON_PINNING_POLICY_REJECT: Reject the override at apply time.\n - NON_PINNING_POLICY_IGNORE: Accept the override at apply time, but ignore it for workflows that do not\nhave a pinning behavior. Once a workflow's behavior is known, the override\nwill only affect it if that behavior is a pinning behavior.\n - NON_PINNING_POLICY_PINNED: Use Pinned.\n - NON_PINNING_POLICY_PINNED_UNTIL_CONTINUE_AS_NEW: Use PinnedUntilContinueAsNew."
+    },
     "VersioningOverridePinnedOverride": {
       "type": "object",
       "properties": {
@@ -7877,7 +7889,11 @@
         },
         "version": {
           "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "Required if the target workflow is not already pinned to a version.\n\nIf the target workflow is already using a pinning behavior and this field is omitted,\nthe effective pinned version will be the existing pinned version."
+          "description": "Required if the target workflow is not already pinned to a version.\n\nIf the target workflow is already using a pinning behavior and this field is omitted,\nthe effective pinned version will be the existing pinned version.\n\nIf the target workflow is not using a pinning behavior and this field is omitted,\nthe override request will be rejected."
+        },
+        "ifNotPinning": {
+          "$ref": "#/definitions/VersioningOverrideNonPinningPolicy",
+          "description": "Required if behavior is PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.\nIgnored if behavior is not PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.\nWe will reject overrides that have PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING PinnedOverrideBehavior\nand UNSPECIFIED NonPinningPolicy before the batch even starts, but if it somehow sneaks in,\nUNSPECIFIED will be treated the same as REJECT."
         }
       },
       "description": "Describes which pinning behavior to apply and, when needed, which WorkerDeploymentVersion to pin to."
@@ -7888,12 +7904,10 @@
         "PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED",
         "PINNED_OVERRIDE_BEHAVIOR_PINNED",
         "PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW",
-        "PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_REJECT",
-        "PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED",
-        "PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED_UNTIL_CONTINUE_AS_NEW"
+        "PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING"
       ],
       "default": "PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED",
-      "description": "`PinnedOverrideBehavior` controls how the override interacts with existing pinning\nbehaviors and with workflows that are not currently pinned.\n\n - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED: Unspecified behavior.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED: Force the workflow to use the PINNED pinning behavior, regardless of its current\nversioning behavior.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW: Force the workflow to use the PINNED_UNTIL_CONTINUE_AS_NEW pinning behavior,\nregardless of its current versioning behavior.\n - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_REJECT: If the workflow is already using a pinning behavior (PINNED or\nPINNED_UNTIL_CONTINUE_AS_NEW), keep its existing behavior.\nOtherwise, reject the override.\n - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED: If the workflow is already using a pinning behavior, keep its existing behavior.\nOtherwise, apply the PINNED behavior.\n - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED_UNTIL_CONTINUE_AS_NEW: If the workflow is already using a pinning behavior, keep its existing behavior.\nOtherwise, apply the PINNED_UNTIL_CONTINUE_AS_NEW behavior.",
+      "description": "`PinnedOverrideBehavior` controls how the override interacts with existing pinning\nbehaviors and with workflows that are not currently pinned.\n\n - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED: Unspecified behavior.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED: Force the workflow to use the PINNED pinning behavior, regardless of its current\nversioning behavior.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW: Force the workflow to use the PINNED_UNTIL_CONTINUE_AS_NEW pinning behavior,\nregardless of its current versioning behavior.\n - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING: If the workflow is already using a pinning behavior (PINNED or\nPINNED_UNTIL_CONTINUE_AS_NEW), keep its existing behavior.\nUse if_not_pinning to specify how to treat other workflows.",
       "title": "\"Pinning behaviors\" refers to behaviors in which a workflow is explicitly assigned\nto a particular version. Currently, the pinning behaviors are:\n  - PINNED\n  - PINNED_UNTIL_CONTINUE_AS_NEW"
     },
     "WorkerConfigAutoscalingPollerBehavior": {

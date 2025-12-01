@@ -13463,9 +13463,7 @@ components:
             - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED
             - PINNED_OVERRIDE_BEHAVIOR_PINNED
             - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
-            - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_REJECT
-            - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED
-            - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING_ELSE_PINNED_UNTIL_CONTINUE_AS_NEW
+            - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING
           type: string
           description: |-
             Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
@@ -13479,6 +13477,24 @@ components:
 
              If the target workflow is already using a pinning behavior and this field is omitted,
              the effective pinned version will be the existing pinned version.
+
+             If the target workflow is not using a pinning behavior and this field is omitted,
+             the override request will be rejected.
+        ifNotPinning:
+          enum:
+            - NON_PINNING_POLICY_UNSPECIFIED
+            - NON_PINNING_POLICY_REJECT
+            - NON_PINNING_POLICY_IGNORE
+            - NON_PINNING_POLICY_PINNED
+            - NON_PINNING_POLICY_PINNED_UNTIL_CONTINUE_AS_NEW
+          type: string
+          description: |-
+            Required if behavior is PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
+             Ignored if behavior is not PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
+             We will reject overrides that have PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING PinnedOverrideBehavior
+             and UNSPECIFIED NonPinningPolicy before the batch even starts, but if it somehow sneaks in,
+             UNSPECIFIED will be treated the same as REJECT.
+          format: enum
       description: Describes which pinning behavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
     WaitPolicy:
       type: object

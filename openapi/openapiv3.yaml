@@ -13433,7 +13433,7 @@ components:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride_PinnedOverride'
           description: |-
-            Override the workflow to use a pinning behavior, optionally specifying a pinned
+            Override the workflow to have Pinned behavior, optionally specifying a pinned
              deployment version.
         autoUpgrade:
           type: boolean
@@ -13445,7 +13445,6 @@ components:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-            - VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
           type: string
           description: |-
             Required.
@@ -13473,13 +13472,8 @@ components:
          To remove the override, call `UpdateWorkflowExecutionOptions` with a null
          `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
 
-         Pinning behavior overrides (PINNED and PINNED_UNTIL_CONTINUE_AS_NEW) are automatically inherited
-         by child workflows, workflow retries, and cron workflows.
-
-         For continue-as-new:
-           - PINNED overrides are inherited by the new run.
-           - PINNED_UNTIL_CONTINUE_AS_NEW overrides are *not* inherited; after continue-as-new,
-             versioning behavior falls back to worker-sent values.
+         Pinned behavior overrides are automatically inherited by child workflows, workflow retries, continue-as-new
+         workflows, and cron workflows.
     VersioningOverride_PinnedOverride:
       type: object
       properties:
@@ -13487,8 +13481,6 @@ components:
           enum:
             - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED
             - PINNED_OVERRIDE_BEHAVIOR_PINNED
-            - PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
-            - PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING
           type: string
           description: |-
             Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
@@ -13500,27 +13492,12 @@ components:
           description: |-
             Required if the target workflow is not already pinned to a version.
 
-             If the target workflow is already using a pinning behavior and this field is omitted,
+             If the target workflow is already pinned and this field is omitted,
              the effective pinned version will be the existing pinned version.
 
-             If the target workflow is not using a pinning behavior and this field is omitted,
+             If the target workflow is not pinned and this field is omitted,
              the override request will be rejected.
-        ifNotPinning:
-          enum:
-            - NON_PINNING_POLICY_UNSPECIFIED
-            - NON_PINNING_POLICY_REJECT
-            - NON_PINNING_POLICY_IGNORE
-            - NON_PINNING_POLICY_PINNED
-            - NON_PINNING_POLICY_PINNED_UNTIL_CONTINUE_AS_NEW
-          type: string
-          description: |-
-            Required if behavior is PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
-             Ignored if behavior is not PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
-             We will reject overrides that have PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING PinnedOverrideBehavior
-             and UNSPECIFIED NonPinningPolicy before the batch even starts, but if it somehow sneaks in,
-             UNSPECIFIED will be treated the same as REJECT.
-          format: enum
-      description: Describes which pinning behavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
+      description: Describes which PinnedOverrideBehavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
     WaitPolicy:
       type: object
       properties:
@@ -14948,7 +14925,6 @@ components:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-            - VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
           type: string
           description: "Versioning behavior determines how the server should treat this execution when workers are\n upgraded. When present it means this workflow execution is versioned; UNSPECIFIED means\n unversioned. See the comments in `VersioningBehavior` enum for more info about different\n behaviors.\n\n Child workflows or CaN executions **inherit** their parent/previous run's effective Versioning \n Behavior and Version (except when the new execution runs on a task queue not belonging to the \n same deployment version as the parent/previous run's task queue). The first workflow task will\n be dispatched according to the inherited behavior (or to the current version of the task-queue's \n deployment in the case of AutoUpgrade.) After completion of their first workflow task the \n Deployment Version and Behavior of the execution will update according to configuration on the worker.\n \n Note that `behavior` is overridden by `versioning_override` if the latter is present."
           format: enum
@@ -15222,7 +15198,6 @@ components:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
             - VERSIONING_BEHAVIOR_PINNED
             - VERSIONING_BEHAVIOR_AUTO_UPGRADE
-            - VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW
           type: string
           description: |-
             Versioning behavior sent by the worker that completed this task for this particular workflow

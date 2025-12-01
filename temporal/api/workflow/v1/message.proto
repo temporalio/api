@@ -559,17 +559,12 @@ message WorkflowExecutionOptions {
 // To remove the override, call `UpdateWorkflowExecutionOptions` with a null
 // `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
 //
-// Pinning behavior overrides (PINNED and PINNED_UNTIL_CONTINUE_AS_NEW) are automatically inherited
-// by child workflows, workflow retries, and cron workflows.
-//
-// For continue-as-new:
-//   - PINNED overrides are inherited by the new run.
-//   - PINNED_UNTIL_CONTINUE_AS_NEW overrides are *not* inherited; after continue-as-new,
-//     versioning behavior falls back to worker-sent values.
+// Pinned behavior overrides are automatically inherited by child workflows, workflow retries, continue-as-new
+// workflows, and cron workflows.
 message VersioningOverride {
-    // Indicates whether to override the workflow to be AutoUpgrade or use a pinning behavior.
+    // Indicates whether to override the workflow to be AutoUpgrade or Pinned.
     oneof override {
-      // Override the workflow to use a pinning behavior, optionally specifying a pinned
+      // Override the workflow to have Pinned behavior, optionally specifying a pinned
       // deployment version.
       PinnedOverride pinned = 3;
 
@@ -593,7 +588,7 @@ message VersioningOverride {
     // Deprecated. Use `override.pinned.version`.
     string pinned_version = 9 [deprecated = true];
 
-    // Describes which pinning behavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
+    // Describes which PinnedOverrideBehavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
     message PinnedOverride {
       // Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
       // See `PinnedOverrideBehavior` for details.
@@ -601,44 +596,20 @@ message VersioningOverride {
 
       // Required if the target workflow is not already pinned to a version.
       //
-      // If the target workflow is already using a pinning behavior and this field is omitted,
+      // If the target workflow is already pinned and this field is omitted,
       // the effective pinned version will be the existing pinned version.
       //
-      // If the target workflow is not using a pinning behavior and this field is omitted,
+      // If the target workflow is not pinned and this field is omitted,
       // the override request will be rejected.
       temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
-
-      // Required if behavior is PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
-      // Ignored if behavior is not PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING.
-      // We will reject overrides that have PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING PinnedOverrideBehavior
-      // and UNSPECIFIED NonPinningPolicy before the batch even starts, but if it somehow sneaks in,
-      // UNSPECIFIED will be treated the same as REJECT.
-      NonPinningPolicy if_not_pinning = 3;
     }
 
-    // "Pinning behaviors" refers to behaviors in which a workflow is explicitly assigned
-    // to a particular version. Currently, the pinning behaviors are:
-    //   - PINNED
-    //   - PINNED_UNTIL_CONTINUE_AS_NEW
-    //
-    // `PinnedOverrideBehavior` controls how the override interacts with existing pinning
-    // behaviors and with workflows that are not currently pinned.
     enum PinnedOverrideBehavior {
       // Unspecified behavior.
       PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED = 0;
 
-      // Force the workflow to use the PINNED pinning behavior, regardless of its current
-      // versioning behavior.
+      // Make the effect behavior of the workflow Pinned.
       PINNED_OVERRIDE_BEHAVIOR_PINNED = 1;
-
-      // Force the workflow to use the PINNED_UNTIL_CONTINUE_AS_NEW pinning behavior,
-      // regardless of its current versioning behavior.
-      PINNED_OVERRIDE_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW = 2;
-
-      // If the workflow is already using a pinning behavior (PINNED or
-      // PINNED_UNTIL_CONTINUE_AS_NEW), keep its existing behavior.
-      // Use if_not_pinning to specify how to treat other workflows.
-      PINNED_OVERRIDE_BEHAVIOR_KEEP_IF_PINNING = 3;
     }
 
     // Describes how a Pinning behavior override that keeps original pinning behavior

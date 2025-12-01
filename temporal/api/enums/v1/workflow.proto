@@ -171,18 +171,15 @@ enum VersioningBehavior {
     // Workflows stuck on a backlogged activity will still auto-upgrade if their Target Version
     // changes, without having to wait for the backlogged activity to complete on the old Version.
     VERSIONING_BEHAVIOR_AUTO_UPGRADE = 2;
-    // The same semantics as PINNED, with the exception of Continue-As-New.
-    // When a PINNED_UNTIL_CONTINUE_AS_NEW workflow continues-as-new, the new execution
-    // will start on the workflow's Target Version, with AUTO_UPGRADE behavior.
-    // On the first workflow task completion of the new run, the workflow will assume
-    // the behavior specified for that workflow type on the Target Version. If that
-    // behavior is also PINNED_UNTIL_CONTINUE_AS_NEW, the new run will now be pinned to
-    // that version until the next time it continues-as-new.
-    //
-    // When the Target Version of a PINNED_UNTIL_CONTINUE_AS_NEW workflow is different
-    // from its Pinned Version, the workflow's continue_as_new_suggested flag will be true,
-    // so that these workflows can tell when continuing-as-new would cause a version change.
-    VERSIONING_BEHAVIOR_PINNED_UNTIL_CONTINUE_AS_NEW = 3;
+}
+
+// Defines the versioning behavior to be used by the first task of a new workflow run in a continue-as-new chain.
+enum ContinueAsNewVersioningBehavior {
+  CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED = 0;
+
+  // Start the new run with AutoUpgrade behavior. Use the Current or Ramping version of the workflow's task queue,
+  // just like auto upgrade.
+  CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE = 1;
 }
 
 // SuggestContinueAsNewReason specifies why SuggestContinueAsNew is true.
@@ -199,6 +196,6 @@ enum SuggestContinueAsNewReason {
     SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_UPDATES = 3;
 
     // Workflow's Target Worker Deployment Version is different from its
-    // Pinned Version and the workflow's Versioning Behavior is PinnedUntilContinueAsNew.
+    // Pinned Version and the workflow is versioned.
     SUGGEST_CONTINUE_AS_NEW_REASON_TARGET_WORKER_DEPLOYMENT_VERSION_CHANGED = 4;
 }

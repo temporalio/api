@@ -7256,6 +7256,45 @@ components:
           type: string
           description: More detailed breakdown of ACTIVITY_EXECUTION_STATUS_RUNNING.
           format: enum
+        taskQueue:
+          $ref: '#/components/schemas/TaskQueue'
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Indicates how long the caller is willing to wait for an activity completion. Limits how long
+             retries will be attempted.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        scheduleToStartTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Limits time an activity task can stay in a task queue before a worker picks it up. This
+             timeout is always non retryable, as all a retry would achieve is to put it back into the same
+             queue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not
+             specified.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        startToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Maximum time an activity is allowed to execute after being picked up by a worker. This
+             timeout is always retryable.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        heartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Maximum permitted time between successful worker heartbeats.
+        retryPolicy:
+          allOf:
+            - $ref: '#/components/schemas/RetryPolicy'
+          description: The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
         heartbeatDetails:
           allOf:
             - $ref: '#/components/schemas/Payloads'
@@ -7285,6 +7324,10 @@ components:
         expirationTime:
           type: string
           description: Scheduled time + schedule to close timeout.
+          format: date-time
+        closeTime:
+          type: string
+          description: Time when the activity transitioned to a closed state.
           format: date-time
         lastFailure:
           allOf:
@@ -13748,12 +13791,15 @@ components:
         runId:
           type: string
           description: Activity run ID, targets the latest run if run_id is empty.
-        reason:
-          type: string
-          description: Reason for requesting the termination, recorded in in the activity's result failure outcome.
         identity:
           type: string
           description: The identity of the worker/client.
+        requestId:
+          type: string
+          description: Used to de-dupe cancellation requests.
+        reason:
+          type: string
+          description: Reason for requesting the termination, recorded in in the activity's result failure outcome.
     TerminateActivityExecutionResponse:
       type: object
       properties: {}

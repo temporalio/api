@@ -9775,13 +9775,17 @@
           "type": "string",
           "description": "Activity run ID, targets the latest run if run_id is empty."
         },
-        "reason": {
-          "type": "string",
-          "description": "Reason for requesting the termination, recorded in in the activity's result failure outcome."
-        },
         "identity": {
           "type": "string",
           "description": "The identity of the worker/client."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "Used to de-dupe termination requests."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for requesting the termination, recorded in in the activity's result failure outcome."
         }
       }
     },
@@ -10361,6 +10365,29 @@
           "$ref": "#/definitions/v1PendingActivityState",
           "description": "More detailed breakdown of ACTIVITY_EXECUTION_STATUS_RUNNING."
         },
+        "taskQueue": {
+          "$ref": "#/definitions/v1TaskQueue"
+        },
+        "scheduleToCloseTimeout": {
+          "type": "string",
+          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted.\n"
+        },
+        "scheduleToStartTimeout": {
+          "type": "string",
+          "description": "Limits time an activity task can stay in a task queue before a worker picks it up. This\ntimeout is always non retryable, as all a retry would achieve is to put it back into the same\nqueue. Defaults to `schedule_to_close_timeout`.\n"
+        },
+        "startToCloseTimeout": {
+          "type": "string",
+          "description": "Maximum time a single activity attempt is allowed to execute after being picked up by a worker. This\ntimeout is always retryable.\n"
+        },
+        "heartbeatTimeout": {
+          "type": "string",
+          "description": "Maximum permitted time between successful worker heartbeats."
+        },
+        "retryPolicy": {
+          "$ref": "#/definitions/v1RetryPolicy",
+          "description": "The retry policy for the activity. Will never exceed `schedule_to_close_timeout`."
+        },
         "heartbeatDetails": {
           "$ref": "#/definitions/v1Payloads",
           "description": "Details provided in the last recorded activity heartbeat."
@@ -10393,6 +10420,11 @@
           "type": "string",
           "format": "date-time",
           "description": "Scheduled time + schedule to close timeout."
+        },
+        "closeTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time when the activity transitioned to a closed state."
         },
         "lastFailure": {
           "$ref": "#/definitions/apifailurev1Failure",

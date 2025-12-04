@@ -67,7 +67,7 @@ message ActivityExecutionInfo {
     // More detailed breakdown of ACTIVITY_EXECUTION_STATUS_RUNNING.
     temporal.api.enums.v1.PendingActivityState run_state = 5;
 
-    temporal.api.taskqueue.v1.TaskQueue task_queue = 6;
+    string task_queue = 6;
 
     // Indicates how long the caller is willing to wait for an activity completion. Limits how long
     // retries will be attempted.
@@ -105,9 +105,10 @@ message ActivityExecutionInfo {
     // Incremented each time a new attempt is started.
     // TODO(dandavison): Confirm if this is on scheduled or started.
     int32 attempt = 15;
-    int32 maximum_attempts = 16;
+    // How long this activity has been running for, including all attempts and backoff between attempts.
+    google.protobuf.Duration execution_duration = 16;
     // Time the activity was originally scheduled via a StartActivityExecution request.
-    google.protobuf.Timestamp scheduled_time = 17;
+    google.protobuf.Timestamp schedule_time = 17;
     // Scheduled time + schedule to close timeout.
     google.protobuf.Timestamp expiration_time = 18;
     // Time when the activity transitioned to a closed state.
@@ -166,9 +167,7 @@ message ActivityExecutionListInfo {
     // The type of the activity, a string that maps to a registered activity on a worker.
     temporal.api.common.v1.ActivityType activity_type = 3;
     // Time the activity was originally scheduled via a StartActivityExecution request.
-    // TODO: Workflows call this schedule_time but it's scheduled_time in PendingActivityInfo, what should we choose for
-    // consistency?
-    google.protobuf.Timestamp scheduled_time = 4;
+    google.protobuf.Timestamp schedule_time = 4;
     // If the activity is in a terminal status, this field represents the time the activity transitioned to that status.
     google.protobuf.Timestamp close_time = 5;
     // Only scheduled and terminal statuses appear here. More detailed information in PendingActivityInfo but not

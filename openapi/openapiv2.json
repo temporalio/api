@@ -8208,6 +8208,10 @@
         "queryRejectCondition": {
           "$ref": "#/definitions/v1QueryRejectCondition",
           "description": "QueryRejectCondition can used to reject the query if workflow state does not satisfy condition.\nDefault: QUERY_REJECT_CONDITION_NONE."
+        },
+        "pinnedQueryFallback": {
+          "$ref": "#/definitions/v1PinnedQueryFallback",
+          "description": "Specifies the fallback behavior for Queries sent to Pinned Workflow executions."
         }
       }
     },
@@ -13342,6 +13346,29 @@
       ],
       "default": "PENDING_WORKFLOW_TASK_STATE_UNSPECIFIED"
     },
+    "v1PinnedQueryFallback": {
+      "type": "string",
+      "enum": [
+        "PINNED_QUERY_FALLBACK_UNSPECIFIED",
+        "PINNED_QUERY_FALLBACK_NEXT_PINNED_WITH_POLLERS"
+      ],
+      "default": "PINNED_QUERY_FALLBACK_UNSPECIFIED",
+      "description": "Specifies the fallback behavior for Queries, of a Pinned workflow execution, that are sent to a Drained and poller less version.\n\n - PINNED_QUERY_FALLBACK_UNSPECIFIED: This is the default behavior. Queries will not fallback to any other version by default.\n - PINNED_QUERY_FALLBACK_NEXT_PINNED_WITH_POLLERS: The Query will be sent to the next Pinned Version that has pollers. \nIf no such version exists, the Query will return an error."
+    },
+    "v1PinnedQueryFallbackInfo": {
+      "type": "object",
+      "properties": {
+        "pinnedDeploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
+          "description": "The Deployment Version to which the Query was Pinned."
+        },
+        "fallbackDeploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
+          "description": "The Deployment Version to which the Query was sent."
+        }
+      },
+      "description": "Used as part of QueryWorkflowResponse to indicate that a Query, of a Pinned workflow execution, fell back and \nwas executed by workers of a different version."
+    },
     "v1PluginInfo": {
       "type": "object",
       "properties": {
@@ -13669,6 +13696,10 @@
         },
         "queryRejected": {
           "$ref": "#/definitions/v1QueryRejected"
+        },
+        "pinnedQueryFallbackInfo": {
+          "$ref": "#/definitions/v1PinnedQueryFallbackInfo",
+          "description": "Only populated when a Query of a Pinned workflow execution gets executed by workers of a different version \nbecause the workflow's Pinned Version was Drained and had no available pollers."
         }
       }
     },

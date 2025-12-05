@@ -13442,12 +13442,14 @@ components:
         pinned:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride_PinnedOverride'
-          description: Send the next workflow task to the Version specified in the override.
+          description: |-
+            Override the workflow to have Pinned behavior, optionally specifying a pinned
+             deployment version.
         autoUpgrade:
           type: boolean
           description: |-
-            Send the next workflow task to the Current Deployment Version
-             of its Task Queue when the next workflow task is dispatched.
+            Override the workflow to use AutoUpgrade. The next workflow task will be sent
+             to the current deployment version of the workflow's task queue.
         behavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
@@ -13474,12 +13476,14 @@ components:
              Deprecated. Use `override.pinned.version`.
       description: |-
         Used to override the versioning behavior (and pinned deployment version, if applicable) of a
-         specific workflow execution. If set, takes precedence over the worker-sent values. See
-         `WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call
-         `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
-         to indicate that it should be mutated.
-         Pinned overrides are automatically inherited by child workflows, continue-as-new workflows,
-         workflow retries, and cron workflows.
+         specific workflow execution. If set, this override takes precedence over worker-sent values.
+         See `WorkflowExecutionInfo.VersioningInfo` for more information.
+
+         To remove the override, call `UpdateWorkflowExecutionOptions` with a null
+         `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
+
+         Pinned behavior overrides are automatically inherited by child workflows, workflow retries, continue-as-new
+         workflows, and cron workflows.
     VersioningOverride_PinnedOverride:
       type: object
       properties:
@@ -13495,7 +13499,15 @@ components:
         version:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: Required.
+          description: |-
+            Required if the target workflow is not already pinned to a version.
+
+             If the target workflow is already pinned and this field is omitted,
+             the effective pinned version will be the existing pinned version.
+
+             If the target workflow is not pinned and this field is omitted,
+             the override request will be rejected.
+      description: Describes which PinnedOverrideBehavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
     WaitPolicy:
       type: object
       properties:
@@ -14287,6 +14299,17 @@ components:
             If this is set, the new execution inherits the Build ID of the current execution. Otherwise,
              the assignment rules will be used to independently assign a Build ID to the new execution.
              Deprecated. Only considered for versioning v0.2.
+        initialVersioningBehavior:
+          enum:
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_INHERIT_PINNED_VERSION
+          type: string
+          description: |-
+            Optionally decide the versioning behavior that the first task of the new run should use.
+
+             Set this to AutoUpgrade to start on the Current/Ramping version of the new run's task queue
+             regardless of the previous run's versioning behavior.
+          format: enum
     WorkflowExecutionExtendedInfo:
       type: object
       properties:
@@ -14754,13 +14777,15 @@ components:
              Child of pinned parent will inherit the parent's version if the Child's Task Queue belongs to that version.
 
              A new run initiated by workflow ContinueAsNew of pinned run, will inherit the previous run's version if the
-             new run's Task Queue belongs to that version.
+             new run's Task Queue belongs to that version, and if the `initial_versioning_behavior` in the continue-as-new
+             request is `CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_INHERIT_PINNED_VERSION`.
 
              A new run initiated by workflow Cron will never inherit.
 
-             A new run initiated by workflow Retry will only inherit if the retried run is effectively pinned at the time
-             of retry, and the retried run inherited a pinned version when it started (ie. it is a child of a pinned
-             parent, or a CaN of a pinned run, and is running on a Task Queue in the inherited version).
+             A new run initiated by workflow Retry or Continue-as-new will only inherit if the retried/continued-as-new
+             run is effectively pinned at the time of retry/CaN, and the retried/continued-as-new run inherited a pinned
+             version when it started (ie. it is a child of a pinned parent and is running on a Task Queue in the inherited
+             version).
 
              Pinned override is inherited if Task Queue of new run is compatible with the override version.
              Override is inherited separately and takes precedence over inherited base version.
@@ -15399,9 +15424,21 @@ components:
              service would return AlreadyStarted error, and matching would drop the task.
         suggestContinueAsNew:
           type: boolean
+          description: True if this workflow should continue-as-new soon. See `suggest_continue_as_new_reasons` for why.
+        suggestContinueAsNewReasons:
+          type: array
+          items:
+            enum:
+              - SUGGEST_CONTINUE_AS_NEW_REASON_UNSPECIFIED
+              - SUGGEST_CONTINUE_AS_NEW_REASON_HISTORY_SIZE_TOO_LARGE
+              - SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_HISTORY_EVENTS
+              - SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_UPDATES
+              - SUGGEST_CONTINUE_AS_NEW_REASON_TARGET_WORKER_DEPLOYMENT_VERSION_CHANGED
+            type: string
+            format: enum
           description: |-
-            True if this workflow should continue-as-new soon because its history size (in
-             either event count or bytes) is getting large.
+            The reason(s) that suggest_continue_as_new is true, if it is.
+             Unset if suggest_continue_as_new is false.
         historySizeBytes:
           type: string
           description: |-

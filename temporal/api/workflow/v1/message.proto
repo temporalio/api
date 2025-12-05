@@ -553,21 +553,26 @@ message WorkflowExecutionOptions {
 }
 
 // Used to override the versioning behavior (and pinned deployment version, if applicable) of a
-// specific workflow execution. If set, takes precedence over the worker-sent values. See
-// `WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call
-// `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
-// to indicate that it should be mutated.
-// Pinned overrides are automatically inherited by child workflows, continue-as-new workflows,
-// workflow retries, and cron workflows.
+// specific workflow execution. If set, this override takes precedence over worker-sent values.
+// See `WorkflowExecutionInfo.VersioningInfo` for more information.
+//
+// To remove the override, call `UpdateWorkflowExecutionOptions` with a null
+// `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
+//
+// Pinned behavior overrides are automatically inherited by child workflows, workflow retries, continue-as-new
+// workflows, and cron workflows.
 message VersioningOverride {
     // Indicates whether to override the workflow to be AutoUpgrade or Pinned.
     oneof override {
-        // Send the next workflow task to the Version specified in the override.
-        PinnedOverride pinned = 3;
-        // Send the next workflow task to the Current Deployment Version
-        // of its Task Queue when the next workflow task is dispatched.
-        bool auto_upgrade = 4;
+      // Override the workflow to have Pinned behavior, optionally specifying a pinned
+      // deployment version.
+      PinnedOverride pinned = 3;
+
+      // Override the workflow to use AutoUpgrade. The next workflow task will be sent
+      // to the current deployment version of the workflow's task queue.
+      bool auto_upgrade = 4;
     }
+
     // Required.
     // Deprecated. Use `override`.
     temporal.api.enums.v1.VersioningBehavior behavior = 1 [deprecated = true];
@@ -583,20 +588,28 @@ message VersioningOverride {
     // Deprecated. Use `override.pinned.version`.
     string pinned_version = 9 [deprecated = true];
 
+    // Describes which PinnedOverrideBehavior to apply and, when needed, which WorkerDeploymentVersion to pin to.
     message PinnedOverride {
-        // Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
-        // See `PinnedOverrideBehavior` for details.
-        PinnedOverrideBehavior behavior = 1;
-        // Required.
-        temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+      // Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
+      // See `PinnedOverrideBehavior` for details.
+      PinnedOverrideBehavior behavior = 1;
+
+      // Required if the target workflow is not already pinned to a version.
+      //
+      // If the target workflow is already pinned and this field is omitted,
+      // the effective pinned version will be the existing pinned version.
+      //
+      // If the target workflow is not pinned and this field is omitted,
+      // the override request will be rejected.
+      temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
     }
 
-    // Used to specify different sub-types of Pinned override that we plan to add in the future.
     enum PinnedOverrideBehavior {
-        // Unspecified.
-        PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED = 0;
-        // Override workflow behavior to be Pinned.
-        PINNED_OVERRIDE_BEHAVIOR_PINNED = 1;
+      // Unspecified behavior.
+      PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED = 0;
+
+      // Make the effective behavior of the workflow Pinned.
+      PINNED_OVERRIDE_BEHAVIOR_PINNED = 1;
     }
 }
 

@@ -1287,4 +1287,95 @@ service WorkflowService {
             body: "*"
         };
     }
+
+    // StartNexusOperation starts a new Nexus operation.
+    //
+    // Returns a `NexusOperationAlreadyStarted` error if an instance already exists with same operation ID in this
+    // namespace unless permitted by the specified ID conflict policy.
+    rpc StartNexusOperation (StartNexusOperationRequest) returns (StartNexusOperationResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/nexus-operations/{operation_id}"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}"
+                body: "*"
+            }
+        };
+    }
+
+    // DescribeNexusOperation returns information about a Nexus operation.
+    // Supported use cases include:
+    // - Get current operation info without waiting
+    // - Long-poll for next state change and return new operation info
+    // Response can optionally include operation input or outcome (if the operation has completed).
+    rpc DescribeNexusOperation (DescribeNexusOperationRequest) returns (DescribeNexusOperationResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus-operations/{operation_id}"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}"
+            }
+        };
+    }
+
+    // PollNexusOperation long-polls for a Nexus operation for a given wait stage to complete and returns
+    // the outcome (result or failure).
+    rpc PollNexusOperation (PollNexusOperationRequest) returns (PollNexusOperationResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus-operations/{operation_id}/poll"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}/poll"
+            }
+        };
+    }
+
+    // ListNexusOperations is a visibility API to list Nexus operations in a specific namespace.
+    rpc ListNexusOperations (ListNexusOperationsRequest) returns (ListNexusOperationsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus-operations"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus-operations"
+            }
+        };
+    }
+
+    // CountNexusOperations is a visibility API to count of Nexus operations in a specific namespace.
+    rpc CountNexusOperations (CountNexusOperationsRequest) returns (CountNexusOperationsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus-operation-count"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus-operation-count"
+            }
+        };
+    }
+
+    // RequestCancelNexusOperation requests cancellation of a Nexus operation.
+    //
+    // Requesting to cancel an operation does not automatically transition the operation to canceled status.
+    // The operation will only transition to canceled status if it supports cancellation and the handler
+    // processes the cancellation request.
+    rpc RequestCancelNexusOperation (RequestCancelNexusOperationRequest) returns (RequestCancelNexusOperationResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/nexus-operations/{operation_id}/cancel"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}/cancel"
+                body: "*"
+            }
+        };
+    }
+
+    // TerminateNexusOperation terminates an existing Nexus operation immediately.
+    //
+    // Termination happens immediately and the operation handler cannot react to it. A terminated operation will have
+    // its outcome set to a failure with a termination reason.
+    rpc TerminateNexusOperation (TerminateNexusOperationRequest) returns (TerminateNexusOperationResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/nexus-operations/{operation_id}/terminate"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}/terminate"
+                body: "*"
+            }
+        };
+    }
 }

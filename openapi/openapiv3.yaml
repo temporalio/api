@@ -1008,6 +1008,323 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/nexus-operation-count:
+    get:
+      tags:
+        - WorkflowService
+      description: CountNexusOperations is a visibility API to count of Nexus operations in a specific namespace.
+      operationId: CountNexusOperations
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: |-
+            Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+             See also ListNexusOperationsRequest for search attributes available for Nexus operations.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountNexusOperationsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/nexus-operations:
+    get:
+      tags:
+        - WorkflowService
+      description: ListNexusOperations is a visibility API to list Nexus operations in a specific namespace.
+      operationId: ListNexusOperations
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          description: Max number of operations to return per page.
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          description: Token returned in ListNexusOperationsResponse.
+          schema:
+            type: string
+            format: bytes
+        - name: query
+          in: query
+          description: |-
+            Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+             Search attributes that are avaialble for Nexus operations include:
+             - OperationId
+             - RunId
+             - Endpoint
+             - Service
+             - Operation
+             - RequestId
+             - StartTime
+             - ExecutionTime
+             - CloseTime
+             - ExecutionStatus
+             - ExecutionDuration
+             - StateTransitionCount
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListNexusOperationsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/nexus-operations/{operationId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeNexusOperation returns information about a Nexus operation.
+         Supported use cases include:
+         - Get current operation info without waiting
+         - Long-poll for next state change and return new operation info
+         Response can optionally include operation input or outcome (if the operation has completed).
+      operationId: DescribeNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Operation run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+        - name: includeInput
+          in: query
+          description: Include the input field in the response.
+          schema:
+            type: boolean
+        - name: includeOutcome
+          in: query
+          description: Include the outcome (result/failure) in the response if the operation has completed.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            Token from a previous DescribeNexusOperationResponse. If present, long-poll until operation
+             state changes from the state encoded in this token. If absent, return current state immediately.
+             If present, run_id must also be present.
+             Note that operation state may change multiple times between requests, therefore it is not
+             guaranteed that a client making a sequence of long-poll requests will see a complete
+             sequence of state changes.
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        StartNexusOperation starts a new Nexus operation.
+
+         Returns a `NexusOperationAlreadyStarted` error if an instance already exists with same operation ID in this
+         namespace unless permitted by the specified ID conflict policy.
+      operationId: StartNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartNexusOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/nexus-operations/{operationId}/cancel:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RequestCancelNexusOperation requests cancellation of a Nexus operation.
+
+         Requesting to cancel an operation does not automatically transition the operation to canceled status.
+         The operation will only transition to canceled status if it supports cancellation and the handler
+         processes the cancellation request.
+      operationId: RequestCancelNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCancelNexusOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestCancelNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/nexus-operations/{operationId}/poll:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollNexusOperation long-polls for a Nexus operation for a given wait stage to complete and returns
+         the outcome (result or failure).
+      operationId: PollNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Operation run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+        - name: waitStage
+          in: query
+          description: Stage to wait for. The operation may be in a more advanced stage when the poll is unblocked.
+          schema:
+            enum:
+              - NEXUS_OPERATION_WAIT_STAGE_UNSPECIFIED
+              - NEXUS_OPERATION_WAIT_STAGE_STARTED
+              - NEXUS_OPERATION_WAIT_STAGE_CLOSED
+            type: string
+            format: enum
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/nexus-operations/{operationId}/terminate:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        TerminateNexusOperation terminates an existing Nexus operation immediately.
+
+         Termination happens immediately and the operation handler cannot react to it. A terminated operation will have
+         its outcome set to a failure with a termination reason.
+      operationId: TerminateNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminateNexusOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/schedules:
     get:
       tags:
@@ -4491,6 +4808,323 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/nexus-operation-count:
+    get:
+      tags:
+        - WorkflowService
+      description: CountNexusOperations is a visibility API to count of Nexus operations in a specific namespace.
+      operationId: CountNexusOperations
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: |-
+            Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+             See also ListNexusOperationsRequest for search attributes available for Nexus operations.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountNexusOperationsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/nexus-operations:
+    get:
+      tags:
+        - WorkflowService
+      description: ListNexusOperations is a visibility API to list Nexus operations in a specific namespace.
+      operationId: ListNexusOperations
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          description: Max number of operations to return per page.
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          description: Token returned in ListNexusOperationsResponse.
+          schema:
+            type: string
+            format: bytes
+        - name: query
+          in: query
+          description: |-
+            Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+             Search attributes that are avaialble for Nexus operations include:
+             - OperationId
+             - RunId
+             - Endpoint
+             - Service
+             - Operation
+             - RequestId
+             - StartTime
+             - ExecutionTime
+             - CloseTime
+             - ExecutionStatus
+             - ExecutionDuration
+             - StateTransitionCount
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListNexusOperationsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/nexus-operations/{operationId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeNexusOperation returns information about a Nexus operation.
+         Supported use cases include:
+         - Get current operation info without waiting
+         - Long-poll for next state change and return new operation info
+         Response can optionally include operation input or outcome (if the operation has completed).
+      operationId: DescribeNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Operation run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+        - name: includeInput
+          in: query
+          description: Include the input field in the response.
+          schema:
+            type: boolean
+        - name: includeOutcome
+          in: query
+          description: Include the outcome (result/failure) in the response if the operation has completed.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            Token from a previous DescribeNexusOperationResponse. If present, long-poll until operation
+             state changes from the state encoded in this token. If absent, return current state immediately.
+             If present, run_id must also be present.
+             Note that operation state may change multiple times between requests, therefore it is not
+             guaranteed that a client making a sequence of long-poll requests will see a complete
+             sequence of state changes.
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        StartNexusOperation starts a new Nexus operation.
+
+         Returns a `NexusOperationAlreadyStarted` error if an instance already exists with same operation ID in this
+         namespace unless permitted by the specified ID conflict policy.
+      operationId: StartNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartNexusOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/nexus-operations/{operationId}/cancel:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RequestCancelNexusOperation requests cancellation of a Nexus operation.
+
+         Requesting to cancel an operation does not automatically transition the operation to canceled status.
+         The operation will only transition to canceled status if it supports cancellation and the handler
+         processes the cancellation request.
+      operationId: RequestCancelNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCancelNexusOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestCancelNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/nexus-operations/{operationId}/poll:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollNexusOperation long-polls for a Nexus operation for a given wait stage to complete and returns
+         the outcome (result or failure).
+      operationId: PollNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Operation run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+        - name: waitStage
+          in: query
+          description: Stage to wait for. The operation may be in a more advanced stage when the poll is unblocked.
+          schema:
+            enum:
+              - NEXUS_OPERATION_WAIT_STAGE_UNSPECIFIED
+              - NEXUS_OPERATION_WAIT_STAGE_STARTED
+              - NEXUS_OPERATION_WAIT_STAGE_CLOSED
+            type: string
+            format: enum
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/nexus-operations/{operationId}/terminate:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        TerminateNexusOperation terminates an existing Nexus operation immediately.
+
+         Termination happens immediately and the operation handler cannot react to it. A terminated operation will have
+         its outcome set to a failure with a termination reason.
+      operationId: TerminateNexusOperation
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminateNexusOperationRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateNexusOperationResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/schedules:
     get:
       tags:
@@ -7688,6 +8322,33 @@ components:
           type: string
           description: Time of the last update.
           format: date-time
+    CountNexusOperationsResponse:
+      type: object
+      properties:
+        count:
+          type: string
+          description: |-
+            If `query` is not grouping by any field, the count is an approximate number
+             of operations that match the query.
+             If `query` is grouping by a field, the count is simply the sum of the counts
+             of the groups returned in the response. This number can be smaller than the
+             total number of operations matching the query.
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountNexusOperationsResponse_AggregationGroup'
+          description: |-
+            Contains the groups if the request is grouping by a field.
+             The list might not be complete, and the counts of each group is approximate.
+    CountNexusOperationsResponse_AggregationGroup:
+      type: object
+      properties:
+        groupValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payload'
+        count:
+          type: string
     CountWorkflowExecutionsResponse:
       type: object
       properties:
@@ -8016,6 +8677,34 @@ components:
           description: |-
             Contains the historical state of failover_versions for the cluster, truncated to contain only the last N
              states to ensure that the list does not grow unbounded.
+    DescribeNexusOperationResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run ID of the operation, useful when run_id was not specified in the request.
+        info:
+          allOf:
+            - $ref: '#/components/schemas/NexusOperationInfo'
+          description: Information about the operation.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Serialized operation input, passed as the request payload.
+             Only set if include_input was true in the request.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: The result if the operation completed successfully.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The failure if the operation completed unsuccessfully.
+        longPollToken:
+          type: string
+          description: Token for follow-on long-poll requests. Absent only if the operation is complete.
+          format: bytes
     DescribeScheduleResponse:
       type: object
       properties:
@@ -8979,6 +9668,8 @@ components:
           $ref: '#/components/schemas/Link_WorkflowEvent'
         batchJob:
           $ref: '#/components/schemas/Link_BatchJob'
+        nexusOperation:
+          $ref: '#/components/schemas/Link_NexusOperation'
       description: |-
         Link can be associated with history events. It might contain information about an external entity
          related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
@@ -8993,6 +9684,16 @@ components:
         A link to a built-in batch job.
          Batch jobs can be used to perform operations on a set of workflows (e.g. terminate, signal, cancel, etc).
          This link can be put on workflow history events generated by actions taken by a batch job.
+    Link_NexusOperation:
+      type: object
+      properties:
+        namespace:
+          type: string
+        operationId:
+          type: string
+        runId:
+          type: string
+      description: A link to a standalone Nexus operation.
     Link_WorkflowEvent:
       type: object
       properties:
@@ -9059,6 +9760,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Endpoint'
+    ListNexusOperationsResponse:
+      type: object
+      properties:
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/NexusOperationListInfo'
+        nextPageToken:
+          type: string
+          description: Token to use to fetch the next page. If empty, there is no next page.
+          format: bytes
     ListScheduleMatchingTimesResponse:
       type: object
       properties:
@@ -9611,6 +10323,180 @@ components:
         operationToken:
           type: string
           description: Operation token - may be empty if the operation completed synchronously.
+    NexusOperationInfo:
+      type: object
+      properties:
+        operationId:
+          type: string
+          description: Unique identifier of this Nexus operation within its namespace along with run ID (below).
+        runId:
+          type: string
+        endpoint:
+          type: string
+          description: Endpoint name, resolved to a URL via the cluster's endpoint registry.
+        service:
+          type: string
+          description: Service name.
+        operation:
+          type: string
+          description: Operation name.
+        status:
+          enum:
+            - NEXUS_OPERATION_STATUS_UNSPECIFIED
+            - NEXUS_OPERATION_STATUS_RUNNING
+            - NEXUS_OPERATION_STATUS_COMPLETED
+            - NEXUS_OPERATION_STATUS_FAILED
+            - NEXUS_OPERATION_STATUS_CANCELED
+            - NEXUS_OPERATION_STATUS_TERMINATED
+            - NEXUS_OPERATION_STATUS_TIMED_OUT
+          type: string
+          description: A general status for this operation, indicates whether it is currently running or in one of the terminal statuses.
+          format: enum
+        state:
+          enum:
+            - PENDING_NEXUS_OPERATION_STATE_UNSPECIFIED
+            - PENDING_NEXUS_OPERATION_STATE_SCHEDULED
+            - PENDING_NEXUS_OPERATION_STATE_BACKING_OFF
+            - PENDING_NEXUS_OPERATION_STATE_STARTED
+            - PENDING_NEXUS_OPERATION_STATE_BLOCKED
+          type: string
+          description: More detailed breakdown of NEXUS_OPERATION_EXECUTION_STATUS_RUNNING.
+          format: enum
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this operation.
+             This is the only timeout settable for a Nexus operation.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to start/deliver the operation request.
+             This number represents a minimum bound since the attempt is incremented after the request completes.
+          format: int32
+        scheduleTime:
+          type: string
+          description: Time the operation was originally scheduled via a StartNexusOperation request.
+          format: date-time
+        expirationTime:
+          type: string
+          description: Scheduled time + schedule to close timeout.
+          format: date-time
+        closeTime:
+          type: string
+          description: Time when the operation transitioned to a closed state.
+          format: date-time
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled.
+          format: date-time
+        executionDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: How long this operation has been running for, including all attempts and backoff between attempts.
+        cancellationInfo:
+          $ref: '#/components/schemas/NexusOperationCancellationInfo'
+        blockedReason:
+          type: string
+          description: If the state is BLOCKED, blocked reason provides additional information.
+        requestId:
+          type: string
+          description: |-
+            Request ID allocated by the server when handling the StartNexusOperation request.
+             Used as an idempotency token for submitting start requests to the handler.
+        operationToken:
+          type: string
+          description: Operation token. Only set for asynchronous operations after a successful StartOperation call.
+        stateTransitionCount:
+          type: string
+          description: Incremented each time the operation's state is mutated in persistence.
+        searchAttributes:
+          $ref: '#/components/schemas/SearchAttributes'
+        nexusHeader:
+          type: object
+          additionalProperties:
+            type: string
+          description: Header for context propagation and tracing purposes.
+        userMetadata:
+          allOf:
+            - $ref: '#/components/schemas/UserMetadata'
+          description: Metadata for use by user interfaces to display the fixed as-of-start summary and details of the operation.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links attached by the handler of this operation on start or completion.
+      description: Information about a standalone Nexus operation.
+    NexusOperationListInfo:
+      type: object
+      properties:
+        operationId:
+          type: string
+          description: A unique identifier of this operation within its namespace along with run ID (below).
+        runId:
+          type: string
+          description: The run ID of the standalone Nexus operation.
+        endpoint:
+          type: string
+          description: Endpoint name.
+        service:
+          type: string
+          description: Service name.
+        operation:
+          type: string
+          description: Operation name.
+        scheduleTime:
+          type: string
+          description: Time the operation was originally scheduled via a StartNexusOperation request.
+          format: date-time
+        closeTime:
+          type: string
+          description: If the operation is in a terminal status, this field represents the time the operation transitioned to that status.
+          format: date-time
+        status:
+          enum:
+            - NEXUS_OPERATION_STATUS_UNSPECIFIED
+            - NEXUS_OPERATION_STATUS_RUNNING
+            - NEXUS_OPERATION_STATUS_COMPLETED
+            - NEXUS_OPERATION_STATUS_FAILED
+            - NEXUS_OPERATION_STATUS_CANCELED
+            - NEXUS_OPERATION_STATUS_TERMINATED
+            - NEXUS_OPERATION_STATUS_TIMED_OUT
+          type: string
+          description: |-
+            Only scheduled and terminal statuses appear here. More detailed information in PendingNexusOperationInfo but not
+             available in the list response.
+          format: enum
+        searchAttributes:
+          allOf:
+            - $ref: '#/components/schemas/SearchAttributes'
+          description: Search attributes from the start request.
+        stateTransitionCount:
+          type: string
+          description: Updated on terminal status.
+        stateSizeBytes:
+          type: string
+          description: Updated once on scheduled and once on terminal status.
+        executionDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            The difference between close time and scheduled time.
+             This field is only populated if the operation is closed.
+      description: |-
+        Limited Nexus operation information returned in the list response.
+         When adding fields here, ensure that it is also present in NexusOperationInfo (note that it may already be present in
+         NexusOperationInfo but not at the top-level).
     NexusOperationScheduledEventAttributes:
       type: object
       properties:
@@ -10090,6 +10976,31 @@ components:
         version:
           type: string
           description: The version of the plugin, may be empty.
+    PollNexusOperationResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run ID of the operation, useful when run_id was not specified in the request.
+        waitStage:
+          enum:
+            - NEXUS_OPERATION_WAIT_STAGE_UNSPECIFIED
+            - NEXUS_OPERATION_WAIT_STAGE_STARTED
+            - NEXUS_OPERATION_WAIT_STAGE_CLOSED
+          type: string
+          description: Stage to wait for. The operation may be in a more advanced stage when the poll is unblocked.
+          format: enum
+        operationToken:
+          type: string
+          description: Operation token. Only populated for asynchronous operations after a successful StartOperation call.
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: The result if the operation completed successfully.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The failure if the operation completed unsuccessfully.
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -10650,6 +11561,28 @@ components:
         reason:
           type: string
           description: Reason for requesting the cancellation
+    RequestCancelNexusOperationRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        operationId:
+          type: string
+        runId:
+          type: string
+          description: Operation run ID, targets the latest run if empty.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        requestId:
+          type: string
+          description: Used to de-dupe cancellation requests.
+        reason:
+          type: string
+          description: Reason for requesting the cancellation, recorded and available via the DescribeNexusOperation API.
+    RequestCancelNexusOperationResponse:
+      type: object
+      properties: {}
     RequestCancelWorkflowExecutionRequest:
       type: object
       properties:
@@ -12245,6 +13178,89 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata
+    StartNexusOperationRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        requestId:
+          type: string
+          description: A unique identifier for this start request. Typically UUIDv4.
+        operationId:
+          type: string
+        endpoint:
+          type: string
+          description: Endpoint name, resolved to a URL via the cluster's endpoint registry.
+        service:
+          type: string
+          description: Service name.
+        operation:
+          type: string
+          description: Operation name.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this operation.
+             This is the only timeout settable for a Nexus operation.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: Serialized input to the operation. Passed as the request payload.
+        idReusePolicy:
+          enum:
+            - NEXUS_OPERATION_ID_REUSE_POLICY_UNSPECIFIED
+            - NEXUS_OPERATION_ID_REUSE_POLICY_ALLOW_DUPLICATE
+            - NEXUS_OPERATION_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY
+            - NEXUS_OPERATION_ID_REUSE_POLICY_REJECT_DUPLICATE
+          type: string
+          description: |-
+            Defines whether to allow re-using the operation id from a previously *closed* operation.
+             The default policy is NEXUS_OPERATION_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+          format: enum
+        idConflictPolicy:
+          enum:
+            - NEXUS_OPERATION_ID_CONFLICT_POLICY_UNSPECIFIED
+            - NEXUS_OPERATION_ID_CONFLICT_POLICY_FAIL
+            - NEXUS_OPERATION_ID_CONFLICT_POLICY_USE_EXISTING
+          type: string
+          description: |-
+            Defines how to resolve an operation id conflict with a *running* operation.
+             The default policy is NEXUS_OPERATION_ID_CONFLICT_POLICY_FAIL.
+          format: enum
+        searchAttributes:
+          allOf:
+            - $ref: '#/components/schemas/SearchAttributes'
+          description: Search attributes for indexing.
+        nexusHeader:
+          type: object
+          additionalProperties:
+            type: string
+          description: |-
+            Header to attach to the Nexus request.
+             Users are responsible for encrypting sensitive data in this header as it is stored in workflow history and
+             transmitted to external services as-is.
+             This is useful for propagating tracing information.
+             Note these headers are not the same as Temporal headers on internal activities and child workflows, these are
+             transmitted to Nexus operations that may be external and are not traditional payloads.
+        userMetadata:
+          allOf:
+            - $ref: '#/components/schemas/UserMetadata'
+          description: Metadata for use by user interfaces to display the fixed as-of-start summary and details of the operation.
+    StartNexusOperationResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run ID of the operation that was started - or used (via NEXUS_OPERATION_ID_CONFLICT_POLICY_USE_EXISTING).
+        started:
+          type: boolean
+          description: If true, a new operation was started.
     StartWorkflowExecutionRequest:
       type: object
       properties:
@@ -12726,6 +13742,28 @@ components:
           description: Last time versioning information of this Task Queue changed.
           format: date-time
       description: Experimental. Worker Deployments are experimental and might significantly change in the future.
+    TerminateNexusOperationRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        operationId:
+          type: string
+        runId:
+          type: string
+          description: Operation run ID, targets the latest run if empty.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        requestId:
+          type: string
+          description: Used to de-dupe termination requests.
+        reason:
+          type: string
+          description: Reason for requesting the termination, recorded in the operation's result failure outcome.
+    TerminateNexusOperationResponse:
+      type: object
+      properties: {}
     TerminateWorkflowExecutionRequest:
       type: object
       properties:

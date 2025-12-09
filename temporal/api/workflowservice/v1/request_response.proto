@@ -999,10 +999,15 @@ message ResetStickyTaskQueueResponse {
 
 message ShutdownWorkerRequest {
     string namespace = 1;
+    // sticky_task_queue may not always be populated. We want to ensure all workers
+    // send a shutdown request to update worker state for heartbeating, as well
+    // as cancel pending poll calls early, instead of waiting for timeouts.
     string sticky_task_queue = 2;
     string identity = 3;
     string reason = 4;
 
+    // WorkerHeartbeat contains a list of Worker Instance Keys for all workers
+    // that are shutting down.
     temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat = 5;
 }
 

@@ -793,9 +793,9 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        GetActivityExecutionOutcome long-polls for an activity execution to complete and returns
-         the outcome (result or failure).
-      operationId: GetActivityExecutionOutcome
+        PollActivityExecution long-polls for an activity execution to complete and returns the
+         outcome (result or failure).
+      operationId: PollActivityExecution
       parameters:
         - name: namespace
           in: path
@@ -818,7 +818,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetActivityExecutionOutcomeResponse'
+                $ref: '#/components/schemas/PollActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -4579,9 +4579,9 @@ paths:
       tags:
         - WorkflowService
       description: |-
-        GetActivityExecutionOutcome long-polls for an activity execution to complete and returns
-         the outcome (result or failure).
-      operationId: GetActivityExecutionOutcome
+        PollActivityExecution long-polls for an activity execution to complete and returns the
+         outcome (result or failure).
+      operationId: PollActivityExecution
       parameters:
         - name: namespace
           in: path
@@ -4604,7 +4604,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetActivityExecutionOutcomeResponse'
+                $ref: '#/components/schemas/PollActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -7257,7 +7257,7 @@ components:
           description: More detailed breakdown of ACTIVITY_EXECUTION_STATUS_RUNNING.
           format: enum
         taskQueue:
-          $ref: '#/components/schemas/TaskQueue'
+          type: string
         scheduleToCloseTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
@@ -7313,10 +7313,11 @@ components:
              Incremented each time a new attempt is started.
              TODO(dandavison): Confirm if this is on scheduled or started.
           format: int32
-        maximumAttempts:
-          type: integer
-          format: int32
-        scheduledTime:
+        executionDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: How long this activity has been running for, including all attempts and backoff between attempts.
+        scheduleTime:
           type: string
           description: Time the activity was originally scheduled via a StartActivityExecution request.
           format: date-time
@@ -7364,10 +7365,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata.
-        activityOptions:
-          allOf:
-            - $ref: '#/components/schemas/ActivityOptions'
-          description: Current activity options. May be different from the one used to start the activity.
         stateTransitionCount:
           type: string
           description: Incremented each time the activity's state is mutated in persistence.
@@ -7388,23 +7385,17 @@ components:
       properties:
         activityId:
           type: string
-          description: For standalone activity - a unique identifier of this activity within its namespace along with run ID (below).
+          description: A unique identifier of this activity within its namespace along with run ID (below).
         runId:
           type: string
-          description: The run ID of the workflow or standalone activity.
-        workflowId:
-          type: string
-          description: Workflow that contains this activity - only present for workflow activity.
+          description: The run ID of the standalone activity.
         activityType:
           allOf:
             - $ref: '#/components/schemas/ActivityType'
           description: The type of the activity, a string that maps to a registered activity on a worker.
-        scheduledTime:
+        scheduleTime:
           type: string
-          description: |-
-            Time the activity was originally scheduled via a StartActivityExecution request.
-             TODO: Workflows call this schedule_time but it's scheduled_time in PendingActivityInfo, what should we choose for
-             consistency?
+          description: Time the activity was originally scheduled via a StartActivityExecution request.
           format: date-time
         closeTime:
           type: string
@@ -7447,6 +7438,18 @@ components:
         Limited activity information returned in the list response.
          When adding fields here, ensure that it is also present in ActivityExecutionInfo (note that it
          may already be present in ActivityExecutionInfo but not at the top-level).
+    ActivityExecutionOutcome:
+      type: object
+      properties:
+        result:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: The result if the activity completed successfully.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The failure if the activity completed unsuccessfully.
+      description: 'The outcome of a completed activity execution: either a successful result or a failure.'
     ActivityFailureInfo:
       type: object
       properties:
@@ -8814,14 +8817,10 @@ components:
           description: |-
             Serialized activity input, passed as arguments to the activity function.
              Only set if include_input was true in the request.
-        result:
+        outcome:
           allOf:
-            - $ref: '#/components/schemas/Payloads'
-          description: The result if the activity completed successfully.
-        failure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: The failure if the activity completed unsuccessfully.
+            - $ref: '#/components/schemas/ActivityExecutionOutcome'
+          description: Only set if the activity is completed and include_outcome was true in the request.
         longPollToken:
           type: string
           description: Token for follow-on long-poll requests. Absent only if the activity is complete.
@@ -9360,20 +9359,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerConfig'
           description: The worker configuration.
-    GetActivityExecutionOutcomeResponse:
-      type: object
-      properties:
-        runId:
-          type: string
-          description: The run ID of the activity, useful when run_id was not specified in the request.
-        result:
-          allOf:
-            - $ref: '#/components/schemas/Payloads'
-          description: The result if the activity completed successfully.
-        failure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: The failure if the activity completed unsuccessfully.
     GetClusterInfoResponse:
       type: object
       properties:
@@ -11016,6 +11001,14 @@ components:
         version:
           type: string
           description: The version of the plugin, may be empty.
+    PollActivityExecutionResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run ID of the activity, useful when run_id was not specified in the request.
+        outcome:
+          $ref: '#/components/schemas/ActivityExecutionOutcome'
     PollWorkflowTaskQueueResponse:
       type: object
       properties:

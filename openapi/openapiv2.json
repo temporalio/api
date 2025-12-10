@@ -852,13 +852,13 @@
     },
     "/api/v1/namespaces/{namespace}/activities/{activityId}/outcome": {
       "get": {
-        "summary": "GetActivityExecutionOutcome long-polls for an activity execution to complete and returns\nthe outcome (result or failure).",
-        "operationId": "GetActivityExecutionOutcome2",
+        "summary": "PollActivityExecution long-polls for an activity execution to complete and returns the\noutcome (result or failure).",
+        "operationId": "PollActivityExecution2",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetActivityExecutionOutcomeResponse"
+              "$ref": "#/definitions/v1PollActivityExecutionResponse"
             }
           },
           "default": {
@@ -5085,13 +5085,13 @@
     },
     "/namespaces/{namespace}/activities/{activityId}/outcome": {
       "get": {
-        "summary": "GetActivityExecutionOutcome long-polls for an activity execution to complete and returns\nthe outcome (result or failure).",
-        "operationId": "GetActivityExecutionOutcome",
+        "summary": "PollActivityExecution long-polls for an activity execution to complete and returns the\noutcome (result or failure).",
+        "operationId": "PollActivityExecution",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1GetActivityExecutionOutcomeResponse"
+              "$ref": "#/definitions/v1PollActivityExecutionResponse"
             }
           },
           "default": {
@@ -10366,7 +10366,7 @@
           "description": "More detailed breakdown of ACTIVITY_EXECUTION_STATUS_RUNNING."
         },
         "taskQueue": {
-          "$ref": "#/definitions/v1TaskQueue"
+          "type": "string"
         },
         "scheduleToCloseTimeout": {
           "type": "string",
@@ -10407,11 +10407,11 @@
           "format": "int32",
           "description": "The attempt this activity is currently on.\nIncremented each time a new attempt is started.\nTODO(dandavison): Confirm if this is on scheduled or started."
         },
-        "maximumAttempts": {
-          "type": "integer",
-          "format": "int32"
+        "executionDuration": {
+          "type": "string",
+          "description": "How long this activity has been running for, including all attempts and backoff between attempts."
         },
-        "scheduledTime": {
+        "scheduleTime": {
           "type": "string",
           "format": "date-time",
           "description": "Time the activity was originally scheduled via a StartActivityExecution request."
@@ -10455,10 +10455,6 @@
           "$ref": "#/definitions/v1Priority",
           "description": "Priority metadata."
         },
-        "activityOptions": {
-          "$ref": "#/definitions/v1ActivityOptions",
-          "description": "Current activity options. May be different from the one used to start the activity."
-        },
         "stateTransitionCount": {
           "type": "string",
           "format": "int64",
@@ -10486,24 +10482,20 @@
       "properties": {
         "activityId": {
           "type": "string",
-          "description": "For standalone activity - a unique identifier of this activity within its namespace along with run ID (below)."
+          "description": "A unique identifier of this activity within its namespace along with run ID (below)."
         },
         "runId": {
           "type": "string",
-          "description": "The run ID of the workflow or standalone activity."
-        },
-        "workflowId": {
-          "type": "string",
-          "description": "Workflow that contains this activity - only present for workflow activity."
+          "description": "The run ID of the standalone activity."
         },
         "activityType": {
           "$ref": "#/definitions/v1ActivityType",
           "description": "The type of the activity, a string that maps to a registered activity on a worker."
         },
-        "scheduledTime": {
+        "scheduleTime": {
           "type": "string",
           "format": "date-time",
-          "title": "Time the activity was originally scheduled via a StartActivityExecution request.\nTODO: Workflows call this schedule_time but it's scheduled_time in PendingActivityInfo, what should we choose for\nconsistency?"
+          "description": "Time the activity was originally scheduled via a StartActivityExecution request."
         },
         "closeTime": {
           "type": "string",
@@ -10538,6 +10530,20 @@
         }
       },
       "description": "Limited activity information returned in the list response.\nWhen adding fields here, ensure that it is also present in ActivityExecutionInfo (note that it\nmay already be present in ActivityExecutionInfo but not at the top-level)."
+    },
+    "v1ActivityExecutionOutcome": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "The result if the activity completed successfully."
+        },
+        "failure": {
+          "$ref": "#/definitions/apifailurev1Failure",
+          "description": "The failure if the activity completed unsuccessfully."
+        }
+      },
+      "description": "The outcome of a completed activity execution: either a successful result or a failure."
     },
     "v1ActivityExecutionStatus": {
       "type": "string",
@@ -12164,13 +12170,9 @@
           "$ref": "#/definitions/v1Payloads",
           "description": "Serialized activity input, passed as arguments to the activity function.\nOnly set if include_input was true in the request."
         },
-        "result": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "The result if the activity completed successfully."
-        },
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "The failure if the activity completed unsuccessfully."
+        "outcome": {
+          "$ref": "#/definitions/v1ActivityExecutionOutcome",
+          "description": "Only set if the activity is completed and include_outcome was true in the request."
         },
         "longPollToken": {
           "type": "string",
@@ -12674,23 +12676,6 @@
         "workerConfig": {
           "$ref": "#/definitions/v1WorkerConfig",
           "description": "The worker configuration."
-        }
-      }
-    },
-    "v1GetActivityExecutionOutcomeResponse": {
-      "type": "object",
-      "properties": {
-        "runId": {
-          "type": "string",
-          "description": "The run ID of the activity, useful when run_id was not specified in the request."
-        },
-        "result": {
-          "$ref": "#/definitions/v1Payloads",
-          "description": "The result if the activity completed successfully."
-        },
-        "failure": {
-          "$ref": "#/definitions/apifailurev1Failure",
-          "description": "The failure if the activity completed unsuccessfully."
         }
       }
     },
@@ -14489,6 +14474,18 @@
         "version": {
           "type": "string",
           "description": "The version of the plugin, may be empty."
+        }
+      }
+    },
+    "v1PollActivityExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The run ID of the activity, useful when run_id was not specified in the request."
+        },
+        "outcome": {
+          "$ref": "#/definitions/v1ActivityExecutionOutcome"
         }
       }
     },

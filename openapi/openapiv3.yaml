@@ -171,7 +171,7 @@ paths:
       description: |-
         RespondActivityTaskFailed is called by workers when processing an activity task fails.
 
-         This results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
+         For workflow activities, this results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
          and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
          no longer valid due to activity timeout, already being completed, or never having existed.
       operationId: RespondActivityTaskCanceled
@@ -245,7 +245,7 @@ paths:
         RespondActivityTaskCompleted is called by workers when they successfully complete an activity
          task.
 
-         This results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history
+         For workflow activities, this results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history
          and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
          no longer valid due to activity timeout, already being completed, or never having existed.
       operationId: RespondActivityTaskCompleted
@@ -391,10 +391,17 @@ paths:
       description: |-
         RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.
 
-         If worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
-         then it will be marked as timed out and an `ACTIVITY_TASK_TIMED_OUT` event will be written to
-         the workflow history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in
-         such situations, in that event, the SDK should request cancellation of the activity.
+         If a worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
+         then the current attempt times out. Depending on RetryPolicy, this may trigger a retry or
+         time out the activity.
+
+         For workflow activities, an `ACTIVITY_TASK_TIMED_OUT` event will be written to the workflow
+         history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in such situations,
+         in that event, the SDK should request cancellation of the activity.
+
+         The request may contain response `details` which will be persisted by the server and may be
+         used by the activity to checkpoint progress. The `cancel_requested` field in the response
+         indicates whether cancellation has been requested for the activity.
       operationId: RecordActivityTaskHeartbeat
       parameters:
         - name: namespace
@@ -648,7 +655,7 @@ paths:
         - WorkflowService
       description: |-
         DescribeActivityExecution returns information about an activity execution.
-         Supported use cases include:
+         It can be used to:
          - Get current activity info without waiting
          - Long-poll for next state change and return new activity info
          Response can optionally include activity input or outcome (if the activity has completed).
@@ -710,7 +717,7 @@ paths:
       description: |-
         StartActivityExecution starts a new activity execution.
 
-         Returns an `ExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
+         Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
          unless permitted by the specified ID conflict policy.
       operationId: StartActivityExecution
       parameters:
@@ -721,6 +728,10 @@ paths:
             type: string
         - name: activityId
           in: path
+          description: |-
+            Identifier for this activity. Required. This identifier should be meaningful in the user's
+             own system. It must be unique among activities in the same namespace, subject to the rules
+             imposed by id_reuse_policy and id_conflict_policy.
           required: true
           schema:
             type: string
@@ -750,13 +761,10 @@ paths:
       description: |-
         RequestCancelActivityExecution requests cancellation of an activity execution.
 
-         Requesting to cancel an activity does not automatically transition the activity to canceled status. If the
-         activity has a currently running attempt, the activity will only transition to canceled status if the current
-         attempt is unsuccessful.
-         TODO: Clarify what happens if there are no more allowed retries after the current attempt.
-
-         It returns success if the requested activity is already closed.
-         TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?
+         Cancellation is cooperative: this call records the request, but the activity must detect and
+         acknowledge it for the activity to reach CANCELED status. The cancellation signal is
+         delivered via `cancel_requested` in the heartbeat response; SDKs surface this via
+         language-idiomatic mechanisms (context cancellation, exceptions, abort signals).
       operationId: RequestCancelActivityExecution
       parameters:
         - name: namespace
@@ -833,7 +841,7 @@ paths:
         TerminateActivityExecution terminates an existing activity execution immediately.
 
          Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a
-         running attempt and will be requested to be canceled by the server when it heartbeats.
+         running attempt.
       operationId: TerminateActivityExecution
       parameters:
         - name: namespace
@@ -869,7 +877,7 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: CountActivityExecutions is a visibility API to count of activity executions in a specific namespace.
+      description: CountActivityExecutions is a visibility API to count activity executions in a specific namespace.
       operationId: CountActivityExecutions
       parameters:
         - name: namespace
@@ -3957,7 +3965,7 @@ paths:
       description: |-
         RespondActivityTaskFailed is called by workers when processing an activity task fails.
 
-         This results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
+         For workflow activities, this results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
          and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
          no longer valid due to activity timeout, already being completed, or never having existed.
       operationId: RespondActivityTaskCanceled
@@ -4031,7 +4039,7 @@ paths:
         RespondActivityTaskCompleted is called by workers when they successfully complete an activity
          task.
 
-         This results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history
+         For workflow activities, this results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history
          and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
          no longer valid due to activity timeout, already being completed, or never having existed.
       operationId: RespondActivityTaskCompleted
@@ -4177,10 +4185,17 @@ paths:
       description: |-
         RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.
 
-         If worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
-         then it will be marked as timed out and an `ACTIVITY_TASK_TIMED_OUT` event will be written to
-         the workflow history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in
-         such situations, in that event, the SDK should request cancellation of the activity.
+         If a worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
+         then the current attempt times out. Depending on RetryPolicy, this may trigger a retry or
+         time out the activity.
+
+         For workflow activities, an `ACTIVITY_TASK_TIMED_OUT` event will be written to the workflow
+         history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in such situations,
+         in that event, the SDK should request cancellation of the activity.
+
+         The request may contain response `details` which will be persisted by the server and may be
+         used by the activity to checkpoint progress. The `cancel_requested` field in the response
+         indicates whether cancellation has been requested for the activity.
       operationId: RecordActivityTaskHeartbeat
       parameters:
         - name: namespace
@@ -4434,7 +4449,7 @@ paths:
         - WorkflowService
       description: |-
         DescribeActivityExecution returns information about an activity execution.
-         Supported use cases include:
+         It can be used to:
          - Get current activity info without waiting
          - Long-poll for next state change and return new activity info
          Response can optionally include activity input or outcome (if the activity has completed).
@@ -4496,7 +4511,7 @@ paths:
       description: |-
         StartActivityExecution starts a new activity execution.
 
-         Returns an `ExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
+         Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
          unless permitted by the specified ID conflict policy.
       operationId: StartActivityExecution
       parameters:
@@ -4507,6 +4522,10 @@ paths:
             type: string
         - name: activityId
           in: path
+          description: |-
+            Identifier for this activity. Required. This identifier should be meaningful in the user's
+             own system. It must be unique among activities in the same namespace, subject to the rules
+             imposed by id_reuse_policy and id_conflict_policy.
           required: true
           schema:
             type: string
@@ -4536,13 +4555,10 @@ paths:
       description: |-
         RequestCancelActivityExecution requests cancellation of an activity execution.
 
-         Requesting to cancel an activity does not automatically transition the activity to canceled status. If the
-         activity has a currently running attempt, the activity will only transition to canceled status if the current
-         attempt is unsuccessful.
-         TODO: Clarify what happens if there are no more allowed retries after the current attempt.
-
-         It returns success if the requested activity is already closed.
-         TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?
+         Cancellation is cooperative: this call records the request, but the activity must detect and
+         acknowledge it for the activity to reach CANCELED status. The cancellation signal is
+         delivered via `cancel_requested` in the heartbeat response; SDKs surface this via
+         language-idiomatic mechanisms (context cancellation, exceptions, abort signals).
       operationId: RequestCancelActivityExecution
       parameters:
         - name: namespace
@@ -4619,7 +4635,7 @@ paths:
         TerminateActivityExecution terminates an existing activity execution immediately.
 
          Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a
-         running attempt and will be requested to be canceled by the server when it heartbeats.
+         running attempt.
       operationId: TerminateActivityExecution
       parameters:
         - name: namespace
@@ -4655,7 +4671,7 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: CountActivityExecutions is a visibility API to count of activity executions in a specific namespace.
+      description: CountActivityExecutions is a visibility API to count activity executions in a specific namespace.
       operationId: CountActivityExecutions
       parameters:
         - name: namespace
@@ -7308,10 +7324,7 @@ components:
           format: date-time
         attempt:
           type: integer
-          description: |-
-            The attempt this activity is currently on.
-             Incremented each time a new attempt is started.
-             TODO(dandavison): Confirm if this is on scheduled or started.
+          description: The attempt this activity is currently on. Incremented each time a new attempt is scheduled.
           format: int32
         executionDuration:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
@@ -7368,6 +7381,9 @@ components:
         stateTransitionCount:
           type: string
           description: Incremented each time the activity's state is mutated in persistence.
+        stateSizeBytes:
+          type: string
+          description: Updated once on scheduled and once on terminal status.
         searchAttributes:
           $ref: '#/components/schemas/SearchAttributes'
         header:
@@ -9867,23 +9883,11 @@ components:
           $ref: '#/components/schemas/Link_WorkflowEvent'
         batchJob:
           $ref: '#/components/schemas/Link_BatchJob'
-        activity:
-          $ref: '#/components/schemas/Link_Activity'
       description: |-
         Link can be associated with history events. It might contain information about an external entity
          related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
          in this case, a history event in workflow A could contain a Link to the workflow started event in
          workflow B, and vice-versa.
-    Link_Activity:
-      type: object
-      properties:
-        namespace:
-          type: string
-        activityId:
-          type: string
-        runId:
-          type: string
-      description: A link to an activity.
     Link_BatchJob:
       type: object
       properties:
@@ -13048,8 +13052,14 @@ components:
           description: A unique identifier for this start request. Typically UUIDv4.
         activityId:
           type: string
+          description: |-
+            Identifier for this activity. Required. This identifier should be meaningful in the user's
+             own system. It must be unique among activities in the same namespace, subject to the rules
+             imposed by id_reuse_policy and id_conflict_policy.
         activityType:
-          $ref: '#/components/schemas/ActivityType'
+          allOf:
+            - $ref: '#/components/schemas/ActivityType'
+          description: The type of the activity, a string that corresponds to a registered activity on a worker.
         taskQueue:
           allOf:
             - $ref: '#/components/schemas/TaskQueue'

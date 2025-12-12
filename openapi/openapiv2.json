@@ -214,7 +214,7 @@
     "/api/v1/namespaces/{namespace}/activities/cancel": {
       "post": {
         "summary": "RespondActivityTaskFailed is called by workers when processing an activity task fails.",
-        "description": "This results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history\nand a new workflow task created for the workflow. Fails with `NotFound` if the task token is\nno longer valid due to activity timeout, already being completed, or never having existed.",
+        "description": "For workflow activities, this results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history\nand a new workflow task created for the workflow. Fails with `NotFound` if the task token is\nno longer valid due to activity timeout, already being completed, or never having existed.",
         "operationId": "RespondActivityTaskCanceled2",
         "responses": {
           "200": {
@@ -294,7 +294,7 @@
     "/api/v1/namespaces/{namespace}/activities/complete": {
       "post": {
         "summary": "RespondActivityTaskCompleted is called by workers when they successfully complete an activity\ntask.",
-        "description": "This results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history\nand a new workflow task created for the workflow. Fails with `NotFound` if the task token is\nno longer valid due to activity timeout, already being completed, or never having existed.",
+        "description": "For workflow activities, this results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history\nand a new workflow task created for the workflow. Fails with `NotFound` if the task token is\nno longer valid due to activity timeout, already being completed, or never having existed.",
         "operationId": "RespondActivityTaskCompleted2",
         "responses": {
           "200": {
@@ -454,7 +454,7 @@
     "/api/v1/namespaces/{namespace}/activities/heartbeat": {
       "post": {
         "summary": "RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.",
-        "description": "If worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,\nthen it will be marked as timed out and an `ACTIVITY_TASK_TIMED_OUT` event will be written to\nthe workflow history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in\nsuch situations, in that event, the SDK should request cancellation of the activity.",
+        "description": "If a worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,\nthen the current attempt times out. Depending on RetryPolicy, this may trigger a retry or\ntime out the activity.\n\nFor workflow activities, an `ACTIVITY_TASK_TIMED_OUT` event will be written to the workflow\nhistory. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in such situations,\nin that event, the SDK should request cancellation of the activity.\n\nThe request may contain response `details` which will be persisted by the server and may be\nused by the activity to checkpoint progress. The `cancel_requested` field in the response\nindicates whether cancellation has been requested for the activity.",
         "operationId": "RecordActivityTaskHeartbeat2",
         "responses": {
           "200": {
@@ -696,7 +696,7 @@
     },
     "/api/v1/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "DescribeActivityExecution returns information about an activity execution.\nSupported use cases include:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or outcome (if the activity has completed).",
+        "summary": "DescribeActivityExecution returns information about an activity execution.\nIt can be used to:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or outcome (if the activity has completed).",
         "operationId": "DescribeActivityExecution2",
         "responses": {
           "200": {
@@ -761,7 +761,7 @@
       },
       "post": {
         "summary": "StartActivityExecution starts a new activity execution.",
-        "description": "Returns an `ExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace\nunless permitted by the specified ID conflict policy.",
+        "description": "Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace\nunless permitted by the specified ID conflict policy.",
         "operationId": "StartActivityExecution2",
         "responses": {
           "200": {
@@ -786,6 +786,7 @@
           },
           {
             "name": "activityId",
+            "description": "Identifier for this activity. Required. This identifier should be meaningful in the user's\nown system. It must be unique among activities in the same namespace, subject to the rules\nimposed by id_reuse_policy and id_conflict_policy.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -807,7 +808,7 @@
     "/api/v1/namespaces/{namespace}/activities/{activityId}/cancel": {
       "post": {
         "summary": "RequestCancelActivityExecution requests cancellation of an activity execution.",
-        "description": "Requesting to cancel an activity does not automatically transition the activity to canceled status. If the\nactivity has a currently running attempt, the activity will only transition to canceled status if the current\nattempt is unsuccessful.\nTODO: Clarify what happens if there are no more allowed retries after the current attempt.\n\nIt returns success if the requested activity is already closed.\nTODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?",
+        "description": "Cancellation is cooperative: this call records the request, but the activity must detect and\nacknowledge it for the activity to reach CANCELED status. The cancellation signal is\ndelivered via `cancel_requested` in the heartbeat response; SDKs surface this via\nlanguage-idiomatic mechanisms (context cancellation, exceptions, abort signals).",
         "operationId": "RequestCancelActivityExecution2",
         "responses": {
           "200": {
@@ -897,7 +898,7 @@
     "/api/v1/namespaces/{namespace}/activities/{activityId}/terminate": {
       "post": {
         "summary": "TerminateActivityExecution terminates an existing activity execution immediately.",
-        "description": "Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a\nrunning attempt and will be requested to be canceled by the server when it heartbeats.",
+        "description": "Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a\nrunning attempt.",
         "operationId": "TerminateActivityExecution2",
         "responses": {
           "200": {
@@ -942,7 +943,7 @@
     },
     "/api/v1/namespaces/{namespace}/activity-count": {
       "get": {
-        "summary": "CountActivityExecutions is a visibility API to count of activity executions in a specific namespace.",
+        "summary": "CountActivityExecutions is a visibility API to count activity executions in a specific namespace.",
         "operationId": "CountActivityExecutions2",
         "responses": {
           "200": {
@@ -4447,7 +4448,7 @@
     "/namespaces/{namespace}/activities/cancel": {
       "post": {
         "summary": "RespondActivityTaskFailed is called by workers when processing an activity task fails.",
-        "description": "This results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history\nand a new workflow task created for the workflow. Fails with `NotFound` if the task token is\nno longer valid due to activity timeout, already being completed, or never having existed.",
+        "description": "For workflow activities, this results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history\nand a new workflow task created for the workflow. Fails with `NotFound` if the task token is\nno longer valid due to activity timeout, already being completed, or never having existed.",
         "operationId": "RespondActivityTaskCanceled",
         "responses": {
           "200": {
@@ -4527,7 +4528,7 @@
     "/namespaces/{namespace}/activities/complete": {
       "post": {
         "summary": "RespondActivityTaskCompleted is called by workers when they successfully complete an activity\ntask.",
-        "description": "This results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history\nand a new workflow task created for the workflow. Fails with `NotFound` if the task token is\nno longer valid due to activity timeout, already being completed, or never having existed.",
+        "description": "For workflow activities, this results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history\nand a new workflow task created for the workflow. Fails with `NotFound` if the task token is\nno longer valid due to activity timeout, already being completed, or never having existed.",
         "operationId": "RespondActivityTaskCompleted",
         "responses": {
           "200": {
@@ -4687,7 +4688,7 @@
     "/namespaces/{namespace}/activities/heartbeat": {
       "post": {
         "summary": "RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.",
-        "description": "If worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,\nthen it will be marked as timed out and an `ACTIVITY_TASK_TIMED_OUT` event will be written to\nthe workflow history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in\nsuch situations, in that event, the SDK should request cancellation of the activity.",
+        "description": "If a worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,\nthen the current attempt times out. Depending on RetryPolicy, this may trigger a retry or\ntime out the activity.\n\nFor workflow activities, an `ACTIVITY_TASK_TIMED_OUT` event will be written to the workflow\nhistory. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in such situations,\nin that event, the SDK should request cancellation of the activity.\n\nThe request may contain response `details` which will be persisted by the server and may be\nused by the activity to checkpoint progress. The `cancel_requested` field in the response\nindicates whether cancellation has been requested for the activity.",
         "operationId": "RecordActivityTaskHeartbeat",
         "responses": {
           "200": {
@@ -4929,7 +4930,7 @@
     },
     "/namespaces/{namespace}/activities/{activityId}": {
       "get": {
-        "summary": "DescribeActivityExecution returns information about an activity execution.\nSupported use cases include:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or outcome (if the activity has completed).",
+        "summary": "DescribeActivityExecution returns information about an activity execution.\nIt can be used to:\n- Get current activity info without waiting\n- Long-poll for next state change and return new activity info\nResponse can optionally include activity input or outcome (if the activity has completed).",
         "operationId": "DescribeActivityExecution",
         "responses": {
           "200": {
@@ -4994,7 +4995,7 @@
       },
       "post": {
         "summary": "StartActivityExecution starts a new activity execution.",
-        "description": "Returns an `ExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace\nunless permitted by the specified ID conflict policy.",
+        "description": "Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace\nunless permitted by the specified ID conflict policy.",
         "operationId": "StartActivityExecution",
         "responses": {
           "200": {
@@ -5019,6 +5020,7 @@
           },
           {
             "name": "activityId",
+            "description": "Identifier for this activity. Required. This identifier should be meaningful in the user's\nown system. It must be unique among activities in the same namespace, subject to the rules\nimposed by id_reuse_policy and id_conflict_policy.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -5040,7 +5042,7 @@
     "/namespaces/{namespace}/activities/{activityId}/cancel": {
       "post": {
         "summary": "RequestCancelActivityExecution requests cancellation of an activity execution.",
-        "description": "Requesting to cancel an activity does not automatically transition the activity to canceled status. If the\nactivity has a currently running attempt, the activity will only transition to canceled status if the current\nattempt is unsuccessful.\nTODO: Clarify what happens if there are no more allowed retries after the current attempt.\n\nIt returns success if the requested activity is already closed.\nTODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?",
+        "description": "Cancellation is cooperative: this call records the request, but the activity must detect and\nacknowledge it for the activity to reach CANCELED status. The cancellation signal is\ndelivered via `cancel_requested` in the heartbeat response; SDKs surface this via\nlanguage-idiomatic mechanisms (context cancellation, exceptions, abort signals).",
         "operationId": "RequestCancelActivityExecution",
         "responses": {
           "200": {
@@ -5130,7 +5132,7 @@
     "/namespaces/{namespace}/activities/{activityId}/terminate": {
       "post": {
         "summary": "TerminateActivityExecution terminates an existing activity execution immediately.",
-        "description": "Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a\nrunning attempt and will be requested to be canceled by the server when it heartbeats.",
+        "description": "Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a\nrunning attempt.",
         "operationId": "TerminateActivityExecution",
         "responses": {
           "200": {
@@ -5175,7 +5177,7 @@
     },
     "/namespaces/{namespace}/activity-count": {
       "get": {
-        "summary": "CountActivityExecutions is a visibility API to count of activity executions in a specific namespace.",
+        "summary": "CountActivityExecutions is a visibility API to count activity executions in a specific namespace.",
         "operationId": "CountActivityExecutions",
         "responses": {
           "200": {
@@ -8193,21 +8195,6 @@
         }
       }
     },
-    "LinkActivity": {
-      "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string"
-        },
-        "activityId": {
-          "type": "string"
-        },
-        "runId": {
-          "type": "string"
-        }
-      },
-      "description": "A link to an activity."
-    },
     "LinkBatchJob": {
       "type": "object",
       "properties": {
@@ -9535,7 +9522,8 @@
           "description": "A unique identifier for this start request. Typically UUIDv4."
         },
         "activityType": {
-          "$ref": "#/definitions/v1ActivityType"
+          "$ref": "#/definitions/v1ActivityType",
+          "description": "The type of the activity, a string that corresponds to a registered activity on a worker."
         },
         "taskQueue": {
           "$ref": "#/definitions/v1TaskQueue",
@@ -10170,9 +10158,6 @@
         },
         "batchJob": {
           "$ref": "#/definitions/LinkBatchJob"
-        },
-        "activity": {
-          "$ref": "#/definitions/LinkActivity"
         }
       },
       "description": "Link can be associated with history events. It might contain information about an external entity\nrelated to the history event. For example, workflow A makes a Nexus call that starts workflow B:\nin this case, a history event in workflow A could contain a Link to the workflow started event in\nworkflow B, and vice-versa."
@@ -10405,7 +10390,7 @@
         "attempt": {
           "type": "integer",
           "format": "int32",
-          "description": "The attempt this activity is currently on.\nIncremented each time a new attempt is started.\nTODO(dandavison): Confirm if this is on scheduled or started."
+          "description": "The attempt this activity is currently on. Incremented each time a new attempt is scheduled."
         },
         "executionDuration": {
           "type": "string",
@@ -10459,6 +10444,11 @@
           "type": "string",
           "format": "int64",
           "description": "Incremented each time the activity's state is mutated in persistence."
+        },
+        "stateSizeBytes": {
+          "type": "string",
+          "format": "int64",
+          "description": "Updated once on scheduled and once on terminal status."
         },
         "searchAttributes": {
           "$ref": "#/definitions/v1SearchAttributes"
@@ -10557,7 +10547,7 @@
         "ACTIVITY_EXECUTION_STATUS_TIMED_OUT"
       ],
       "default": "ACTIVITY_EXECUTION_STATUS_UNSPECIFIED",
-      "description": "Status of a standalone activity.\nThe status is updated once, when the activity is originally scheduled, and again when the activity reaches a terminal\nstatus.\nTODO: Should this be a common execution status? Seems like the other archetypes will share this status.\n\n - ACTIVITY_EXECUTION_STATUS_RUNNING: The activity is not in a terminal status. This does not necessarily mean that there is a currently running\nattempt. The activity may be backing off between attempts or waiting for a worker to pick it up.\n - ACTIVITY_EXECUTION_STATUS_COMPLETED: The activity completed successfully.\n - ACTIVITY_EXECUTION_STATUS_FAILED: The activity completed with failure.\n - ACTIVITY_EXECUTION_STATUS_CANCELED: The activity completed as canceled.\nRequesting to cancel an activity does not automatically transition the activity to canceled status. If the\nactivity has a currently running attempt, the activity will only transition to canceled status if the current\nattempt is unsuccessful.\nTODO: Clarify what happens if there are no more allowed retries after the current attempt.\n - ACTIVITY_EXECUTION_STATUS_TERMINATED: The activity was terminated. Termination does not reach the worker and the activity code cannot react to it.\nA terminated activity may have a running attempt and will be requested to be canceled by the server when it\nheartbeats.\n - ACTIVITY_EXECUTION_STATUS_TIMED_OUT: The activity has timed out by reaching the specified shedule-to-start or schedule-to-close timeouts.\nTODO: Clarify if there are other conditions where the activity can end up in timed out status."
+      "description": "Status of a standalone activity.\nThe status is updated once, when the activity is originally scheduled, and again when the activity reaches a terminal\nstatus.\n\n - ACTIVITY_EXECUTION_STATUS_RUNNING: The activity has not reached a terminal status. See PendingActivityState for the run state\n(SCHEDULED, STARTED, or CANCEL_REQUESTED).\n - ACTIVITY_EXECUTION_STATUS_COMPLETED: The activity completed successfully. An activity can complete even after cancellation is\nrequested if the worker calls RespondActivityTaskCompleted before acknowledging cancellation.\n - ACTIVITY_EXECUTION_STATUS_FAILED: The activity failed. Causes:\n- Worker returned a non-retryable failure\n- RetryPolicy.maximum_attempts exhausted\n- Attempt failed after cancellation was requested (retries blocked)\n - ACTIVITY_EXECUTION_STATUS_CANCELED: The activity was canceled. Reached when:\n- Cancellation requested while SCHEDULED (immediate), or\n- Cancellation requested while STARTED and worker called RespondActivityTaskCanceled.\n\nWorkers discover cancellation requests via heartbeat responses (cancel_requested=true).\nActivities that do not heartbeat will not learn of cancellation and may complete, fail, or\ntime out normally. CANCELED requires explicit worker acknowledgment or immediate cancellation\nof a SCHEDULED activity.\n - ACTIVITY_EXECUTION_STATUS_TERMINATED: The activity was terminated. Immediate; does not wait for worker acknowledgment.\n - ACTIVITY_EXECUTION_STATUS_TIMED_OUT: The activity timed out. See TimeoutType for the specific timeout.\n- SCHEDULE_TO_START and SCHEDULE_TO_CLOSE timeouts always result in TIMED_OUT.\n- START_TO_CLOSE and HEARTBEAT may retry if RetryPolicy permits; TIMED_OUT is\n  reached when retry is blocked (RetryPolicy.maximum_attempts exhausted,\n  SCHEDULE_TO_CLOSE would be exceeded, or cancellation has been requested)."
     },
     "v1ActivityFailureInfo": {
       "type": "object",

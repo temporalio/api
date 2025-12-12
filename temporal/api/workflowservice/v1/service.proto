@@ -205,10 +205,17 @@ service WorkflowService {
 
     // RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.
     //
-    // If worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
-    // then it will be marked as timed out and an `ACTIVITY_TASK_TIMED_OUT` event will be written to
-    // the workflow history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in
-    // such situations, in that event, the SDK should request cancellation of the activity.
+    // If a worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
+    // then the current attempt times out. Depending on RetryPolicy, this may trigger a retry or
+    // time out the activity.
+    //
+    // For workflow activities, an `ACTIVITY_TASK_TIMED_OUT` event will be written to the workflow
+    // history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in such situations,
+    // in that event, the SDK should request cancellation of the activity.
+    //
+    // The request may contain response `details` which will be persisted by the server and may be
+    // used by the activity to checkpoint progress. The `cancel_requested` field in the response
+    // indicates whether cancellation has been requested for the activity.
     rpc RecordActivityTaskHeartbeat (RecordActivityTaskHeartbeatRequest) returns (RecordActivityTaskHeartbeatResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/heartbeat"
@@ -239,7 +246,7 @@ service WorkflowService {
     // RespondActivityTaskCompleted is called by workers when they successfully complete an activity
     // task.
     //
-    // This results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history
+    // For workflow activities, this results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history
     // and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
     // no longer valid due to activity timeout, already being completed, or never having existed.
     rpc RespondActivityTaskCompleted (RespondActivityTaskCompletedRequest) returns (RespondActivityTaskCompletedResponse) {
@@ -303,7 +310,7 @@ service WorkflowService {
 
     // RespondActivityTaskFailed is called by workers when processing an activity task fails.
     //
-    // This results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
+    // For workflow activities, this results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
     // and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
     // no longer valid due to activity timeout, already being completed, or never having existed.
     rpc RespondActivityTaskCanceled (RespondActivityTaskCanceledRequest) returns (RespondActivityTaskCanceledResponse) {
@@ -1298,7 +1305,7 @@ service WorkflowService {
 
     // StartActivityExecution starts a new activity execution.
     //
-    // Returns an `ExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
+    // Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
     // unless permitted by the specified ID conflict policy.
     rpc StartActivityExecution (StartActivityExecutionRequest) returns (StartActivityExecutionResponse) {
         option (google.api.http) = {
@@ -1312,7 +1319,7 @@ service WorkflowService {
     }
 
     // DescribeActivityExecution returns information about an activity execution.
-    // Supported use cases include:
+    // It can be used to:
     // - Get current activity info without waiting
     // - Long-poll for next state change and return new activity info
     // Response can optionally include activity input or outcome (if the activity has completed).
@@ -1346,7 +1353,7 @@ service WorkflowService {
         };
     }
 
-    // CountActivityExecutions is a visibility API to count of activity executions in a specific namespace.
+    // CountActivityExecutions is a visibility API to count activity executions in a specific namespace.
     rpc CountActivityExecutions (CountActivityExecutionsRequest) returns (CountActivityExecutionsResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/activity-count"
@@ -1358,13 +1365,10 @@ service WorkflowService {
 
     // RequestCancelActivityExecution requests cancellation of an activity execution.
     //
-    // Requesting to cancel an activity does not automatically transition the activity to canceled status. If the
-    // activity has a currently running attempt, the activity will only transition to canceled status if the current
-    // attempt is unsuccessful.
-    // TODO: Clarify what happens if there are no more allowed retries after the current attempt.
-    //
-    // It returns success if the requested activity is already closed.
-    // TODO: This ^^ is copied from RequestCancelWorkflowExecution, do we want to preserve this behavior?
+    // Cancellation is cooperative: this call records the request, but the activity must detect and
+    // acknowledge it for the activity to reach CANCELED status. The cancellation signal is
+    // delivered via `cancel_requested` in the heartbeat response; SDKs surface this via
+    // language-idiomatic mechanisms (context cancellation, exceptions, abort signals).
     rpc RequestCancelActivityExecution (RequestCancelActivityExecutionRequest) returns (RequestCancelActivityExecutionResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/{activity_id}/cancel"
@@ -1379,7 +1383,7 @@ service WorkflowService {
     // TerminateActivityExecution terminates an existing activity execution immediately.
     //
     // Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a
-    // running attempt and will be requested to be canceled by the server when it heartbeats.
+    // running attempt.
     rpc TerminateActivityExecution (TerminateActivityExecutionRequest) returns (TerminateActivityExecutionResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/activities/{activity_id}/terminate"
@@ -1393,7 +1397,7 @@ service WorkflowService {
 
     // DeleteActivityExecution asynchronously deletes a specific activity execution (when
     // ActivityExecution.run_id is provided) or the latest activity execution (when
-    // ActivityExecution.run_id is not provided). If the activity EXecution is running, it will be
+    // ActivityExecution.run_id is not provided). If the activity Execution is running, it will be
     // terminated before deletion.
     //
     // (-- api-linter: core::0127::http-annotation=disabled

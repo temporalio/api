@@ -14531,12 +14531,10 @@ components:
         pinned:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride_PinnedOverride'
-          description: Send the next workflow task to the Version specified in the override.
+          description: Override the workflow to have Pinned behavior.
         autoUpgrade:
           type: boolean
-          description: |-
-            Send the next workflow task to the Current Deployment Version
-             of its Task Queue when the next workflow task is dispatched.
+          description: Override the workflow to have AutoUpgrade behavior.
         behavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
@@ -14563,12 +14561,14 @@ components:
              Deprecated. Use `override.pinned.version`.
       description: |-
         Used to override the versioning behavior (and pinned deployment version, if applicable) of a
-         specific workflow execution. If set, takes precedence over the worker-sent values. See
-         `WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call
-         `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
-         to indicate that it should be mutated.
-         Pinned overrides are automatically inherited by child workflows, continue-as-new workflows,
-         workflow retries, and cron workflows.
+         specific workflow execution. If set, this override takes precedence over worker-sent values.
+         See `WorkflowExecutionInfo.VersioningInfo` for more information.
+
+         To remove the override, call `UpdateWorkflowExecutionOptions` with a null
+         `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
+
+         Pinned behavior overrides are automatically inherited by child workflows, workflow retries, continue-as-new
+         workflows, and cron workflows.
     VersioningOverride_PinnedOverride:
       type: object
       properties:
@@ -15392,6 +15392,16 @@ components:
             If this is set, the new execution inherits the Build ID of the current execution. Otherwise,
              the assignment rules will be used to independently assign a Build ID to the new execution.
              Deprecated. Only considered for versioning v0.2.
+        initialVersioningBehavior:
+          enum:
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+          type: string
+          description: |-
+            Experimental. Optionally decide the versioning behavior that the first task of the new run should use.
+             For example, choose to AutoUpgrade on continue-as-new instead of inheriting the pinned version
+             of the previous run.
+          format: enum
     WorkflowExecutionExtendedInfo:
       type: object
       properties:
@@ -16510,9 +16520,21 @@ components:
              service would return AlreadyStarted error, and matching would drop the task.
         suggestContinueAsNew:
           type: boolean
+          description: True if this workflow should continue-as-new soon. See `suggest_continue_as_new_reasons` for why.
+        suggestContinueAsNewReasons:
+          type: array
+          items:
+            enum:
+              - SUGGEST_CONTINUE_AS_NEW_REASON_UNSPECIFIED
+              - SUGGEST_CONTINUE_AS_NEW_REASON_HISTORY_SIZE_TOO_LARGE
+              - SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_HISTORY_EVENTS
+              - SUGGEST_CONTINUE_AS_NEW_REASON_TOO_MANY_UPDATES
+              - SUGGEST_CONTINUE_AS_NEW_REASON_TARGET_WORKER_DEPLOYMENT_VERSION_CHANGED
+            type: string
+            format: enum
           description: |-
-            True if this workflow should continue-as-new soon because its history size (in
-             either event count or bytes) is getting large.
+            The reason(s) that suggest_continue_as_new is true, if it is.
+             Unset if suggest_continue_as_new is false.
         historySizeBytes:
           type: string
           description: |-

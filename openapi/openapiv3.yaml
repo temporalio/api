@@ -1611,6 +1611,80 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/streams/{streamId}:
+    post:
+      tags:
+        - WorkflowService
+      description: AddToStream pushes messages to the stream.
+      operationId: AddToStream
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace stream's namespace. Required.
+          required: true
+          schema:
+            type: string
+        - name: streamId
+          in: path
+          description: |-
+            Identifier for the stream. Required. This identifier should be meaningful in the user's
+             own system.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddToStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddToStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/streams/{streamId}/outcome:
+    get:
+      tags:
+        - WorkflowService
+      description: PollStream long-polls for new messages on the stream.
+      operationId: PollStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: streamId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/task-queues/{taskQueue}/update-config:
     post:
       tags:
@@ -5380,6 +5454,80 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/streams/{streamId}:
+    post:
+      tags:
+        - WorkflowService
+      description: AddToStream pushes messages to the stream.
+      operationId: AddToStream
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace stream's namespace. Required.
+          required: true
+          schema:
+            type: string
+        - name: streamId
+          in: path
+          description: |-
+            Identifier for the stream. Required. This identifier should be meaningful in the user's
+             own system.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddToStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddToStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/streams/{streamId}/outcome:
+    get:
+      tags:
+        - WorkflowService
+      description: PollStream long-polls for new messages on the stream.
+      operationId: PollStream
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: streamId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/task-queues/{taskQueue}/update-config:
     post:
       tags:
@@ -7789,6 +7937,30 @@ components:
       description: |-
         Represents the identifier used by a activity author to define the activity. Typically, the
          name of a function. This is sometimes referred to as the activity's "name"
+    AddToStreamRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: The namespace stream's namespace. Required.
+        streamId:
+          type: string
+          description: |-
+            Identifier for the stream. Required. This identifier should be meaningful in the user's
+             own system.
+        runId:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payload'
+        nonDurable:
+          type: boolean
+    AddToStreamResponse:
+      type: object
+      properties:
+        runId:
+          type: string
     Alert:
       type: object
       properties:
@@ -11013,6 +11185,13 @@ components:
           description: The run ID of the activity, useful when run_id was not specified in the request.
         outcome:
           $ref: '#/components/schemas/ActivityExecutionOutcome'
+    PollStreamResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payload'
     PollWorkflowTaskQueueResponse:
       type: object
       properties:

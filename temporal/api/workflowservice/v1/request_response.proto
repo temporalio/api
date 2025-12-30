@@ -2860,6 +2860,23 @@ message DeleteActivityExecutionRequest {
 message DeleteActivityExecutionResponse {
 }
 
+message CreateStreamRequest {
+    // The stream's namespace. Required.
+    string namespace = 1;
+    // Identifier for the stream. Required. This identifier should be meaningful in the user's
+    // own system.
+    string stream_id = 2;
+    // Optional run ID for idempotency. If not provided, a new run ID will be generated.
+    string run_id = 3;
+    // Optional initial messages to add to the stream upon creation.
+    repeated temporal.api.common.v1.Payload messages = 4;
+    bool non_durable = 5;
+}
+
+message CreateStreamResponse {
+    string run_id = 1;
+}
+
 message AddToStreamRequest {
     // The namespace stream's namespace. Required.
     string namespace = 1;
@@ -2879,8 +2896,19 @@ message PollStreamRequest {
     string namespace = 1;
     string stream_id = 2;
     string run_id = 3;
+    // Opaque cursor token returned from previous PollStreamResponse.
+    // If empty/nil, polling starts from the beginning (message ID 0).
+    // Server controls the cursor format - clients must treat as opaque.
+    bytes cursor = 4;
+    // Maximum number of messages to return in a single response.
+    // If not set or exceeds server limit, server will apply default/max limit.
+    int32 max_messages = 5;
 }
 
 message PollStreamResponse {
     repeated temporal.api.common.v1.Payload messages = 4;
+    // Opaque cursor token to use in the next PollStreamRequest.
+    // Points to the position AFTER the last message in this response.
+    // Client should pass this as-is in the next poll request.
+    bytes next_cursor = 5;
 }

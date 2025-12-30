@@ -1879,6 +1879,62 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "cursor",
+            "description": "Opaque cursor token returned from previous PollStreamResponse.\nIf empty/nil, polling starts from the beginning (message ID 0).\nServer controls the cursor format - clients must treat as opaque.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "maxMessages",
+            "description": "Maximum number of messages to return in a single response.\nIf not set or exceeds server limit, server will apply default/max limit.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/streams:create": {
+      "post": {
+        "summary": "CreateStream creates a new stream with optional initial messages.",
+        "operationId": "CreateStream2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The stream's namespace. Required.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCreateStreamBody"
+            }
           }
         ],
         "tags": [
@@ -6172,6 +6228,62 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "cursor",
+            "description": "Opaque cursor token returned from previous PollStreamResponse.\nIf empty/nil, polling starts from the beginning (message ID 0).\nServer controls the cursor format - clients must treat as opaque.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "maxMessages",
+            "description": "Maximum number of messages to return in a single response.\nIf not set or exceeds server limit, server will apply default/max limit.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/streams:create": {
+      "post": {
+        "summary": "CreateStream creates a new stream with optional initial messages.",
+        "operationId": "CreateStream",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateStreamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The stream's namespace. Required.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCreateStreamBody"
+            }
           }
         ],
         "tags": [
@@ -8923,6 +9035,30 @@
         },
         "searchAttributes": {
           "$ref": "#/definitions/v1SearchAttributes"
+        }
+      }
+    },
+    "WorkflowServiceCreateStreamBody": {
+      "type": "object",
+      "properties": {
+        "streamId": {
+          "type": "string",
+          "description": "Identifier for the stream. Required. This identifier should be meaningful in the user's\nown system."
+        },
+        "runId": {
+          "type": "string",
+          "description": "Optional run ID for idempotency. If not provided, a new run ID will be generated."
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Payload"
+          },
+          "description": "Optional initial messages to add to the stream upon creation."
+        },
+        "nonDurable": {
+          "type": "boolean"
         }
       }
     },
@@ -12213,6 +12349,14 @@
         }
       }
     },
+    "v1CreateStreamResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string"
+        }
+      }
+    },
     "v1CreateWorkflowRuleResponse": {
       "type": "object",
       "properties": {
@@ -14815,6 +14959,11 @@
             "type": "object",
             "$ref": "#/definitions/v1Payload"
           }
+        },
+        "nextCursor": {
+          "type": "string",
+          "format": "byte",
+          "description": "Opaque cursor token to use in the next PollStreamRequest.\nPoints to the position AFTER the last message in this response.\nClient should pass this as-is in the next poll request."
         }
       }
     },

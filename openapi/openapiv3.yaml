@@ -1615,7 +1615,11 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: AddToStream pushes messages to the stream.
+      description: |-
+        AddToStream pushes messages to the stream.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: Stream operations use custom patterns. --)
       operationId: AddToStream
       parameters:
         - name: namespace
@@ -1655,7 +1659,11 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: PollStream long-polls for new messages on the stream.
+      description: |-
+        PollStream long-polls for new messages on the stream.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: Stream operations use custom patterns. --)
       operationId: PollStream
       parameters:
         - name: namespace
@@ -1672,6 +1680,23 @@ paths:
           in: query
           schema:
             type: string
+        - name: cursor
+          in: query
+          description: |-
+            Opaque cursor token returned from previous PollStreamResponse.
+             If empty/nil, polling starts from the beginning (message ID 0).
+             Server controls the cursor format - clients must treat as opaque.
+          schema:
+            type: string
+            format: bytes
+        - name: maxMessages
+          in: query
+          description: |-
+            Maximum number of messages to return in a single response.
+             If not set or exceeds server limit, server will apply default/max limit.
+          schema:
+            type: integer
+            format: int32
       responses:
         "200":
           description: OK
@@ -1679,6 +1704,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PollStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/streams:create:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        CreateStream creates a new stream with optional initial messages.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: Stream operations use custom patterns. --)
+      operationId: CreateStream
+      parameters:
+        - name: namespace
+          in: path
+          description: The stream's namespace. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateStreamResponse'
         default:
           description: Default error response
           content:
@@ -5458,7 +5519,11 @@ paths:
     post:
       tags:
         - WorkflowService
-      description: AddToStream pushes messages to the stream.
+      description: |-
+        AddToStream pushes messages to the stream.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: Stream operations use custom patterns. --)
       operationId: AddToStream
       parameters:
         - name: namespace
@@ -5498,7 +5563,11 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: PollStream long-polls for new messages on the stream.
+      description: |-
+        PollStream long-polls for new messages on the stream.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: Stream operations use custom patterns. --)
       operationId: PollStream
       parameters:
         - name: namespace
@@ -5515,6 +5584,23 @@ paths:
           in: query
           schema:
             type: string
+        - name: cursor
+          in: query
+          description: |-
+            Opaque cursor token returned from previous PollStreamResponse.
+             If empty/nil, polling starts from the beginning (message ID 0).
+             Server controls the cursor format - clients must treat as opaque.
+          schema:
+            type: string
+            format: bytes
+        - name: maxMessages
+          in: query
+          description: |-
+            Maximum number of messages to return in a single response.
+             If not set or exceeds server limit, server will apply default/max limit.
+          schema:
+            type: integer
+            format: int32
       responses:
         "200":
           description: OK
@@ -5522,6 +5608,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PollStreamResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/streams:create:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        CreateStream creates a new stream with optional initial messages.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: Stream operations use custom patterns. --)
+      operationId: CreateStream
+      parameters:
+        - name: namespace
+          in: path
+          description: The stream's namespace. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStreamRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateStreamResponse'
         default:
           description: Default error response
           content:
@@ -8819,6 +8941,32 @@ components:
         conflictToken:
           type: string
           format: bytes
+    CreateStreamRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+          description: The stream's namespace. Required.
+        streamId:
+          type: string
+          description: |-
+            Identifier for the stream. Required. This identifier should be meaningful in the user's
+             own system.
+        runId:
+          type: string
+          description: Optional run ID for idempotency. If not provided, a new run ID will be generated.
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payload'
+          description: Optional initial messages to add to the stream upon creation.
+        nonDurable:
+          type: boolean
+    CreateStreamResponse:
+      type: object
+      properties:
+        runId:
+          type: string
     CreateWorkflowRuleRequest:
       type: object
       properties:
@@ -11192,6 +11340,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Payload'
+        nextCursor:
+          type: string
+          description: |-
+            Opaque cursor token to use in the next PollStreamRequest.
+             Points to the position AFTER the last message in this response.
+             Client should pass this as-is in the next poll request.
+          format: bytes
     PollWorkflowTaskQueueResponse:
       type: object
       properties:

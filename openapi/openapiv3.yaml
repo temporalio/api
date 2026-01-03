@@ -9253,25 +9253,35 @@ components:
           $ref: '#/components/schemas/StartWorkflowExecutionResponse'
         updateWorkflow:
           $ref: '#/components/schemas/UpdateWorkflowExecutionResponse'
-    ExternalPayloadDownloadStats:
+    ExternalPayloadTransferStats:
       type: object
       properties:
-        payloadCount:
+        uploaded:
+          allOf:
+            - $ref: '#/components/schemas/ExternalPayloadTransferStats_TransferStats'
+          description: Stats for payloads uploaded during this task.
+        downloaded:
+          allOf:
+            - $ref: '#/components/schemas/ExternalPayloadTransferStats_TransferStats'
+          description: Stats for payloads downloaded during this task.
+        downloadedDuringReplay:
+          allOf:
+            - $ref: '#/components/schemas/ExternalPayloadTransferStats_TransferStats'
+          description: Stats for payloads downloaded during replay.
+      description: Stats about external payloads transferred by SDK during workflow task processing.
+    ExternalPayloadTransferStats_TransferStats:
+      type: object
+      properties:
+        totalCount:
           type: string
-          description: Number of external payloads downloaded.
+          description: Number of payloads transferred.
         totalSizeBytes:
           type: string
-          description: Total size in bytes of downloaded payloads.
-        downloadTime:
+          description: Total size in bytes of transferred payloads.
+        transferDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Wall time spent downloading.
-          format: date-time
-        replayInvolved:
-          type: boolean
-          description: |-
-            True if any portion of this workflow task processed history in replay mode
-             (i.e., SDK had to rebuild state) and downloaded payloads during that period.
-      description: Stats about external payloads downloaded by SDK during workflow task processing.
+          description: Wall time spent on transfers.
     ExternalWorkflowExecutionCancelRequestedEventAttributes:
       type: object
       properties:
@@ -16364,7 +16374,7 @@ components:
              Experimental. Worker Deployments are experimental and might significantly change in the future.
         externalPayloadStats:
           allOf:
-            - $ref: '#/components/schemas/ExternalPayloadDownloadStats'
+            - $ref: '#/components/schemas/ExternalPayloadTransferStats'
           description: Stats about external payloads downloaded by SDK.
     WorkflowTaskCompletedMetadata:
       type: object
@@ -16506,7 +16516,7 @@ components:
              Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
         externalPayloadStats:
           allOf:
-            - $ref: '#/components/schemas/ExternalPayloadDownloadStats'
+            - $ref: '#/components/schemas/ExternalPayloadTransferStats'
           description: Stats about external payloads downloaded by SDK.
     WorkflowTaskScheduledEventAttributes:
       type: object

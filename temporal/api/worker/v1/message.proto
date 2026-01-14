@@ -11,6 +11,7 @@ option csharp_namespace = "Temporalio.Api.Worker.V1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "temporal/api/common/v1/message.proto";
 import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/enums/v1/common.proto";
 
@@ -138,4 +139,35 @@ message PluginInfo {
     string name = 1;
     // The version of the plugin, may be empty.
     string version = 2;
+}
+
+// Container for batched control tasks delivered to a worker.
+// One Nexus operation can deliver multiple tasks efficiently.
+// For example, when a workflow with multiple activities is cancelled,
+// all cancel tasks for activities on the same worker are batched together.
+message WorkerControlPayload {
+    repeated WorkerControlTask tasks = 1;
+}
+
+// A single control task for a worker.
+message WorkerControlTask {
+    // Unique identifier for this task (for deduplication).
+    // Format: {run_id}/{scheduled_event_id}/{cancel_request_id}
+    string task_id = 1;
+
+    oneof task {
+        CancelActivityTask cancel_activity = 2;
+    }
+}
+
+// Request to cancel a running activity on this worker.
+message CancelActivityTask {
+    // The workflow execution that owns this activity.
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 1;
+    // The scheduled event ID of the activity to cancel.
+    int64 scheduled_event_id = 2;
+    // The activity ID (user-defined or auto-generated).
+    string activity_id = 3;
+    // Human-readable reason for cancellation.
+    string reason = 4;
 }

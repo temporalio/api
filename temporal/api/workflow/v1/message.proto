@@ -98,6 +98,12 @@ message WorkflowExecutionInfo {
 
     // Priority metadata
     temporal.api.common.v1.Priority priority = 24;
+
+    // Total size in bytes of all external payloads referenced in workflow history.
+    int64 external_payload_size_bytes = 25;
+
+    // Count of external payloads referenced in workflow history.
+    int64 external_payload_count = 26;
 }
 
 // Holds all the extra information about workflow execution that is not part of Visibility.
@@ -520,6 +526,16 @@ message PendingNexusOperationInfo {
 
     // Operation token. Only set for asynchronous operations after a successful StartOperation call.
     string operation_token = 15;
+
+    // Schedule-to-start timeout for this operation.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_start_timeout = 16;
+
+    // Start-to-close timeout for this operation.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 17;
 }
 
 // NexusOperationCancellationInfo contains the state of a nexus operation cancellation.
@@ -553,21 +569,24 @@ message WorkflowExecutionOptions {
 }
 
 // Used to override the versioning behavior (and pinned deployment version, if applicable) of a
-// specific workflow execution. If set, takes precedence over the worker-sent values. See
-// `WorkflowExecutionInfo.VersioningInfo` for more information. To remove the override, call
-// `UpdateWorkflowExecutionOptions` with a null `VersioningOverride`, and use the `update_mask`
-// to indicate that it should be mutated.
-// Pinned overrides are automatically inherited by child workflows, continue-as-new workflows,
-// workflow retries, and cron workflows.
+// specific workflow execution. If set, this override takes precedence over worker-sent values.
+// See `WorkflowExecutionInfo.VersioningInfo` for more information.
+//
+// To remove the override, call `UpdateWorkflowExecutionOptions` with a null
+// `VersioningOverride`, and use the `update_mask` to indicate that it should be mutated.
+//
+// Pinned behavior overrides are automatically inherited by child workflows, workflow retries, continue-as-new
+// workflows, and cron workflows.
 message VersioningOverride {
     // Indicates whether to override the workflow to be AutoUpgrade or Pinned.
     oneof override {
-        // Send the next workflow task to the Version specified in the override.
+        // Override the workflow to have Pinned behavior.
         PinnedOverride pinned = 3;
-        // Send the next workflow task to the Current Deployment Version
-        // of its Task Queue when the next workflow task is dispatched.
+
+        // Override the workflow to have AutoUpgrade behavior.
         bool auto_upgrade = 4;
     }
+
     // Required.
     // Deprecated. Use `override`.
     temporal.api.enums.v1.VersioningBehavior behavior = 1 [deprecated = true];
@@ -587,14 +606,22 @@ message VersioningOverride {
         // Defaults to PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED.
         // See `PinnedOverrideBehavior` for details.
         PinnedOverrideBehavior behavior = 1;
-        // Required.
+
+        // Specifies the Worker Deployment Version to pin this workflow to.
+        // Required if the target workflow is not already pinned to a version.
+        //
+        // If omitted and the target workflow is already pinned, the effective
+        // pinned version will be the existing pinned version.
+        //
+        // If omitted and the target workflow is not pinned, the override request
+        // will be rejected with a PreconditionFailed error.
         temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
     }
 
-    // Used to specify different sub-types of Pinned override that we plan to add in the future.
     enum PinnedOverrideBehavior {
         // Unspecified.
         PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED = 0;
+
         // Override workflow behavior to be Pinned.
         PINNED_OVERRIDE_BEHAVIOR_PINNED = 1;
     }

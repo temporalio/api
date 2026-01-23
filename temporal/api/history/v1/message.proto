@@ -243,6 +243,11 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
     // Deprecated. Only considered for versioning v0.2.
     bool inherit_build_id = 15 [deprecated = true];
 
+    // Experimental. Optionally decide the versioning behavior that the first task of the new run should use.
+    // For example, choose to AutoUpgrade on continue-as-new instead of inheriting the pinned version
+    // of the previous run.
+    temporal.api.enums.v1.ContinueAsNewVersioningBehavior initial_versioning_behavior = 16;
+
     // workflow_execution_timeout is omitted as it shouldn't be overridden from within a workflow.
 }
 
@@ -270,9 +275,11 @@ message WorkflowTaskStartedEventAttributes {
     // In that case, matching will continue to deliver the task to worker. Without this field, history
     // service would return AlreadyStarted error, and matching would drop the task.
     string request_id = 3;
-    // True if this workflow should continue-as-new soon because its history size (in
-    // either event count or bytes) is getting large.
+    // True if this workflow should continue-as-new soon. See `suggest_continue_as_new_reasons` for why.
     bool suggest_continue_as_new = 4;
+    // The reason(s) that suggest_continue_as_new is true, if it is.
+    // Unset if suggest_continue_as_new is false.
+    repeated temporal.api.enums.v1.SuggestContinueAsNewReason suggest_continue_as_new_reasons = 8;
     // Total history size in bytes, which the workflow might use to decide when to
     // continue-as-new regardless of the suggestion. Note that history event count is
     // just the event id of this event, so we don't include it explicitly here.
@@ -968,6 +975,18 @@ message NexusOperationScheduledEventAttributes {
     // This is stored on the event and used internally by the server in case the endpoint is renamed from the time the
     // event was originally scheduled.
     string endpoint_id = 9;
+
+    // Schedule-to-start timeout for this operation.
+    // See ScheduleNexusOperationCommandAttributes.schedule_to_start_timeout for details.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_start_timeout = 10;
+
+    // Start-to-close timeout for this operation.
+    // See ScheduleNexusOperationCommandAttributes.start_to_close_timeout for details.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 11;
 }
 
 // Event marking an asynchronous operation was started by the responding Nexus handler.

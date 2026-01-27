@@ -26,6 +26,7 @@ import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/command/v1/message.proto";
 import "temporal/api/deployment/v1/message.proto";
+import "temporal/api/deployment/v1/compute_provider.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/filter/v1/message.proto";
 import "temporal/api/protocol/v1/message.proto";
@@ -2281,6 +2282,34 @@ message SetWorkerDeploymentRampingVersionResponse {
     // `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
     // between the two calls.
     float previous_percentage = 3 [deprecated = true];
+}
+
+// Creates or Replaces the worker lifecycle configuration for a
+// WorkerDeployment.
+message UpdateWorkerDeploymentComputeProviderRequest {
+    string namespace = 1;
+    string deployment_name = 2;
+
+    // Contains the new worker compute provider configuration for the
+    // WorkerDeployment.
+	temporal.api.deployment.v1.ComputeProvider compute_provider = 20;
+
+    // Optional. This can be the value of conflict_token from a Describe or
+    // another UpdateWorkerDeploymentComputeProvider API call.
+    //
+    // Passing a non-nil conflict token will cause this request to fail if the
+    // WorkerDeployment's configuration has been modified between the API call
+    // that generated the token and this one.
+    bytes conflict_token = 14;
+    // Optional. The identity of the client who initiated this request.
+    string identity = 15;
+}
+
+message UpdateWorkerDeploymentComputeProviderResponse {
+    // This value is returned so that it can be optionally passed to APIs that
+    // write to the WorkerDeployment state to ensure that the state did not
+    // change between this API call and a future write.
+    bytes conflict_token = 1;
 }
 
 message ListWorkerDeploymentsRequest {

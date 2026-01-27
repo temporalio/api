@@ -2559,6 +2559,52 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/update-compute-provider": {
+      "post": {
+        "summary": "Creates or replaces the compute provider configuration for a Worker\nDeployment.",
+        "description": "If a Worker Deployment with the supplied name does not exist, this\ncommand will create a new Worker Deployment with the supplied name.\n\nExperimental. This API might significantly change or be removed in a\nfuture release.",
+        "operationId": "UpdateWorkerDeploymentComputeProvider2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateWorkerDeploymentComputeProviderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentName",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceUpdateWorkerDeploymentComputeProviderBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/worker-task-reachability": {
       "get": {
         "summary": "Deprecated. Use `DescribeTaskQueue`.",
@@ -6723,6 +6769,52 @@
         ]
       }
     },
+    "/namespaces/{namespace}/worker-deployments/{deploymentName}/update-compute-provider": {
+      "post": {
+        "summary": "Creates or replaces the compute provider configuration for a Worker\nDeployment.",
+        "description": "If a Worker Deployment with the supplied name does not exist, this\ncommand will create a new Worker Deployment with the supplied name.\n\nExperimental. This API might significantly change or be removed in a\nfuture release.",
+        "operationId": "UpdateWorkerDeploymentComputeProvider",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateWorkerDeploymentComputeProviderResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "deploymentName",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceUpdateWorkerDeploymentComputeProviderBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/worker-task-reachability": {
       "get": {
         "summary": "Deprecated. Use `DescribeTaskQueue`.",
@@ -9910,6 +10002,25 @@
         }
       }
     },
+    "WorkflowServiceUpdateWorkerDeploymentComputeProviderBody": {
+      "type": "object",
+      "properties": {
+        "computeProvider": {
+          "$ref": "#/definitions/v1ComputeProvider",
+          "description": "Contains the new worker compute provider configuration for the\nWorkerDeployment."
+        },
+        "conflictToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Optional. This can be the value of conflict_token from a Describe or\nanother UpdateWorkerDeploymentComputeProvider API call.\n\nPassing a non-nil conflict token will cause this request to fail if the\nWorkerDeployment's configuration has been modified between the API call\nthat generated the token and this one."
+        },
+        "identity": {
+          "type": "string",
+          "description": "Optional. The identity of the client who initiated this request."
+        }
+      },
+      "description": "Creates or Replaces the worker lifecycle configuration for a\nWorkerDeployment."
+    },
     "WorkflowServiceUpdateWorkerDeploymentVersionMetadataBody": {
       "type": "object",
       "properties": {
@@ -11338,6 +11449,16 @@
         }
       },
       "description": "Used by the worker versioning APIs, represents an unordered set of one or more versions which are\nconsidered to be compatible with each other. Currently the versions are always worker build IDs."
+    },
+    "v1ComputeProvider": {
+      "type": "object",
+      "properties": {
+        "providerDetails": {
+          "$ref": "#/definitions/v1Payload",
+          "description": "We use Payload here because the configuration may include secret\ninformation.\n\nAn individual ComputeProviderAWSLambda,\nComputeProviderGoogleCloudRun, etc will be encrypted and\nserialized into compute_provider_config."
+        }
+      },
+      "description": "ComputeProvider stores information used by a worker control plane controller\nto respond to worker lifecycle events. For example, when a Task is received\non a TaskQueue that has no active pollers in the last five minutes, a\nserverless worker lifecycle controller might need to invoke an AWS Lambda\nFunction that itself ends up calling the SDK's worker.New() function."
     },
     "v1ConfigMetadata": {
       "type": "object",
@@ -16020,6 +16141,16 @@
         }
       }
     },
+    "v1UpdateWorkerDeploymentComputeProviderResponse": {
+      "type": "object",
+      "properties": {
+        "conflictToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "This value is returned so that it can be optionally passed to APIs that\nwrite to the WorkerDeployment state to ensure that the state did not\nchange between this API call and a future write."
+        }
+      }
+    },
     "v1UpdateWorkerDeploymentVersionMetadataResponse": {
       "type": "object",
       "properties": {
@@ -16280,6 +16411,10 @@
         "routingConfigUpdateState": {
           "$ref": "#/definitions/v1RoutingConfigUpdateState",
           "description": "Indicates whether the routing_config has been fully propagated to all\nrelevant task queues and their partitions."
+        },
+        "computeProvider": {
+          "$ref": "#/definitions/v1ComputeProvider",
+          "description": "Contains information used by worker control plane controllers to handle\nscale events."
         }
       },
       "description": "A Worker Deployment (Deployment, for short) represents all workers serving \na shared set of Task Queues. Typically, a Deployment represents one service or \napplication.\nA Deployment contains multiple Deployment Versions, each representing a different \nversion of workers. (see documentation of WorkerDeploymentVersionInfo)\nDeployment records are created in Temporal server automatically when their\nfirst poller arrives to the server.\nExperimental. Worker Deployments are experimental and might significantly change in the future."

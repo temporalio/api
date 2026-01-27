@@ -2302,6 +2302,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/update-compute-provider:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Creates or replaces the compute provider configuration for a Worker
+         Deployment.
+
+         If a Worker Deployment with the supplied name does not exist, this
+         command will create a new Worker Deployment with the supplied name.
+
+         Experimental. This API might significantly change or be removed in a
+         future release.
+      operationId: UpdateWorkerDeploymentComputeProvider
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkerDeploymentComputeProviderRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkerDeploymentComputeProviderResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/worker-task-reachability:
     get:
       tags:
@@ -6038,6 +6082,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/worker-deployments/{deploymentName}/update-compute-provider:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Creates or replaces the compute provider configuration for a Worker
+         Deployment.
+
+         If a Worker Deployment with the supplied name does not exist, this
+         command will create a new Worker Deployment with the supplied name.
+
+         Experimental. This API might significantly change or be removed in a
+         future release.
+      operationId: UpdateWorkerDeploymentComputeProvider
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkerDeploymentComputeProviderRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkerDeploymentComputeProviderResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/worker-task-reachability:
     get:
       tags:
@@ -8526,6 +8614,25 @@ components:
       description: |-
         Used by the worker versioning APIs, represents an unordered set of one or more versions which are
          considered to be compatible with each other. Currently the versions are always worker build IDs.
+    ComputeProvider:
+      type: object
+      properties:
+        providerDetails:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            We use Payload here because the configuration may include secret
+             information.
+
+             An individual ComputeProviderAWSLambda,
+             ComputeProviderGoogleCloudRun, etc will be encrypted and
+             serialized into compute_provider_config.
+      description: |-
+        ComputeProvider stores information used by a worker control plane controller
+         to respond to worker lifecycle events. For example, when a Task is received
+         on a TaskQueue that has no active pollers in the last five minutes, a
+         serverless worker lifecycle controller might need to invoke an AWS Lambda
+         Function that itself ends up calling the SDK's worker.New() function.
     ConfigMetadata:
       type: object
       properties:
@@ -14342,6 +14449,45 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerConfig'
           description: The worker configuration. Will be returned if the command was sent to a single worker.
+    UpdateWorkerDeploymentComputeProviderRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        deploymentName:
+          type: string
+        computeProvider:
+          allOf:
+            - $ref: '#/components/schemas/ComputeProvider'
+          description: |-
+            Contains the new worker compute provider configuration for the
+             WorkerDeployment.
+        conflictToken:
+          type: string
+          description: |-
+            Optional. This can be the value of conflict_token from a Describe or
+             another UpdateWorkerDeploymentComputeProvider API call.
+
+             Passing a non-nil conflict token will cause this request to fail if the
+             WorkerDeployment's configuration has been modified between the API call
+             that generated the token and this one.
+          format: bytes
+        identity:
+          type: string
+          description: Optional. The identity of the client who initiated this request.
+      description: |-
+        Creates or Replaces the worker lifecycle configuration for a
+         WorkerDeployment.
+    UpdateWorkerDeploymentComputeProviderResponse:
+      type: object
+      properties:
+        conflictToken:
+          type: string
+          description: |-
+            This value is returned so that it can be optionally passed to APIs that
+             write to the WorkerDeployment state to ensure that the state did not
+             change between this API call and a future write.
+          format: bytes
     UpdateWorkerDeploymentVersionMetadataRequest:
       type: object
       properties:
@@ -14718,6 +14864,12 @@ components:
             Indicates whether the routing_config has been fully propagated to all
              relevant task queues and their partitions.
           format: enum
+        computeProvider:
+          allOf:
+            - $ref: '#/components/schemas/ComputeProvider'
+          description: |-
+            Contains information used by worker control plane controllers to handle
+             scale events.
       description: "A Worker Deployment (Deployment, for short) represents all workers serving \n a shared set of Task Queues. Typically, a Deployment represents one service or \n application.\n A Deployment contains multiple Deployment Versions, each representing a different \n version of workers. (see documentation of WorkerDeploymentVersionInfo)\n Deployment records are created in Temporal server automatically when their\n first poller arrives to the server.\n Experimental. Worker Deployments are experimental and might significantly change in the future."
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object

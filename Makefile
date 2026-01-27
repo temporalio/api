@@ -23,7 +23,7 @@ STAMPDIR := .stamp
 COLOR := "\e[1;36m%s\e[0m\n"
 
 PROTO_ROOT := .
-PROTO_FILES = $(shell find temporal -name "*.proto")
+PROTO_FILES = $(shell find temporal -name "*.proto" -not -name "*.swp")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 PROTO_OUT := .gen
 PROTO_IMPORTS = \

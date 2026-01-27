@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package temporal.api.compute.v1;
+
+option go_package = "go.temporal.io/api/compute/v1;compute";
+option java_package = "io.temporal.api.compute.v1";
+option java_multiple_files = true;
+option java_outer_classname = "ConfigProto";
+option ruby_package = "Temporalio::Api::Compute::V1";
+option csharp_namespace = "Temporalio.Api.Compute.V1";
+
+import "temporal/api/compute/v1/provider.proto";
+import "temporal/api/compute/v1/scaler.proto";
+import "temporal/api/enums/v1/task_queue.proto";
+
+// ComputeConfig stores configuration that helps a worker control plane
+// controller understand *when* and *how* to respond to worker lifecycle
+// events.
+message ComputeConfig {
+    // When a task matching any of these task queue name + type tuples is
+    // received by the Temporal Server and there are no active pollers to send
+    // the task to, workers will be launched using the configuration
+    // information in the provider field.
+    repeated TaskQueueNameType task_queues = 1;
+    // Stores instructions for a worker control plane controller how to respond
+    // to worker lifeycle events.
+    temporal.api.compute.v1.Provider provider = 2;
+    // Informs a worker lifecycle controller *when* and *how often* to perform
+    // certain worker lifecycle actions like starting a serverless worker.
+    temporal.api.compute.v1.Scaler scaler = 3;
+
+    // Uniquely identifies a combination of task queue name and type that, when
+    // this combination has no active pollers, causes new workers to be
+    // launched with the configuration described in the provider field.
+    // (-- api-linter: core::0123::resource-annotation=disabled
+    //     aip.dev/not-precedent: this isn't a resource --)
+    message TaskQueueNameType {
+        string name = 1;
+        temporal.api.enums.v1.TaskQueueType type = 2;
+    }
+}

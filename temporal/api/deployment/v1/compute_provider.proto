@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package temporal.api.deployment.v1;
+
+option go_package = "go.temporal.io/api/deployment/v1;deployment";
+option java_package = "io.temporal.api.deployment.v1";
+option java_multiple_files = true;
+option java_outer_classname = "ComputeProviderProto";
+option ruby_package = "Temporalio::Api::Deployment::V1";
+option csharp_namespace = "Temporalio.Api.Deployment.V1";
+
+import "temporal/api/common/v1/message.proto";
+
+// ComputeProvider stores information used by a worker control plane controller
+// to respond to worker lifecycle events. For example, when a Task is received
+// on a TaskQueue that has no active pollers in the last five minutes, a
+// serverless worker lifecycle controller might need to invoke an AWS Lambda
+// Function that itself ends up calling the SDK's worker.New() function.
+message ComputeProvider {
+    // We use Payload here because the configuration may include secret
+    // information.
+    //
+    // An individual ComputeProviderAWSLambda,
+    // ComputeProviderGoogleCloudRun, etc will be encrypted and
+    // serialized into compute_provider_config.
+    temporal.api.common.v1.Payload provider_details = 1;
+}
+
+// ComputeProviderAWSLambda stores configuration information for Workers
+// that use the AWS Lambda serverless compute platform.
+//
+// Workers that use AWS Lambda have their lifecycle managed by the Temporal
+// Server. When a WorkerDeployment has its compute_provider set to use the AWS
+// Lambda compute provider, the Temporal Server will invoke an AWS Lambda
+// Function via its ARN. This will start the Worker that is housed within that
+// AWS Lambda Function and the Worker will begin listening to Tasks on the
+// WorkerDeployment's configured TaskQueue.
+message ComputeProviderAWSLambda {
+    // The Qualified or Unqualified ARN of the AWS Lambda Function to be
+    // invoked.
+    string invoke = 1;
+    // Optional AWS IAM Role ARN that will need to be assumed by the Temporal
+    // Server to invoke the Lambda Function.
+    string iam_role = 10;
+}

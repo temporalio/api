@@ -3090,6 +3090,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflowId}/pause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Note: This is an experimental API and the behavior may change in a future release.
+         PauseWorkflowExecution pauses the workflow execution specified in the request. Pausing a workflow execution results in
+         - The workflow execution status changes to `PAUSED` and a new WORKFLOW_EXECUTION_PAUSED event is added to the history
+         - No new workflow tasks or activity tasks are dispatched.
+           - Any workflow task currently executing on the worker will be allowed to complete.
+           - Any activity task currently executing will be paused.
+         - All server-side events will continue to be processed by the server.
+         - Queries & Updates on a paused workflow will be rejected.
+      operationId: PauseWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow to pause.
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          description: ID of the workflow execution to be paused. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PauseWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{workflowId}/signal-with-start/{signalName}:
     post:
       tags:
@@ -3138,6 +3184,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SignalWithStartWorkflowExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflowId}/unpause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Note: This is an experimental API and the behavior may change in a future release.
+         UnpauseWorkflowExecution unpauses a previously paused workflow execution specified in the request.
+         Unpausing a workflow execution results in
+         - The workflow execution status changes to `RUNNING` and a new WORKFLOW_EXECUTION_UNPAUSED event is added to the history
+         - Workflow tasks and activity tasks are resumed.
+      operationId: UnpauseWorkflowExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow to unpause.
+          required: true
+          schema:
+            type: string
+        - name: workflowId
+          in: path
+          description: ID of the workflow execution to be paused. Required.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnpauseWorkflowExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnpauseWorkflowExecutionResponse'
         default:
           description: Default error response
           content:

@@ -2332,6 +2332,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/worker-deployments/{deploymentName}/update-compute-config:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Creates or replaces the compute configuration for a Worker Deployment.
+
+         If a Worker Deployment with the supplied name does not exist, this
+         command will create a new Worker Deployment with the supplied name.
+
+         If the build ID field is not specified in the request payload, it will
+         default to the string `$LATEST`. If no Worker Deployment Version
+         matching the deployment name and build ID exists, this command will
+         create a new Worker Deployment Version with that deployment name and
+         build ID.
+
+         Experimental. This API might significantly change or be removed in a
+         future release.
+      operationId: UpdateWorkerDeploymentComputeConfig
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          description: |-
+            The name of the Worker Deployment to target. If a Worker Deployment with
+             this name does not exist, one is created.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkerDeploymentComputeConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkerDeploymentComputeConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/worker-task-reachability:
     get:
       tags:
@@ -6187,6 +6239,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/worker-deployments/{deploymentName}/update-compute-config:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        Creates or replaces the compute configuration for a Worker Deployment.
+
+         If a Worker Deployment with the supplied name does not exist, this
+         command will create a new Worker Deployment with the supplied name.
+
+         If the build ID field is not specified in the request payload, it will
+         default to the string `$LATEST`. If no Worker Deployment Version
+         matching the deployment name and build ID exists, this command will
+         create a new Worker Deployment Version with that deployment name and
+         build ID.
+
+         Experimental. This API might significantly change or be removed in a
+         future release.
+      operationId: UpdateWorkerDeploymentComputeConfig
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deploymentName
+          in: path
+          description: |-
+            The name of the Worker Deployment to target. If a Worker Deployment with
+             this name does not exist, one is created.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkerDeploymentComputeConfigRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateWorkerDeploymentComputeConfigResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/worker-task-reachability:
     get:
       tags:
@@ -8675,6 +8779,37 @@ components:
       description: |-
         Used by the worker versioning APIs, represents an unordered set of one or more versions which are
          considered to be compatible with each other. Currently the versions are always worker build IDs.
+    ComputeProvider:
+      type: object
+      properties:
+        provider:
+          type: string
+          description: |-
+            String identifier of the compute provider. This string is
+             implementation-specific and can be used by implementations to understand
+             how to interpret the contents of the provider_details field.
+        object:
+          allOf:
+            - $ref: '#/components/schemas/GoogleProtobufAny'
+          description: |-
+            will be an unencrypted, unencoded object of provider-specific
+             information
+             (-- api-linter: core::0146::any=disabled
+                 aip.dev/not-precedent: This needs to be extensible to
+                 externally-written compute providers --)
+        payload:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            will be an encrypted, encoded bytestring containing
+             provider-specific information. The implementation must understand
+             how to decrypt the payload.
+      description: |-
+        ComputeProvider stores information used by a worker control plane controller
+         to respond to worker lifecycle events. For example, when a Task is received
+         on a TaskQueue that has no active pollers in the last five minutes, a
+         serverless worker lifecycle controller might need to invoke an AWS Lambda
+         Function that itself ends up calling the SDK's worker.New() function.
     ConfigMetadata:
       type: object
       properties:
@@ -12419,6 +12554,25 @@ components:
         revisionNumber:
           type: string
           description: "Monotonically increasing value which is incremented on every mutation \n to any field of this message to achieve eventual consistency between task queues and their partitions."
+    Scaler:
+      type: object
+      properties:
+        minReplicas:
+          type: integer
+          description: |-
+            The lower limit for the number of Workers (in the WorkerDeployment) to
+             which the Scaler can scale down.
+          format: int32
+        maxReplicas:
+          type: integer
+          description: |-
+            The upper limit for the number of Workers (in the WorkerDeployment) to
+             which the Scaler can scale up. Must be greater than or equal to
+             minReplicas.
+          format: int32
+      description: |-
+        Scaler instructs the Temporal Service when to scale up or down the number of
+         Workers that comprise a WorkerDeployment.
     Schedule:
       type: object
       properties:
@@ -14518,6 +14672,70 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerConfig'
           description: The worker configuration. Will be returned if the command was sent to a single worker.
+    UpdateWorkerDeploymentComputeConfigRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        deploymentName:
+          type: string
+          description: |-
+            The name of the Worker Deployment to target. If a Worker Deployment with
+             this name does not exist, one is created.
+        buildId:
+          type: string
+          description: |-
+            Optional Build ID.
+
+             If set, we look up the Worker Deployment Version
+             matching the deployment name and build ID. If a Worker Deployment
+             Version with that build ID does not exist, one is created.
+
+             If this field is not set, defaults to the string `$LATEST`. If no such
+             Worker Deployment Version exists, it will be created.
+        taskQueueName:
+          type: string
+          description: |-
+            Optional task queue name. If the WorkerDeployment does not yet exist
+             when the user calls `temporal worker deployment update-compute-config`,
+             the task queue's name is required in order to create the
+             WorkerDeployment.
+        computeProvider:
+          allOf:
+            - $ref: '#/components/schemas/ComputeProvider'
+          description: |-
+            Contains the new worker compute provider configuration for the
+             WorkerDeploymentVersion.
+        scaler:
+          allOf:
+            - $ref: '#/components/schemas/Scaler'
+          description: Contains the new scaler configuration for the WorkerDeploymentVersion.
+        conflictToken:
+          type: string
+          description: |-
+            Optional. This can be the value of conflict_token from a Describe or
+             another UpdateWorkerDeploymentComputeProvider API call.
+
+             Passing a non-nil conflict token will cause this request to fail if the
+             WorkerDeployment's configuration has been modified between the API call
+             that generated the token and this one.
+          format: bytes
+        identity:
+          type: string
+          description: Optional. The identity of the client who initiated this request.
+      description: |-
+        Creates or Replaces the compute configuration for a WorkerDeployment or
+         WorkerDeploymentVersion.
+    UpdateWorkerDeploymentComputeConfigResponse:
+      type: object
+      properties:
+        conflictToken:
+          type: string
+          description: |-
+            This value is returned so that it can be optionally passed to APIs that
+             write to the WorkerDeploymentVersion state to ensure that the state did
+             not change between this API call and a future write.
+          format: bytes
     UpdateWorkerDeploymentVersionMetadataRequest:
       type: object
       properties:
@@ -15105,6 +15323,18 @@ components:
           allOf:
             - $ref: '#/components/schemas/VersionMetadata'
           description: Arbitrary user-provided metadata attached to this version.
+        computeProvider:
+          allOf:
+            - $ref: '#/components/schemas/ComputeProvider'
+          description: |-
+            Contains information used by worker control plane controllers to handle
+             scale events.
+        scaler:
+          allOf:
+            - $ref: '#/components/schemas/Scaler'
+          description: |-
+            Instructs the worker control plane controllers when to scale up or down
+             the number of workers in a deployment (version).
       description: "A Worker Deployment Version (Version, for short) represents all workers of the same \n code and config within a Deployment. Workers of the same Version are expected to \n behave exactly the same so when executions move between them there are no \n non-determinism issues.\n Worker Deployment Versions are created in Temporal server automatically when \n their first poller arrives to the server.\n Experimental. Worker Deployments are experimental and might significantly change in the future."
     WorkerDeploymentVersionInfo_VersionTaskQueueInfo:
       type: object

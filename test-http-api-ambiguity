@@ -1,0 +1,115 @@
+#!/usr/bin/env -S uv run --script
+#
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["pytest", "networkx"]
+# ///
+#
+# Checks that every possible URL matches at most one HTTP API handler.
+# Parses openapi/openapiv2.json and reports any pair of routes (same HTTP
+# method) where a concrete URL could match both patterns.
+
+import json
+import sys
+from collections import defaultdict
+from itertools import combinations
+from pathlib import Path
+
+import networkx as nx
+import pytest
+
+SPEC_PATH = Path(__file__).parent / "openapi" / "openapiv2.json"
+HTTP_METHODS = {"get", "put", "post", "delete", "patch"}
+
+# Known ambiguities that have not yet been resolved.
+KNOWN_CONFLICTS = {
+    ("post", "/namespaces/{namespace}/workflows/{workflowId}"),
+    ("post", "/api/v1/namespaces/{namespace}/workflows/{workflowId}"),
+}
+
+
+def test_no_ambiguous_routes() -> None:
+    g = find_conflicts(load_routes())
+    unknown = nx.Graph(
+        (u, v)
+        for u, v in g.edges()
+        if u[:2] not in KNOWN_CONFLICTS and v[:2] not in KNOWN_CONFLICTS
+    )
+    if unknown.number_of_edges():
+        pytest.fail(
+            f"Found {len(list(nx.connected_components(unknown)))} conflict group(s):\n\n"
+            + format_conflicts(unknown)
+        )
+
+
+# --- helpers ---
+
+
+def load_routes() -> defaultdict[str, list[tuple[str, str]]]:
+    spec = json.loads(SPEC_PATH.read_text())
+    routes: defaultdict[str, list[tuple[str, str]]] = defaultdict(list)
+    for path, methods in spec["paths"].items():
+        segments = path.strip("/").split("/")
+        validate_segments(path, segments)
+        for method in methods:
+            if method not in HTTP_METHODS:
+                continue
+            op_id = methods[method].get("operationId", "?")
+            routes[method].append((path, op_id))
+    return routes
+
+
+def find_conflicts(routes: defaultdict[str, list[tuple[str, str]]]) -> nx.Graph:
+    g: nx.Graph = nx.Graph()
+    for method, entries in sorted(routes.items()):
+        for (path_a, op_a), (path_b, op_b) in combinations(entries, 2):
+            if ambiguous(path_a, path_b):
+                g.add_edge((method, path_a, op_a), (method, path_b, op_b))
+    return g
+
+
+def format_conflicts(g: nx.Graph) -> str:
+    groups: list[str] = []
+    for comp in nx.connected_components(g):
+        hub = max(comp, key=lambda n: g.degree(n))  # type: ignore[type-var]
+        others = sorted(comp - {hub})
+        method, path, op = hub
+        lines = f"{method.upper()} {path} ({op}) ambiguous with:"
+        for _, p, o in others:
+            lines += f"\n    {p} ({o})"
+        groups.append(lines)
+    return "\n\n".join(sorted(groups))
+
+
+def ambiguous(a: str, b: str) -> bool:
+    sa = a.strip("/").split("/")
+    sb = b.strip("/").split("/")
+    if len(sa) != len(sb):
+        return False
+    return all(x == y or is_variable(x) or is_variable(y) for x, y in zip(sa, sb))
+
+
+def is_variable(segment: str) -> bool:
+    return segment.startswith("{") and segment.endswith("}")
+
+
+def validate_segments(path: str, segments: list[str]) -> None:
+    """Fail loudly if any segment uses multi-segment wildcards."""
+    for seg in segments:
+        if seg in ("*", "**"):
+            raise ValueError(
+                f"Unsupported wildcard segment '{seg}' in {path}; extend this check."
+            )
+        if seg.startswith("{") and "=" in seg:
+            raise ValueError(
+                f"Unsupported pattern variable '{seg}' in {path}; extend this check."
+            )
+
+
+if __name__ == "__main__":
+    try:
+        test_no_ambiguous_routes()
+    except pytest.fail.Exception as e:
+        print(f"FAILED: {e}", file=sys.stderr)
+        sys.exit(1)
+    print("PASSED: test_no_ambiguous_routes")

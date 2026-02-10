@@ -237,6 +237,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/cancel/{activityId}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RequestCancelActivityExecution requests cancellation of an activity execution.
+
+         Cancellation is cooperative: this call records the request, but the activity must detect and
+         acknowledge it for the activity to reach CANCELED status. The cancellation signal is
+         delivered via `cancel_requested` in the heartbeat response; SDKs surface this via
+         language-idiomatic mechanisms (context cancellation, exceptions, abort signals).
+      operationId: RequestCancelActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCancelActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestCancelActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activities/complete:
     post:
       tags:
@@ -305,6 +347,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespondActivityTaskCompletedByIdResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/describe/{activityId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeActivityExecution returns information about an activity execution.
+         It can be used to:
+         - Get current activity info without waiting
+         - Long-poll for next state change and return new activity info
+         Response can optionally include activity input or outcome (if the activity has completed).
+      operationId: DescribeActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Activity run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+        - name: includeInput
+          in: query
+          description: Include the input field in the response.
+          schema:
+            type: boolean
+        - name: includeOutcome
+          in: query
+          description: Include the outcome (result/failure) in the response if the activity has completed.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity
+             state changes from the state encoded in this token. If absent, return current state immediately.
+             If present, run_id must also be present.
+             Note that activity state may change multiple times between requests, therefore it is not
+             guaranteed that a client making a sequence of long-poll requests will see a complete
+             sequence of state changes.
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -465,6 +569,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/outcome/{activityId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollActivityExecution long-polls for an activity execution to complete and returns the
+         outcome (result or failure).
+      operationId: PollActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Activity run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activities/pause:
     post:
       tags:
@@ -566,6 +707,90 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/start/{activityId}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        StartActivityExecution starts a new activity execution.
+
+         Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
+         unless permitted by the specified ID conflict policy.
+      operationId: StartActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          description: |-
+            Identifier for this activity. Required. This identifier should be meaningful in the user's
+             own system. It must be unique among activities in the same namespace, subject to the rules
+             imposed by id_reuse_policy and id_conflict_policy.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/terminate/{activityId}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        TerminateActivityExecution terminates an existing activity execution immediately.
+
+         Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a
+         running attempt.
+      operationId: TerminateActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminateActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activities/unpause:
     post:
       tags:
@@ -643,230 +868,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UpdateActivityOptionsResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/{activityId}:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        DescribeActivityExecution returns information about an activity execution.
-         It can be used to:
-         - Get current activity info without waiting
-         - Long-poll for next state change and return new activity info
-         Response can optionally include activity input or outcome (if the activity has completed).
-      operationId: DescribeActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: runId
-          in: query
-          description: Activity run ID. If empty the request targets the latest run.
-          schema:
-            type: string
-        - name: includeInput
-          in: query
-          description: Include the input field in the response.
-          schema:
-            type: boolean
-        - name: includeOutcome
-          in: query
-          description: Include the outcome (result/failure) in the response if the activity has completed.
-          schema:
-            type: boolean
-        - name: longPollToken
-          in: query
-          description: |-
-            Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity
-             state changes from the state encoded in this token. If absent, return current state immediately.
-             If present, run_id must also be present.
-             Note that activity state may change multiple times between requests, therefore it is not
-             guaranteed that a client making a sequence of long-poll requests will see a complete
-             sequence of state changes.
-          schema:
-            type: string
-            format: bytes
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        StartActivityExecution starts a new activity execution.
-
-         Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
-         unless permitted by the specified ID conflict policy.
-      operationId: StartActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          description: |-
-            Identifier for this activity. Required. This identifier should be meaningful in the user's
-             own system. It must be unique among activities in the same namespace, subject to the rules
-             imposed by id_reuse_policy and id_conflict_policy.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StartActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StartActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/{activityId}/cancel:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        RequestCancelActivityExecution requests cancellation of an activity execution.
-
-         Cancellation is cooperative: this call records the request, but the activity must detect and
-         acknowledge it for the activity to reach CANCELED status. The cancellation signal is
-         delivered via `cancel_requested` in the heartbeat response; SDKs surface this via
-         language-idiomatic mechanisms (context cancellation, exceptions, abort signals).
-      operationId: RequestCancelActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RequestCancelActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RequestCancelActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/{activityId}/outcome:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        PollActivityExecution long-polls for an activity execution to complete and returns the
-         outcome (result or failure).
-      operationId: PollActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: runId
-          in: query
-          description: Activity run ID. If empty the request targets the latest run.
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PollActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activities/{activityId}/terminate:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        TerminateActivityExecution terminates an existing activity execution immediately.
-
-         Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a
-         running attempt.
-      operationId: TerminateActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TerminateActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TerminateActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -4150,6 +4151,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/cancel/{activityId}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RequestCancelActivityExecution requests cancellation of an activity execution.
+
+         Cancellation is cooperative: this call records the request, but the activity must detect and
+         acknowledge it for the activity to reach CANCELED status. The cancellation signal is
+         delivered via `cancel_requested` in the heartbeat response; SDKs surface this via
+         language-idiomatic mechanisms (context cancellation, exceptions, abort signals).
+      operationId: RequestCancelActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCancelActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestCancelActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/activities/complete:
     post:
       tags:
@@ -4218,6 +4261,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespondActivityTaskCompletedByIdResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/describe/{activityId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeActivityExecution returns information about an activity execution.
+         It can be used to:
+         - Get current activity info without waiting
+         - Long-poll for next state change and return new activity info
+         Response can optionally include activity input or outcome (if the activity has completed).
+      operationId: DescribeActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Activity run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+        - name: includeInput
+          in: query
+          description: Include the input field in the response.
+          schema:
+            type: boolean
+        - name: includeOutcome
+          in: query
+          description: Include the outcome (result/failure) in the response if the activity has completed.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity
+             state changes from the state encoded in this token. If absent, return current state immediately.
+             If present, run_id must also be present.
+             Note that activity state may change multiple times between requests, therefore it is not
+             guaranteed that a client making a sequence of long-poll requests will see a complete
+             sequence of state changes.
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -4378,6 +4483,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/outcome/{activityId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollActivityExecution long-polls for an activity execution to complete and returns the
+         outcome (result or failure).
+      operationId: PollActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Activity run ID. If empty the request targets the latest run.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/activities/pause:
     post:
       tags:
@@ -4479,6 +4621,90 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/start/{activityId}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        StartActivityExecution starts a new activity execution.
+
+         Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
+         unless permitted by the specified ID conflict policy.
+      operationId: StartActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          description: |-
+            Identifier for this activity. Required. This identifier should be meaningful in the user's
+             own system. It must be unique among activities in the same namespace, subject to the rules
+             imposed by id_reuse_policy and id_conflict_policy.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/terminate/{activityId}:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        TerminateActivityExecution terminates an existing activity execution immediately.
+
+         Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a
+         running attempt.
+      operationId: TerminateActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminateActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/activities/unpause:
     post:
       tags:
@@ -4556,230 +4782,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UpdateActivityOptionsResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/{activityId}:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        DescribeActivityExecution returns information about an activity execution.
-         It can be used to:
-         - Get current activity info without waiting
-         - Long-poll for next state change and return new activity info
-         Response can optionally include activity input or outcome (if the activity has completed).
-      operationId: DescribeActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: runId
-          in: query
-          description: Activity run ID. If empty the request targets the latest run.
-          schema:
-            type: string
-        - name: includeInput
-          in: query
-          description: Include the input field in the response.
-          schema:
-            type: boolean
-        - name: includeOutcome
-          in: query
-          description: Include the outcome (result/failure) in the response if the activity has completed.
-          schema:
-            type: boolean
-        - name: longPollToken
-          in: query
-          description: |-
-            Token from a previous DescribeActivityExecutionResponse. If present, long-poll until activity
-             state changes from the state encoded in this token. If absent, return current state immediately.
-             If present, run_id must also be present.
-             Note that activity state may change multiple times between requests, therefore it is not
-             guaranteed that a client making a sequence of long-poll requests will see a complete
-             sequence of state changes.
-          schema:
-            type: string
-            format: bytes
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DescribeActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        StartActivityExecution starts a new activity execution.
-
-         Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
-         unless permitted by the specified ID conflict policy.
-      operationId: StartActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          description: |-
-            Identifier for this activity. Required. This identifier should be meaningful in the user's
-             own system. It must be unique among activities in the same namespace, subject to the rules
-             imposed by id_reuse_policy and id_conflict_policy.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/StartActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StartActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/{activityId}/cancel:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        RequestCancelActivityExecution requests cancellation of an activity execution.
-
-         Cancellation is cooperative: this call records the request, but the activity must detect and
-         acknowledge it for the activity to reach CANCELED status. The cancellation signal is
-         delivered via `cancel_requested` in the heartbeat response; SDKs surface this via
-         language-idiomatic mechanisms (context cancellation, exceptions, abort signals).
-      operationId: RequestCancelActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RequestCancelActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RequestCancelActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/{activityId}/outcome:
-    get:
-      tags:
-        - WorkflowService
-      description: |-
-        PollActivityExecution long-polls for an activity execution to complete and returns the
-         outcome (result or failure).
-      operationId: PollActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: runId
-          in: query
-          description: Activity run ID. If empty the request targets the latest run.
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PollActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activities/{activityId}/terminate:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        TerminateActivityExecution terminates an existing activity execution immediately.
-
-         Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a
-         running attempt.
-      operationId: TerminateActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TerminateActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TerminateActivityExecutionResponse'
         default:
           description: Default error response
           content:

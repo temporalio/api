@@ -2,7 +2,7 @@ SHELL=bash -o pipefail
 
 $(VERBOSE).SILENT:
 ############################# Main targets #############################
-ci-build: install proto http-api-docs
+ci-build: install proto http-api-docs test
 
 # Install dependencies.
 install: grpc-install api-linter-install buf-install
@@ -73,6 +73,10 @@ http-api-docs:
 	yq e -i '(.paths[] | .[] | .operationId) |= sub("\w+_(.*)", "$$1")' $(OAPI_OUT)/openapi.yaml
 	mv -f $(OAPI_OUT)/openapi.yaml $(OAPI_OUT)/openapiv3.yaml
 
+test:
+	./test-http-api-ambiguity
+
+
 ##### Plugins & tools #####
 grpc-install:
 	@printf $(COLOR) "Install/update protoc and plugins..."
@@ -113,7 +117,7 @@ buf-lint: $(STAMPDIR)/buf-mod-prune
 	(cd $(PROTO_ROOT) && buf lint)
 
 buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
+	@printf $(COLOR) "Run buf breaking changes check against master branch..."
 	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
 
 ##### Clean #####

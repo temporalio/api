@@ -2817,46 +2817,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/workflows/execute-multi-operation:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        ExecuteMultiOperation executes multiple operations within a single workflow.
-
-         Operations are started atomically, meaning if *any* operation fails to be started, none are,
-         and the request fails. Upon start, the API returns only when *all* operations have a response.
-
-         Upon failure, it returns `MultiOperationExecutionFailure` where the status code
-         equals the status code of the *first* operation that failed to be started.
-
-         NOTE: Experimental API.
-      operationId: ExecuteMultiOperation
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ExecuteMultiOperationRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExecuteMultiOperationResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}:
     get:
       tags:
@@ -6892,46 +6852,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/workflows/execute-multi-operation:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        ExecuteMultiOperation executes multiple operations within a single workflow.
-
-         Operations are started atomically, meaning if *any* operation fails to be started, none are,
-         and the request fails. Upon start, the API returns only when *all* operations have a response.
-
-         Upon failure, it returns `MultiOperationExecutionFailure` where the status code
-         equals the status code of the *first* operation that failed to be started.
-
-         NOTE: Experimental API.
-      operationId: ExecuteMultiOperation
-      parameters:
-        - name: namespace
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ExecuteMultiOperationRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExecuteMultiOperationResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{execution.workflow_id}:
     get:
       tags:
@@ -9812,63 +9732,6 @@ components:
           type: string
           description: Nexus task queue to route requests to.
       description: Target a worker polling on a Nexus task queue in a specific namespace.
-    ExecuteMultiOperationRequest:
-      type: object
-      properties:
-        namespace:
-          type: string
-        operations:
-          type: array
-          items:
-            $ref: '#/components/schemas/ExecuteMultiOperationRequest_Operation'
-          description: |-
-            List of operations to execute within a single workflow.
-
-             Preconditions:
-             - The list of operations must not be empty.
-             - The workflow ids must match across operations.
-             - The only valid list of operations at this time is [StartWorkflow, UpdateWorkflow], in this order.
-
-             Note that additional operation-specific restrictions have to be considered.
-    ExecuteMultiOperationRequest_Operation:
-      type: object
-      properties:
-        startWorkflow:
-          allOf:
-            - $ref: '#/components/schemas/StartWorkflowExecutionRequest'
-          description: |-
-            Additional restrictions:
-             - setting `cron_schedule` is invalid
-             - setting `request_eager_execution` is invalid
-             - setting `workflow_start_delay` is invalid
-        updateWorkflow:
-          allOf:
-            - $ref: '#/components/schemas/UpdateWorkflowExecutionRequest'
-          description: |-
-            Additional restrictions:
-             - setting `first_execution_run_id` is invalid
-             - setting `workflow_execution.run_id` is invalid
-    ExecuteMultiOperationResponse:
-      type: object
-      properties:
-        responses:
-          type: array
-          items:
-            $ref: '#/components/schemas/ExecuteMultiOperationResponse_Response'
-      description: |-
-        IMPORTANT: For [StartWorkflow, UpdateWorkflow] combination ("Update-with-Start") when both
-           1. the workflow update for the requested update ID has already completed, and
-           2. the workflow for the requested workflow ID has already been closed,
-         then you'll receive
-           - an update response containing the update's outcome, and
-           - a start response with a `status` field that reflects the workflow's current state.
-    ExecuteMultiOperationResponse_Response:
-      type: object
-      properties:
-        startWorkflow:
-          $ref: '#/components/schemas/StartWorkflowExecutionResponse'
-        updateWorkflow:
-          $ref: '#/components/schemas/UpdateWorkflowExecutionResponse'
     ExternalWorkflowExecutionCancelRequestedEventAttributes:
       type: object
       properties:

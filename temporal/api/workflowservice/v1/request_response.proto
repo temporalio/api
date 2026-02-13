@@ -25,6 +25,7 @@ import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/command/v1/message.proto";
+import "temporal/api/compute/v1/config.proto";
 import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/filter/v1/message.proto";
@@ -2315,6 +2316,93 @@ message SetWorkerDeploymentRampingVersionResponse {
     // `DescribeWorkerDeployment` call to this API you can ensure there is no interfering changes
     // between the two calls.
     float previous_percentage = 3 [deprecated = true];
+}
+
+// Creates a new WorkerDeployment.
+message CreateWorkerDeploymentRequest {
+    string namespace = 1;
+    // The name of the Worker Deployment to create. If a Worker Deployment with
+    // this name already exists, an error will be returned.
+    string deployment_name = 2;
+
+    // Optional. Indicates the Worker Deployment should use a particular
+    // versioning strategy.
+    //
+    // If empty, defaults to UNVERSIONED.
+    temporal.api.enums.v1.WorkerVersioningMode worker_versioning_mode = 3;
+
+    // Optional. Contains the new worker compute configuration for the Worker
+    // Deployment. Used as the default compute configuration for new Worker
+    // Deployment Versions created for this Worker Deployment.
+	temporal.api.compute.v1.ComputeConfig compute_config = 6;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 15;
+    // A unique identifier for this create request for idempotence. Typically UUIDv4.
+    string request_id = 16;
+}
+
+message CreateWorkerDeploymentResponse {
+    // This value is returned so that it can be optionally passed to APIs that
+    // write to the WorkerDeployment state to ensure that the state did not
+    // change between this API call and a future write.
+    bytes conflict_token = 1;
+}
+
+// Updates the compute configuration for an existing WorkerDeployment.
+message UpdateWorkerDeploymentComputeConfigRequest {
+    string namespace = 1;
+    // The name of the Worker Deployment to target. If a Worker Deployment with
+    // this name does not exist, one is created.
+    string deployment_name = 2;
+
+    // Contains the new worker compute configuration for the
+    // WorkerDeployment.
+	temporal.api.compute.v1.ComputeConfig compute_config = 6;
+
+    // Optional. This can be the value of conflict_token from a Describe or
+    // another UpdateWorkerDeploymentComputeProvider API call.
+    //
+    // Passing a non-nil conflict token will cause this request to fail if the
+    // WorkerDeployment's configuration has been modified between the API call
+    // that generated the token and this one.
+    bytes conflict_token = 14;
+    // Optional. The identity of the client who initiated this request.
+    string identity = 15;
+}
+
+message UpdateWorkerDeploymentComputeConfigResponse {
+    // This value is returned so that it can be optionally passed to APIs that
+    // write to the WorkerDeployment state to ensure that the state did not
+    // change between this API call and a future write.
+    bytes conflict_token = 1;
+}
+
+// Updates the compute configuration for an existing WorkerDeploymentVersion.
+message UpdateWorkerDeploymentVersionComputeConfigRequest {
+    string namespace = 1;
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 5;
+
+    // Contains the new worker compute configuration for the
+    // WorkerDeploymentVersion.
+	temporal.api.compute.v1.ComputeConfig compute_config = 6;
+
+    // Optional. This can be the value of conflict_token from a Describe or
+    // another UpdateWorkerDeploymentVersionComputeProvider API call.
+    //
+    // Passing a non-nil conflict token will cause this request to fail if the
+    // WorkerDeploymentVersion's configuration has been modified between the
+    // API call that generated the token and this one.
+    bytes conflict_token = 14;
+    // Optional. The identity of the client who initiated this request.
+    string identity = 15;
+}
+
+message UpdateWorkerDeploymentVersionComputeConfigResponse {
+    // This value is returned so that it can be optionally passed to APIs that
+    // write to the WorkerDeploymentVersion state to ensure that the state did
+    // not change between this API call and a future write.
+    bytes conflict_token = 1;
 }
 
 message ListWorkerDeploymentsRequest {

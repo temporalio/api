@@ -14,6 +14,7 @@ world system {
 interface workflow-service {
   use nexus:temporal-types/model@1.0.0.{
     duration,
+    failure,
     header,
     memo,
     payloads,
@@ -157,4 +158,83 @@ interface workflow-service {
   signal-with-start-workflow: func(
     request: signal-with-start-workflow-request,
   ) -> signal-with-start-workflow-response;
+
+  /// @nexus.doc "Request fields for waiting on a standalone activity to complete."
+  /// @nexus.experimental
+  /// @nexus.proto "temporal.api.workflowservice.v1.PollActivityExecutionRequest" typescript-import="@temporalio/proto"
+  record poll-activity-execution-request {
+    /// @nexus.omit
+    namespace: placeholder,
+    /// @nexus.doc "ID of the standalone activity to wait on."
+    activity-id: string,
+    /// @nexus.doc "Run ID of the activity. Defaults to the latest run."
+    run-id: option<string>,
+  }
+
+  /// @nexus.doc "The successful result or failure of an activity execution."
+  /// @nexus.experimental
+  /// @nexus.proto "temporal.api.activity.v1.ActivityExecutionOutcome.value"
+  variant activity-execution-outcome-value {
+    /// @nexus.doc "The activity completed successfully with this result."
+    %result(payloads),
+    /// @nexus.doc "The activity completed unsuccessfully."
+    failure(failure),
+  }
+
+  /// @nexus.doc "Retry state of an unsuccessful activity execution."
+  /// @nexus.experimental
+  /// @nexus.proto "temporal.api.enums.v1.RetryState"
+  enum retry-state {
+    retry-state-unspecified,
+    retry-state-in-progress,
+    retry-state-non-retryable-failure,
+    retry-state-timeout,
+    retry-state-maximum-attempts-reached,
+    retry-state-retry-policy-not-set,
+    retry-state-internal-server-error,
+    retry-state-cancel-requested,
+  }
+
+  /// @nexus.doc "Outcome of a closed activity execution."
+  /// @nexus.experimental
+  /// @nexus.proto "temporal.api.activity.v1.ActivityExecutionOutcome" typescript-import="@temporalio/proto"
+  record activity-execution-outcome {
+    /// @nexus.doc "The result or failure of the activity."
+    value: option<activity-execution-outcome-value>,
+    /// @nexus.doc "The retry state associated with an unsuccessful activity execution."
+    retry-state: option<retry-state>,
+  }
+
+  /// @nexus.doc "Context of the Nexus caller that started an execution, used to serialize its payloads."
+  /// @nexus.experimental
+  /// @nexus.proto "temporal.api.nexus.v1.PropagatedSerializationContext" typescript-import="@temporalio/proto"
+  record propagated-serialization-context {
+    /// @nexus.doc "Nexus endpoint of the caller."
+    endpoint: string,
+    /// @nexus.doc "Nexus service of the caller."
+    service: string,
+    /// @nexus.doc "Nexus operation of the caller."
+    operation: string,
+  }
+
+  /// @nexus.doc "Outcome of a standalone activity execution."
+  /// @nexus.experimental
+  /// @nexus.proto "temporal.api.workflowservice.v1.PollActivityExecutionResponse" typescript-import="@temporalio/proto"
+  record poll-activity-execution-response {
+    /// @nexus.doc "Run ID of the activity, useful when run-id was not specified in the request."
+    run-id: string,
+    /// @nexus.doc "The result or failure of the activity."
+    outcome: option<activity-execution-outcome>,
+    /// @nexus.doc "Serialization context propagated from the Nexus caller that started the activity, if any."
+    propagated-nexus-serialization-context: option<propagated-serialization-context>,
+  }
+
+  /// @nexus.doc
+  ///   "Wait for a standalone activity to complete and return its outcome."
+  ///   returns="The activity's outcome, including its result or failure."
+  /// @nexus.operation name="PollActivityExecution"
+  /// @nexus.experimental
+  poll-activity-execution: func(
+    request: poll-activity-execution-request,
+  ) -> poll-activity-execution-response;
 }

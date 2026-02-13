@@ -39,6 +39,10 @@ var exemptions = map[string]struct{}{
 
 	"WorkflowService.ShutdownWorker": {},
 
+	// Direct Nexus calls have no resource in the request itself. The target is derived from the operation input.
+	"WorkflowService.StartNexusOperation":  {},
+	"WorkflowService.CancelNexusOperation": {},
+
 	"WorkflowService.GetWorkerTaskReachability": {},
 
 	"WorkflowService.DescribeDeployment":        {},

@@ -696,6 +696,7 @@
     "/api/v1/namespaces/{namespace}/activities/{activityId}/outcome": {
       "get": {
         "summary": "PollActivityExecution long-polls for an activity execution to complete and returns the\noutcome (result or failure).",
+        "description": "Also exposed as an asynchronous operation on the system Nexus endpoint. When invoked via Nexus, the request's\nnamespace must be empty; the caller's namespace is used.",
         "operationId": "PollActivityExecution2",
         "responses": {
           "200": {
@@ -714,6 +715,7 @@
         "parameters": [
           {
             "name": "namespace",
+            "description": "Must be empty when invoked as a system Nexus operation. The caller's namespace is used instead.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -2018,6 +2020,129 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/WorkflowServiceTerminateNexusOperationExecutionBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}": {
+      "post": {
+        "summary": "StartNexusOperation starts a Nexus operation on an endpoint, communicating directly with the endpoint using the\ncaller's namespace credentials. Unlike StartNexusOperationExecution, no durable caller-side operation is created.\nThe response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start, or operation\nfailure. Handler errors (e.g. NOT_FOUND, BAD_REQUEST) are returned as gRPC errors.",
+        "description": "A request carrying an ephemeral completion callback may be held open as a long poll until the operation\ncompletes or the long-poll deadline is reached.\n\nCurrently only supported for the system Nexus endpoint.",
+        "operationId": "StartNexusOperation2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartNexusOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace to authenticate to. This may be different from the target namespace of the specified endpoint.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "endpoint",
+            "description": "Endpoint name, resolved via the Temporal service's endpoint registry.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "description": "Nexus service name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "operation",
+            "description": "Nexus operation name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceStartNexusOperationBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}/cancel": {
+      "post": {
+        "summary": "CancelNexusOperation requests cancellation of an asynchronous Nexus operation previously started via\nStartNexusOperation.\nCancellation is cooperative: this forwards a cancel request to the handler, but the operation will only\ntransition to canceled if the handler processes it.",
+        "operationId": "CancelNexusOperation2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelNexusOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace to authenticate to. This may be different from the target namespace of the specified endpoint.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "endpoint",
+            "description": "Endpoint name, resolved via the Temporal service's endpoint registry.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "description": "Nexus service name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "operation",
+            "description": "Nexus operation name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCancelNexusOperationBody"
             }
           }
         ],
@@ -6351,6 +6476,7 @@
     "/namespaces/{namespace}/activities/{activityId}/outcome": {
       "get": {
         "summary": "PollActivityExecution long-polls for an activity execution to complete and returns the\noutcome (result or failure).",
+        "description": "Also exposed as an asynchronous operation on the system Nexus endpoint. When invoked via Nexus, the request's\nnamespace must be empty; the caller's namespace is used.",
         "operationId": "PollActivityExecution",
         "responses": {
           "200": {
@@ -6369,6 +6495,7 @@
         "parameters": [
           {
             "name": "namespace",
+            "description": "Must be empty when invoked as a system Nexus operation. The caller's namespace is used instead.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -7673,6 +7800,129 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/WorkflowServiceTerminateNexusOperationExecutionBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}": {
+      "post": {
+        "summary": "StartNexusOperation starts a Nexus operation on an endpoint, communicating directly with the endpoint using the\ncaller's namespace credentials. Unlike StartNexusOperationExecution, no durable caller-side operation is created.\nThe response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start, or operation\nfailure. Handler errors (e.g. NOT_FOUND, BAD_REQUEST) are returned as gRPC errors.",
+        "description": "A request carrying an ephemeral completion callback may be held open as a long poll until the operation\ncompletes or the long-poll deadline is reached.\n\nCurrently only supported for the system Nexus endpoint.",
+        "operationId": "StartNexusOperation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartNexusOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace to authenticate to. This may be different from the target namespace of the specified endpoint.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "endpoint",
+            "description": "Endpoint name, resolved via the Temporal service's endpoint registry.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "description": "Nexus service name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "operation",
+            "description": "Nexus operation name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceStartNexusOperationBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}/cancel": {
+      "post": {
+        "summary": "CancelNexusOperation requests cancellation of an asynchronous Nexus operation previously started via\nStartNexusOperation.\nCancellation is cooperative: this forwards a cancel request to the handler, but the operation will only\ntransition to canceled if the handler processes it.",
+        "operationId": "CancelNexusOperation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelNexusOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace to authenticate to. This may be different from the target namespace of the specified endpoint.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "endpoint",
+            "description": "Endpoint name, resolved via the Temporal service's endpoint registry.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "description": "Nexus service name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "operation",
+            "description": "Nexus operation name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCancelNexusOperationBody"
             }
           }
         ],
@@ -10815,6 +11065,10 @@
     }
   },
   "definitions": {
+    "CallbackEphemeral": {
+      "type": "object",
+      "description": "Ephemeral callbacks are never persisted. An ephemeral callback indicates that the caller is waiting for the\noutcome on the request that carries it, turning that request into a long poll.\nIf the operation completes before the long-poll deadline, its outcome is returned synchronously. Otherwise the\nrequest returns as if the operation was started asynchronously, and the caller should re-issue it with the same\nrequest ID to continue waiting.\n\nCurrently only supported in StartNexusOperationRequest targeting the system Nexus endpoint. Other APIs reject\nthis variant with an error."
+    },
     "CallbackInfoActivityClosed": {
       "type": "object",
       "description": "Trigger for when the activity is closed."
@@ -11377,6 +11631,41 @@
       "default": "RUNTIME_TYPE_UNSPECIFIED",
       "description": " - RUNTIME_TYPE_UNSPECIFIED: Should never actually be set, exists to follow convention of having a default.\nSDKs should just leave `runtimes` empty if none can be determined.\n - RUNTIME_TYPE_GRAAL_AOT: Report when the application is compiled ahead-of-time as a GraalVM native image.\n - RUNTIME_TYPE_KOTLIN: Report when any registered Workflow or Activity implementation is a Kotlin class."
     },
+    "StartNexusOperationResponseAsync": {
+      "type": "object",
+      "properties": {
+        "operationToken": {
+          "type": "string",
+          "description": "Token that can be used to reference the operation, e.g. in CancelNexusOperation."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Link"
+          },
+          "description": "Links associated with the operation, as returned by the handler."
+        }
+      },
+      "description": "The operation was started and will complete asynchronously."
+    },
+    "StartNexusOperationResponseSync": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "$ref": "#/definitions/v1Payload"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Link"
+          },
+          "description": "Links associated with the operation, as returned by the handler."
+        }
+      },
+      "description": "The operation completed successfully."
+    },
     "UpdateTaskQueueConfigRequestConcurrencyLimitUpdate": {
       "type": "object",
       "properties": {
@@ -11610,6 +11899,26 @@
         }
       },
       "description": "Activity trigger will be triggered when an activity is about to start."
+    },
+    "WorkflowServiceCancelNexusOperationBody": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the client who initiated this request."
+        },
+        "operationToken": {
+          "type": "string",
+          "description": "Operation token from StartNexusOperationResponse.Async."
+        },
+        "nexusHeader": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Header to attach to the Nexus request.\nUsers are responsible for encrypting sensitive data in this header as it is transmitted to the handler as-is.\nNot supported for the system Nexus endpoint."
+        }
+      }
     },
     "WorkflowServiceCreateScheduleBody": {
       "type": "object",
@@ -12734,6 +13043,42 @@
         }
       }
     },
+    "WorkflowServiceStartNexusOperationBody": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the client who initiated this request."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "A unique identifier for this request, used as an idempotency key.\nWhen waiting with an ephemeral completion callback, re-issue the request with the same request ID to continue\nwaiting."
+        },
+        "input": {
+          "$ref": "#/definitions/v1Payload",
+          "description": "Serialized input to the operation."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apiCommonV1Link"
+          },
+          "description": "Links for associating the caller with the operation."
+        },
+        "nexusHeader": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Header to attach to the Nexus request.\nUsers are responsible for encrypting sensitive data in this header as it is transmitted to the handler as-is.\nThis is useful for propagating tracing information.\nNot supported for the system Nexus endpoint."
+        },
+        "completionCallback": {
+          "$ref": "#/definitions/commonV1Callback",
+          "description": "Callback to deliver the operation's outcome to if it completes asynchronously.\nOnly the ephemeral variant is currently supported. An ephemeral callback turns this request into a long poll:\nif the operation completes before the long-poll deadline, its outcome is returned synchronously."
+        }
+      }
+    },
     "WorkflowServiceStartNexusOperationExecutionBody": {
       "type": "object",
       "properties": {
@@ -13744,6 +14089,9 @@
         },
         "nexusHandler": {
           "$ref": "#/definitions/CallbackNexusHandler"
+        },
+        "ephemeral": {
+          "$ref": "#/definitions/CallbackEphemeral"
         },
         "links": {
           "type": "array",
@@ -14891,6 +15239,9 @@
         "CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_NAMESPACE_NOT_FOUND"
       ],
       "default": "CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED_CAUSE_UNSPECIFIED"
+    },
+    "v1CancelNexusOperationResponse": {
+      "type": "object"
     },
     "v1CanceledFailureInfo": {
       "type": "object",
@@ -20269,6 +20620,22 @@
         "started": {
           "type": "boolean",
           "description": "If true, a new operation was started."
+        }
+      }
+    },
+    "v1StartNexusOperationResponse": {
+      "type": "object",
+      "properties": {
+        "syncSuccess": {
+          "$ref": "#/definitions/StartNexusOperationResponseSync"
+        },
+        "asyncSuccess": {
+          "$ref": "#/definitions/StartNexusOperationResponseAsync",
+          "description": "The operation is still running.\nIf the request carried an ephemeral completion callback, the long-poll deadline was reached before the\noperation completed. Re-issue the request with the same request ID to continue waiting."
+        },
+        "failure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "The operation completed unsuccessfully (failed or canceled).\nFailure object must contain an ApplicationFailureInfo or CanceledFailureInfo object."
         }
       }
     },

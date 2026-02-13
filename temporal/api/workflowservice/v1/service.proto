@@ -1458,4 +1458,34 @@ service WorkflowService {
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: Activity deletion not exposed to HTTP, users should use cancel or terminate. --)
     rpc DeleteActivityExecution (DeleteActivityExecutionRequest) returns (DeleteActivityExecutionResponse) {}
+
+    // StartNexusOperation starts a Nexus operation on an endpoint, communicating directly with the
+    // endpoint using the caller's namespace credentials.
+    // The response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start,
+    // or operation error.
+    // Handler errors (e.g., NOT_FOUND, BAD_REQUEST) are returned as gRPC errors.
+    rpc StartNexusOperation (StartNexusOperationRequest) returns (StartNexusOperationResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}"
+                body: "*"
+            }
+        };
+    }
+
+    // CancelNexusOperation requests cancellation of a previously started asynchronous Nexus operation.
+    // Cancellation is cooperative: this forwards a cancel request to the handler, but the operation
+    // will only transition to canceled if the handler processes it.
+    rpc CancelNexusOperation (CancelNexusOperationRequest) returns (CancelNexusOperationResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}/cancel"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}/cancel"
+                body: "*"
+            }
+        };
+    }
 }

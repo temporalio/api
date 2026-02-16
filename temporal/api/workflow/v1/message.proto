@@ -566,6 +566,177 @@ message WorkflowExecutionOptions {
 
     // If set, overrides the workflow's priority sent by the SDK.
     temporal.api.common.v1.Priority priority = 2;
+
+    // Time skipping configuration for this workflow execution.
+    // Once enabled, cannot be disabled. See `TimeSkippingConfig` for details.
+    TimeSkippingConfig time_skipping_config = 3;
+}
+
+// Configuration for time skipping on a workflow execution.
+// Time skipping allows a workflow's virtual time to diverge from wall-clock time,
+// enabling fast-forwarding through timers and timeouts for testing purposes.
+// Once enabled, cannot be disabled (the workflow's virtual time has diverged).
+message TimeSkippingConfig {
+    // Enables time skipping for this workflow execution. Once set to true, cannot be
+    // set back to false. When enabled, timers and timeouts will not fire based on
+    // wall-clock time; they only fire via explicit SkipWorkflowExecutionTime calls
+    // or auto-skip (if configured).
+    bool enabled = 1;
+
+    // If set, enables automatic time skipping. Clear this field (set to null via
+    // FieldMask) to disable auto-skip and return to manual-only time skipping.
+    //
+    // Auto-skip is automatically paused (inactive) while there are any pending
+    // activities, child workflows, or Nexus operations, to avoid unexpectedly
+    // firing their timeouts. It resumes once the workflow becomes idle and a
+    // workflow task completes. Users who need to advance time while external
+    // work is pending should use the AdvanceWorkflowExecutionTimePoint API
+    // directly.
+    AutoSkipConfig auto_skip = 2;
+
+    // If true, newly started child workflows will automatically inherit this
+    // time-skipping configuration. Default false. The inherited config includes
+    // this flag, so grandchildren will also inherit (transitive).
+    bool propagate_to_new_children = 3;
+
+    // If true, continue-as-new will inherit this time-skipping configuration
+    // into the new run. The proto default is false, but SDKs should default
+    // this to true when constructing a TimeSkippingConfig, since losing
+    // time-skipping on continue-as-new is rarely desired.
+    bool propagate_on_continue_as_new = 4;
+
+    // Configuration for automatic time skipping.
+    // Auto-skip advances the workflow's virtual time to the next upcoming time
+    // point whenever the workflow is idle (no pending activities, child
+    // workflows, or Nexus operations). Auto-skip halts when either the time
+    // bound or the firings limit is reached, at which point the workflow
+    // behaves as manual-skip until the config is updated.
+    message AutoSkipConfig {
+        // The time bound for auto-skip. Auto-skip will not advance the workflow's
+        // virtual time past this point. Exactly one of `until_time` or `until_duration`
+        // must be set.
+        oneof bound {
+            // Absolute virtual timestamp to auto-skip until.
+            google.protobuf.Timestamp until_time = 1;
+            // Duration from the workflow's current virtual time (at the time the config
+            // is applied) to auto-skip for. The server resolves this to an absolute
+            // timestamp stored in TimeSkippingInfo.
+            google.protobuf.Duration until_duration = 2;
+        }
+
+        // Maximum number of time-point firings (timer fires, timeout expirations)
+        // auto-skip will trigger before halting. Resets each time auto-skip config
+        // is updated. Defaults to 10 if not set or set to 0.
+        int32 max_firings = 3;
+    }
+}
+
+// Runtime information about time skipping for a workflow execution.
+// Returned by DescribeWorkflowExecution when time skipping is enabled.
+message TimeSkippingInfo {
+    // The current time skipping configuration.
+    TimeSkippingConfig config = 1;
+
+    // The accumulated virtual time offset from time-skipping advances.
+    google.protobuf.Duration virtual_time_offset = 2;
+
+    // The workflow's current virtual time (server wall clock + virtual_time_offset).
+    google.protobuf.Timestamp virtual_time = 3;
+
+    // Present when auto-skip is configured. Null when auto-skip is not active.
+    AutoSkipInfo auto_skip = 4;
+
+    // Runtime information about automatic time skipping.
+    message AutoSkipInfo {
+        // Whether auto-skip is currently advancing time. False when paused due to
+        // pending activities, child workflows, or Nexus operations, or when a
+        // limit has been reached.
+        bool active = 1;
+
+        // The resolved auto-skip deadline as an absolute virtual timestamp
+        // (regardless of whether the config was set via `until_time` or
+        // `until_duration`).
+        google.protobuf.Timestamp deadline = 2;
+
+        // The remaining virtual time until the auto-skip deadline is reached.
+        google.protobuf.Duration deadline_remaining = 3;
+
+        // Number of time-point firings triggered by auto-skip in the current window.
+        int32 firings_used = 4;
+
+        // Number of firings remaining before the max_firings limit is reached.
+        int32 firings_remaining = 5;
+    }
+}
+
+// Describes an upcoming time point for a workflow execution: a future instant at
+// which something will happen (a timer fires, a timeout expires, etc.).
+// Returned by DescribeWorkflowExecution.
+//
+// The following are intentionally NOT considered time points:
+//
+// - Workflow task timeout: Workflow task processing still occurs during time
+//   skipping and needs to be timed out if the worker is unresponsive. The server
+//   retries the task automatically.
+// - Workflow retry backoff: Whole-workflow retries are not modeled as time
+//   points at this time.
+// - Activity heartbeat timeout: Heartbeats are a liveness check for running
+//   activities and are still needed during time skipping. May be added in the
+//   future.
+// - Activity retry backoff: Activity retries can be managed through other
+//   mechanisms such as activity reset.
+message UpcomingTimePointInfo {
+    // The absolute virtual time at which this time point will fire.
+    google.protobuf.Timestamp fire_time = 1;
+
+    // The remaining virtual time until this time point fires
+    // (fire_time minus current virtual time at the time of the response).
+    google.protobuf.Duration fire_time_remaining = 2;
+
+    // The source of this upcoming time point.
+    oneof source {
+        TimerTimePoint timer = 3;
+        ActivityTimeoutTimePoint activity_timeout = 4;
+        WorkflowTimeoutTimePoint workflow_timeout = 5;
+        ChildWorkflowTimePoint child_workflow = 6;
+        NexusOperationTimeoutTimePoint nexus_operation_timeout = 7;
+    }
+
+    // A workflow timer (e.g., from workflow.sleep() or workflow.newTimer()).
+    message TimerTimePoint {
+        string timer_id = 1;
+        int64 started_event_id = 2;
+    }
+
+    // An activity timeout about to expire.
+    message ActivityTimeoutTimePoint {
+        string activity_id = 1;
+        temporal.api.enums.v1.TimeoutType timeout_type = 2;
+    }
+
+    // A workflow-level timeout about to expire.
+    // SCHEDULE_TO_CLOSE = execution timeout (total including retries/CaN).
+    // START_TO_CLOSE = run timeout (single run).
+    message WorkflowTimeoutTimePoint {
+        temporal.api.enums.v1.TimeoutType timeout_type = 1;
+    }
+
+    // An upcoming time point originating from a child workflow.
+    // TODO: Decide whether to include details of the child's time point source.
+    message ChildWorkflowTimePoint {
+        string workflow_id = 1;
+        string run_id = 2;
+        int64 initiated_event_id = 3;
+    }
+
+    // A Nexus operation timeout about to expire.
+    message NexusOperationTimeoutTimePoint {
+        string endpoint = 1;
+        string service = 2;
+        string operation = 3;
+        int64 scheduled_event_id = 4;
+        temporal.api.enums.v1.TimeoutType timeout_type = 5;
+    }
 }
 
 // Used to override the versioning behavior (and pinned deployment version, if applicable) of a

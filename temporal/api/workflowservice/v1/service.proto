@@ -1358,6 +1358,25 @@ service WorkflowService {
         };
     }
 
+    // AdvanceWorkflowExecutionTimePoint advances a workflow's virtual time to the
+    // next upcoming time point (the nearest pending timer fire or timeout expiration),
+    // causing it to trigger. If there is no upcoming time point, returns successfully
+    // with no_upcoming_time_point=true.
+    // Requires time skipping to be enabled on the workflow (either previously via
+    // UpdateWorkflowExecutionOptions or inline via the time_skipping_config field).
+    // Records a WORKFLOW_EXECUTION_TIME_POINT_ADVANCED event in the workflow history.
+    // The workflow must be in RUNNING status and not PAUSED.
+    rpc AdvanceWorkflowExecutionTimePoint (AdvanceWorkflowExecutionTimePointRequest) returns (AdvanceWorkflowExecutionTimePointResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/advance-time-point"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/advance-time-point"
+                body: "*"
+            }
+        };
+    }
+
     // StartActivityExecution starts a new activity execution.
     //
     // Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace

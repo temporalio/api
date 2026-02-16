@@ -197,6 +197,8 @@ message StartWorkflowExecutionRequest {
     temporal.api.common.v1.Priority priority = 27;
     // Deployment Options of the worker who will process the eager task. Passed when `request_eager_execution=true`.
     temporal.api.deployment.v1.WorkerDeploymentOptions eager_worker_deployment_options = 28;
+    // Time skipping configuration. If set, enables time skipping for this workflow from the start.
+    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 29;
 }
 
 message StartWorkflowExecutionResponse {
@@ -836,6 +838,8 @@ message SignalWithStartWorkflowExecutionRequest {
     temporal.api.workflow.v1.VersioningOverride versioning_override = 25;
     // Priority metadata
     temporal.api.common.v1.Priority priority = 26;
+    // Time skipping configuration. If set, enables time skipping for this workflow from the start.
+    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 27;
 }
 
 message SignalWithStartWorkflowExecutionResponse {
@@ -1094,6 +1098,14 @@ message DescribeWorkflowExecutionResponse {
     repeated temporal.api.workflow.v1.CallbackInfo callbacks = 6;
     repeated temporal.api.workflow.v1.PendingNexusOperationInfo pending_nexus_operations = 7;
     temporal.api.workflow.v1.WorkflowExecutionExtendedInfo workflow_extended_info = 8;
+    // Upcoming time points for this workflow execution. Each unique combination of
+    // source and timeout type is returned at most once with its nearest fire time.
+    // For example, an activity with both a heartbeat timeout and a start-to-close
+    // timeout will appear as two separate entries. A timer always appears once.
+    // TODO: Determine how to represent child workflow time points with different sources.
+    repeated temporal.api.workflow.v1.UpcomingTimePointInfo upcoming_time_points = 9;
+    // Time skipping information. Present when time skipping is enabled for this workflow.
+    temporal.api.workflow.v1.TimeSkippingInfo time_skipping_info = 10;
 }
 
 // (-- api-linter: core::0203::optional=disabled
@@ -2750,6 +2762,40 @@ message UnpauseWorkflowExecutionRequest {
 
 // Response to a successful UnpauseWorkflowExecution request.
 message UnpauseWorkflowExecutionResponse { }
+
+message AdvanceWorkflowExecutionTimePointRequest {
+    string namespace = 1;
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+    // Optionally enable or update time skipping configuration in the same call.
+    // If time skipping is not already enabled, this must be provided with enabled=true.
+    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 3;
+    // The identity of the client who initiated this request.
+    string identity = 4;
+    // A unique identifier for this request, used for idempotency.
+    string request_id = 5;
+    // Optional upper bound for the advance. Virtual time will advance to the
+    // earlier of the next time point or this value. If no time point exists
+    // before this value, virtual time advances to this value without firing
+    // any time points.
+    oneof up_to {
+        // Absolute virtual timestamp to advance up to.
+        google.protobuf.Timestamp up_to_time = 6;
+        // Duration from the workflow's current virtual time to advance up to.
+        google.protobuf.Duration up_to_duration = 7;
+    }
+}
+
+message AdvanceWorkflowExecutionTimePointResponse {
+    // Time skipping state after the advance (config, virtual time offset, auto-skip info).
+    temporal.api.workflow.v1.TimeSkippingInfo time_skipping_info = 1;
+    // The time points that were fired at the advanced-to time.
+    // Empty when there was no upcoming time point to advance to.
+    // Currently all entries will share the same fire_time, since each advance
+    // moves to a single point in time and fires everything scheduled there.
+    repeated temporal.api.workflow.v1.UpcomingTimePointInfo advanced_time_points = 2;
+    // Remaining upcoming time points after the advance.
+    repeated temporal.api.workflow.v1.UpcomingTimePointInfo upcoming_time_points = 3;
+}
 
 message StartActivityExecutionRequest {
     string namespace = 1;

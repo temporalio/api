@@ -17825,6 +17825,10 @@
           "type": "string",
           "format": "int64",
           "description": "Monotonic counter reflecting the latest routing decision for this workflow execution.\nUsed for staleness detection between history and matching when dispatching tasks to workers.\nIncremented when a workflow execution routes to a new deployment version, which happens\nwhen a worker of the new deployment version completes a workflow task.\nNote: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not\nface the problem of inconsistent dispatching that arises from eventual consistency between\ntask queues and their partitions."
+        },
+        "targetVersionOnStart": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion",
+          "description": "The target deployment version (from the task queue's routing config) observed on the\nvery first workflow task of this run. On each subsequent workflow task, this value is\ncompared against the current target deployment version, which is fetched from the task queue's routing config,\nto compute the `target_worker_deployment_version_changed` flag in WorkflowTaskStartedEvent. That\nflag signals pinned workflows that the task queue's current deployment version has\nchanged, allowing them to continue-as-new onto the latest version. Without this\nanchor, the comparison falls back to the workflow's effective deployment, which for\npinned workflows permanently differs from the routing target after a version change,\ncausing the flag to stay true indefinitely and triggering infinite continue-as-new\nloops."
         }
       },
       "description": "Holds all the information about worker versioning for a particular workflow execution.\nExperimental. Versioning info is experimental and might change in the future."

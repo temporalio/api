@@ -9237,10 +9237,6 @@
     "WorkflowServiceCreateWorkerDeploymentBody": {
       "type": "object",
       "properties": {
-        "workerVersioningMode": {
-          "$ref": "#/definitions/v1WorkerVersioningMode",
-          "description": "Optional. Indicates the Worker Deployment should use a particular\nversioning strategy.\n\nIf empty, defaults to UNVERSIONED."
-        },
         "computeConfig": {
           "$ref": "#/definitions/v1ComputeConfig",
           "description": "Optional. Contains the new worker compute configuration for the Worker\nDeployment. Used as the default compute configuration for new Worker\nDeployment Versions created for this Worker Deployment."
@@ -12007,14 +12003,6 @@
     "v1ComputeConfig": {
       "type": "object",
       "properties": {
-        "taskQueues": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1TaskQueueNameType"
-          },
-          "description": "When a task matching any of these task queue name + type tuples is\nreceived by the Temporal Server and there are no active pollers to send\nthe task to, workers will be launched using the configuration\ninformation in the provider field."
-        },
         "provider": {
           "$ref": "#/definitions/v1ComputeProvider",
           "description": "Stores instructions for a worker control plane controller how to respond\nto worker lifeycle events."
@@ -15377,7 +15365,7 @@
       "properties": {
         "currentDeploymentVersion": {
           "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "Specifies which Deployment Version should receive new workflow executions and tasks of\nexisting unversioned or AutoUpgrade workflows.\nNil value means no Version in this Deployment (except Ramping Version, if present) receives traffic other than tasks of previously Pinned workflows. In absence of a Current Version, remaining traffic after any ramp (if set)  goes to unversioned workers (those with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.). \nNote: Current Version is overridden by the Ramping Version for a portion of traffic when ramp percentage\nis non-zero (see `ramping_deployment_version` and `ramping_version_percentage`)."
+          "description": "Specifies which Deployment Version should receive new workflow executions and tasks of\nexisting unversioned or AutoUpgrade workflows.\nNil value means no Version in this Deployment (except Ramping Version, if present) receives traffic other than tasks of previously Pinned workflows. In absence of a Current Version, remaining traffic after any ramp (if set)  goes to unversioned workers (those with `UNVERSIONED` (or unspecified) `WorkerVersioningMode`.).\nNote: Current Version is overridden by the Ramping Version for a portion of traffic when ramp percentage\nis non-zero (see `ramping_deployment_version` and `ramping_version_percentage`)."
         },
         "currentVersion": {
           "type": "string",
@@ -15414,7 +15402,7 @@
         "revisionNumber": {
           "type": "string",
           "format": "int64",
-          "description": "Monotonically increasing value which is incremented on every mutation \nto any field of this message to achieve eventual consistency between task queues and their partitions."
+          "description": "Monotonically increasing value which is incremented on every mutation\nto any field of this message to achieve eventual consistency between task queues and their partitions."
         }
       }
     },
@@ -16259,18 +16247,6 @@
       "default": "TASK_QUEUE_KIND_UNSPECIFIED",
       "description": " - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities."
     },
-    "v1TaskQueueNameType": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "type": {
-          "$ref": "#/definitions/v1TaskQueueType"
-        }
-      },
-      "description": "Uniquely identifies a combination of task queue name and type."
-    },
     "v1TaskQueueReachability": {
       "type": "object",
       "properties": {
@@ -16921,7 +16897,7 @@
             "type": "object",
             "$ref": "#/definitions/WorkerDeploymentInfoWorkerDeploymentVersionSummary"
           },
-          "title": "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\ncleaned up automatically if all the following conditions meet:\n- It does not receive new executions (is not current or ramping)\n- It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status) \n- It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
+          "title": "Deployment Versions that are currently tracked in this Deployment. A DeploymentVersion will be\ncleaned up automatically if all the following conditions meet:\n- It does not receive new executions (is not current or ramping)\n- It has no active pollers (see WorkerDeploymentVersionInfo.pollers_status)\n- It is drained (see WorkerDeploymentVersionInfo.drainage_status)"
         },
         "createTime": {
           "type": "string",
@@ -17053,10 +17029,6 @@
         "metadata": {
           "$ref": "#/definitions/v1VersionMetadata",
           "description": "Arbitrary user-provided metadata attached to this version."
-        },
-        "computeConfig": {
-          "$ref": "#/definitions/v1ComputeConfig",
-          "description": "Contains information used by worker control plane controllers to handle\nscale events."
         }
       },
       "description": "A Worker Deployment Version (Version, for short) represents all workers of the same \ncode and config within a Deployment. Workers of the same Version are expected to \nbehave exactly the same so when executions move between them there are no \nnon-determinism issues.\nWorker Deployment Versions are created in Temporal server automatically when \ntheir first poller arrives to the server.\nExperimental. Worker Deployments are experimental and might significantly change in the future."

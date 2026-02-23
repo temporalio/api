@@ -111,16 +111,9 @@ service WorkflowService {
     // Upon failure, it returns `MultiOperationExecutionFailure` where the status code
     // equals the status code of the *first* operation that failed to be started.
     //
-    // NOTE: Experimental API.
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: To be exposed over HTTP in the future. --)
     rpc ExecuteMultiOperation (ExecuteMultiOperationRequest) returns (ExecuteMultiOperationResponse) {
-        option (google.api.http) = {
-            post: "/namespaces/{namespace}/workflows/execute-multi-operation"
-            body: "*"
-            additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/workflows/execute-multi-operation"
-                body: "*"
-            }
-        };
     }
 
     // GetWorkflowExecutionHistory returns the history of specified workflow execution. Fails with
@@ -205,16 +198,23 @@ service WorkflowService {
 
     // RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.
     //
-    // If worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
-    // then it will be marked as timed out and an `ACTIVITY_TASK_TIMED_OUT` event will be written to
-    // the workflow history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in
-    // such situations, in that event, the SDK should request cancellation of the activity.
+    // If a worker fails to heartbeat within the `heartbeat_timeout` interval for the activity task,
+    // then the current attempt times out. Depending on RetryPolicy, this may trigger a retry or
+    // time out the activity.
+    //
+    // For workflow activities, an `ACTIVITY_TASK_TIMED_OUT` event will be written to the workflow
+    // history. Calling `RecordActivityTaskHeartbeat` will fail with `NotFound` in such situations,
+    // in that event, the SDK should request cancellation of the activity.
+    //
+    // The request may contain response `details` which will be persisted by the server and may be
+    // used by the activity to checkpoint progress. The `cancel_requested` field in the response
+    // indicates whether cancellation has been requested for the activity.
     rpc RecordActivityTaskHeartbeat (RecordActivityTaskHeartbeatRequest) returns (RecordActivityTaskHeartbeatResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/heartbeat"
+            post: "/namespaces/{namespace}/activity-heartbeat"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/heartbeat"
+                post: "/api/v1/namespaces/{namespace}/activity-heartbeat"
                 body: "*"
             }
         };
@@ -227,10 +227,21 @@ service WorkflowService {
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
     rpc RecordActivityTaskHeartbeatById (RecordActivityTaskHeartbeatByIdRequest) returns (RecordActivityTaskHeartbeatByIdResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/heartbeat-by-id"
+            // Standalone
+            post: "/namespaces/{namespace}/activities/{activity_id}/heartbeat"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/heartbeat-by-id"
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}/heartbeat"
+                body: "*"
+            }
+
+            // Workflow
+            additional_bindings {
+                post: "/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/heartbeat"
+                body: "*"
+            }
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/heartbeat"
                 body: "*"
             }
         };
@@ -239,31 +250,42 @@ service WorkflowService {
     // RespondActivityTaskCompleted is called by workers when they successfully complete an activity
     // task.
     //
-    // This results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history
+    // For workflow activities, this results in a new `ACTIVITY_TASK_COMPLETED` event being written to the workflow history
     // and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
     // no longer valid due to activity timeout, already being completed, or never having existed.
     rpc RespondActivityTaskCompleted (RespondActivityTaskCompletedRequest) returns (RespondActivityTaskCompletedResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/complete"
+            post: "/namespaces/{namespace}/activity-complete"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/complete"
+                post: "/api/v1/namespaces/{namespace}/activity-complete"
                 body: "*"
             }
         };
     }
 
-    // See `RecordActivityTaskCompleted`. This version allows clients to record completions by
+    // See `RespondActivityTaskCompleted`. This version allows clients to record completions by
     // namespace/workflow id/activity id instead of task token.
     //
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
     rpc RespondActivityTaskCompletedById (RespondActivityTaskCompletedByIdRequest) returns (RespondActivityTaskCompletedByIdResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/complete-by-id"
+            // Standalone
+            post: "/namespaces/{namespace}/activities/{activity_id}/complete"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/complete-by-id"
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}/complete"
+                body: "*"
+            }
+
+            // Workflow
+            additional_bindings {
+                post: "/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/complete"
+                body: "*"
+            }
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/complete"
                 body: "*"
             }
         };
@@ -276,10 +298,10 @@ service WorkflowService {
     // longer valid due to activity timeout, already being completed, or never having existed.
     rpc RespondActivityTaskFailed (RespondActivityTaskFailedRequest) returns (RespondActivityTaskFailedResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/fail"
+            post: "/namespaces/{namespace}/activity-fail"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/fail"
+                post: "/api/v1/namespaces/{namespace}/activity-fail"
                 body: "*"
             }
         };
@@ -292,10 +314,21 @@ service WorkflowService {
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
     rpc RespondActivityTaskFailedById (RespondActivityTaskFailedByIdRequest) returns (RespondActivityTaskFailedByIdResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/fail-by-id"
+            // Standalone
+            post: "/namespaces/{namespace}/activities/{activity_id}/fail"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/fail-by-id"
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}/fail"
+                body: "*"
+            }
+
+            // Workflow
+            additional_bindings {
+                post: "/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/fail"
+                body: "*"
+            }
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/fail"
                 body: "*"
             }
         };
@@ -303,31 +336,42 @@ service WorkflowService {
 
     // RespondActivityTaskFailed is called by workers when processing an activity task fails.
     //
-    // This results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
+    // For workflow activities, this results in a new `ACTIVITY_TASK_CANCELED` event being written to the workflow history
     // and a new workflow task created for the workflow. Fails with `NotFound` if the task token is
     // no longer valid due to activity timeout, already being completed, or never having existed.
     rpc RespondActivityTaskCanceled (RespondActivityTaskCanceledRequest) returns (RespondActivityTaskCanceledResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/cancel"
+            post: "/namespaces/{namespace}/activity-resolve-as-canceled"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/cancel"
+                post: "/api/v1/namespaces/{namespace}/activity-resolve-as-canceled"
                 body: "*"
             }
         };
     }
 
-    // See `RecordActivityTaskCanceled`. This version allows clients to record failures by
+    // See `RespondActivityTaskCanceled`. This version allows clients to record failures by
     // namespace/workflow id/activity id instead of task token.
     //
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "By" is used to indicate request type. --)
     rpc RespondActivityTaskCanceledById (RespondActivityTaskCanceledByIdRequest) returns (RespondActivityTaskCanceledByIdResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/cancel-by-id"
+            // Standalone
+            post: "/namespaces/{namespace}/activities/{activity_id}/resolve-as-canceled"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/cancel-by-id"
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}/resolve-as-canceled"
+                body: "*"
+            }
+
+            // Workflow
+            additional_bindings {
+                post: "/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/resolve-as-canceled"
+                body: "*"
+            }
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/resolve-as-canceled"
                 body: "*"
             }
         };
@@ -659,6 +703,16 @@ service WorkflowService {
             get: "/namespaces/{namespace}/schedules"
             additional_bindings {
                 get: "/api/v1/namespaces/{namespace}/schedules"
+            }
+        };
+    }
+
+    // CountSchedules is a visibility API to count schedules in a specific namespace.
+    rpc CountSchedules (CountSchedulesRequest) returns (CountSchedulesResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/schedule-count"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/schedule-count"
             }
         };
     }
@@ -1024,12 +1078,14 @@ service WorkflowService {
 
     // UpdateActivityOptions is called by the client to update the options of an activity by its ID or type.
     // If there are multiple pending activities of the provided type - all of them will be updated.
+    // This API will be deprecated soon and replaced with a newer UpdateActivityExecutionOptions that is better named and
+    // structured to work well for standalone activities.
     rpc UpdateActivityOptions (UpdateActivityOptionsRequest) returns (UpdateActivityOptionsResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/update-options"
+            post: "/namespaces/{namespace}/activities-deprecated/update-options"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/update-options"
+                post: "/api/v1/namespaces/{namespace}/activities-deprecated/update-options"
                 body: "*"
             }
         };
@@ -1063,12 +1119,14 @@ service WorkflowService {
     // - The activity should respond to the cancellation accordingly.
     //
     // Returns a `NotFound` error if there is no pending activity with the provided ID or type
+    // This API will be deprecated soon and replaced with a newer PauseActivityExecution that is better named and
+    // structured to work well for standalone activities.
     rpc PauseActivity (PauseActivityRequest) returns (PauseActivityResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/pause"
+            post: "/namespaces/{namespace}/activities-deprecated/pause"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/pause"
+                post: "/api/v1/namespaces/{namespace}/activities-deprecated/pause"
                 body: "*"
             }
         };
@@ -1087,12 +1145,14 @@ service WorkflowService {
     // 'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
     //
     // Returns a `NotFound` error if there is no pending activity with the provided ID or type
+    // This API will be deprecated soon and replaced with a newer UnpauseActivityExecution that is better named and
+    // structured to work well for standalone activities.
     rpc UnpauseActivity (UnpauseActivityRequest) returns (UnpauseActivityResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/unpause"
+            post: "/namespaces/{namespace}/activities-deprecated/unpause"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/unpause"
+                post: "/api/v1/namespaces/{namespace}/activities-deprecated/unpause"
                 body: "*"
             }
         };
@@ -1115,12 +1175,14 @@ service WorkflowService {
     // 'keep_paused': if the activity is paused, it will remain paused.
     //
     // Returns a `NotFound` error if there is no pending activity with the provided ID or type.
+    // This API will be deprecated soon and replaced with a newer ResetActivityExecution that is better named and
+    // structured to work well for standalone activities.
     rpc ResetActivity (ResetActivityRequest) returns (ResetActivityResponse) {
         option (google.api.http) = {
-            post: "/namespaces/{namespace}/activities/reset"
+            post: "/namespaces/{namespace}/activities-deprecated/reset"
             body: "*"
             additional_bindings {
-                post: "/api/v1/namespaces/{namespace}/activities/reset"
+                post: "/api/v1/namespaces/{namespace}/activities-deprecated/reset"
                 body: "*"
             }
         };
@@ -1273,6 +1335,10 @@ service WorkflowService {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/workflows/{workflow_id}/pause"
             body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{workflow_id}/pause"
+                body: "*"
+            }
         };
     }
 
@@ -1285,6 +1351,25 @@ service WorkflowService {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/workflows/{workflow_id}/unpause"
             body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{workflow_id}/unpause"
+                body: "*"
+            }
+        };
+    }
+
+    // StartActivityExecution starts a new activity execution.
+    //
+    // Returns an `ActivityExecutionAlreadyStarted` error if an instance already exists with same activity ID in this namespace
+    // unless permitted by the specified ID conflict policy.
+    rpc StartActivityExecution (StartActivityExecutionRequest) returns (StartActivityExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activities/{activity_id}"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}"
+                body: "*"
+            }
         };
     }
 
@@ -1303,6 +1388,20 @@ service WorkflowService {
         };
     }
 
+    // DescribeActivityExecution returns information about an activity execution.
+    // It can be used to:
+    // - Get current activity info without waiting
+    // - Long-poll for next state change and return new activity info
+    // Response can optionally include activity input or outcome (if the activity has completed).
+    rpc DescribeActivityExecution (DescribeActivityExecutionRequest) returns (DescribeActivityExecutionResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/activities/{activity_id}"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/activities/{activity_id}"
+            }
+        };
+    }
+
     // DescribeNexusOperation returns information about a Nexus operation.
     // Supported use cases include:
     // - Get current operation info without waiting
@@ -1313,6 +1412,17 @@ service WorkflowService {
             get: "/namespaces/{namespace}/nexus-operations/{operation_id}"
             additional_bindings {
                 get: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}"
+            }
+        };
+    }
+
+    // PollActivityExecution long-polls for an activity execution to complete and returns the
+    // outcome (result or failure).
+    rpc PollActivityExecution (PollActivityExecutionRequest) returns (PollActivityExecutionResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/activities/{activity_id}/outcome"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/activities/{activity_id}/outcome"
             }
         };
     }
@@ -1328,6 +1438,16 @@ service WorkflowService {
         };
     }
 
+    // ListActivityExecutions is a visibility API to list activity executions in a specific namespace.
+    rpc ListActivityExecutions (ListActivityExecutionsRequest) returns (ListActivityExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/activities"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/activities"
+            }
+        };
+    }
+
     // ListNexusOperations is a visibility API to list Nexus operations in a specific namespace.
     rpc ListNexusOperations (ListNexusOperationsRequest) returns (ListNexusOperationsResponse) {
         option (google.api.http) = {
@@ -1338,12 +1458,39 @@ service WorkflowService {
         };
     }
 
+    // CountActivityExecutions is a visibility API to count activity executions in a specific namespace.
+    rpc CountActivityExecutions (CountActivityExecutionsRequest) returns (CountActivityExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/activity-count"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/activity-count"
+            }
+        };
+    }
+
     // CountNexusOperations is a visibility API to count of Nexus operations in a specific namespace.
     rpc CountNexusOperations (CountNexusOperationsRequest) returns (CountNexusOperationsResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/nexus-operation-count"
             additional_bindings {
                 get: "/api/v1/namespaces/{namespace}/nexus-operation-count"
+            }
+        };
+    }
+
+    // RequestCancelActivityExecution requests cancellation of an activity execution.
+    //
+    // Cancellation is cooperative: this call records the request, but the activity must detect and
+    // acknowledge it for the activity to reach CANCELED status. The cancellation signal is
+    // delivered via `cancel_requested` in the heartbeat response; SDKs surface this via
+    // language-idiomatic mechanisms (context cancellation, exceptions, abort signals).
+    rpc RequestCancelActivityExecution (RequestCancelActivityExecutionRequest) returns (RequestCancelActivityExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activities/{activity_id}/cancel"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}/cancel"
+                body: "*"
             }
         };
     }
@@ -1363,6 +1510,30 @@ service WorkflowService {
             }
         };
     }
+
+    // TerminateActivityExecution terminates an existing activity execution immediately.
+    //
+    // Termination does not reach the worker and the activity code cannot react to it. A terminated activity may have a
+    // running attempt.
+    rpc TerminateActivityExecution (TerminateActivityExecutionRequest) returns (TerminateActivityExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activities/{activity_id}/terminate"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}/terminate"
+                body: "*"
+            }
+        };
+    }
+
+    // DeleteActivityExecution asynchronously deletes a specific activity execution (when
+    // ActivityExecution.run_id is provided) or the latest activity execution (when
+    // ActivityExecution.run_id is not provided). If the activity Execution is running, it will be
+    // terminated before deletion.
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: Activity deletion not exposed to HTTP, users should use cancel or terminate. --)
+    rpc DeleteActivityExecution (DeleteActivityExecutionRequest) returns (DeleteActivityExecutionResponse) {}
 
     // TerminateNexusOperation terminates an existing Nexus operation immediately.
     //

@@ -2806,6 +2806,54 @@ message DescribeActivityExecutionRequest {
     bytes long_poll_token = 6;
 }
 
+message DescribeActivityExecutionResponse {
+    // The run ID of the activity, useful when run_id was not specified in the request.
+    string run_id = 1;
+
+    // Information about the activity execution.
+    temporal.api.activity.v1.ActivityExecutionInfo info = 2;
+
+    // Serialized activity input, passed as arguments to the activity function.
+    // Only set if include_input was true in the request.
+    temporal.api.common.v1.Payloads input = 3;
+
+    // Only set if the activity is completed and include_outcome was true in the request.
+    temporal.api.activity.v1.ActivityExecutionOutcome outcome = 4;
+
+    // Token for follow-on long-poll requests. Absent only if the activity is complete.
+    bytes long_poll_token = 5;
+}
+
+message PollActivityExecutionRequest {
+    string namespace = 1;
+    string activity_id = 2;
+    // Activity run ID. If empty the request targets the latest run.
+    string run_id = 3;
+}
+
+message PollActivityExecutionResponse {
+    // The run ID of the activity, useful when run_id was not specified in the request.
+    string run_id = 1;
+
+    temporal.api.activity.v1.ActivityExecutionOutcome outcome = 2;
+}
+
+message ListActivityExecutionsRequest {
+    string namespace = 1;
+    // Max number of executions to return per page.
+    int32 page_size = 2;
+    // Token returned in ListActivityExecutionsResponse.
+    bytes next_page_token = 3;
+    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+    string query = 4;
+}
+
+message ListActivityExecutionsResponse {
+    repeated temporal.api.activity.v1.ActivityExecutionListInfo executions = 1;
+    // Token to use to fetch the next page. If empty, there is no next page.
+    bytes next_page_token = 2;
+}
+
 message StartNexusOperationRequest {
     string namespace = 1;
     // The identity of the client who initiated this request.
@@ -2876,54 +2924,6 @@ message DescribeNexusOperationRequest {
     // guaranteed that a client making a sequence of long-poll requests will see a complete
     // sequence of state changes.
     bytes long_poll_token = 6;
-}
-
-message DescribeActivityExecutionResponse {
-    // The run ID of the activity, useful when run_id was not specified in the request.
-    string run_id = 1;
-
-    // Information about the activity execution.
-    temporal.api.activity.v1.ActivityExecutionInfo info = 2;
-
-    // Serialized activity input, passed as arguments to the activity function.
-    // Only set if include_input was true in the request.
-    temporal.api.common.v1.Payloads input = 3;
-
-    // Only set if the activity is completed and include_outcome was true in the request.
-    temporal.api.activity.v1.ActivityExecutionOutcome outcome = 4;
-
-    // Token for follow-on long-poll requests. Absent only if the activity is complete.
-    bytes long_poll_token = 5;
-}
-
-message PollActivityExecutionRequest {
-    string namespace = 1;
-    string activity_id = 2;
-    // Activity run ID. If empty the request targets the latest run.
-    string run_id = 3;
-}
-
-message PollActivityExecutionResponse {
-    // The run ID of the activity, useful when run_id was not specified in the request.
-    string run_id = 1;
-
-    temporal.api.activity.v1.ActivityExecutionOutcome outcome = 2;
-}
-
-message ListActivityExecutionsRequest {
-    string namespace = 1;
-    // Max number of executions to return per page.
-    int32 page_size = 2;
-    // Token returned in ListActivityExecutionsResponse.
-    bytes next_page_token = 3;
-    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
-    string query = 4;
-}
-
-message ListActivityExecutionsResponse {
-    repeated temporal.api.activity.v1.ActivityExecutionListInfo executions = 1;
-    // Token to use to fetch the next page. If empty, there is no next page.
-    bytes next_page_token = 2;
 }
 
 message DescribeNexusOperationResponse {

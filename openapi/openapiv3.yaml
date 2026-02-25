@@ -1347,7 +1347,7 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: CountNexusOperations is a visibility API to count of Nexus operations in a specific namespace.
+      description: CountNexusOperations is a visibility API to count Nexus operations in a specific namespace.
       operationId: CountNexusOperations
       parameters:
         - name: namespace
@@ -5761,7 +5761,7 @@ paths:
     get:
       tags:
         - WorkflowService
-      description: CountNexusOperations is a visibility API to count of Nexus operations in a specific namespace.
+      description: CountNexusOperations is a visibility API to count Nexus operations in a specific namespace.
       operationId: CountNexusOperations
       parameters:
         - name: namespace
@@ -11774,7 +11774,7 @@ components:
             - PENDING_NEXUS_OPERATION_STATE_STARTED
             - PENDING_NEXUS_OPERATION_STATE_BLOCKED
           type: string
-          description: More detailed breakdown of NEXUS_OPERATION_EXECUTION_STATUS_RUNNING.
+          description: More detailed breakdown of NEXUS_OPERATION_STATUS_RUNNING.
           format: enum
         scheduleToCloseTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
@@ -11817,7 +11817,9 @@ components:
         executionDuration:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: How long this operation has been running for, including all attempts and backoff between attempts.
+          description: |-
+            Elapsed time from schedule_time to now for running operations or to close_time for closed
+             operations, including all attempts and backoff between attempts.
         cancellationInfo:
           $ref: '#/components/schemas/NexusOperationCancellationInfo'
         blockedReason:
@@ -11826,8 +11828,9 @@ components:
         requestId:
           type: string
           description: |-
-            Request ID allocated by the server when handling the StartNexusOperation request.
-             Used as an idempotency token for submitting start requests to the handler.
+            Server-generated request ID used as an idempotency token when submitting start requests to
+             the handler. Distinct from the request_id in StartNexusOperationRequest, which is the
+             caller-side idempotency key for the StartNexusOperation RPC itself.
         operationToken:
           type: string
           description: Operation token. Only set for asynchronous operations after a successful StartOperation call.
@@ -11850,7 +11853,7 @@ components:
           items:
             $ref: '#/components/schemas/Link'
           description: Links attached by the handler of this operation on start or completion.
-      description: Information about a standalone Nexus operation.
+      description: Full current state of a standalone Nexus operation, as of the time of the request.
     NexusOperationListInfo:
       type: object
       properties:
@@ -11888,8 +11891,8 @@ components:
             - NEXUS_OPERATION_STATUS_TIMED_OUT
           type: string
           description: |-
-            Only scheduled and terminal statuses appear here. More detailed information in PendingNexusOperationInfo but not
-             available in the list response.
+            Set once when the operation is scheduled and updated once when it reaches a terminal status.
+             Use DescribeNexusOperation for full current state.
           format: enum
         searchAttributes:
           allOf:

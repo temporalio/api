@@ -1878,7 +1878,9 @@ message PollNexusTaskQueueResponse {
     temporal.api.nexus.v1.Request request = 2;
     // Server-advised information the SDK may use to adjust its poller count.
     temporal.api.taskqueue.v1.PollerScalingDecision poller_scaling_decision = 3;
-    string resource_id = 4;
+    // Should be return in RespondNexusTaskCompletedRequest and RespondNexusTaskFailedRequest
+    // for proper routing of handler's response.
+    string routing_key = 4;
     repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 5;
 }
 
@@ -1890,7 +1892,9 @@ message RespondNexusTaskCompletedRequest {
     bytes task_token = 3;
     // Embedded response to be translated into a frontend response.
     temporal.api.nexus.v1.Response response = 4;
-    string resource_id = 5;
+    // Client must forward the routing_key received in PollNexusTaskQueueResponse for proper routing
+    // of response.
+    string routing_key = 5;
 }
 
 message RespondNexusTaskCompletedResponse {
@@ -1906,7 +1910,9 @@ message RespondNexusTaskFailedRequest {
     temporal.api.nexus.v1.HandlerError error = 4 [deprecated = true];
     // The error the handler failed with. Must contain a NexusHandlerFailureInfo object.
     temporal.api.failure.v1.Failure failure = 5;
-    string resource_id = 6;
+    // Client must forward the routing_key received in PollNexusTaskQueueResponse for proper routing
+    // of response.
+    string routing_key = 6;
 }
 
 message RespondNexusTaskFailedResponse {

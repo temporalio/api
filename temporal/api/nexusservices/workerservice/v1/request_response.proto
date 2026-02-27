@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package temporal.api.nexusservices.workerservice.v1;
+
+option go_package = "go.temporal.io/api/nexusservices/workerservice/v1;workerservice";
+option java_package = "io.temporal.api.nexusservices.workerservice.v1";
+option java_multiple_files = true;
+option java_outer_classname = "RequestResponseProto";
+option ruby_package = "Temporalio::Api::Nexusservices::Workerservice::V1";
+option csharp_namespace = "Temporalio.Api.Nexusservices.Workerservice.V1";
+
+// (--
+// Internal Nexus service for server-to-worker communication.
+// See service.yaml for the service definition.
+// --)
+
+// Request payload for the "executeCommands" Nexus operation.
+message WorkerCommandsRequest {
+    repeated WorkerCommand commands = 1;
+
+    message WorkerCommand {
+        oneof type {
+            CancelActivity cancel_activity = 1;
+        }
+    }
+
+    // Cancel an activity if it is still running. Otherwise, do nothing.
+    message CancelActivity {
+        bytes task_token = 1;
+    }
+}
+
+// Response payload for the "executeCommands" Nexus operation.
+message WorkerCommandsResponse {
+    repeated WorkerCommandResult results = 1;
+
+    message WorkerCommandResult {
+        oneof type {
+            CancelActivity cancel_activity = 1;
+        }
+    }
+
+    // Treat both successful cancellation and no-op (activity is no longer running) as success.
+    message CancelActivity {
+    }
+}

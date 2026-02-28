@@ -2919,3 +2919,76 @@ message DeleteActivityExecutionRequest {
 
 message DeleteActivityExecutionResponse {
 }
+
+message StartNexusOperationRequest {
+    // The namespace to authenticate to. This may be different from the target namespace of the specified endpoint.
+    string namespace = 1;
+    // The identity of the client who initiated this request.
+    string identity = 2;
+    // A unique identifier for this request, used as an idempotency key.
+    string request_id = 3;
+
+    // Endpoint name, resolved via the Temporal service's endpoint registry.
+    string endpoint = 4;
+    // Nexus service name.
+    string service = 5;
+    // Nexus operation name.
+    string operation = 6;
+
+    // Serialized input to the operation.
+    temporal.api.common.v1.Payload input = 7;
+
+    // Links for associating the caller with the operation.
+    repeated temporal.api.common.v1.Link links = 8;
+
+    // TODO: The following fields will be supported in the future:
+    // - nexus_header: map<string, string> for Nexus request headers (tracing, etc.)
+    // - callback: string for async completion delivery URL
+    // - callback_header: map<string, string> for callback request headers
+}
+
+message StartNexusOperationResponse {
+    // An operation completed successfully and synchronously.
+    message SyncSuccess {
+        temporal.api.common.v1.Payload payload = 1;
+    }
+
+    // An operation was started asynchronously. The token can be used for cancellation.
+    message AsyncSuccess {
+        string operation_token = 1;
+    }
+
+    // The operation completed unsuccessfully.
+    // The operation is considered canceled if the failure has a CanceledFailureInfo object attached.
+    message OperationFailure {
+        temporal.api.failure.v1.Failure failure = 1;
+    }
+
+    oneof variant {
+        SyncSuccess sync_success = 1;
+        AsyncSuccess async_success = 2;
+        OperationFailure operation_failure = 3;
+    }
+
+    // Links associated with the operation, as returned by the handler.
+    repeated temporal.api.nexus.v1.Link links = 4;
+}
+
+message CancelNexusOperationRequest {
+    // The namespace to authenticate to. This may be different from the target namespace of the specified endpoint.
+    string namespace = 1;
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    // Endpoint name, resolved via the Temporal service's endpoint registry.
+    string endpoint = 3;
+    // Nexus service name.
+    string service = 4;
+    // Nexus operation name.
+    string operation = 5;
+    // Operation token from StartNexusOperationResponse.AsyncSuccess.
+    string operation_token = 6;
+}
+
+message CancelNexusOperationResponse {
+}

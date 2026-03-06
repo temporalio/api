@@ -16463,13 +16463,13 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
-            The latest target Worker Deployment Version that matching had resolved
-             for the previous run before this workflow execution commenced. Populated
-             by the server during continue-as-new from the previous run's
-             latest_target_worker_deployment_version on its versioning info. Used to
-             detect whether the routing target has changed since this run started,
-             preventing infinite continue-as-new loops for pinned workflows that do
-             not have initial CaN behavior set as AutoUpgrade. Nil for fresh starts.
+            The previous run's latest target Worker Deployment Version that matching
+             had resolved before this workflow execution commenced. Populated by the
+             server during continue-as-new. Used to detect whether the workflow's
+             Target Version has changed since this run started, preventing infinite
+             continue-as-new loops for pinned workflows that do not have initial CaN
+             behavior set as AutoUpgrade. Nil for workflows that are not initiated by
+             a versioned workflow continuing-as-new.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -16680,24 +16680,6 @@ components:
              Note: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not
              face the problem of inconsistent dispatching that arises from eventual consistency between
              task queues and their partitions.
-        latestTargetWorkerDeploymentVersion:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: |-
-            The most recent target Worker Deployment Version received from matching,
-             updated on every workflow task start. When matching dispatches a workflow
-             task, it compares the polling worker's deployment version against the task
-             queue's routing target. If they differ, matching sends the routing target
-             as target_deployment_version alongside the workflow task. This field
-             stores that value.
-
-             This field exists so that when a workflow continues-as-new, the new run
-             can know what the routing target was at the end of the previous run.
-             Specifically, it is copied into the new run's WorkflowExecutionStartedEvent,
-             enabling the new run to detect whether the routing target has actually
-             changed since it started — which is how we prevent infinite
-             continue-as-new loops for pinned workflows that do not have initial
-             CaN behavior set as AutoUpgrade.
       description: |-
         Holds all the information about worker versioning for a particular workflow execution.
          Experimental. Versioning info is experimental and might change in the future.

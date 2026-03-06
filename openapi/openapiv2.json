@@ -17648,7 +17648,7 @@
         },
         "previousRunLatestTargetWorkerDeploymentVersion": {
           "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "The latest target Worker Deployment Version that matching had resolved\nfor the previous run before this workflow execution commenced. Populated\nby the server during continue-as-new from the previous run's\nlatest_target_worker_deployment_version on its versioning info. Used to\ndetect whether the routing target has changed since this run started,\npreventing infinite continue-as-new loops for pinned workflows that do\nnot have initial CaN behavior set as AutoUpgrade. Nil for fresh starts."
+          "description": "The previous run's latest target Worker Deployment Version that matching\nhad resolved before this workflow execution commenced. Populated by the\nserver during continue-as-new. Used to detect whether the workflow's\nTarget Version has changed since this run started, preventing infinite\ncontinue-as-new loops for pinned workflows that do not have initial CaN\nbehavior set as AutoUpgrade. Nil for workflows that are not initiated by\na versioned workflow continuing-as-new."
         }
       },
       "title": "Always the first event in workflow history"
@@ -17829,10 +17829,6 @@
           "type": "string",
           "format": "int64",
           "description": "Monotonic counter reflecting the latest routing decision for this workflow execution.\nUsed for staleness detection between history and matching when dispatching tasks to workers.\nIncremented when a workflow execution routes to a new deployment version, which happens\nwhen a worker of the new deployment version completes a workflow task.\nNote: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not\nface the problem of inconsistent dispatching that arises from eventual consistency between\ntask queues and their partitions."
-        },
-        "latestTargetWorkerDeploymentVersion": {
-          "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "The most recent target Worker Deployment Version received from matching,\nupdated on every workflow task start. When matching dispatches a workflow\ntask, it compares the polling worker's deployment version against the task\nqueue's routing target. If they differ, matching sends the routing target\nas target_deployment_version alongside the workflow task. This field\nstores that value.\n\nThis field exists so that when a workflow continues-as-new, the new run\ncan know what the routing target was at the end of the previous run.\nSpecifically, it is copied into the new run's WorkflowExecutionStartedEvent,\nenabling the new run to detect whether the routing target has actually\nchanged since it started — which is how we prevent infinite\ncontinue-as-new loops for pinned workflows that do not have initial\nCaN behavior set as AutoUpgrade."
         }
       },
       "description": "Holds all the information about worker versioning for a particular workflow execution.\nExperimental. Versioning info is experimental and might change in the future."

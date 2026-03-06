@@ -16459,6 +16459,17 @@ components:
             A boolean indicating whether the SDK has asked to eagerly execute the first workflow task for this workflow and
              eager execution was accepted by the server.
              Only populated by server with version >= 1.29.0.
+        previousRunTargetWorkerDeploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: |-
+            The latest target Worker Deployment Version that matching had resolved
+             for the previous run before this workflow execution commenced. Populated
+             by the server during continue-as-new from the previous run's
+             latest_target_worker_deployment_version on its versioning info. Used to
+             detect whether the routing target has changed since this run started,
+             preventing infinite continue-as-new loops for pinned workflows that do
+             not have initial CaN behavior set as AutoUpgrade. Nil for fresh starts.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -16669,20 +16680,24 @@ components:
              Note: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not
              face the problem of inconsistent dispatching that arises from eventual consistency between
              task queues and their partitions.
-        targetWorkerDeploymentVersionOnStart:
+        latestTargetWorkerDeploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
-            The target Worker Deployment Version (from the task queue's routing config) observed on the
-             very first workflow task of this run. On each subsequent workflow task, this value is
-             compared against the current target deployment version, which is fetched from the task queue's routing config,
-             to compute the `target_worker_deployment_version_changed` flag in WorkflowTaskStartedEvent. That
-             flag signals pinned workflows that the task queue's current deployment version has
-             changed, allowing them to continue-as-new onto the latest version. Without this
-             anchor, the comparison falls back to the workflow's effective deployment, which for
-             pinned workflows permanently differs from the routing target after a version change,
-             causing the flag to stay true indefinitely and triggering infinite continue-as-new
-             loops.
+            The most recent target Worker Deployment Version received from matching,
+             updated on every workflow task start. When matching dispatches a workflow
+             task, it compares the polling worker's deployment version against the task
+             queue's routing target. If they differ, matching sends the routing target
+             as target_deployment_version alongside the workflow task. This field
+             stores that value.
+
+             This field exists so that when a workflow continues-as-new, the new run
+             can know what the routing target was at the end of the previous run.
+             Specifically, it is copied into the new run's WorkflowExecutionStartedEvent,
+             enabling the new run to detect whether the routing target has actually
+             changed since it started — which is how we prevent infinite
+             continue-as-new loops for pinned workflows that do not have initial
+             CaN behavior set as AutoUpgrade.
       description: |-
         Holds all the information about worker versioning for a particular workflow execution.
          Experimental. Versioning info is experimental and might change in the future.
@@ -17095,14 +17110,6 @@ components:
             True if Workflow's Target Worker Deployment Version is different from its Pinned Version and
              the workflow is Pinned.
              Experimental.
-        targetWorkerDeploymentVersionOnStart:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeploymentVersion'
-          description: |-
-            The target Worker Deployment Version (from the task queue's routing config) observed on the
-             very first workflow task of this run. On each subsequent workflow task, this value is
-             compared against the current target deployment version, which is fetched from the task queue's routing config,
-             to compute the `target_worker_deployment_version_changed` flag in WorkflowTaskStartedEvent.
         historySizeBytes:
           type: string
           description: |-

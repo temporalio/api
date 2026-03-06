@@ -184,6 +184,15 @@ message WorkflowExecutionStartedEventAttributes {
     // eager execution was accepted by the server.
     // Only populated by server with version >= 1.29.0.
     bool eager_execution_accepted = 38;
+
+    // The latest target Worker Deployment Version that matching had resolved
+    // for the previous run before this workflow execution commenced. Populated
+    // by the server during continue-as-new from the previous run's
+    // latest_target_worker_deployment_version on its versioning info. Used to
+    // detect whether the routing target has changed since this run started,
+    // preventing infinite continue-as-new loops for pinned workflows that do
+    // not have initial CaN behavior set as AutoUpgrade. Nil for fresh starts.
+    temporal.api.deployment.v1.WorkerDeploymentVersion previous_run_target_worker_deployment_version = 40;
 }
 
 message WorkflowExecutionCompletedEventAttributes {
@@ -284,11 +293,6 @@ message WorkflowTaskStartedEventAttributes {
     // the workflow is Pinned.
     // Experimental.
     bool target_worker_deployment_version_changed = 9;
-    // The target Worker Deployment Version (from the task queue's routing config) observed on the
-    // very first workflow task of this run. On each subsequent workflow task, this value is
-    // compared against the current target deployment version, which is fetched from the task queue's routing config,
-    // to compute the `target_worker_deployment_version_changed` flag in WorkflowTaskStartedEvent.
-    temporal.api.deployment.v1.WorkerDeploymentVersion target_worker_deployment_version_on_start = 10;
     // Total history size in bytes, which the workflow might use to decide when to
     // continue-as-new regardless of the suggestion. Note that history event count is
     // just the event id of this event, so we don't include it explicitly here.

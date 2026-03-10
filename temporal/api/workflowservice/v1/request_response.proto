@@ -357,6 +357,8 @@ message RespondWorkflowTaskCompletedRequest {
     // Responses to the `queries` field in the task being responded to
     map<string, temporal.api.query.v1.WorkflowQueryResult> query_results = 8;
     string namespace = 9;
+    // Resource ID for routing. Contains the workflow ID from the original task.
+    string resource_id = 18;
     // Version info of the worker who processed this task. This message's `build_id` field should
     // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
     // field to true. See message docstrings for more.
@@ -418,6 +420,8 @@ message RespondWorkflowTaskFailedRequest {
     // Worker process' unique binary id
     string binary_checksum = 5 [deprecated = true];
     string namespace = 6;
+    // Resource ID for routing. Contains the workflow ID from the original task.
+    string resource_id = 11;
     // Protocol messages piggybacking on a WFT as a transport
     repeated temporal.api.protocol.v1.Message messages = 7;
     // Version info of the worker who processed this task. This message's `build_id` field should
@@ -522,6 +526,8 @@ message RecordActivityTaskHeartbeatRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Resource ID for routing. Contains the workflow ID or activity ID for standalone activities.
+    string resource_id = 5;
 }
 
 message RecordActivityTaskHeartbeatResponse {
@@ -551,6 +557,8 @@ message RecordActivityTaskHeartbeatByIdRequest {
     temporal.api.common.v1.Payloads details = 5;
     // The identity of the worker/client
     string identity = 6;
+    // Resource ID for routing. Contains "workflow:workflow_id" or "activity:activity_id" for standalone activities.
+    string resource_id = 7;
 }
 
 message RecordActivityTaskHeartbeatByIdResponse {
@@ -574,6 +582,8 @@ message RespondActivityTaskCompletedRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Resource ID for routing. Contains the workflow ID or activity ID for standalone activities.
+    string resource_id = 8;
     // Version info of the worker who processed this task. This message's `build_id` field should
     // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
     // field to true. See message docstrings for more.
@@ -604,6 +614,8 @@ message RespondActivityTaskCompletedByIdRequest {
     temporal.api.common.v1.Payloads result = 5;
     // The identity of the worker/client
     string identity = 6;
+    // Resource ID for routing. Contains "workflow:workflow_id" or "activity:activity_id" for standalone activities.
+    string resource_id = 7;
 }
 
 message RespondActivityTaskCompletedByIdResponse {
@@ -617,6 +629,8 @@ message RespondActivityTaskFailedRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Resource ID for routing. Contains the workflow ID or activity ID for standalone activities.
+    string resource_id = 9;
     // Additional details to be stored as last activity heartbeat
     temporal.api.common.v1.Payloads last_heartbeat_details = 5;
     // Version info of the worker who processed this task. This message's `build_id` field should
@@ -654,6 +668,8 @@ message RespondActivityTaskFailedByIdRequest {
     string identity = 6;
     // Additional details to be stored as last activity heartbeat
     temporal.api.common.v1.Payloads last_heartbeat_details = 7;
+    // Resource ID for routing. Contains "workflow:workflow_id" or "activity:activity_id" for standalone activities.
+    string resource_id = 8;
 }
 
 message RespondActivityTaskFailedByIdResponse {
@@ -670,6 +686,8 @@ message RespondActivityTaskCanceledRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Resource ID for routing. Contains the workflow ID or activity ID for standalone activities.
+    string resource_id = 8;
     // Version info of the worker who processed this task. This message's `build_id` field should
     // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
     // field to true. See message docstrings for more.
@@ -702,6 +720,8 @@ message RespondActivityTaskCanceledByIdRequest {
     string identity = 6;
     // Worker deployment options that user has set in the worker.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 7;
+    // Resource ID for routing. Contains "workflow:workflow_id" or "activity:activity_id" for standalone activities.
+    string resource_id = 8;
 }
 
 message RespondActivityTaskCanceledByIdResponse {
@@ -1000,6 +1020,8 @@ message RespondQueryTaskCompletedRequest {
     string error_message = 4;
     reserved 5;
     string namespace = 6;
+    // Resource ID for routing. Contains the workflow ID from the original task.
+    string resource_id = 9;
     // The full reason for this query failure. This field is newer than `error_message` and can be
     // encoded by the SDK's failure converter to support E2E encryption of messages and stack
     // traces.
@@ -1872,6 +1894,8 @@ message PollNexusTaskQueueResponse {
     temporal.api.nexus.v1.Request request = 2;
     // Server-advised information the SDK may use to adjust its poller count.
     temporal.api.taskqueue.v1.PollerScalingDecision poller_scaling_decision = 3;
+    // Server routing ID for task routing. Workers should pass this value in response requests.
+    string server_routing_id = 4;
 }
 
 message RespondNexusTaskCompletedRequest {
@@ -1882,6 +1906,8 @@ message RespondNexusTaskCompletedRequest {
     bytes task_token = 3;
     // Embedded response to be translated into a frontend response.
     temporal.api.nexus.v1.Response response = 4;
+    // Server routing ID for task routing. Should match the value from PollNexusTaskQueueResponse.
+    string server_routing_id = 5;
 }
 
 message RespondNexusTaskCompletedResponse {
@@ -1897,6 +1923,8 @@ message RespondNexusTaskFailedRequest {
     temporal.api.nexus.v1.HandlerError error = 4 [deprecated = true];
     // The error the handler failed with. Must contain a NexusHandlerFailureInfo object.
     temporal.api.failure.v1.Failure failure = 5;
+    // Server routing ID for task routing. Should match the value from PollNexusTaskQueueResponse.
+    string server_routing_id = 6;
 }
 
 message RespondNexusTaskFailedResponse {
@@ -1914,6 +1942,9 @@ message ExecuteMultiOperationRequest {
     //
     // Note that additional operation-specific restrictions have to be considered.
     repeated Operation operations = 2;
+
+    // Resource ID for routing. Should match operations[0].start_workflow.workflow_id
+    string resource_id = 3;
 
     message Operation {
         oneof operation {

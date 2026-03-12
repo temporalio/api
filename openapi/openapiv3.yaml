@@ -10351,6 +10351,15 @@ components:
          xx:19:00. An interval of 28 days with phase zero would match
          2022-02-17T00:00:00Z (among other times). The same interval with a phase of 3
          days, 5 hours, and 23 minutes would match 2022-02-20T05:23:00Z instead.
+    LastNotifiedTargetVersion:
+      type: object
+      properties:
+        deploymentVersion:
+          $ref: '#/components/schemas/WorkerDeploymentVersion'
+      description: |-
+        Wrapper for the last Target Deployment Version that the server notified the SDK about
+         via the targetDeploymentVersionChanged flag on a workflow task started event.
+         See last_notified_target_version on WorkflowExecutionStartedEventAttributes.
     Link:
       type: object
       properties:
@@ -16530,17 +16539,17 @@ components:
              Only populated by server with version >= 1.29.0.
         lastNotifiedTargetVersion:
           allOf:
-            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+            - $ref: '#/components/schemas/LastNotifiedTargetVersion'
           description: |-
             During the previous run of this workflow, if it exists, the server may have notified
              the SDK that the Target Worker Deployment Version changed, prompting
              a pinned workflow to continue-as-new to upgrade on to this latest target. This field records
              the last target version that was part of such a notification.
 
-             Never set when there is no previous run (i.e., not initiated by
-             continue-as-new or retry). When there is a previous run, the value is
-             either a non-nil deployment version representing the last notified
-             target, or nil representing an unversioned target.
+             This is a wrapper message to distinguish "never notified" (nil wrapper) from
+             "notified about an unversioned target" (non-nil wrapper with nil deployment_version).
+             Without the wrapper, both cases would be represented as nil and the server could
+             not tell whether a previous run was actually signaled.
 
              Used internally by the server during continue-as-new and retry.
              Should not be read or interpreted by SDKs.

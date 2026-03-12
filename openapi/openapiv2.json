@@ -13238,6 +13238,15 @@
       },
       "description": "IntervalSpec matches times that can be expressed as:\nepoch + n * interval + phase\nwhere n is an integer.\nphase defaults to zero if missing. interval is required.\nBoth interval and phase must be non-negative and are truncated to the nearest\nsecond before any calculations.\nFor example, an interval of 1 hour with phase of zero would match every hour,\non the hour. The same interval but a phase of 19 minutes would match every\nxx:19:00. An interval of 28 days with phase zero would match\n2022-02-17T00:00:00Z (among other times). The same interval with a phase of 3\ndays, 5 hours, and 23 minutes would match 2022-02-20T05:23:00Z instead."
     },
+    "v1LastNotifiedTargetVersion": {
+      "type": "object",
+      "properties": {
+        "deploymentVersion": {
+          "$ref": "#/definitions/v1WorkerDeploymentVersion"
+        }
+      },
+      "description": "Wrapper for the last Target Deployment Version that the server notified the SDK about\nvia the targetDeploymentVersionChanged flag on a workflow task started event.\nSee last_notified_target_version on WorkflowExecutionStartedEventAttributes."
+    },
     "v1Link": {
       "type": "object",
       "properties": {
@@ -17721,8 +17730,8 @@
           "description": "A boolean indicating whether the SDK has asked to eagerly execute the first workflow task for this workflow and\neager execution was accepted by the server.\nOnly populated by server with version >= 1.29.0."
         },
         "lastNotifiedTargetVersion": {
-          "$ref": "#/definitions/v1WorkerDeploymentVersion",
-          "description": "During the previous run of this workflow, if it exists, the server may have notified\nthe SDK that the Target Worker Deployment Version changed, prompting\na pinned workflow to continue-as-new to upgrade on to this latest target. This field records\nthe last target version that was part of such a notification.\n\nNever set when there is no previous run (i.e., not initiated by\ncontinue-as-new or retry). When there is a previous run, the value is\neither a non-nil deployment version representing the last notified\ntarget, or nil representing an unversioned target.\n\nUsed internally by the server during continue-as-new and retry.\nShould not be read or interpreted by SDKs."
+          "$ref": "#/definitions/v1LastNotifiedTargetVersion",
+          "description": "During the previous run of this workflow, if it exists, the server may have notified\nthe SDK that the Target Worker Deployment Version changed, prompting\na pinned workflow to continue-as-new to upgrade on to this latest target. This field records\nthe last target version that was part of such a notification.\n\nThis is a wrapper message to distinguish \"never notified\" (nil wrapper) from\n\"notified about an unversioned target\" (non-nil wrapper with nil deployment_version).\nWithout the wrapper, both cases would be represented as nil and the server could\nnot tell whether a previous run was actually signaled.\n\nUsed internally by the server during continue-as-new and retry.\nShould not be read or interpreted by SDKs."
         }
       },
       "title": "Always the first event in workflow history"

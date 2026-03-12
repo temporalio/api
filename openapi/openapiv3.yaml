@@ -9226,6 +9226,14 @@ components:
         data:
           type: string
           format: bytes
+    DeclinedTargetVersionUpgrade:
+      type: object
+      properties:
+        deploymentVersion:
+          $ref: '#/components/schemas/WorkerDeploymentVersion'
+      description: |-
+        Wrapper for a target deployment version that the SDK declined to upgrade to.
+         See declined_target_version_upgrade on WorkflowExecutionStartedEventAttributes.
     DeleteNexusEndpointResponse:
       type: object
       properties: {}
@@ -10351,15 +10359,6 @@ components:
          xx:19:00. An interval of 28 days with phase zero would match
          2022-02-17T00:00:00Z (among other times). The same interval with a phase of 3
          days, 5 hours, and 23 minutes would match 2022-02-20T05:23:00Z instead.
-    LastNotifiedTargetVersion:
-      type: object
-      properties:
-        deploymentVersion:
-          $ref: '#/components/schemas/WorkerDeploymentVersion'
-      description: |-
-        Wrapper for the last Target Deployment Version that the server notified the SDK about
-         via the targetDeploymentVersionChanged flag on a workflow task started event.
-         See last_notified_target_version on WorkflowExecutionStartedEventAttributes.
     Link:
       type: object
       properties:
@@ -16537,19 +16536,17 @@ components:
             A boolean indicating whether the SDK has asked to eagerly execute the first workflow task for this workflow and
              eager execution was accepted by the server.
              Only populated by server with version >= 1.29.0.
-        lastNotifiedTargetVersion:
+        declinedTargetVersionUpgrade:
           allOf:
-            - $ref: '#/components/schemas/LastNotifiedTargetVersion'
+            - $ref: '#/components/schemas/DeclinedTargetVersionUpgrade'
           description: |-
-            During the previous run of this workflow, if it exists, the server may have notified
-             the SDK that the Target Worker Deployment Version changed, prompting
-             a pinned workflow to continue-as-new to upgrade on to this latest target. This field records
-             the last target version that was part of such a notification.
+            During a previous run of this workflow, the server may have notified the SDK
+             that the Target Worker Deployment Version changed, but the SDK declined to
+             upgrade (e.g., by continuing-as-new with PINNED behavior). This field records
+             the target version that was declined.
 
-             This is a wrapper message to distinguish "never notified" (nil wrapper) from
-             "notified about an unversioned target" (non-nil wrapper with nil deployment_version).
-             Without the wrapper, both cases would be represented as nil and the server could
-             not tell whether a previous run was actually signaled.
+             This is a wrapper message to distinguish "never declined" (nil wrapper) from
+             "declined an unversioned target" (non-nil wrapper with nil deployment_version).
 
              Used internally by the server during continue-as-new and retry.
              Should not be read or interpreted by SDKs.

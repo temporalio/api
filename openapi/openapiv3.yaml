@@ -16528,19 +16528,22 @@ components:
             A boolean indicating whether the SDK has asked to eagerly execute the first workflow task for this workflow and
              eager execution was accepted by the server.
              Only populated by server with version >= 1.29.0.
-        previousRunLatestTargetWorkerDeploymentVersion:
+        lastNotifiedTargetVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
-            The previous run's latest target Worker Deployment Version that matching
-             had resolved before this workflow execution commenced. Populated by the
-             server during continue-as-new. Used to detect whether the workflow's
-             Target Version has changed since this run started, preventing infinite
-             continue-as-new loops for pinned workflows that do not have initial CaN
-             behavior set as AutoUpgrade. Nil for workflows that are not initiated by
-             a versioned workflow continuing-as-new.
-             This field is used internally by the server and should not be read or
-             interpreted by SDKs.
+            During the previous run of this workflow, if it exists, the server may have notified
+             the SDK that the Target Worker Deployment Version changed, prompting
+             a pinned workflow to continue-as-new to upgrade on to this latest target. This field records
+             the last target version that was part of such a notification.
+
+             Never set when there is no previous run (i.e., not initiated by
+             continue-as-new or retry). When there is a previous run, the value is
+             either a non-nil deployment version representing the last notified
+             target, or nil representing an unversioned target.
+
+             Used internally by the server during continue-as-new and retry.
+             Should not be read or interpreted by SDKs.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object

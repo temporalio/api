@@ -566,6 +566,28 @@ message WorkflowExecutionOptions {
 
     // If set, overrides the workflow's priority sent by the SDK.
     temporal.api.common.v1.Priority priority = 2;
+
+    // Time-skipping configuration for this workflow execution.
+    // If not set, the time-skipping conf will not get updated upon request, 
+    // i.e. the existing time-skipping conf will be preserved.
+    TimeSkippingConfig time_skipping_config = 3;
+}
+
+// Configuration for automatic time skipping on a workflow execution.
+// Once enabled, time automatically advances when there is no in-flight 
+// activities, child workflows, or Nexus operations.
+message TimeSkippingConfig {
+
+    // If set, enables automatic time-skipping for this workflow execution.
+    // It can also be disabled by setting this field to false.
+    // Special attention for transitively related workflows:
+    // - By default, Child workflows and Continue-As-New workflows will 
+    // inherit the enabled config but only at the time they are started.
+    // - But if the enabled config is flipped after a child/continue-as-new workflow is started, 
+    // the propagation won't happen. It not recommended flip the parent's enabled config
+    // when there are in-flight child/continue-as-new workflows.
+    bool enabled = 1;
+
 }
 
 // Used to override the versioning behavior (and pinned deployment version, if applicable) of a

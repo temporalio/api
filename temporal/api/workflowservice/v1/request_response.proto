@@ -1268,10 +1268,10 @@ message GetSystemInfoResponse {
         // This flag is dependent both on server version and for Nexus to be enabled via server configuration.
         bool nexus = 11;
 
-        // True if the server supports serverless deployments.
-        // This flag is dependent both on server version and for serverless deployments
+        // True if the server supports server-scaled deployments.
+        // This flag is dependent both on server version and for server-scaled deployments
         // to be enabled via server configuration.
-        bool serverless_deployments = 12;
+        bool server_scaled_deployments = 12;
 
     }
 }
@@ -2357,10 +2357,6 @@ message CreateWorkerDeploymentRequest {
     // this name already exists, an error will be returned.
     string deployment_name = 2;
 
-    // Optional. Contains the new worker compute configuration for the Worker
-    // Deployment. Used for worker scale management.
-    temporal.api.compute.v1.ComputeConfig compute_config = 3;
-
     // Optional. The identity of the client who initiated this request.
     string identity = 4;
     // A unique identifier for this create request for idempotence. Typically UUIDv4.
@@ -2400,6 +2396,32 @@ message ListWorkerDeploymentsResponse {
     }
 }
 
+// Creates a new WorkerDeploymentVersion.
+message CreateWorkerDeploymentVersionRequest {
+    string namespace = 1;
+    // Required.
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+
+    // Optional. Contains the new worker compute configuration for the Worker
+    // Deployment. Used for worker scale management.
+    temporal.api.compute.v1.ComputeConfig compute_config = 4;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+    
+    // A unique identifier for this create request for idempotence. Typically UUIDv4.
+    // If a second request with the same ID is recieved, it is considered a successful no-op.
+    // Retrying with a different request ID for the same deployment name + build ID is an error.
+    string request_id = 5;
+}
+
+message CreateWorkerDeploymentVersionResponse {
+    // This value is returned so that it can be optionally passed to APIs that
+    // write to the WorkerDeployment state to ensure that the state did not
+    // change between this API call and a future write.
+    bytes conflict_token = 1;
+}
+
 // Used for manual deletion of Versions. User can delete a Version only when all the
 // following conditions are met:
 //  - It is not the Current or Ramping Version of its Deployment.
@@ -2432,6 +2454,65 @@ message DeleteWorkerDeploymentRequest {
 }
 
 message DeleteWorkerDeploymentResponse {
+}
+
+// Used to update the compute config of a Worker Deployment Version.
+message UpdateWorkerDeploymentVersionComputeConfigRequest {
+    string namespace = 1;
+
+    // Required.
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+
+    message ScalingGroupUpdate {
+      temporal.api.compute.v1.ComputeConfigScalingGroup scaling_group = 1;
+
+      // Controls which fields from `scaling_group` will be applied
+      google.protobuf.FieldMask update_mask = 2;
+    }
+
+    // Optional. Contains the compute config scaling groups to add or updated for the Worker
+    // Deployment.
+    map<string, ScalingGroupUpdate> compute_config_scaling_groups = 6;
+
+    // Optional. Contains the compute config scaling groups to remove from the Worker Deployment.
+    repeated string remove_compute_config_scaling_groups = 7;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+
+    // A unique identifier for this create request for idempotence. Typically UUIDv4.
+    // If a second request with the same ID is recieved, it is considered a successful no-op.
+    // Retrying with a different request ID for the same deployment name + build ID is an error.
+    string request_id = 4;
+
+    // Optional. This value is returned so that it can be optionally passed to APIs
+    // that write to the Worker Deployment state to ensure that the state
+    // did not change between this API call and a future write.
+    bytes conflict_token = 5;
+}
+
+message UpdateWorkerDeploymentVersionComputeConfigResponse {
+    // This value is returned so that it can be optionally passed to APIs that
+    // write to the WorkerDeployment state to ensure that the state did not
+    // change between this API call and a future write.
+    bytes conflict_token = 1;
+}
+
+// Used to validate the compute config without attaching it to a Worker Deployment Version.
+message ValidateWorkerDeploymentVersionComputeConfigRequest {
+    string namespace = 1;
+
+    // Required.
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+
+    // Required. Contains the new worker compute configuration for the Worker Deployment.
+    temporal.api.compute.v1.ComputeConfig compute_config = 4;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+}
+
+message ValidateWorkerDeploymentVersionComputeConfigResponse {
 }
 
 // Used to update the user-defined metadata of a Worker Deployment Version.

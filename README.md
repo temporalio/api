@@ -20,4 +20,4 @@ of adding such an exception. A subsequent PR will be needed to then disable to e
 
 ## License
 
-MIT License, please see [LICENSE](LICENSE) for details.
+MIT License, please see [LICENSE](LICENSE) for details..

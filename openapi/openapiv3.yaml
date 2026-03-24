@@ -661,6 +661,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/{activityId}/pause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        PauseActivityExecution pauses the execution of an activity specified by its ID.
+         This API can be used to target a workflow activity or a standalone activity
+
+         Pausing an activity means:
+         - If the activity is currently waiting for a retry or is running and subsequently fails,
+           it will not be rescheduled until it is unpaused.
+         - If the activity is already paused, calling this method will have no effect.
+         - If the activity is running and finishes successfully, the activity will be completed.
+         - If the activity is running and finishes with failure:
+           * if there is no retry left - the activity will be completed.
+           * if there are more retries left - the activity will be paused.
+         For long-running activities:
+         - activities in paused state will send a cancellation with "activity_paused" set to 'true' in response to 'RecordActivityTaskHeartbeat'.
+         - The activity should respond to the cancellation accordingly.
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID
+      operationId: PauseActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          description: |-
+            Pause an activity with this ID. Must be provided for a standalone activity.
+             Mutually exclusive with workflow_activity_type.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PauseActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activities/{activityId}/reset:
     post:
       tags:
@@ -694,7 +750,7 @@ paths:
         - name: activityId
           in: path
           description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
+            The ID of the activity to target. Must be provided for a standalone activity.
              Mutually exclusive with workflow_activity_type.
           required: true
           schema:
@@ -801,6 +857,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activities/{activityId}/unpause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        UnpauseActivityExecution unpauses the execution of an activity specified by its ID.
+         This API can be used to target a workflow activity or a standalone activity.
+
+         If activity is not paused, this call will have no effect.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
+         Once the activity is unpaused, all timeout timers will be regenerated.
+
+         Flags:
+         'jitter': the activity will be scheduled at a random time within the jitter duration.
+         'reset_attempts': the number of attempts will be reset.
+         'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID
+      operationId: UnpauseActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          description: |-
+            The ID of the activity to target. Must be provided for a standalone activity.
+             Mutually exclusive with workflow_activity_type.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnpauseActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnpauseActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activities/{activityId}/update-options:
     post:
       tags:
@@ -819,7 +928,7 @@ paths:
         - name: activityId
           in: path
           description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
+            The ID of the activity to target. Must be provided for a standalone activity.
              Mutually exclusive with workflow_activity_type.
           required: true
           schema:
@@ -1020,115 +1129,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespondActivityTaskCanceledResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activity/{activityId}/pause:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        PauseActivityExecution pauses the execution of an activity specified by its ID.
-         This API can be used to target a workflow activity or a standalone activity
-
-         Pausing an activity means:
-         - If the activity is currently waiting for a retry or is running and subsequently fails,
-           it will not be rescheduled until it is unpaused.
-         - If the activity is already paused, calling this method will have no effect.
-         - If the activity is running and finishes successfully, the activity will be completed.
-         - If the activity is running and finishes with failure:
-           * if there is no retry left - the activity will be completed.
-           * if there are more retries left - the activity will be paused.
-         For long-running activities:
-         - activities in paused state will send a cancellation with "activity_paused" set to 'true' in response to 'RecordActivityTaskHeartbeat'.
-         - The activity should respond to the cancellation accordingly.
-
-         Returns a `NotFound` error if there is no pending activity with the provided ID
-      operationId: PauseActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace of the workflow which scheduled this activity.
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
-             Mutually exclusive with workflow_activity_type.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PauseActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PauseActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /api/v1/namespaces/{namespace}/activity/{activityId}/unpause:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        UnpauseActivityExecution unpauses the execution of an activity specified by its ID.
-         This API can be used to target a workflow activity or a standalone activity.
-
-         If activity is not paused, this call will have no effect.
-         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
-         Once the activity is unpaused, all timeout timers will be regenerated.
-
-         Flags:
-         'jitter': the activity will be scheduled at a random time within the jitter duration.
-         'reset_attempts': the number of attempts will be reset.
-         'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
-
-         Returns a `NotFound` error if there is no pending activity with the provided ID
-      operationId: UnpauseActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace of the workflow which scheduled this activity.
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
-             Mutually exclusive with workflow_activity_type.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UnpauseActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnpauseActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -4960,6 +4960,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/{activityId}/pause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        PauseActivityExecution pauses the execution of an activity specified by its ID.
+         This API can be used to target a workflow activity or a standalone activity
+
+         Pausing an activity means:
+         - If the activity is currently waiting for a retry or is running and subsequently fails,
+           it will not be rescheduled until it is unpaused.
+         - If the activity is already paused, calling this method will have no effect.
+         - If the activity is running and finishes successfully, the activity will be completed.
+         - If the activity is running and finishes with failure:
+           * if there is no retry left - the activity will be completed.
+           * if there are more retries left - the activity will be paused.
+         For long-running activities:
+         - activities in paused state will send a cancellation with "activity_paused" set to 'true' in response to 'RecordActivityTaskHeartbeat'.
+         - The activity should respond to the cancellation accordingly.
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID
+      operationId: PauseActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          description: |-
+            Pause an activity with this ID. Must be provided for a standalone activity.
+             Mutually exclusive with workflow_activity_type.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PauseActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/activities/{activityId}/reset:
     post:
       tags:
@@ -4993,7 +5049,7 @@ paths:
         - name: activityId
           in: path
           description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
+            The ID of the activity to target. Must be provided for a standalone activity.
              Mutually exclusive with workflow_activity_type.
           required: true
           schema:
@@ -5100,6 +5156,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activities/{activityId}/unpause:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        UnpauseActivityExecution unpauses the execution of an activity specified by its ID.
+         This API can be used to target a workflow activity or a standalone activity.
+
+         If activity is not paused, this call will have no effect.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
+         Once the activity is unpaused, all timeout timers will be regenerated.
+
+         Flags:
+         'jitter': the activity will be scheduled at a random time within the jitter duration.
+         'reset_attempts': the number of attempts will be reset.
+         'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
+
+         Returns a `NotFound` error if there is no pending activity with the provided ID
+      operationId: UnpauseActivityExecution
+      parameters:
+        - name: namespace
+          in: path
+          description: Namespace of the workflow which scheduled this activity.
+          required: true
+          schema:
+            type: string
+        - name: activityId
+          in: path
+          description: |-
+            The ID of the activity to target. Must be provided for a standalone activity.
+             Mutually exclusive with workflow_activity_type.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnpauseActivityExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnpauseActivityExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/activities/{activityId}/update-options:
     post:
       tags:
@@ -5118,7 +5227,7 @@ paths:
         - name: activityId
           in: path
           description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
+            The ID of the activity to target. Must be provided for a standalone activity.
              Mutually exclusive with workflow_activity_type.
           required: true
           schema:
@@ -5319,115 +5428,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespondActivityTaskCanceledResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activity/{activityId}/pause:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        PauseActivityExecution pauses the execution of an activity specified by its ID.
-         This API can be used to target a workflow activity or a standalone activity
-
-         Pausing an activity means:
-         - If the activity is currently waiting for a retry or is running and subsequently fails,
-           it will not be rescheduled until it is unpaused.
-         - If the activity is already paused, calling this method will have no effect.
-         - If the activity is running and finishes successfully, the activity will be completed.
-         - If the activity is running and finishes with failure:
-           * if there is no retry left - the activity will be completed.
-           * if there are more retries left - the activity will be paused.
-         For long-running activities:
-         - activities in paused state will send a cancellation with "activity_paused" set to 'true' in response to 'RecordActivityTaskHeartbeat'.
-         - The activity should respond to the cancellation accordingly.
-
-         Returns a `NotFound` error if there is no pending activity with the provided ID
-      operationId: PauseActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace of the workflow which scheduled this activity.
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
-             Mutually exclusive with workflow_activity_type.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PauseActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PauseActivityExecutionResponse'
-        default:
-          description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Status'
-  /namespaces/{namespace}/activity/{activityId}/unpause:
-    post:
-      tags:
-        - WorkflowService
-      description: |-
-        UnpauseActivityExecution unpauses the execution of an activity specified by its ID.
-         This API can be used to target a workflow activity or a standalone activity.
-
-         If activity is not paused, this call will have no effect.
-         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
-         Once the activity is unpaused, all timeout timers will be regenerated.
-
-         Flags:
-         'jitter': the activity will be scheduled at a random time within the jitter duration.
-         'reset_attempts': the number of attempts will be reset.
-         'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
-
-         Returns a `NotFound` error if there is no pending activity with the provided ID
-      operationId: UnpauseActivityExecution
-      parameters:
-        - name: namespace
-          in: path
-          description: Namespace of the workflow which scheduled this activity.
-          required: true
-          schema:
-            type: string
-        - name: activityId
-          in: path
-          description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
-             Mutually exclusive with workflow_activity_type.
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UnpauseActivityExecutionRequest'
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UnpauseActivityExecutionResponse'
         default:
           description: Default error response
           content:
@@ -11663,7 +11663,7 @@ components:
     PauseActivityResponse:
       type: object
       properties: {}
-      description: Deprecated. Use `PauseActivityExecutionRequest`.
+      description: Deprecated. Use `PauseActivityExecutionResponse`.
     PauseInfo_Manual:
       type: object
       properties:
@@ -12728,12 +12728,12 @@ components:
         workflowId:
           type: string
           description: |-
-            If provided, pause a workflow activity (or activities) for the given workflow ID.
+            If provided, targets a workflow activity for the given workflow ID.
              If empty, target a standalone activity.
         activityId:
           type: string
           description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
+            The ID of the activity to target. Must be provided for a standalone activity.
              Mutually exclusive with workflow_activity_type.
         runId:
           type: string
@@ -15053,12 +15053,12 @@ components:
         workflowId:
           type: string
           description: |-
-            If provided, pause a workflow activity (or activities) for the given workflow ID.
+            If provided, targets a workflow activity for the given workflow ID.
              If empty, target a standalone activity.
         activityId:
           type: string
           description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
+            The ID of the activity to target. Must be provided for a standalone activity.
              Mutually exclusive with workflow_activity_type.
         runId:
           type: string
@@ -15074,7 +15074,11 @@ components:
           description: Providing this flag will also reset the heartbeat details.
         reason:
           type: string
-          description: Reason to pause the activity.
+          description: Reason to unpause the activity.
+        jitter:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: If set, the activity will start at a random time within the specified jitter duration.
     UnpauseActivityExecutionResponse:
       type: object
       properties: {}
@@ -15147,12 +15151,12 @@ components:
         workflowId:
           type: string
           description: |-
-            If provided, pause a workflow activity (or activities) for the given workflow ID.
+            If provided, targets a workflow activity for the given workflow ID.
              If empty, target a standalone activity.
         activityId:
           type: string
           description: |-
-            Pause an activity with this ID. Must be provided for a standalone activity.
+            The ID of the activity to target. Must be provided for a standalone activity.
              Mutually exclusive with workflow_activity_type.
         runId:
           type: string

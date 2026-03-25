@@ -16894,10 +16894,28 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "If set, enables automatic time-skipping for this workflow execution.\nIt can also be disabled by setting this field to false.\nSpecial attention for transitively related workflows:\n- By default, Child workflows and Continue-As-New workflows will \ninherit the enabled config but only at the time they are started.\n- But if the enabled config is flipped after a child/continue-as-new workflow is started, \nthe propagation won't happen. It not recommended flip the parent's enabled config\nwhen there are in-flight child/continue-as-new workflows."
+          "description": "Enables or disables automatic time skipping for this workflow execution.\nBy default, this field is propagated to child workflows at the time they are started.\nChanges made after a child workflow has started are not propagated."
+        },
+        "disablePropagation": {
+          "type": "boolean",
+          "description": "If set, the enabled field is not propagated to child workflows."
+        },
+        "maxSkippedDuration": {
+          "type": "string",
+          "description": "Maximum total virtual time that can be skipped."
+        },
+        "maxElapsedDuration": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Maximum elapsed time since time skipping was enabled.\nThis includes both skipped time and real time elapsing."
+        },
+        "maxTargetTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Absolute virtual timestamp at which time skipping is disabled.\nTime skipping will not advance beyond this point."
         }
       },
-      "description": "Configuration for automatic time skipping on a workflow execution.\nOnce enabled, time automatically advances when there is no in-flight \nactivities, child workflows, or Nexus operations."
+      "description": "Configuration for automatic time skipping during a workflow execution.\nWhen enabled, virtual time advances automatically whenever there are\nno in-flight activities, child workflows, or Nexus operations."
     },
     "v1TimeoutFailureInfo": {
       "type": "object",
@@ -18482,12 +18500,22 @@
     "v1WorkflowExecutionTimeSkippedEventAttributes": {
       "type": "object",
       "properties": {
-        "toTime": {
+        "targetTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "The virtual time after time skipping is applied."
+        },
+        "disabledAfterBound": {
+          "type": "boolean",
+          "description": "when true, automatic time-skipping was enabled with a bound\nand now that bound has been reached and time-skipping is disabled automatically."
+        },
+        "wallClockTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The wall-clock time when the time-skipping event happened."
         }
       },
-      "description": "Attributes for an event marking that a duration was skipped for a workflow execution,\neither via manual time-skipping api call or automatic time-skipping."
+      "description": "Attributes for an event indicating that virtual time was advanced for a workflow execution,\neither via a manual time-skipping API call or automatic time skipping."
     },
     "v1WorkflowExecutionTimedOutEventAttributes": {
       "type": "object",

@@ -257,10 +257,10 @@ message GetWorkflowExecutionHistoryReverseResponse {
 message PollWorkflowTaskQueueRequest {
     string namespace = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
-    // Client must pass one of the poller group IDs received in `poller_group_infos` of the last
-    // the PollWorkflowTaskQueueResponse according to the instructions. If not set, the poll is
-    // routed randomly which can cause it being blocked without receiving a task while the queue
-    // actually has tasks in another server location.
+    // Unless this is the first poll, the client must pass one of the poller group IDs received in
+    // `poller_group_infos` of the last the PollWorkflowTaskQueueResponse according to the
+    // instructions. If not set, the poll is routed randomly which can cause it being blocked
+    // without receiving a task while the queue actually has tasks in another server location.
     string poller_group_id = 9;
     // The identity of the worker/client who is polling this task queue
     string identity = 3;
@@ -458,10 +458,10 @@ message RespondWorkflowTaskFailedResponse {
 message PollActivityTaskQueueRequest {
     string namespace = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
-    // Client must pass one of the poller group IDs received in `poller_group_infos` of the last
-    // the PollActivityTaskQueueResponse according to the instructions. If not set, the poll is
-    // routed randomly which can cause it being blocked without receiving a task while the queue
-    // actually has tasks in another server location.
+    // Unless this is the first poll, the client must pass one of the poller group IDs received in
+    // `poller_group_infos` of the last the PollActivityTaskQueueResponse according to the
+    // instructions. If not set, the poll is routed randomly which can cause it being blocked
+    // without receiving a task while the queue actually has tasks in another server location.
     string poller_group_id = 9;
     // The identity of the worker/client
     string identity = 3;
@@ -1899,10 +1899,10 @@ message PollWorkflowExecutionUpdateResponse {
 message PollNexusTaskQueueRequest {
     string namespace = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 3;
-    // Client must pass one of the poller group IDs received in `poller_group_infos` of the last
-    // the PollNexusTaskQueueResponse according to the instructions. If not set, the poll is
-    // routed randomly which can cause it being blocked without receiving a task while the queue
-    // actually has tasks in another server location.
+    // Unless this is the first poll, the client must pass one of the poller group IDs received in
+    // `poller_group_infos` of the last the PollNexusTaskQueueResponse according to the
+    // instructions. If not set, the poll is routed randomly which can cause it being blocked
+    // without receiving a task while the queue actually has tasks in another server location.
     string poller_group_id = 9;
     // The identity of the client who initiated this request.
     string identity = 2;
@@ -1927,21 +1927,18 @@ message PollNexusTaskQueueResponse {
     temporal.api.nexus.v1.Request request = 2;
     // Server-advised information the SDK may use to adjust its poller count.
     temporal.api.taskqueue.v1.PollerScalingDecision poller_scaling_decision = 3;
-    // Should be returned in RespondNexusTaskCompletedRequest and RespondNexusTaskFailedRequest
-    // for proper routing of handler's response.
-    string routing_key = 4;
     // This poller group ID identifies the owner of the nexus task awaiting for synchronous
     // response.
     // Corresponding `RespondNexusTaskCompleted` and `RespondNexusTaskFailed` calls should pass this
     // value for proper response routing.
-    string poller_group_id = 5;
+    string poller_group_id = 4;
     // The weighted list of poller groups IDs that client should use for future polls to this task
     // queue. Client is expected to:
     //   1. Maintain minimum number of pollers no less than the number of groups.
     //   2. Try to assign the next poll to a group without any pending polls,
     //   3. If every group has some pending polls, assign the next poll to a group randomly
     //     according to the weights.
-    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 6;
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 5;
 }
 
 message RespondNexusTaskCompletedRequest {

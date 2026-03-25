@@ -8,7 +8,7 @@ ci-build: install proto http-api-docs
 install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
-proto: grpc http-api-docs
+proto: sync-nexus-annotations grpc http-api-docs
 ########################################################################
 
 ##### Variables ######
@@ -94,6 +94,11 @@ api-linter-install:
 buf-install:
 	printf $(COLOR) "Install/update buf..."
 	go install github.com/bufbuild/buf/cmd/buf@v1.27.0
+
+##### Sync external proto dependencies #####
+sync-nexus-annotations:
+	printf $(COLOR) "Sync nexusannotations from buf.build/temporalio/nexus-annotations..."
+	buf export buf.build/temporalio/nexus-annotations --output .
 
 ##### Linters #####
 api-linter:

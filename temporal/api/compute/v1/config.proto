@@ -12,6 +12,7 @@ option csharp_namespace = "Temporalio.Api.Compute.V1";
 import "temporal/api/compute/v1/provider.proto";
 import "temporal/api/compute/v1/scaler.proto";
 import "temporal/api/enums/v1/task_queue.proto";
+import "google/protobuf/field_mask.proto";
 
 message ComputeConfigScalingGroup {
     // Optional. The set of task queue types this scaling group serves. 
@@ -43,3 +44,15 @@ message ComputeConfig {
     map<string, ComputeConfigScalingGroup> scaling_groups = 1;
 }
 
+message ComputeConfigScalingGroupUpdate {
+  ComputeConfigScalingGroup scaling_group = 1;
+
+  // Controls which fields from `scaling_group` will be applied. Semantics:
+  // - Mask is ignored for new scaling groups (only applicable when scaling group already exists).
+  // - Empty mask for an existing scaling group is no-op: no change.
+  // - Non-empty mask for an existing scaling group will update/unset only to the fields
+  //   mentioned in the mask.
+  // - Accepted paths: "task_queue_types", "provider", "provider.type", "provider.details",
+  //   "provider.nexus_endpoint", "scaler", "scaler.type", "scaler.details"
+  google.protobuf.FieldMask update_mask = 2;
+}

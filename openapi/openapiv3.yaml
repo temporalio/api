@@ -9405,6 +9405,22 @@ components:
           description: |-
             Informs a worker lifecycle controller *when* and *how often* to perform
              certain worker lifecycle actions like starting a serverless worker.
+    ComputeConfigScalingGroupUpdate:
+      type: object
+      properties:
+        scalingGroup:
+          $ref: '#/components/schemas/ComputeConfigScalingGroup'
+        updateMask:
+          type: string
+          description: |-
+            Controls which fields from `scaling_group` will be applied. Semantics:
+             - Mask is ignored for new scaling groups (only applicable when scaling group already exists).
+             - Empty mask for an existing scaling group is no-op: no change.
+             - Non-empty mask for an existing scaling group will update/unset only to the fields
+               mentioned in the mask.
+             - Accepted paths: "task_queue_types", "provider", "provider.type", "provider.details",
+               "provider.nexus_endpoint", "scaler", "scaler.type", "scaler.details"
+          format: field-mask
     ComputeProvider:
       type: object
       properties:
@@ -15404,7 +15420,7 @@ components:
         computeConfigScalingGroups:
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/UpdateWorkerDeploymentVersionComputeConfigRequest_ScalingGroupUpdate'
+            $ref: '#/components/schemas/ComputeConfigScalingGroupUpdate'
           description: |-
             Optional. Contains the compute config scaling groups to add or updated for the Worker
              Deployment.
@@ -15423,15 +15439,6 @@ components:
              If a second request with the same ID is recieved, it is considered a successful no-op.
              Retrying with a different request ID for the same deployment name + build ID is an error.
       description: Used to update the compute config of a Worker Deployment Version.
-    UpdateWorkerDeploymentVersionComputeConfigRequest_ScalingGroupUpdate:
-      type: object
-      properties:
-        scalingGroup:
-          $ref: '#/components/schemas/ComputeConfigScalingGroup'
-        updateMask:
-          type: string
-          description: Controls which fields from `scaling_group` will be applied
-          format: field-mask
     UpdateWorkerDeploymentVersionComputeConfigResponse:
       type: object
       properties: {}
@@ -15610,10 +15617,18 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: Required.
-        computeConfig:
-          allOf:
-            - $ref: '#/components/schemas/ComputeConfig'
-          description: Required. Contains the new worker compute configuration for the Worker Deployment.
+        computeConfigScalingGroups:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComputeConfigScalingGroupUpdate'
+          description: |-
+            Optional. Contains the compute config scaling groups to add or updated for the Worker
+             Deployment.
+        removeComputeConfigScalingGroups:
+          type: array
+          items:
+            type: string
+          description: Optional. Contains the compute config scaling groups to remove from the Worker Deployment.
         identity:
           type: string
           description: Optional. The identity of the client who initiated this request.

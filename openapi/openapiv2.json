@@ -9156,6 +9156,21 @@
       },
       "description": "Target a worker polling on a Nexus task queue in a specific namespace."
     },
+    "LinkActivity": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "activityId": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        }
+      },
+      "description": "A link to an activity."
+    },
     "LinkBatchJob": {
       "type": "object",
       "properties": {
@@ -10437,6 +10452,26 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "description": "Priority metadata."
+        },
+        "startDelay": {
+          "type": "string",
+          "description": "Time to wait before dispatching the first activity."
+        },
+        "completionCallbacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Callback"
+          },
+          "description": "Callbacks to be called by the server when this activity reaches a terminal state.\nCallback addresses must be whitelisted in the server's dynamic configuration."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apiCommonV1Link"
+          },
+          "description": "Links to be associated with the activity."
         }
       }
     },
@@ -11249,6 +11284,14 @@
         "canceledReason": {
           "type": "string",
           "description": "Set if activity cancelation was requested."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Link"
+          },
+          "description": "Links to be associated with the activity."
         }
       },
       "description": "Information about a standalone activity."
@@ -12865,6 +12908,14 @@
           "type": "string",
           "format": "byte",
           "description": "Token for follow-on long-poll requests. Absent only if the activity is complete."
+        },
+        "callbacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CallbackInfo"
+          },
+          "description": "Callbacks attached to this activity execution and their current state."
         }
       }
     },
@@ -13952,6 +14003,9 @@
         },
         "batchJob": {
           "$ref": "#/definitions/LinkBatchJob"
+        },
+        "activity": {
+          "$ref": "#/definitions/LinkActivity"
         }
       },
       "description": "Link can be associated with history events. It might contain information about an external entity\nrelated to the history event. For example, workflow A makes a Nexus call that starts workflow B:\nin this case, a history event in workflow A could contain a Link to the workflow started event in\nworkflow B, and vice-versa."
@@ -16442,6 +16496,10 @@
         "started": {
           "type": "boolean",
           "description": "If true, a new activity was started."
+        },
+        "link": {
+          "$ref": "#/definitions/v1Link",
+          "description": "Link to the activity event."
         }
       }
     },

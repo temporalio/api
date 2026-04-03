@@ -8236,6 +8236,11 @@ components:
         canceledReason:
           type: string
           description: Set if activity cancelation was requested.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to be associated with the activity.
       description: Information about a standalone activity.
     ActivityExecutionListInfo:
       type: object
@@ -9912,6 +9917,11 @@ components:
           type: string
           description: Token for follow-on long-poll requests. Absent only if the activity is complete.
           format: bytes
+        callbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CallbackInfo'
+          description: Callbacks attached to this activity execution and their current state.
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -10934,11 +10944,23 @@ components:
           $ref: '#/components/schemas/Link_WorkflowEvent'
         batchJob:
           $ref: '#/components/schemas/Link_BatchJob'
+        activity:
+          $ref: '#/components/schemas/Link_Activity'
       description: |-
         Link can be associated with history events. It might contain information about an external entity
          related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
          in this case, a history event in workflow A could contain a Link to the workflow started event in
          workflow B, and vice-versa.
+    Link_Activity:
+      type: object
+      properties:
+        namespace:
+          type: string
+        activityId:
+          type: string
+        runId:
+          type: string
+      description: A link to an activity.
     Link_BatchJob:
       type: object
       properties:
@@ -14299,6 +14321,22 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata.
+        startDelay:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Time to wait before dispatching the first activity.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: |-
+            Callbacks to be called by the server when this activity reaches a terminal state.
+             Callback addresses must be whitelisted in the server's dynamic configuration.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to be associated with the activity.
     StartActivityExecutionResponse:
       type: object
       properties:
@@ -14308,6 +14346,10 @@ components:
         started:
           type: boolean
           description: If true, a new activity was started.
+        link:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: Link to the activity event.
     StartBatchOperationRequest:
       type: object
       properties:

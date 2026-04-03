@@ -8,7 +8,7 @@ ci-build: install proto http-api-docs
 install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
-proto: sync-nexus-annotations grpc http-api-docs
+proto: sync-nexus-annotations grpc http-api-docs nexusrpc-yaml
 ########################################################################
 
 ##### Variables ######
@@ -120,6 +120,18 @@ buf-lint: $(STAMPDIR)/buf-mod-prune
 buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
 	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
+
+nexusrpc-yaml: nexusrpc-yaml-install
+	printf $(COLOR) "Generate nexus/nexusrpc.yaml and nexus/nexusrpc.langs.yaml..."
+	mkdir -p nexus
+	protoc -I $(PROTO_ROOT) \
+		--nexus-rpc-yaml_out=. \
+		temporal/api/workflowservice/v1/* \
+		temporal/api/operatorservice/v1/*
+
+nexusrpc-yaml-install:
+	printf $(COLOR) "Install protoc-gen-nexus-rpc-yaml..."
+	cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Clean #####
 clean:

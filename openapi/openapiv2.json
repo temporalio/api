@@ -1237,6 +1237,302 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/callback-count": {
+      "get": {
+        "summary": "CountCallbackExecutions is a visibility API to count callback executions in a specific namespace.",
+        "operationId": "CountCallbackExecutions2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CountCallbackExecutionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "query",
+            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/callbacks": {
+      "get": {
+        "summary": "ListCallbackExecutions is a visibility API to list callback executions in a specific namespace.",
+        "operationId": "ListCallbackExecutions2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCallbackExecutionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "description": "Max number of executions to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "nextPageToken",
+            "description": "Token returned in ListCallbackExecutionsResponse.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "query",
+            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/callbacks/{callbackId}": {
+      "get": {
+        "summary": "DescribeCallbackExecution returns information about a callback execution.\nIt can be used to:\n- Get current callback info without waiting\n- Long-poll for next state change and return new callback info\nResponse can optionally include the outcome (if the callback has completed).",
+        "operationId": "DescribeCallbackExecution2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeCallbackExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "callbackId",
+            "description": "Identifier for the callback",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "runId",
+            "description": "Run ID of the callback execution to describe. If empty, the latest run will be described.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "includeInput",
+            "description": "Include the input field in the response.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "includeOutcome",
+            "description": "Include the outcome (result/failure) in the response if the callback has completed.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "longPollToken",
+            "description": "Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until callback\nstate changes from the state encoded in this token. If absent, return current state immediately.\nNote that callback state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "post": {
+        "summary": "StartCallbackExecution starts a new standalone callback execution.",
+        "description": "Returns a `CallbackExecutionAlreadyStarted` error if a callback already exists with the same\ncallback ID in this namespace, either in running or terminal states.",
+        "operationId": "StartCallbackExecution2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartCallbackExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "callbackId",
+            "description": "Identifier for this callback. Required. Must be unique among callbacks in the same namespace.\nIf a callback with this ID already exists, the request will fail with CallbackExecutionAlreadyStarted.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceStartCallbackExecutionBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/callbacks/{callbackId}/outcome": {
+      "get": {
+        "summary": "PollCallbackExecution long-polls for a callback execution to complete and returns the outcome.",
+        "operationId": "PollCallbackExecution2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PollCallbackExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "callbackId",
+            "description": "Identifier for the callback",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "runId",
+            "description": "Run ID of the callback execution to poll. If empty, the latest run will be polled.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/namespaces/{namespace}/callbacks/{callbackId}/terminate": {
+      "post": {
+        "summary": "TerminateCallbackExecution terminates an existing callback execution immediately.",
+        "description": "Termination happens immediately. A terminated callback will have its state set to\nCALLBACK_STATE_TERMINATED.",
+        "operationId": "TerminateCallbackExecution2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TerminateCallbackExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "callbackId",
+            "description": "Identifier for the callback",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceTerminateCallbackExecutionBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/current-deployment/{deployment.seriesName}": {
       "post": {
         "summary": "Sets a deployment as the current deployment for its deployment series. Can optionally update\nthe metadata of the deployment as well.\nExperimental. This API might significantly change or be removed in a future release.\nDeprecated. Replaced by `SetWorkerDeploymentCurrentVersion`.",
@@ -6006,6 +6302,302 @@
         ]
       }
     },
+    "/namespaces/{namespace}/callback-count": {
+      "get": {
+        "summary": "CountCallbackExecutions is a visibility API to count callback executions in a specific namespace.",
+        "operationId": "CountCallbackExecutions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CountCallbackExecutionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "query",
+            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/callbacks": {
+      "get": {
+        "summary": "ListCallbackExecutions is a visibility API to list callback executions in a specific namespace.",
+        "operationId": "ListCallbackExecutions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListCallbackExecutionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "description": "Max number of executions to return per page.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "nextPageToken",
+            "description": "Token returned in ListCallbackExecutionsResponse.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          },
+          {
+            "name": "query",
+            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/callbacks/{callbackId}": {
+      "get": {
+        "summary": "DescribeCallbackExecution returns information about a callback execution.\nIt can be used to:\n- Get current callback info without waiting\n- Long-poll for next state change and return new callback info\nResponse can optionally include the outcome (if the callback has completed).",
+        "operationId": "DescribeCallbackExecution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DescribeCallbackExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "callbackId",
+            "description": "Identifier for the callback",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "runId",
+            "description": "Run ID of the callback execution to describe. If empty, the latest run will be described.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "includeInput",
+            "description": "Include the input field in the response.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "includeOutcome",
+            "description": "Include the outcome (result/failure) in the response if the callback has completed.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "longPollToken",
+            "description": "Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until callback\nstate changes from the state encoded in this token. If absent, return current state immediately.\nNote that callback state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "byte"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      },
+      "post": {
+        "summary": "StartCallbackExecution starts a new standalone callback execution.",
+        "description": "Returns a `CallbackExecutionAlreadyStarted` error if a callback already exists with the same\ncallback ID in this namespace, either in running or terminal states.",
+        "operationId": "StartCallbackExecution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartCallbackExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "callbackId",
+            "description": "Identifier for this callback. Required. Must be unique among callbacks in the same namespace.\nIf a callback with this ID already exists, the request will fail with CallbackExecutionAlreadyStarted.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceStartCallbackExecutionBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/callbacks/{callbackId}/outcome": {
+      "get": {
+        "summary": "PollCallbackExecution long-polls for a callback execution to complete and returns the outcome.",
+        "operationId": "PollCallbackExecution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PollCallbackExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "callbackId",
+            "description": "Identifier for the callback",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "runId",
+            "description": "Run ID of the callback execution to poll. If empty, the latest run will be polled.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/callbacks/{callbackId}/terminate": {
+      "post": {
+        "summary": "TerminateCallbackExecution terminates an existing callback execution immediately.",
+        "description": "Termination happens immediately. A terminated callback will have its state set to\nCALLBACK_STATE_TERMINATED.",
+        "operationId": "TerminateCallbackExecution",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TerminateCallbackExecutionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "callbackId",
+            "description": "Identifier for the callback",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceTerminateCallbackExecutionBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/current-deployment/{deployment.seriesName}": {
       "post": {
         "summary": "Sets a deployment as the current deployment for its deployment series. Can optionally update\nthe metadata of the deployment as well.\nExperimental. This API might significantly change or be removed in a future release.\nDeprecated. Replaced by `SetWorkerDeploymentCurrentVersion`.",
@@ -9075,6 +9667,10 @@
             "type": "string"
           },
           "description": "Header to attach to callback request."
+        },
+        "token": {
+          "type": "string",
+          "description": "Standard token to use for completion."
         }
       }
     },
@@ -10526,6 +11122,35 @@
         }
       }
     },
+    "WorkflowServiceStartCallbackExecutionBody": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the client who initiated this request."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "A unique identifier for this start request. Typically UUIDv4."
+        },
+        "callback": {
+          "$ref": "#/definitions/v1Callback",
+          "description": "Information on how this callback should be invoked (e.g. its URL and type)."
+        },
+        "scheduleToCloseTimeout": {
+          "type": "string",
+          "description": "Schedule-to-close timeout for this callback."
+        },
+        "searchAttributes": {
+          "$ref": "#/definitions/v1SearchAttributes",
+          "description": "Search attributes for indexing."
+        },
+        "completion": {
+          "$ref": "#/definitions/v1CallbackExecutionCompletion",
+          "description": "The Nexus completion data to deliver to the callback URL.\nContains either a successful result payload or a failure."
+        }
+      }
+    },
     "WorkflowServiceStartWorkflowExecutionBody": {
       "type": "object",
       "properties": {
@@ -10672,6 +11297,27 @@
         "reason": {
           "type": "string",
           "description": "Reason for requesting the termination, recorded in in the activity's result failure outcome."
+        }
+      }
+    },
+    "WorkflowServiceTerminateCallbackExecutionBody": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "Run ID of the callback execution to terminate. If empty, the latest run will be terminated."
+        },
+        "identity": {
+          "type": "string",
+          "description": "The identity of the worker/client."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "Used to de-dupe termination requests."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for requesting the termination."
         }
       }
     },
@@ -12286,6 +12932,152 @@
       },
       "description": "Callback to attach to various events in the system, e.g. workflow run completion."
     },
+    "v1CallbackExecutionCompletion": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "$ref": "#/definitions/v1Payload",
+          "description": "Deliver a successful Nexus operation completion with this result payload.\nIf set, the callback delivers a successful completion to the target URL."
+        },
+        "failure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "Deliver a failed Nexus operation completion with this failure.\nIf set, the callback delivers a failed completion to the target URL.\nIf CanceledFailureInfo is set, the target operation is resolved is canceled instead of failed."
+        }
+      },
+      "description": "The Nexus completion data that a standalone callback execution will deliver to its target URL.\nExactly one of success or failure should be set."
+    },
+    "v1CallbackExecutionInfo": {
+      "type": "object",
+      "properties": {
+        "callbackId": {
+          "type": "string",
+          "description": "Unique identifier of this callback within its namespace."
+        },
+        "runId": {
+          "type": "string",
+          "description": "Run ID of the callback execution."
+        },
+        "callback": {
+          "$ref": "#/definitions/v1Callback",
+          "description": "Information on how this callback should be invoked (e.g. its URL and type)."
+        },
+        "state": {
+          "$ref": "#/definitions/v1CallbackExecutionState",
+          "description": "Current state of the callback execution."
+        },
+        "attempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The number of attempts made to deliver the callback.\nThis number represents a minimum bound since the attempt is incremented after the callback request completes."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the callback was created/scheduled."
+        },
+        "lastAttemptCompleteTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the last attempt completed."
+        },
+        "lastAttemptFailure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "The last attempt's failure, if any."
+        },
+        "nextAttemptScheduleTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the next attempt is scheduled."
+        },
+        "blockedReason": {
+          "type": "string",
+          "description": "If the state is BLOCKED, provides additional information."
+        },
+        "closeTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time when the callback transitioned to a terminal state."
+        },
+        "searchAttributes": {
+          "$ref": "#/definitions/v1SearchAttributes",
+          "description": "Search attributes for indexing."
+        },
+        "scheduleToCloseTimeout": {
+          "type": "string",
+          "description": "Schedule-to-close timeout for this callback."
+        },
+        "stateTransitionCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Incremented each time the callback's state is mutated in persistence."
+        }
+      },
+      "description": "Information about a standalone callback execution."
+    },
+    "v1CallbackExecutionListInfo": {
+      "type": "object",
+      "properties": {
+        "callbackId": {
+          "type": "string",
+          "description": "Unique identifier of this callback within its namespace."
+        },
+        "runId": {
+          "type": "string",
+          "description": "Run ID of the callback execution."
+        },
+        "state": {
+          "$ref": "#/definitions/v1CallbackExecutionState",
+          "description": "Current state of the callback execution."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the callback was created/scheduled."
+        },
+        "closeTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time when the callback transitioned to a terminal state."
+        },
+        "searchAttributes": {
+          "$ref": "#/definitions/v1SearchAttributes",
+          "description": "Search attributes from the start request."
+        },
+        "stateTransitionCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Incremented each time the callback's state is mutated."
+        }
+      },
+      "description": "Limited callback information returned in the list response."
+    },
+    "v1CallbackExecutionOutcome": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "object",
+          "properties": {},
+          "description": "The callback completed successfully."
+        },
+        "failure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "The failure if the callback completed unsuccessfully."
+        }
+      },
+      "description": "The outcome of a completed callback execution: either success or a failure."
+    },
+    "v1CallbackExecutionState": {
+      "type": "string",
+      "enum": [
+        "CALLBACK_EXECUTION_STATE_UNSPECIFIED",
+        "CALLBACK_EXECUTION_STATE_RUNNING",
+        "CALLBACK_EXECUTION_STATE_SUCCEEDED",
+        "CALLBACK_EXECUTION_STATE_FAILED",
+        "CALLBACK_EXECUTION_STATE_TERMINATED"
+      ],
+      "default": "CALLBACK_EXECUTION_STATE_UNSPECIFIED",
+      "description": "Terminal status of a standalone callback execution.\n\n - CALLBACK_EXECUTION_STATE_UNSPECIFIED: Default value, unspecified status.\n - CALLBACK_EXECUTION_STATE_RUNNING: Callback execution is running.\n - CALLBACK_EXECUTION_STATE_SUCCEEDED: Callback has succeeded.\n - CALLBACK_EXECUTION_STATE_FAILED: Callback has failed.\n - CALLBACK_EXECUTION_STATE_TERMINATED: Callback was terminated via TerminateCallbackExecution."
+    },
     "v1CallbackState": {
       "type": "string",
       "enum": [
@@ -12295,10 +13087,11 @@
         "CALLBACK_STATE_BACKING_OFF",
         "CALLBACK_STATE_FAILED",
         "CALLBACK_STATE_SUCCEEDED",
-        "CALLBACK_STATE_BLOCKED"
+        "CALLBACK_STATE_BLOCKED",
+        "CALLBACK_STATE_TERMINATED"
       ],
       "default": "CALLBACK_STATE_UNSPECIFIED",
-      "description": "State of a callback.\n\n - CALLBACK_STATE_UNSPECIFIED: Default value, unspecified state.\n - CALLBACK_STATE_STANDBY: Callback is standing by, waiting to be triggered.\n - CALLBACK_STATE_SCHEDULED: Callback is in the queue waiting to be executed or is currently executing.\n - CALLBACK_STATE_BACKING_OFF: Callback has failed with a retryable error and is backing off before the next attempt.\n - CALLBACK_STATE_FAILED: Callback has failed.\n - CALLBACK_STATE_SUCCEEDED: Callback has succeeded.\n - CALLBACK_STATE_BLOCKED: Callback is blocked (eg: by circuit breaker)."
+      "description": "State of a callback.\n\n - CALLBACK_STATE_UNSPECIFIED: Default value, unspecified state.\n - CALLBACK_STATE_STANDBY: Callback is standing by, waiting to be triggered.\n - CALLBACK_STATE_SCHEDULED: Callback is in the queue waiting to be executed or is currently executing.\n - CALLBACK_STATE_BACKING_OFF: Callback has failed with a retryable error and is backing off before the next attempt.\n - CALLBACK_STATE_FAILED: Callback has failed.\n - CALLBACK_STATE_SUCCEEDED: Callback has succeeded.\n - CALLBACK_STATE_BLOCKED: Callback is blocked (eg: by circuit breaker).\n - CALLBACK_STATE_TERMINATED: Callback was terminated via TerminateCallbackExecution. Only possible for standalone callbacks."
     },
     "v1CancelExternalWorkflowExecutionFailedCause": {
       "type": "string",
@@ -12737,6 +13530,40 @@
         }
       }
     },
+    "v1CountCallbackExecutionsResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "string",
+          "format": "int64",
+          "description": "If `query` is not grouping by any field, the count is an approximate number\nof callbacks that match the query.\nIf `query` is grouping by a field, the count is simply the sum of the counts\nof the groups returned in the response. This number can be smaller than the\ntotal number of callbacks matching the query."
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CountCallbackExecutionsResponseAggregationGroup"
+          },
+          "description": "Contains the groups if the request is grouping by a field.\nThe list might not be complete, and the counts of each group is approximate."
+        }
+      }
+    },
+    "v1CountCallbackExecutionsResponseAggregationGroup": {
+      "type": "object",
+      "properties": {
+        "groupValues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Payload"
+          }
+        },
+        "count": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1CountSchedulesResponse": {
       "type": "object",
       "properties": {
@@ -13072,6 +13899,24 @@
         "reason": {
           "type": "string",
           "title": "Reason indicates the reason to stop a operation"
+        }
+      }
+    },
+    "v1DescribeCallbackExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "info": {
+          "$ref": "#/definitions/v1CallbackExecutionInfo",
+          "description": "Information about the callback execution."
+        },
+        "outcome": {
+          "$ref": "#/definitions/v1CallbackExecutionOutcome",
+          "description": "Only set if the callback is completed and include_outcome was true in the request."
+        },
+        "longPollToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Token for follow-on long-poll requests. Absent only if the callback is complete."
         }
       }
     },
@@ -14163,6 +15008,23 @@
         "nextPageToken": {
           "type": "string",
           "format": "byte"
+        }
+      }
+    },
+    "v1ListCallbackExecutionsResponse": {
+      "type": "object",
+      "properties": {
+        "executions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CallbackExecutionListInfo"
+          }
+        },
+        "nextPageToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Token to use to fetch the next page. If empty, there is no next page."
         }
       }
     },
@@ -15297,6 +16159,14 @@
         },
         "outcome": {
           "$ref": "#/definitions/v1ActivityExecutionOutcome"
+        }
+      }
+    },
+    "v1PollCallbackExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "$ref": "#/definitions/v1CallbackExecutionOutcome"
         }
       }
     },
@@ -16604,6 +17474,15 @@
     "v1StartBatchOperationResponse": {
       "type": "object"
     },
+    "v1StartCallbackExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The run ID of the callback that was started."
+        }
+      }
+    },
     "v1StartChildWorkflowExecutionFailedCause": {
       "type": "string",
       "enum": [
@@ -17075,6 +17954,9 @@
       "description": "Specifies which category of tasks may reach a worker on a versioned task queue.\nUsed both in a reachability query and its response.\nDeprecated.\n\n - TASK_REACHABILITY_NEW_WORKFLOWS: There's a possiblity for a worker to receive new workflow tasks. Workers should *not* be retired.\n - TASK_REACHABILITY_EXISTING_WORKFLOWS: There's a possiblity for a worker to receive existing workflow and activity tasks from existing workflows. Workers\nshould *not* be retired.\nThis enum value does not distinguish between open and closed workflows.\n - TASK_REACHABILITY_OPEN_WORKFLOWS: There's a possiblity for a worker to receive existing workflow and activity tasks from open workflows. Workers\nshould *not* be retired.\n - TASK_REACHABILITY_CLOSED_WORKFLOWS: There's a possiblity for a worker to receive existing workflow tasks from closed workflows. Workers may be\nretired dependending on application requirements. For example, if there's no need to query closed workflows."
     },
     "v1TerminateActivityExecutionResponse": {
+      "type": "object"
+    },
+    "v1TerminateCallbackExecutionResponse": {
       "type": "object"
     },
     "v1TerminateWorkflowExecutionResponse": {

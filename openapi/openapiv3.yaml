@@ -1111,6 +1111,259 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/callback-count:
+    get:
+      tags:
+        - WorkflowService
+      description: CountCallbackExecutions is a visibility API to count callback executions in a specific namespace.
+      operationId: CountCallbackExecutions
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountCallbackExecutionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/callbacks:
+    get:
+      tags:
+        - WorkflowService
+      description: ListCallbackExecutions is a visibility API to list callback executions in a specific namespace.
+      operationId: ListCallbackExecutions
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          description: Max number of executions to return per page.
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          description: Token returned in ListCallbackExecutionsResponse.
+          schema:
+            type: string
+            format: bytes
+        - name: query
+          in: query
+          description: Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCallbackExecutionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/callbacks/{callbackId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeCallbackExecution returns information about a callback execution.
+         It can be used to:
+         - Get current callback info without waiting
+         - Long-poll for next state change and return new callback info
+         Response can optionally include the outcome (if the callback has completed).
+      operationId: DescribeCallbackExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: callbackId
+          in: path
+          description: Identifier for the callback
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Run ID of the callback execution to describe. If empty, the latest run will be described.
+          schema:
+            type: string
+        - name: includeInput
+          in: query
+          description: Include the input field in the response.
+          schema:
+            type: boolean
+        - name: includeOutcome
+          in: query
+          description: Include the outcome (result/failure) in the response if the callback has completed.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until callback
+             state changes from the state encoded in this token. If absent, return current state immediately.
+             Note that callback state may change multiple times between requests, therefore it is not
+             guaranteed that a client making a sequence of long-poll requests will see a complete
+             sequence of state changes.
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeCallbackExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        StartCallbackExecution starts a new standalone callback execution.
+
+         Returns a `CallbackExecutionAlreadyStarted` error if a callback already exists with the same
+         callback ID in this namespace, either in running or terminal states.
+      operationId: StartCallbackExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: callbackId
+          in: path
+          description: |-
+            Identifier for this callback. Required. Must be unique among callbacks in the same namespace.
+             If a callback with this ID already exists, the request will fail with CallbackExecutionAlreadyStarted.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartCallbackExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartCallbackExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/callbacks/{callbackId}/outcome:
+    get:
+      tags:
+        - WorkflowService
+      description: PollCallbackExecution long-polls for a callback execution to complete and returns the outcome.
+      operationId: PollCallbackExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: callbackId
+          in: path
+          description: Identifier for the callback
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Run ID of the callback execution to poll. If empty, the latest run will be polled.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollCallbackExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/callbacks/{callbackId}/terminate:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        TerminateCallbackExecution terminates an existing callback execution immediately.
+
+         Termination happens immediately. A terminated callback will have its state set to
+         CALLBACK_STATE_TERMINATED.
+      operationId: TerminateCallbackExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: callbackId
+          in: path
+          description: Identifier for the callback
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminateCallbackExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateCallbackExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/current-deployment/{deployment.series_name}:
     post:
       tags:
@@ -5371,6 +5624,259 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/callback-count:
+    get:
+      tags:
+        - WorkflowService
+      description: CountCallbackExecutions is a visibility API to count callback executions in a specific namespace.
+      operationId: CountCallbackExecutions
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountCallbackExecutionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/callbacks:
+    get:
+      tags:
+        - WorkflowService
+      description: ListCallbackExecutions is a visibility API to list callback executions in a specific namespace.
+      operationId: ListCallbackExecutions
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          description: Max number of executions to return per page.
+          schema:
+            type: integer
+            format: int32
+        - name: nextPageToken
+          in: query
+          description: Token returned in ListCallbackExecutionsResponse.
+          schema:
+            type: string
+            format: bytes
+        - name: query
+          in: query
+          description: Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCallbackExecutionsResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/callbacks/{callbackId}:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        DescribeCallbackExecution returns information about a callback execution.
+         It can be used to:
+         - Get current callback info without waiting
+         - Long-poll for next state change and return new callback info
+         Response can optionally include the outcome (if the callback has completed).
+      operationId: DescribeCallbackExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: callbackId
+          in: path
+          description: Identifier for the callback
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Run ID of the callback execution to describe. If empty, the latest run will be described.
+          schema:
+            type: string
+        - name: includeInput
+          in: query
+          description: Include the input field in the response.
+          schema:
+            type: boolean
+        - name: includeOutcome
+          in: query
+          description: Include the outcome (result/failure) in the response if the callback has completed.
+          schema:
+            type: boolean
+        - name: longPollToken
+          in: query
+          description: |-
+            Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until callback
+             state changes from the state encoded in this token. If absent, return current state immediately.
+             Note that callback state may change multiple times between requests, therefore it is not
+             guaranteed that a client making a sequence of long-poll requests will see a complete
+             sequence of state changes.
+          schema:
+            type: string
+            format: bytes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescribeCallbackExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        StartCallbackExecution starts a new standalone callback execution.
+
+         Returns a `CallbackExecutionAlreadyStarted` error if a callback already exists with the same
+         callback ID in this namespace, either in running or terminal states.
+      operationId: StartCallbackExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: callbackId
+          in: path
+          description: |-
+            Identifier for this callback. Required. Must be unique among callbacks in the same namespace.
+             If a callback with this ID already exists, the request will fail with CallbackExecutionAlreadyStarted.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartCallbackExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartCallbackExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/callbacks/{callbackId}/outcome:
+    get:
+      tags:
+        - WorkflowService
+      description: PollCallbackExecution long-polls for a callback execution to complete and returns the outcome.
+      operationId: PollCallbackExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: callbackId
+          in: path
+          description: Identifier for the callback
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: query
+          description: Run ID of the callback execution to poll. If empty, the latest run will be polled.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollCallbackExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/callbacks/{callbackId}/terminate:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        TerminateCallbackExecution terminates an existing callback execution immediately.
+
+         Termination happens immediately. A terminated callback will have its state set to
+         CALLBACK_STATE_TERMINATED.
+      operationId: TerminateCallbackExecution
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: callbackId
+          in: path
+          description: Identifier for the callback
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminateCallbackExecutionRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminateCallbackExecutionResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/current-deployment/{deployment.series_name}:
     post:
       tags:
@@ -9066,6 +9572,135 @@ components:
             Links associated with the callback. It can be used to link to underlying resources of the
              callback.
       description: Callback to attach to various events in the system, e.g. workflow run completion.
+    CallbackExecutionCompletion:
+      type: object
+      properties:
+        success:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Deliver a successful Nexus operation completion with this result payload.
+             If set, the callback delivers a successful completion to the target URL.
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: |-
+            Deliver a failed Nexus operation completion with this failure.
+             If set, the callback delivers a failed completion to the target URL.
+             If CanceledFailureInfo is set, the target operation is resolved is canceled instead of failed.
+      description: |-
+        The Nexus completion data that a standalone callback execution will deliver to its target URL.
+         Exactly one of success or failure should be set.
+    CallbackExecutionInfo:
+      type: object
+      properties:
+        callbackId:
+          type: string
+          description: Unique identifier of this callback within its namespace.
+        runId:
+          type: string
+          description: Run ID of the callback execution.
+        callback:
+          allOf:
+            - $ref: '#/components/schemas/Callback'
+          description: Information on how this callback should be invoked (e.g. its URL and type).
+        state:
+          enum:
+            - CALLBACK_EXECUTION_STATE_UNSPECIFIED
+            - CALLBACK_EXECUTION_STATE_RUNNING
+            - CALLBACK_EXECUTION_STATE_SUCCEEDED
+            - CALLBACK_EXECUTION_STATE_FAILED
+            - CALLBACK_EXECUTION_STATE_TERMINATED
+          type: string
+          description: Current state of the callback execution.
+          format: enum
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to deliver the callback.
+             This number represents a minimum bound since the attempt is incremented after the callback request completes.
+          format: int32
+        createTime:
+          type: string
+          description: The time when the callback was created/scheduled.
+          format: date-time
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled.
+          format: date-time
+        blockedReason:
+          type: string
+          description: If the state is BLOCKED, provides additional information.
+        closeTime:
+          type: string
+          description: Time when the callback transitioned to a terminal state.
+          format: date-time
+        searchAttributes:
+          allOf:
+            - $ref: '#/components/schemas/SearchAttributes'
+          description: Search attributes for indexing.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this callback.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        stateTransitionCount:
+          type: string
+          description: Incremented each time the callback's state is mutated in persistence.
+      description: Information about a standalone callback execution.
+    CallbackExecutionListInfo:
+      type: object
+      properties:
+        callbackId:
+          type: string
+          description: Unique identifier of this callback within its namespace.
+        runId:
+          type: string
+          description: Run ID of the callback execution.
+        state:
+          enum:
+            - CALLBACK_EXECUTION_STATE_UNSPECIFIED
+            - CALLBACK_EXECUTION_STATE_RUNNING
+            - CALLBACK_EXECUTION_STATE_SUCCEEDED
+            - CALLBACK_EXECUTION_STATE_FAILED
+            - CALLBACK_EXECUTION_STATE_TERMINATED
+          type: string
+          description: Current state of the callback execution.
+          format: enum
+        createTime:
+          type: string
+          description: The time when the callback was created/scheduled.
+          format: date-time
+        closeTime:
+          type: string
+          description: Time when the callback transitioned to a terminal state.
+          format: date-time
+        searchAttributes:
+          allOf:
+            - $ref: '#/components/schemas/SearchAttributes'
+          description: Search attributes from the start request.
+        stateTransitionCount:
+          type: string
+          description: Incremented each time the callback's state is mutated.
+      description: Limited callback information returned in the list response.
+    CallbackExecutionOutcome:
+      type: object
+      properties:
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The failure if the callback completed unsuccessfully.
+      description: 'The outcome of a completed callback execution: either success or a failure.'
     CallbackInfo:
       type: object
       properties:
@@ -9086,6 +9721,7 @@ components:
             - CALLBACK_STATE_FAILED
             - CALLBACK_STATE_SUCCEEDED
             - CALLBACK_STATE_BLOCKED
+            - CALLBACK_STATE_TERMINATED
           type: string
           description: The current state of the callback.
           format: enum
@@ -9134,6 +9770,9 @@ components:
           additionalProperties:
             type: string
           description: Header to attach to callback request.
+        token:
+          type: string
+          description: Standard token to use for completion.
     CanceledFailureInfo:
       type: object
       properties:
@@ -9536,6 +10175,33 @@ components:
             Contains the groups if the request is grouping by a field.
              The list might not be complete, and the counts of each group is approximate.
     CountActivityExecutionsResponse_AggregationGroup:
+      type: object
+      properties:
+        groupValues:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payload'
+        count:
+          type: string
+    CountCallbackExecutionsResponse:
+      type: object
+      properties:
+        count:
+          type: string
+          description: |-
+            If `query` is not grouping by any field, the count is an approximate number
+             of callbacks that match the query.
+             If `query` is grouping by a field, the count is simply the sum of the counts
+             of the groups returned in the response. This number can be smaller than the
+             total number of callbacks matching the query.
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountCallbackExecutionsResponse_AggregationGroup'
+          description: |-
+            Contains the groups if the request is grouping by a field.
+             The list might not be complete, and the counts of each group is approximate.
+    CountCallbackExecutionsResponse_AggregationGroup:
       type: object
       properties:
         groupValues:
@@ -9965,6 +10631,21 @@ components:
         reason:
           type: string
           description: Reason indicates the reason to stop a operation
+    DescribeCallbackExecutionResponse:
+      type: object
+      properties:
+        info:
+          allOf:
+            - $ref: '#/components/schemas/CallbackExecutionInfo'
+          description: Information about the callback execution.
+        outcome:
+          allOf:
+            - $ref: '#/components/schemas/CallbackExecutionOutcome'
+          description: Only set if the callback is completed and include_outcome was true in the request.
+        longPollToken:
+          type: string
+          description: Token for follow-on long-poll requests. Absent only if the callback is complete.
+          format: bytes
     DescribeDeploymentResponse:
       type: object
       properties:
@@ -11004,6 +11685,17 @@ components:
           description: BatchOperationInfo contains the basic info about batch operation
         nextPageToken:
           type: string
+          format: bytes
+    ListCallbackExecutionsResponse:
+      type: object
+      properties:
+        executions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CallbackExecutionListInfo'
+        nextPageToken:
+          type: string
+          description: Token to use to fetch the next page. If empty, there is no next page.
           format: bytes
     ListDeploymentsResponse:
       type: object
@@ -12129,6 +12821,11 @@ components:
           description: The run ID of the activity, useful when run_id was not specified in the request.
         outcome:
           $ref: '#/components/schemas/ActivityExecutionOutcome'
+    PollCallbackExecutionResponse:
+      type: object
+      properties:
+        outcome:
+          $ref: '#/components/schemas/CallbackExecutionOutcome'
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -14409,6 +15106,49 @@ components:
     StartBatchOperationResponse:
       type: object
       properties: {}
+    StartCallbackExecutionRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        requestId:
+          type: string
+          description: A unique identifier for this start request. Typically UUIDv4.
+        callbackId:
+          type: string
+          description: |-
+            Identifier for this callback. Required. Must be unique among callbacks in the same namespace.
+             If a callback with this ID already exists, the request will fail with CallbackExecutionAlreadyStarted.
+        callback:
+          allOf:
+            - $ref: '#/components/schemas/Callback'
+          description: Information on how this callback should be invoked (e.g. its URL and type).
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this callback.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        searchAttributes:
+          allOf:
+            - $ref: '#/components/schemas/SearchAttributes'
+          description: Search attributes for indexing.
+        completion:
+          allOf:
+            - $ref: '#/components/schemas/CallbackExecutionCompletion'
+          description: |-
+            The Nexus completion data to deliver to the callback URL.
+             Contains either a successful result payload or a failure.
+    StartCallbackExecutionResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: The run ID of the callback that was started.
     StartChildWorkflowExecutionFailedEventAttributes:
       type: object
       properties:
@@ -15026,6 +15766,29 @@ components:
           type: string
           description: Reason for requesting the termination, recorded in in the activity's result failure outcome.
     TerminateActivityExecutionResponse:
+      type: object
+      properties: {}
+    TerminateCallbackExecutionRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        callbackId:
+          type: string
+          description: Identifier for the callback
+        runId:
+          type: string
+          description: Run ID of the callback execution to terminate. If empty, the latest run will be terminated.
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        requestId:
+          type: string
+          description: Used to de-dupe termination requests.
+        reason:
+          type: string
+          description: Reason for requesting the termination.
+    TerminateCallbackExecutionResponse:
       type: object
       properties: {}
     TerminateWorkflowExecutionRequest:

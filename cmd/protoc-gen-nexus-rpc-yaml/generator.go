@@ -65,9 +65,9 @@ func generate(gen *protogen.Plugin) error {
 //	{MessageName}  (no package prefix)
 //
 // e.g. message "SignalWithStartWorkflowExecutionRequest"
-// → "components.schemas.SignalWithStartWorkflowExecutionRequest"
+// → "../openapi/openapiv3.yaml#/components/schemas/SignalWithStartWorkflowExecutionRequest"
 func openAPIRef(msg protoreflect.MessageDescriptor) string {
-	return "../openapi/openapiv3.yaml#components.schemas." + string(msg.Name())
+	return "../openapi/openapiv3.yaml#/components/schemas/" + string(msg.Name())
 }
 
 // langRefs builds the map of language-specific type refs for a message,

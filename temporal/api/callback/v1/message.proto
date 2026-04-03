@@ -73,41 +73,44 @@ message CallbackExecutionInfo {
     // Information on how this callback should be invoked (e.g. its URL and type).
     temporal.api.common.v1.Callback callback = 3;
 
-    // Current state of the callback execution.
-    temporal.api.enums.v1.CallbackExecutionState state = 4;
+    // A general status for this callback, indicates whether it is currently running or in one of the terminal statuses.
+    temporal.api.enums.v1.CallbackExecutionStatus status = 4;
+
+    // The detailed state of this callback, provides more granular information than the general status.
+    temporal.api.enums.v1.CallbackState state = 5;
 
     // The number of attempts made to deliver the callback.
     // This number represents a minimum bound since the attempt is incremented after the callback request completes.
-    int32 attempt = 5;
+    int32 attempt = 6;
 
     // The time when the callback was created/scheduled.
-    google.protobuf.Timestamp create_time = 6;
+    google.protobuf.Timestamp create_time = 7;
 
     // The time when the last attempt completed.
-    google.protobuf.Timestamp last_attempt_complete_time = 7;
+    google.protobuf.Timestamp last_attempt_complete_time = 8;
 
     // The last attempt's failure, if any.
-    temporal.api.failure.v1.Failure last_attempt_failure = 8;
+    temporal.api.failure.v1.Failure last_attempt_failure = 9;
 
     // The time when the next attempt is scheduled.
-    google.protobuf.Timestamp next_attempt_schedule_time = 9;
+    google.protobuf.Timestamp next_attempt_schedule_time = 10;
 
     // If the state is BLOCKED, provides additional information.
-    string blocked_reason = 10;
+    string blocked_reason = 11;
 
     // Time when the callback transitioned to a terminal state.
-    google.protobuf.Timestamp close_time = 11;
+    google.protobuf.Timestamp close_time = 12;
 
     // Search attributes for indexing.
-    temporal.api.common.v1.SearchAttributes search_attributes = 12;
+    temporal.api.common.v1.SearchAttributes search_attributes = 13;
 
     // Schedule-to-close timeout for this callback.
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
-    google.protobuf.Duration schedule_to_close_timeout = 13;
+    google.protobuf.Duration schedule_to_close_timeout = 14;
 
     // Incremented each time the callback's state is mutated in persistence.
-    int64 state_transition_count = 14;
+    int64 state_transition_count = 15;
 }
 
 // Limited callback information returned in the list response.
@@ -118,8 +121,9 @@ message CallbackExecutionListInfo {
     // Run ID of the callback execution.
     string run_id = 2;
 
-    // Current state of the callback execution.
-    temporal.api.enums.v1.CallbackExecutionState state = 3;
+    // Only running and terminal statuses appear here. More detailed information in CallbackExecutionInfo but not
+    // available in the list response.
+    temporal.api.enums.v1.CallbackExecutionStatus status = 3;
 
     // The time when the callback was created/scheduled.
     google.protobuf.Timestamp create_time = 4;

@@ -9604,15 +9604,28 @@ components:
           allOf:
             - $ref: '#/components/schemas/Callback'
           description: Information on how this callback should be invoked (e.g. its URL and type).
+        status:
+          enum:
+            - CALLBACK_EXECUTION_STATUS_UNSPECIFIED
+            - CALLBACK_EXECUTION_STATUS_RUNNING
+            - CALLBACK_EXECUTION_STATUS_SUCCEEDED
+            - CALLBACK_EXECUTION_STATUS_FAILED
+            - CALLBACK_EXECUTION_STATUS_TERMINATED
+          type: string
+          description: A general status for this callback, indicates whether it is currently running or in one of the terminal statuses.
+          format: enum
         state:
           enum:
-            - CALLBACK_EXECUTION_STATE_UNSPECIFIED
-            - CALLBACK_EXECUTION_STATE_RUNNING
-            - CALLBACK_EXECUTION_STATE_SUCCEEDED
-            - CALLBACK_EXECUTION_STATE_FAILED
-            - CALLBACK_EXECUTION_STATE_TERMINATED
+            - CALLBACK_STATE_UNSPECIFIED
+            - CALLBACK_STATE_STANDBY
+            - CALLBACK_STATE_SCHEDULED
+            - CALLBACK_STATE_BACKING_OFF
+            - CALLBACK_STATE_FAILED
+            - CALLBACK_STATE_SUCCEEDED
+            - CALLBACK_STATE_BLOCKED
+            - CALLBACK_STATE_TERMINATED
           type: string
-          description: Current state of the callback execution.
+          description: The detailed state of this callback, provides more granular information than the general status.
           format: enum
         attempt:
           type: integer
@@ -9667,15 +9680,17 @@ components:
         runId:
           type: string
           description: Run ID of the callback execution.
-        state:
+        status:
           enum:
-            - CALLBACK_EXECUTION_STATE_UNSPECIFIED
-            - CALLBACK_EXECUTION_STATE_RUNNING
-            - CALLBACK_EXECUTION_STATE_SUCCEEDED
-            - CALLBACK_EXECUTION_STATE_FAILED
-            - CALLBACK_EXECUTION_STATE_TERMINATED
+            - CALLBACK_EXECUTION_STATUS_UNSPECIFIED
+            - CALLBACK_EXECUTION_STATUS_RUNNING
+            - CALLBACK_EXECUTION_STATUS_SUCCEEDED
+            - CALLBACK_EXECUTION_STATUS_FAILED
+            - CALLBACK_EXECUTION_STATUS_TERMINATED
           type: string
-          description: Current state of the callback execution.
+          description: |-
+            Only running and terminal statuses appear here. More detailed information in CallbackExecutionInfo but not
+             available in the list response.
           format: enum
         createTime:
           type: string
@@ -12824,6 +12839,9 @@ components:
     PollCallbackExecutionResponse:
       type: object
       properties:
+        runId:
+          type: string
+          description: The run ID of the callback, useful when run_id was not specified in the request.
         outcome:
           $ref: '#/components/schemas/CallbackExecutionOutcome'
     PollWorkflowTaskQueueResponse:

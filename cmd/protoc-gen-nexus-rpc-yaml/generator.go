@@ -50,11 +50,10 @@ func generate(gen *protogen.Plugin) error {
 			}
 		}
 	}
-
-	if err := writeFile(gen, "nexus/nexusrpc.yaml", nexusDoc); err != nil {
+	if err := writeFile(gen, "nexus/temporal-json-schema-models-nexusrpc.yaml", nexusDoc); err != nil {
 		return err
 	}
-	return writeFile(gen, "nexus/nexusrpc.langs.yaml", langsDoc)
+	return writeFile(gen, "nexus/temporal-proto-models-nexusrpc.yaml", langsDoc)
 }
 
 // openAPIRef returns the nexus-rpc-gen multi-file $ref string for a message type,

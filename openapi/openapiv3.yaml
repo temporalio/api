@@ -9144,6 +9144,9 @@ components:
       properties:
         details:
           $ref: '#/components/schemas/Payloads'
+        identity:
+          type: string
+          description: The identity of the worker or client that requested the cancellation.
     ChildWorkflowExecutionCanceledEventAttributes:
       type: object
       properties:
@@ -9374,7 +9377,14 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/ComputeConfigScalingGroup'
-          description: "Each scaling group describes a compute config for a specific subset of the worker \n deployment version: covering a specific set of task types and/or regions.\n Having different configurations for different task types, allows independent\n tuning of activity and workflow task processing (for example).\n\n The key of the map is the ID of the scaling group used to reference it in subsequent\n update calls."
+          description: |-
+            Each scaling group describes a compute config for a specific subset of the worker
+             deployment version: covering a specific set of task types and/or regions.
+             Having different configurations for different task types, allows independent
+             tuning of activity and workflow task processing (for example).
+
+             The key of the map is the ID of the scaling group used to reference it in subsequent
+             update calls.
       description: |-
         ComputeConfig stores configuration that helps a worker control plane
          controller understand *when* and *how* to respond to worker lifecycle
@@ -9392,7 +9402,10 @@ components:
               - TASK_QUEUE_TYPE_NEXUS
             type: string
             format: enum
-          description: "Optional. The set of task queue types this scaling group serves. \n If not provided, this scaling group serves all not otherwise defined\n task types."
+          description: |-
+            Optional. The set of task queue types this scaling group serves.
+             If not provided, this scaling group serves all not otherwise defined
+             task types.
         provider:
           allOf:
             - $ref: '#/components/schemas/ComputeProvider'
@@ -9405,6 +9418,21 @@ components:
           description: |-
             Informs a worker lifecycle controller *when* and *how often* to perform
              certain worker lifecycle actions like starting a serverless worker.
+    ComputeConfigScalingGroupSummary:
+      type: object
+      properties:
+        taskQueueTypes:
+          type: array
+          items:
+            enum:
+              - TASK_QUEUE_TYPE_UNSPECIFIED
+              - TASK_QUEUE_TYPE_WORKFLOW
+              - TASK_QUEUE_TYPE_ACTIVITY
+              - TASK_QUEUE_TYPE_NEXUS
+            type: string
+            format: enum
+        providerType:
+          type: string
     ComputeConfigScalingGroupUpdate:
       type: object
       properties:
@@ -9421,6 +9449,14 @@ components:
              - Accepted paths: "task_queue_types", "provider", "provider.type", "provider.details",
                "provider.nexus_endpoint", "scaler", "scaler.type", "scaler.details"
           format: field-mask
+    ComputeConfigSummary:
+      type: object
+      properties:
+        scalingGroups:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComputeConfigScalingGroupSummary'
+      description: A subset of information in ComputeConfig optimized for list views.
     ComputeProvider:
       type: object
       properties:
@@ -10832,7 +10868,9 @@ components:
         sourceDeploymentRevisionNumber:
           type: string
           description: The revision number of the source deployment version of the parent/previous workflow.
-      description: "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version \n to a workflow execution whose parent/previous workflow has an AutoUpgrade behavior."
+      description: |-
+        Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version
+         to a workflow execution whose parent/previous workflow has an AutoUpgrade behavior.
     Input:
       type: object
       properties:
@@ -14902,7 +14940,6 @@ components:
           type: string
           description: Last time versioning information of this Task Queue changed.
           format: date-time
-      description: Experimental. Worker Deployments are experimental and might significantly change in the future.
     TerminateActivityExecutionRequest:
       type: object
       properties:
@@ -14957,7 +14994,10 @@ components:
       properties: {}
     TerminatedFailureInfo:
       type: object
-      properties: {}
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker or client that requested the termination.
     TimeSkippingConfig:
       type: object
       properties:
@@ -15713,7 +15753,6 @@ components:
       description: |-
         Information about workflow drainage to help the user determine when it is safe
          to decommission a Version. Not present while version is current or ramping.
-         Experimental. Worker Deployments are experimental and might significantly change in the future.
     VersionInfo:
       type: object
       properties:
@@ -15904,7 +15943,14 @@ components:
             Indicates whether the routing_config has been fully propagated to all
              relevant task queues and their partitions.
           format: enum
-      description: "A Worker Deployment (Deployment, for short) represents all workers serving \n a shared set of Task Queues. Typically, a Deployment represents one service or \n application.\n A Deployment contains multiple Deployment Versions, each representing a different \n version of workers. (see documentation of WorkerDeploymentVersionInfo)\n Deployment records are created in Temporal server automatically when their\n first poller arrives to the server.\n Experimental. Worker Deployments are experimental and might significantly change in the future."
+      description: |-
+        A Worker Deployment (Deployment, for short) represents all workers serving
+         a shared set of Task Queues. Typically, a Deployment represents one service or
+         application.
+         A Deployment contains multiple Deployment Versions, each representing a different
+         version of workers. (see documentation of WorkerDeploymentVersionInfo)
+         Deployment records are created in Temporal server automatically when their
+         first poller arrives to the server.
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object
       properties:
@@ -15978,6 +16024,8 @@ components:
             Timestamp when this version last stopped being current or ramping.
              Cleared if the version becomes current or ramping again.
           format: date-time
+        computeConfig:
+          $ref: '#/components/schemas/ComputeConfigSummary'
     WorkerDeploymentOptions:
       type: object
       properties:
@@ -16000,9 +16048,7 @@ components:
              same `deployment_name` and `build_id` combination, across all Task Queues.
              When `worker_versioning_mode==VERSIONED`, the worker will be part of a Deployment Version.
           format: enum
-      description: |-
-        Worker Deployment options set in SDK that need to be sent to server in every poll.
-         Experimental. Worker Deployments are experimental and might significantly change in the future.
+      description: Worker Deployment options set in SDK that need to be sent to server in every poll.
     WorkerDeploymentVersion:
       type: object
       properties:
@@ -16132,7 +16178,13 @@ components:
              - `CreateWorkerDeploymentVersion`
              - `UpdateWorkerDeploymentVersionComputeConfig`
              - `UpdateWorkerDeploymentVersionMetadata`
-      description: "A Worker Deployment Version (Version, for short) represents all workers of the same \n code and config within a Deployment. Workers of the same Version are expected to \n behave exactly the same so when executions move between them there are no \n non-determinism issues.\n Worker Deployment Versions are created in Temporal server automatically when \n their first poller arrives to the server.\n Experimental. Worker Deployments are experimental and might significantly change in the future."
+      description: |-
+        A Worker Deployment Version (Version, for short) represents all workers of the same
+         code and config within a Deployment. Workers of the same Version are expected to
+         behave exactly the same so when executions move between them there are no
+         non-determinism issues.
+         Worker Deployment Versions are created in Temporal server automatically when
+         their first poller arrives to the server.
     WorkerDeploymentVersionInfo_VersionTaskQueueInfo:
       type: object
       properties:
@@ -16898,9 +16950,7 @@ components:
              Experimental. Versioning info is experimental and might change in the future.
         workerDeploymentName:
           type: string
-          description: |-
-            The name of Worker Deployment that completed the most recent workflow task.
-             Experimental. Worker Deployments are experimental and might change in the future.
+          description: The name of Worker Deployment that completed the most recent workflow task.
         priority:
           allOf:
             - $ref: '#/components/schemas/Priority'
@@ -17687,21 +17737,18 @@ components:
           description: |-
             The Worker Deployment Version that completed this task. Must be set if `versioning_behavior`
              is set. This value updates workflow execution's `versioning_info.version`.
-             Experimental. Worker Deployments are experimental and might significantly change in the future.
              Deprecated. Replaced with `deployment_version`.
         workerDeploymentName:
           type: string
           description: |-
             The name of Worker Deployment that completed this task. Must be set if `versioning_behavior`
              is set. This value updates workflow execution's `worker_deployment_name`.
-             Experimental. Worker Deployments are experimental and might significantly change in the future.
         deploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
             The Worker Deployment Version that completed this task. Must be set if `versioning_behavior`
              is set. This value updates workflow execution's `versioning_info.deployment_version`.
-             Experimental. Worker Deployments are experimental and might significantly change in the future.
     WorkflowTaskCompletedMetadata:
       type: object
       properties:

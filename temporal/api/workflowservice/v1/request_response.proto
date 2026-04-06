@@ -25,6 +25,7 @@ import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/command/v1/message.proto";
+import "temporal/api/compute/v1/config.proto";
 import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/filter/v1/message.proto";
@@ -197,6 +198,8 @@ message StartWorkflowExecutionRequest {
     temporal.api.common.v1.Priority priority = 27;
     // Deployment Options of the worker who will process the eager task. Passed when `request_eager_execution=true`.
     temporal.api.deployment.v1.WorkerDeploymentOptions eager_worker_deployment_options = 28;
+    // Time-skipping configuration. If not set, time skipping is disabled.
+    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 29;
 }
 
 message StartWorkflowExecutionResponse {
@@ -362,6 +365,8 @@ message RespondWorkflowTaskCompletedRequest {
     // Responses to the `queries` field in the task being responded to
     map<string, temporal.api.query.v1.WorkflowQueryResult> query_results = 8;
     string namespace = 9;
+    // Resource ID for routing. Contains the workflow ID from the original task.
+    string resource_id = 18;
     // Version info of the worker who processed this task. This message's `build_id` field should
     // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
     // field to true. See message docstrings for more.
@@ -431,6 +436,8 @@ message RespondWorkflowTaskFailedRequest {
     // Worker process' unique binary id
     string binary_checksum = 5 [deprecated = true];
     string namespace = 6;
+    // Resource ID for routing. Contains the workflow ID from the original task.
+    string resource_id = 11;
     // Protocol messages piggybacking on a WFT as a transport
     repeated temporal.api.protocol.v1.Message messages = 7;
     // Version info of the worker who processed this task. This message's `build_id` field should
@@ -540,6 +547,8 @@ message RecordActivityTaskHeartbeatRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Resource ID for routing. Contains the workflow ID or activity ID for standalone activities.
+    string resource_id = 5;
 }
 
 message RecordActivityTaskHeartbeatResponse {
@@ -569,6 +578,8 @@ message RecordActivityTaskHeartbeatByIdRequest {
     temporal.api.common.v1.Payloads details = 5;
     // The identity of the worker/client
     string identity = 6;
+    // Resource ID for routing. Contains "workflow:workflow_id" or "activity:activity_id" for standalone activities.
+    string resource_id = 7;
 }
 
 message RecordActivityTaskHeartbeatByIdResponse {
@@ -592,6 +603,8 @@ message RespondActivityTaskCompletedRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Resource ID for routing. Contains the workflow ID or activity ID for standalone activities.
+    string resource_id = 8;
     // Version info of the worker who processed this task. This message's `build_id` field should
     // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
     // field to true. See message docstrings for more.
@@ -622,6 +635,8 @@ message RespondActivityTaskCompletedByIdRequest {
     temporal.api.common.v1.Payloads result = 5;
     // The identity of the worker/client
     string identity = 6;
+    // Resource ID for routing. Contains "workflow:workflow_id" or "activity:activity_id" for standalone activities.
+    string resource_id = 7;
 }
 
 message RespondActivityTaskCompletedByIdResponse {
@@ -635,6 +650,8 @@ message RespondActivityTaskFailedRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Resource ID for routing. Contains the workflow ID or activity ID for standalone activities.
+    string resource_id = 9;
     // Additional details to be stored as last activity heartbeat
     temporal.api.common.v1.Payloads last_heartbeat_details = 5;
     // Version info of the worker who processed this task. This message's `build_id` field should
@@ -672,6 +689,8 @@ message RespondActivityTaskFailedByIdRequest {
     string identity = 6;
     // Additional details to be stored as last activity heartbeat
     temporal.api.common.v1.Payloads last_heartbeat_details = 7;
+    // Resource ID for routing. Contains "workflow:workflow_id" or "activity:activity_id" for standalone activities.
+    string resource_id = 8;
 }
 
 message RespondActivityTaskFailedByIdResponse {
@@ -688,6 +707,8 @@ message RespondActivityTaskCanceledRequest {
     // The identity of the worker/client
     string identity = 3;
     string namespace = 4;
+    // Resource ID for routing. Contains the workflow ID or activity ID for standalone activities.
+    string resource_id = 8;
     // Version info of the worker who processed this task. This message's `build_id` field should
     // always be set by SDKs. Workers opting into versioning will also set the `use_versioning`
     // field to true. See message docstrings for more.
@@ -720,6 +741,8 @@ message RespondActivityTaskCanceledByIdRequest {
     string identity = 6;
     // Worker deployment options that user has set in the worker.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 7;
+    // Resource ID for routing. Contains "workflow:workflow_id" or "activity:activity_id" for standalone activities.
+    string resource_id = 8;
 }
 
 message RespondActivityTaskCanceledByIdResponse {
@@ -834,6 +857,8 @@ message SignalWithStartWorkflowExecutionRequest {
     temporal.api.workflow.v1.VersioningOverride versioning_override = 25;
     // Priority metadata
     temporal.api.common.v1.Priority priority = 26;
+    // Time-skipping configuration. If not set, time skipping is disabled.
+    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 27;
 }
 
 message SignalWithStartWorkflowExecutionResponse {
@@ -1265,6 +1290,11 @@ message GetSystemInfoResponse {
         // This flag is dependent both on server version and for Nexus to be enabled via server configuration.
         bool nexus = 11;
 
+        // True if the server supports server-scaled deployments.
+        // This flag is dependent both on server version and for server-scaled deployments
+        // to be enabled via server configuration.
+        bool server_scaled_deployments = 12;
+
     }
 }
 
@@ -1353,6 +1383,10 @@ message UpdateScheduleRequest {
     // Note: you cannot only update the search attributes with `UpdateScheduleRequest`,
     // you must also set the `schedule` field; otherwise, it will unset the schedule.
     temporal.api.common.v1.SearchAttributes search_attributes = 7;
+    // Schedule memo to replace. If set, replaces the entire memo.
+    // Do not set this field if you do not want to update the memo.
+    // A non-null empty object will clear the memo.
+    temporal.api.common.v1.Memo memo = 8;
 }
 
 message UpdateScheduleResponse {
@@ -1933,6 +1967,9 @@ message ExecuteMultiOperationRequest {
     // Note that additional operation-specific restrictions have to be considered.
     repeated Operation operations = 2;
 
+    // Resource ID for routing. Should match operations[0].start_workflow.workflow_id
+    string resource_id = 3;
+
     message Operation {
         oneof operation {
             // Additional restrictions:
@@ -2335,6 +2372,26 @@ message SetWorkerDeploymentRampingVersionResponse {
     float previous_percentage = 3 [deprecated = true];
 }
 
+// Creates a new WorkerDeployment.
+message CreateWorkerDeploymentRequest {
+    string namespace = 1;
+    // The name of the Worker Deployment to create. If a Worker Deployment with
+    // this name already exists, an error will be returned.
+    string deployment_name = 2;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 4;
+    // A unique identifier for this create request for idempotence. Typically UUIDv4.
+    string request_id = 5;
+}
+
+message CreateWorkerDeploymentResponse {
+    // This value is returned so that it can be optionally passed to APIs that
+    // write to the WorkerDeployment state to ensure that the state did not
+    // change between this API call and a future write.
+    bytes conflict_token = 1;
+}
+
 message ListWorkerDeploymentsRequest {
     string namespace = 1;
     int32 page_size = 2;
@@ -2359,6 +2416,28 @@ message ListWorkerDeploymentsResponse {
         // Summary of the ramping version of the Worker Deployment.
         temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary ramping_version_summary = 6;
     }
+}
+
+// Creates a new WorkerDeploymentVersion.
+message CreateWorkerDeploymentVersionRequest {
+    string namespace = 1;
+    // Required.
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+
+    // Optional. Contains the new worker compute configuration for the Worker
+    // Deployment. Used for worker scale management.
+    temporal.api.compute.v1.ComputeConfig compute_config = 4;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+    
+    // A unique identifier for this create request for idempotence. Typically UUIDv4.
+    // If a second request with the same ID is recieved, it is considered a successful no-op.
+    // Retrying with a different request ID for the same deployment name + build ID is an error.
+    string request_id = 5;
+}
+
+message CreateWorkerDeploymentVersionResponse {
 }
 
 // Used for manual deletion of Versions. User can delete a Version only when all the
@@ -2393,6 +2472,53 @@ message DeleteWorkerDeploymentRequest {
 }
 
 message DeleteWorkerDeploymentResponse {
+}
+
+// Used to update the compute config of a Worker Deployment Version.
+message UpdateWorkerDeploymentVersionComputeConfigRequest {
+    string namespace = 1;
+
+    // Required.
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+
+    // Optional. Contains the compute config scaling groups to add or update for the Worker
+    // Deployment.
+    map<string, temporal.api.compute.v1.ComputeConfigScalingGroupUpdate> compute_config_scaling_groups = 6;
+
+    // Optional. Contains the compute config scaling groups to remove from the Worker Deployment.
+    repeated string remove_compute_config_scaling_groups = 7;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+
+    // A unique identifier for this create request for idempotence. Typically UUIDv4.
+    // If a second request with the same ID is recieved, it is considered a successful no-op.
+    // Retrying with a different request ID for the same deployment name + build ID is an error.
+    string request_id = 4;
+}
+
+message UpdateWorkerDeploymentVersionComputeConfigResponse {
+}
+
+// Used to validate the compute config without attaching it to a Worker Deployment Version.
+message ValidateWorkerDeploymentVersionComputeConfigRequest {
+    string namespace = 1;
+
+    // Required.
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+
+    // Optional. Contains the compute config scaling groups to add or update for the Worker
+    // Deployment.
+    map<string, temporal.api.compute.v1.ComputeConfigScalingGroupUpdate> compute_config_scaling_groups = 6;
+
+    // Optional. Contains the compute config scaling groups to remove from the Worker Deployment.
+    repeated string remove_compute_config_scaling_groups = 7;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+}
+
+message ValidateWorkerDeploymentVersionComputeConfigResponse {
 }
 
 // Used to update the user-defined metadata of a Worker Deployment Version.
@@ -2567,6 +2693,9 @@ message RecordWorkerHeartbeatRequest {
     string identity = 2;
 
     repeated temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat = 3;
+    
+    // Resource ID for routing. Contains the worker grouping key.
+    string resource_id = 4;
 }
 
 message RecordWorkerHeartbeatResponse {
@@ -2653,6 +2782,8 @@ message FetchWorkerConfigRequest {
     // Defines which workers should receive this command.
     // only single worker is supported at this time.
     temporal.api.common.v1.WorkerSelector selector = 6;
+    // Resource ID for routing. Contains the worker grouping key.
+    string resource_id = 7;
 }
 
 message FetchWorkerConfigResponse {
@@ -2679,6 +2810,8 @@ message UpdateWorkerConfigRequest {
 
     // Defines which workers should receive this command.
     temporal.api.common.v1.WorkerSelector selector = 6;
+    // Resource ID for routing. Contains the worker grouping key.
+    string resource_id = 7;
 }
 
 message UpdateWorkerConfigResponse {

@@ -69,9 +69,10 @@ func openAPIRef(msg protoreflect.MessageDescriptor) string {
 	return "../openapi/openapiv3.yaml#/components/schemas/" + string(msg.Name())
 }
 
-// langRefs builds the map of language-specific type refs for a message,
-// derived from proto file-level options. Only keys with non-empty values are included.
-// Order is canonical: go → java → ruby → csharp.
+// langRefs builds the map of language-specific type refs for a message.
+// Go, Java, dotnet, and Ruby refs are derived from proto file-level package options.
+// Python and TypeScript refs are derived from the go_package path, taking only the
+// last two path segments ({service}/v{n}).
 func langRefs(file protoreflect.FileDescriptor, msg protoreflect.MessageDescriptor) map[string]string {
 	opts, ok := file.Options().(*descriptorpb.FileOptions)
 	if !ok || opts == nil {
@@ -84,6 +85,13 @@ func langRefs(file protoreflect.FileDescriptor, msg protoreflect.MessageDescript
 		// strip the ";alias" suffix (e.g. "go.temporal.io/api/workflowservice/v1;workflowservice")
 		pkg = strings.SplitN(pkg, ";", 2)[0]
 		refs["$goRef"] = pkg + "." + name
+
+		segments := strings.Split(pkg, "/")
+		if len(segments) >= 2 {
+			tail := strings.Join(segments[len(segments)-2:], "/")
+			refs["$pythonRef"] = "temporalio.api." + strings.ReplaceAll(tail, "/", ".") + "." + name
+			refs["$typescriptRef"] = "@temporalio/api/" + tail + "." + name
+		}
 	}
 	if pkg := opts.GetJavaPackage(); pkg != "" {
 		refs["$javaRef"] = pkg + "." + name
@@ -92,7 +100,7 @@ func langRefs(file protoreflect.FileDescriptor, msg protoreflect.MessageDescript
 		refs["$rubyRef"] = pkg + "::" + name
 	}
 	if pkg := opts.GetCsharpNamespace(); pkg != "" {
-		refs["$csharpRef"] = pkg + "." + name
+		refs["$dotnetRef"] = pkg + "." + name
 	}
 	if len(refs) == 0 {
 		return nil

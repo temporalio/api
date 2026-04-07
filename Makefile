@@ -111,9 +111,11 @@ buf-lint: $(STAMPDIR)/buf-mod-prune
 	printf $(COLOR) "Run buf linter..."
 	(cd $(PROTO_ROOT) && buf lint)
 
+BUF_BREAKING_BRANCH ?= $(or $(GITHUB_BASE_REF),master)
+
 buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
-	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
+	@printf $(COLOR) "Run buf breaking changes check against $(BUF_BREAKING_BRANCH) branch..."
+	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=$(BUF_BREAKING_BRANCH)')
 
 ##### Clean #####
 clean:

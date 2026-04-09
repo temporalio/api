@@ -10868,9 +10868,28 @@ components:
         sourceDeploymentRevisionNumber:
           type: string
           description: The revision number of the source deployment version of the parent/previous workflow.
+        continueAsNewInitialVersioningBehavior:
+          enum:
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION
+          type: string
+          description: |-
+            Experimental.
+             If this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior
+             specified in that command.
+             Only used for the initial task of this run and the initial task of any retries of this run.
+             Not passed to children or to future continue-as-new.
+
+             Note: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,
+             a non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility
+             with history events generated during that time, know that an UNSPECIFIED value here is equivalent to AutoUpgrade
+             value if the InheritedAutoUpgradeInfo is non-empty.
+          format: enum
       description: |-
         Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version
          to a workflow execution whose parent/previous workflow has an AutoUpgrade behavior.
+         Also used for Upgrade-on-CaN behaviors AutoUpgrade and UseRampingVersion.
     Input:
       type: object
       properties:
@@ -16764,6 +16783,7 @@ components:
           enum:
             - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
             - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION
           type: string
           description: |-
             Experimental. Optionally decide the versioning behavior that the first task of the new run should use.
@@ -17538,6 +17558,24 @@ components:
              Note: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not
              face the problem of inconsistent dispatching that arises from eventual consistency between
              task queues and their partitions.
+        continueAsNewInitialVersioningBehavior:
+          enum:
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION
+          type: string
+          description: |-
+            Experimental.
+             If this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior
+             specified in that command.
+             Only used for the initial task of this run and the initial task of any retries of this run.
+             Not passed to children or to future continue-as-new.
+
+             Note: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,
+             a non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility
+             with ContinueAsNew history commands generated during that time, know that an UNSPECIFIED value here is equivalent
+             to ContinueAsNewVersioningBehaviorAutoUpgrade if the behavior of the workflow is AutoUpgrade.
+          format: enum
       description: |-
         Holds all the information about worker versioning for a particular workflow execution.
          Experimental. Versioning info is experimental and might change in the future.

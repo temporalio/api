@@ -12548,10 +12548,11 @@
       "type": "string",
       "enum": [
         "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED",
-        "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE"
+        "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE",
+        "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION"
       ],
       "default": "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED",
-      "description": "Experimental. Defines the versioning behavior to be used by the first task of a new workflow run in a continue-as-new chain.\n\n - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE: Start the new run with AutoUpgrade behavior. Use the Target Version of the workflow's task queue at\nstart-time, as AutoUpgrade workflows do. After the first workflow task completes, use whatever\nVersioning Behavior the workflow is annotated with in the workflow code.\n\nNote that if the previous workflow had a Pinned override, that override will be inherited by the\nnew workflow run regardless of the ContinueAsNewVersioningBehavior specified in the continue-as-new\ncommand. If a Pinned override is inherited by the new run, and the new run starts with AutoUpgrade\nbehavior, the base version of the new run will be the Target Version as described above, but the\neffective version will be whatever is specified by the Versioning Override until the override is removed."
+      "description": "Experimental. Defines the versioning behavior to be used by the first task of a new workflow run in a continue-as-new chain.\n\n - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE: Experimental.\nStart the new run with AutoUpgrade behavior. Use the Target Version of the workflow's task queue at\nstart-time, as AutoUpgrade workflows do. After the first workflow task completes, use whatever\nVersioning Behavior the workflow is annotated with in the workflow code.\n\nNote that if the workflow being continued has a Pinned override, that override will be inherited by the\nnew workflow run regardless of the ContinueAsNewVersioningBehavior specified in the continue-as-new\ncommand. Versioning Override always takes precedence until it's removed manually via UpdateWorkflowExecutionOptions.\n - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION: Experimental.\nUse the Ramping Version of the workflow's task queue at start time, regardless of the workflow's\nTarget Version (according to f(workflow_id, ramp_percentage)). After the first workflow task completes,\nthe workflow will use whatever Versioning Behavior it is annotated with. If there is no Ramping\nVersion by the time that the first workflow task is dispatched, it will be sent to the Current Version.\n\nIt is highly discouraged to use this if the workflow is annotated with AutoUpgrade behavior, because\nthis setting ONLY applies to the first task of the workflow. If, after the first task, the workflow\nis AutoUpgrade, it will behave like a normal AutoUpgrade workflow and go to the Target Version, which\nmay be the Current Version instead of the Ramping Version.\n\nNote that if the workflow being continued has a Pinned override, that override will be inherited by the\nnew workflow run regardless of the ContinueAsNewVersioningBehavior specified in the continue-as-new\ncommand. Versioning Override always takes precedence until it's removed manually via UpdateWorkflowExecutionOptions."
     },
     "v1CountActivityExecutionsResponse": {
       "type": "object",
@@ -13906,9 +13907,13 @@
           "type": "string",
           "format": "int64",
           "description": "The revision number of the source deployment version of the parent/previous workflow."
+        },
+        "continueAsNewInitialVersioningBehavior": {
+          "$ref": "#/definitions/v1ContinueAsNewVersioningBehavior",
+          "description": "Experimental.\nIf this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior\nspecified in that command.\nOnly used for the initial task of this run and the initial task of any retries of this run.\nNot passed to children or to future continue-as-new.\n\nNote: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,\na non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility\nwith history events generated during that time, know that an UNSPECIFIED value here is equivalent to AutoUpgrade\nvalue if the InheritedAutoUpgradeInfo is non-empty."
         }
       },
-      "description": "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version\nto a workflow execution whose parent/previous workflow has an AutoUpgrade behavior."
+      "description": "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version\nto a workflow execution whose parent/previous workflow has an AutoUpgrade behavior.\nAlso used for Upgrade-on-CaN behaviors AutoUpgrade and UseRampingVersion."
     },
     "v1Input": {
       "type": "object",
@@ -18698,6 +18703,10 @@
           "type": "string",
           "format": "int64",
           "description": "Monotonic counter reflecting the latest routing decision for this workflow execution.\nUsed for staleness detection between history and matching when dispatching tasks to workers.\nIncremented when a workflow execution routes to a new deployment version, which happens\nwhen a worker of the new deployment version completes a workflow task.\nNote: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not\nface the problem of inconsistent dispatching that arises from eventual consistency between\ntask queues and their partitions."
+        },
+        "continueAsNewInitialVersioningBehavior": {
+          "$ref": "#/definitions/v1ContinueAsNewVersioningBehavior",
+          "description": "Experimental.\nIf this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior\nspecified in that command.\nOnly used for the initial task of this run and the initial task of any retries of this run.\nNot passed to children or to future continue-as-new.\n\nNote: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,\na non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility\nwith ContinueAsNew history commands generated during that time, know that an UNSPECIFIED value here is equivalent\nto ContinueAsNewVersioningBehaviorAutoUpgrade if the behavior of the workflow is AutoUpgrade."
         }
       },
       "description": "Holds all the information about worker versioning for a particular workflow execution.\nExperimental. Versioning info is experimental and might change in the future."

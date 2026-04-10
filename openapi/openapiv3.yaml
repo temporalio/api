@@ -8236,6 +8236,11 @@ components:
         canceledReason:
           type: string
           description: Set if activity cancelation was requested.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to related entities, such as the entity that started this activity.
       description: Information about a standalone activity.
     ActivityExecutionListInfo:
       type: object
@@ -9066,10 +9071,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/Callback'
           description: Information on how this callback should be invoked (e.g. its URL and type).
-        trigger:
-          allOf:
-            - $ref: '#/components/schemas/CallbackInfo_Trigger'
-          description: Trigger for this callback.
         registrationTime:
           type: string
           description: The time when the callback was registered.
@@ -9084,6 +9085,7 @@ components:
             - CALLBACK_STATE_SUCCEEDED
             - CALLBACK_STATE_BLOCKED
           type: string
+          description: The current state of the callback.
           format: enum
         attempt:
           type: integer
@@ -9106,16 +9108,7 @@ components:
         blockedReason:
           type: string
           description: If the state is BLOCKED, blocked reason provides additional information.
-      description: CallbackInfo contains the state of an attached workflow callback.
-    CallbackInfo_Trigger:
-      type: object
-      properties:
-        workflowClosed:
-          $ref: '#/components/schemas/CallbackInfo_WorkflowClosed'
-    CallbackInfo_WorkflowClosed:
-      type: object
-      properties: {}
-      description: Trigger for when the workflow is closed.
+      description: Common callback information. Specific CallbackInfo messages should embed this and may include additional fields.
     Callback_Internal:
       type: object
       properties:
@@ -9912,6 +9905,11 @@ components:
           type: string
           description: Token for follow-on long-poll requests. Absent only if the activity is complete.
           format: bytes
+        callbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CallbackInfo'
+          description: Callbacks attached to this activity execution and their current state.
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -10730,7 +10728,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Link'
-          description: Links associated with the event.
+          description: Links to related entities, such as the entity that started this event's workflow.
         principal:
           allOf:
             - $ref: '#/components/schemas/Principal'
@@ -10934,11 +10932,23 @@ components:
           $ref: '#/components/schemas/Link_WorkflowEvent'
         batchJob:
           $ref: '#/components/schemas/Link_BatchJob'
+        activity:
+          $ref: '#/components/schemas/Link_Activity'
       description: |-
         Link can be associated with history events. It might contain information about an external entity
          related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
          in this case, a history event in workflow A could contain a Link to the workflow started event in
          workflow B, and vice-versa.
+    Link_Activity:
+      type: object
+      properties:
+        namespace:
+          type: string
+        activityId:
+          type: string
+        runId:
+          type: string
+      description: A link to an activity.
     Link_BatchJob:
       type: object
       properties:
@@ -14299,6 +14309,20 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: |-
+            Callbacks to be called by the server when this activity reaches a terminal state.
+             Callback addresses must be whitelisted in the server's dynamic configuration.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: |-
+            Links to be associated with the activity. Callbacks may also have associated links;
+             links already included with a callback should not be duplicated here.
     StartActivityExecutionResponse:
       type: object
       properties:
@@ -14308,6 +14332,10 @@ components:
         started:
           type: boolean
           description: If true, a new activity was started.
+        link:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: Link to the started activity.
     StartBatchOperationRequest:
       type: object
       properties:

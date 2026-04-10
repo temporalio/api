@@ -25,6 +25,7 @@ import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/command/v1/message.proto";
+import "temporal/api/compute/v1/config.proto";
 import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/filter/v1/message.proto";
@@ -197,6 +198,8 @@ message StartWorkflowExecutionRequest {
     temporal.api.common.v1.Priority priority = 27;
     // Deployment Options of the worker who will process the eager task. Passed when `request_eager_execution=true`.
     temporal.api.deployment.v1.WorkerDeploymentOptions eager_worker_deployment_options = 28;
+    // Time-skipping configuration. If not set, time skipping is disabled.
+    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 29;
 }
 
 message StartWorkflowExecutionResponse {
@@ -262,6 +265,11 @@ message PollWorkflowTaskQueueRequest {
     // A unique key for this worker instance, used for tracking worker lifecycle.
     // This is guaranteed to be unique, whereas identity is not guaranteed to be unique.
     string worker_instance_key = 8;
+
+    // A dedicated per-worker Nexus task queue on which the server sends control
+    // tasks (e.g. activity cancellation) to this specific worker instance.
+    string worker_control_task_queue = 9;
+
     // Deprecated. Use deployment_options instead.
     // Each worker process should provide an ID unique to the specific set of code it is running
     // "checksum" in this field name isn't very accurate, it should be though of as an id.
@@ -271,7 +279,6 @@ message PollWorkflowTaskQueueRequest {
     // feature. See the `WorkerVersionCapabilities` docstring for more.
     temporal.api.common.v1.WorkerVersionCapabilities worker_version_capabilities = 5 [deprecated = true];
     // Worker deployment options that user has set in the worker.
-    // Experimental. Worker Deployments are experimental and might significantly change in the future.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
 
     // Removed in 1.55.0; was temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat
@@ -383,6 +390,14 @@ message RespondWorkflowTaskCompletedRequest {
     // Worker deployment options that user has set in the worker.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 17;
 
+    // A unique key for this worker instance, used for tracking worker lifecycle.
+    // This is guaranteed to be unique, whereas identity is not guaranteed to be unique.
+    string worker_instance_key = 19;
+
+    // A dedicated per-worker Nexus task queue on which the server sends control
+    // tasks (e.g. activity cancellation) to this specific worker instance.
+    string worker_control_task_queue = 20;
+
     // SDK capability details.
     message Capabilities {
         // True if the SDK can handle speculative workflow task with command events. If true, the
@@ -448,6 +463,11 @@ message PollActivityTaskQueueRequest {
     // A unique key for this worker instance, used for tracking worker lifecycle.
     // This is guaranteed to be unique, whereas identity is not guaranteed to be unique.
     string worker_instance_key = 8;
+
+    // A dedicated per-worker Nexus task queue on which the server sends control
+    // tasks (e.g. activity cancellation) to this specific worker instance.
+    string worker_control_task_queue = 9;
+
     temporal.api.taskqueue.v1.TaskQueueMetadata task_queue_metadata = 4;
     // Information about this worker's build identifier and if it is choosing to use the versioning
     // feature. See the `WorkerVersionCapabilities` docstring for more.
@@ -836,6 +856,8 @@ message SignalWithStartWorkflowExecutionRequest {
     temporal.api.workflow.v1.VersioningOverride versioning_override = 25;
     // Priority metadata
     temporal.api.common.v1.Priority priority = 26;
+    // Time-skipping configuration. If not set, time skipping is disabled.
+    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 27;
 }
 
 message SignalWithStartWorkflowExecutionResponse {
@@ -1267,6 +1289,11 @@ message GetSystemInfoResponse {
         // This flag is dependent both on server version and for Nexus to be enabled via server configuration.
         bool nexus = 11;
 
+        // True if the server supports server-scaled deployments.
+        // This flag is dependent both on server version and for server-scaled deployments
+        // to be enabled via server configuration.
+        bool server_scaled_deployments = 12;
+
     }
 }
 
@@ -1355,6 +1382,10 @@ message UpdateScheduleRequest {
     // Note: you cannot only update the search attributes with `UpdateScheduleRequest`,
     // you must also set the `schedule` field; otherwise, it will unset the schedule.
     temporal.api.common.v1.SearchAttributes search_attributes = 7;
+    // Schedule memo to replace. If set, replaces the entire memo.
+    // Do not set this field if you do not want to update the memo.
+    // A non-null empty object will clear the memo.
+    temporal.api.common.v1.Memo memo = 8;
 }
 
 message UpdateScheduleResponse {
@@ -2485,6 +2516,26 @@ message SetWorkerDeploymentRampingVersionResponse {
     float previous_percentage = 3 [deprecated = true];
 }
 
+// Creates a new WorkerDeployment.
+message CreateWorkerDeploymentRequest {
+    string namespace = 1;
+    // The name of the Worker Deployment to create. If a Worker Deployment with
+    // this name already exists, an error will be returned.
+    string deployment_name = 2;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 4;
+    // A unique identifier for this create request for idempotence. Typically UUIDv4.
+    string request_id = 5;
+}
+
+message CreateWorkerDeploymentResponse {
+    // This value is returned so that it can be optionally passed to APIs that
+    // write to the WorkerDeployment state to ensure that the state did not
+    // change between this API call and a future write.
+    bytes conflict_token = 1;
+}
+
 message ListWorkerDeploymentsRequest {
     string namespace = 1;
     int32 page_size = 2;
@@ -2509,6 +2560,28 @@ message ListWorkerDeploymentsResponse {
         // Summary of the ramping version of the Worker Deployment.
         temporal.api.deployment.v1.WorkerDeploymentInfo.WorkerDeploymentVersionSummary ramping_version_summary = 6;
     }
+}
+
+// Creates a new WorkerDeploymentVersion.
+message CreateWorkerDeploymentVersionRequest {
+    string namespace = 1;
+    // Required.
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+
+    // Optional. Contains the new worker compute configuration for the Worker
+    // Deployment. Used for worker scale management.
+    temporal.api.compute.v1.ComputeConfig compute_config = 4;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+    
+    // A unique identifier for this create request for idempotence. Typically UUIDv4.
+    // If a second request with the same ID is recieved, it is considered a successful no-op.
+    // Retrying with a different request ID for the same deployment name + build ID is an error.
+    string request_id = 5;
+}
+
+message CreateWorkerDeploymentVersionResponse {
 }
 
 // Used for manual deletion of Versions. User can delete a Version only when all the
@@ -2543,6 +2616,53 @@ message DeleteWorkerDeploymentRequest {
 }
 
 message DeleteWorkerDeploymentResponse {
+}
+
+// Used to update the compute config of a Worker Deployment Version.
+message UpdateWorkerDeploymentVersionComputeConfigRequest {
+    string namespace = 1;
+
+    // Required.
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+
+    // Optional. Contains the compute config scaling groups to add or update for the Worker
+    // Deployment.
+    map<string, temporal.api.compute.v1.ComputeConfigScalingGroupUpdate> compute_config_scaling_groups = 6;
+
+    // Optional. Contains the compute config scaling groups to remove from the Worker Deployment.
+    repeated string remove_compute_config_scaling_groups = 7;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+
+    // A unique identifier for this create request for idempotence. Typically UUIDv4.
+    // If a second request with the same ID is recieved, it is considered a successful no-op.
+    // Retrying with a different request ID for the same deployment name + build ID is an error.
+    string request_id = 4;
+}
+
+message UpdateWorkerDeploymentVersionComputeConfigResponse {
+}
+
+// Used to validate the compute config without attaching it to a Worker Deployment Version.
+message ValidateWorkerDeploymentVersionComputeConfigRequest {
+    string namespace = 1;
+
+    // Required.
+    temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 2;
+
+    // Optional. Contains the compute config scaling groups to add or update for the Worker
+    // Deployment.
+    map<string, temporal.api.compute.v1.ComputeConfigScalingGroupUpdate> compute_config_scaling_groups = 6;
+
+    // Optional. Contains the compute config scaling groups to remove from the Worker Deployment.
+    repeated string remove_compute_config_scaling_groups = 7;
+
+    // Optional. The identity of the client who initiated this request.
+    string identity = 3;
+}
+
+message ValidateWorkerDeploymentVersionComputeConfigResponse {
 }
 
 // Used to update the user-defined metadata of a Worker Deployment Version.
@@ -2956,6 +3076,12 @@ message StartActivityExecutionRequest {
     temporal.api.sdk.v1.UserMetadata user_metadata = 17;
     // Priority metadata.
     temporal.api.common.v1.Priority priority = 18;
+    // Callbacks to be called by the server when this activity reaches a terminal state.
+    // Callback addresses must be whitelisted in the server's dynamic configuration.
+    repeated temporal.api.common.v1.Callback completion_callbacks = 19;
+    // Links to be associated with the activity. Callbacks may also have associated links;
+    // links already included with a callback should not be duplicated here.
+    repeated temporal.api.common.v1.Link links = 20;
 }
 
 message StartActivityExecutionResponse {
@@ -2963,6 +3089,8 @@ message StartActivityExecutionResponse {
     string run_id = 1;
     // If true, a new activity was started.
     bool started = 2;
+    // Link to the started activity.
+    temporal.api.common.v1.Link link = 3;
 }
 
 message DescribeActivityExecutionRequest {
@@ -2999,6 +3127,9 @@ message DescribeActivityExecutionResponse {
 
     // Token for follow-on long-poll requests. Absent only if the activity is complete.
     bytes long_poll_token = 5;
+
+    // Callbacks attached to this activity execution and their current state.
+    repeated temporal.api.activity.v1.CallbackInfo callbacks = 6;
 }
 
 message PollActivityExecutionRequest {

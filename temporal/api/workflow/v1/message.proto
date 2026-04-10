@@ -93,7 +93,6 @@ message WorkflowExecutionInfo {
     WorkflowExecutionVersioningInfo versioning_info = 22;
 
     // The name of Worker Deployment that completed the most recent workflow task.
-    // Experimental. Worker Deployments are experimental and might change in the future.
     string worker_deployment_name = 23;
 
     // Priority metadata
@@ -232,6 +231,17 @@ message WorkflowExecutionVersioningInfo {
     // face the problem of inconsistent dispatching that arises from eventual consistency between
     // task queues and their partitions.
     int64 revision_number = 8;
+    // Experimental.
+    // If this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior
+    // specified in that command.
+    // Only used for the initial task of this run and the initial task of any retries of this run.
+    // Not passed to children or to future continue-as-new.
+    //
+    // Note: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,
+    // a non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility
+    // with ContinueAsNew history commands generated during that time, know that an UNSPECIFIED value here is equivalent
+    // to ContinueAsNewVersioningBehaviorAutoUpgrade if the behavior of the workflow is AutoUpgrade.
+    temporal.api.enums.v1.ContinueAsNewVersioningBehavior continue_as_new_initial_versioning_behavior = 9;
 }
 
 // Holds information about ongoing transition of a workflow execution from one deployment to another.
@@ -566,6 +576,56 @@ message WorkflowExecutionOptions {
 
     // If set, overrides the workflow's priority sent by the SDK.
     temporal.api.common.v1.Priority priority = 2;
+
+    // Time-skipping configuration for this workflow execution.
+    // If not set, the time-skipping conf will not get updated upon request, 
+    // i.e. the existing time-skipping conf will be preserved.
+    TimeSkippingConfig time_skipping_config = 3;
+}
+
+// Configuration for time skipping during a workflow execution.
+// When enabled, virtual time advances automatically whenever there is no in-flight work.
+// In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,
+// and possibly other features added in the future.
+// User timers are not classified as in-flight work and will be skipped over.
+// When time advances, it skips to the earlier of the next user timer or the configured bound, if either exists.
+message TimeSkippingConfig {
+
+    // Enables or disables time skipping for this workflow execution.
+    // By default, this field is propagated to transitively related workflows (child workflows/start-as-new/reset) 
+    // at the time they are started.
+    // Changes made after a transitively related workflow has started are not propagated.
+    bool enabled = 1;
+
+    // If set, the enabled field is not propagated to transitively related workflows.
+    bool disable_propagation = 2;
+
+    // Optional bound that limits how long time skipping remains active.
+    // Once the bound is reached, time skipping is automatically disabled.
+    // It can later be re-enabled via UpdateWorkflowExecutionOptions.
+    //
+    // This is particularly useful in testing scenarios where workflows
+    // are expected to receive signals, updates, or other events while
+    // timers are in progress.
+    //
+    // This bound is not propagated to transitively related workflows. 
+    // When bound is also needed for transitively related workflows,
+    // it is recommended to set disable_propagation to true 
+    // and configure TimeSkippingConfig explicitly for transitively related workflows.
+    oneof bound {
+
+        // Maximum total virtual time that can be skipped.
+        google.protobuf.Duration max_skipped_duration = 4;
+
+        // Maximum elapsed time since time skipping was enabled.
+        // This includes both skipped time and real time elapsing.
+        // (-- api-linter: core::0142::time-field-names=disabled --)
+        google.protobuf.Duration max_elapsed_duration = 5;
+
+        // Absolute virtual timestamp at which time skipping is disabled.
+        // Time skipping will not advance beyond this point.
+        google.protobuf.Timestamp max_target_time = 6;
+    }
 }
 
 // Used to override the versioning behavior (and pinned deployment version, if applicable) of a

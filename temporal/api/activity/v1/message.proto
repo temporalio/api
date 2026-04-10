@@ -15,6 +15,7 @@ import "google/protobuf/timestamp.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/enums/v1/activity.proto";
+import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
@@ -162,7 +163,7 @@ message ActivityExecutionInfo {
     // Set if activity cancelation was requested.
     string canceled_reason = 32;
 
-    // Links associated with the activity.
+    // Links to related entities, such as the entity that started this activity.
     repeated temporal.api.common.v1.Link links = 33;
 }
 
@@ -197,4 +198,39 @@ message ActivityExecutionListInfo {
     // The difference between close time and scheduled time.
     // This field is only populated if the activity is closed.
     google.protobuf.Duration execution_duration = 11;
+}
+
+// CallbackInfo contains the state of an attached activity callback.
+message CallbackInfo {
+    // Trigger for when the activity is closed.
+    message ActivityClosed {}
+
+    message Trigger {
+        oneof variant {
+            ActivityClosed activity_closed = 1;
+        }
+    }
+
+    // Information on how this callback should be invoked (e.g. its URL and type).
+    temporal.api.common.v1.Callback callback = 1;
+    // Trigger for this callback.
+    Trigger trigger = 2;
+    // The time when the callback was registered.
+    google.protobuf.Timestamp registration_time = 3;
+
+    // The current state of the callback.
+    temporal.api.enums.v1.CallbackState state = 4;
+    // The number of attempts made to deliver the callback.
+    // This number represents a minimum bound since the attempt is incremented after the callback request completes.
+    int32 attempt = 5;
+
+    // The time when the last attempt completed.
+    google.protobuf.Timestamp last_attempt_complete_time = 6;
+    // The last attempt's failure, if any.
+    temporal.api.failure.v1.Failure last_attempt_failure = 7;
+    // The time when the next attempt is scheduled.
+    google.protobuf.Timestamp next_attempt_schedule_time = 8;
+
+    // If the state is BLOCKED, blocked reason provides additional information.
+    string blocked_reason = 9;
 }

@@ -9041,13 +9041,9 @@
     }
   },
   "definitions": {
-    "CallbackInfoTrigger": {
+    "CallbackInfoActivityClosed": {
       "type": "object",
-      "properties": {
-        "workflowClosed": {
-          "$ref": "#/definitions/CallbackInfoWorkflowClosed"
-        }
-      }
+      "description": "Trigger for when the activity is closed."
     },
     "CallbackInfoWorkflowClosed": {
       "type": "object",
@@ -11115,6 +11111,113 @@
       },
       "description": "Used to validate the compute config without attaching it to a Worker Deployment Version."
     },
+    "apiActivityV1CallbackInfo": {
+      "type": "object",
+      "properties": {
+        "callback": {
+          "$ref": "#/definitions/v1Callback",
+          "description": "Information on how this callback should be invoked (e.g. its URL and type)."
+        },
+        "trigger": {
+          "$ref": "#/definitions/apiActivityV1CallbackInfoTrigger",
+          "description": "Trigger for this callback."
+        },
+        "registrationTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the callback was registered."
+        },
+        "state": {
+          "$ref": "#/definitions/v1CallbackState",
+          "description": "The current state of the callback."
+        },
+        "attempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The number of attempts made to deliver the callback.\nThis number represents a minimum bound since the attempt is incremented after the callback request completes."
+        },
+        "lastAttemptCompleteTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the last attempt completed."
+        },
+        "lastAttemptFailure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "The last attempt's failure, if any."
+        },
+        "nextAttemptScheduleTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the next attempt is scheduled."
+        },
+        "blockedReason": {
+          "type": "string",
+          "description": "If the state is BLOCKED, blocked reason provides additional information."
+        }
+      },
+      "description": "CallbackInfo contains the state of an attached activity callback."
+    },
+    "apiActivityV1CallbackInfoTrigger": {
+      "type": "object",
+      "properties": {
+        "activityClosed": {
+          "$ref": "#/definitions/CallbackInfoActivityClosed"
+        }
+      }
+    },
+    "apiWorkflowV1CallbackInfo": {
+      "type": "object",
+      "properties": {
+        "callback": {
+          "$ref": "#/definitions/v1Callback",
+          "description": "Information on how this callback should be invoked (e.g. its URL and type)."
+        },
+        "trigger": {
+          "$ref": "#/definitions/apiWorkflowV1CallbackInfoTrigger",
+          "description": "Trigger for this callback."
+        },
+        "registrationTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the callback was registered."
+        },
+        "state": {
+          "$ref": "#/definitions/v1CallbackState"
+        },
+        "attempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The number of attempts made to deliver the callback.\nThis number represents a minimum bound since the attempt is incremented after the callback request completes."
+        },
+        "lastAttemptCompleteTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the last attempt completed."
+        },
+        "lastAttemptFailure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "The last attempt's failure, if any."
+        },
+        "nextAttemptScheduleTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the next attempt is scheduled."
+        },
+        "blockedReason": {
+          "type": "string",
+          "description": "If the state is BLOCKED, blocked reason provides additional information."
+        }
+      },
+      "description": "CallbackInfo contains the state of an attached workflow callback."
+    },
+    "apiWorkflowV1CallbackInfoTrigger": {
+      "type": "object",
+      "properties": {
+        "workflowClosed": {
+          "$ref": "#/definitions/CallbackInfoWorkflowClosed"
+        }
+      }
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -11287,7 +11390,7 @@
             "type": "object",
             "$ref": "#/definitions/v1Link"
           },
-          "description": "Links associated with the activity."
+          "description": "Links to related entities, such as the entity that started this activity."
         }
       },
       "description": "Information about a standalone activity."
@@ -12131,51 +12234,6 @@
       },
       "description": "Callback to attach to various events in the system, e.g. workflow run completion."
     },
-    "v1CallbackInfo": {
-      "type": "object",
-      "properties": {
-        "callback": {
-          "$ref": "#/definitions/v1Callback",
-          "description": "Information on how this callback should be invoked (e.g. its URL and type)."
-        },
-        "trigger": {
-          "$ref": "#/definitions/CallbackInfoTrigger",
-          "description": "Trigger for this callback."
-        },
-        "registrationTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the callback was registered."
-        },
-        "state": {
-          "$ref": "#/definitions/v1CallbackState"
-        },
-        "attempt": {
-          "type": "integer",
-          "format": "int32",
-          "description": "The number of attempts made to deliver the callback.\nThis number represents a minimum bound since the attempt is incremented after the callback request completes."
-        },
-        "lastAttemptCompleteTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the last attempt completed."
-        },
-        "lastAttemptFailure": {
-          "$ref": "#/definitions/v1Failure",
-          "description": "The last attempt's failure, if any."
-        },
-        "nextAttemptScheduleTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the next attempt is scheduled."
-        },
-        "blockedReason": {
-          "type": "string",
-          "description": "If the state is BLOCKED, blocked reason provides additional information."
-        }
-      },
-      "description": "CallbackInfo contains the state of an attached workflow callback."
-    },
     "v1CallbackState": {
       "type": "string",
       "enum": [
@@ -12909,7 +12967,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1CallbackInfo"
+            "$ref": "#/definitions/apiActivityV1CallbackInfo"
           },
           "description": "Callbacks attached to this activity execution and their current state."
         }
@@ -13149,7 +13207,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1CallbackInfo"
+            "$ref": "#/definitions/apiWorkflowV1CallbackInfo"
           }
         },
         "pendingNexusOperations": {
@@ -13731,7 +13789,7 @@
             "type": "object",
             "$ref": "#/definitions/v1Link"
           },
-          "description": "Links associated with the event."
+          "description": "Links to related entities, such as the entity that started this event's workflow."
         },
         "principal": {
           "$ref": "#/definitions/v1Principal",

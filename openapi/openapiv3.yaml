@@ -8878,6 +8878,11 @@ components:
         canceledReason:
           type: string
           description: Set if activity cancelation was requested.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to related entities, such as the entity that started this activity.
       description: Information about a standalone activity.
     ActivityExecutionListInfo:
       type: object
@@ -9708,10 +9713,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/Callback'
           description: Information on how this callback should be invoked (e.g. its URL and type).
-        trigger:
-          allOf:
-            - $ref: '#/components/schemas/CallbackInfo_Trigger'
-          description: Trigger for this callback.
         registrationTime:
           type: string
           description: The time when the callback was registered.
@@ -9726,6 +9727,7 @@ components:
             - CALLBACK_STATE_SUCCEEDED
             - CALLBACK_STATE_BLOCKED
           type: string
+          description: The current state of the callback.
           format: enum
         attempt:
           type: integer
@@ -9748,16 +9750,7 @@ components:
         blockedReason:
           type: string
           description: If the state is BLOCKED, blocked reason provides additional information.
-      description: CallbackInfo contains the state of an attached workflow callback.
-    CallbackInfo_Trigger:
-      type: object
-      properties:
-        workflowClosed:
-          $ref: '#/components/schemas/CallbackInfo_WorkflowClosed'
-    CallbackInfo_WorkflowClosed:
-      type: object
-      properties: {}
-      description: Trigger for when the workflow is closed.
+      description: Common callback information. Specific CallbackInfo messages should embed this and may include additional fields.
     Callback_Internal:
       type: object
       properties:
@@ -10581,6 +10574,11 @@ components:
           type: string
           description: Token for follow-on long-poll requests. Absent only if the activity is complete.
           format: bytes
+        callbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CallbackInfo'
+          description: Callbacks attached to this activity execution and their current state.
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -11427,7 +11425,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Link'
-          description: Links associated with the event.
+          description: Links to related entities, such as the entity that started this event's workflow.
         principal:
           allOf:
             - $ref: '#/components/schemas/Principal'
@@ -11565,9 +11563,28 @@ components:
         sourceDeploymentRevisionNumber:
           type: string
           description: The revision number of the source deployment version of the parent/previous workflow.
+        continueAsNewInitialVersioningBehavior:
+          enum:
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION
+          type: string
+          description: |-
+            Experimental.
+             If this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior
+             specified in that command.
+             Only used for the initial task of this run and the initial task of any retries of this run.
+             Not passed to children or to future continue-as-new.
+
+             Note: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,
+             a non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility
+             with history events generated during that time, know that an UNSPECIFIED value here is equivalent to AutoUpgrade
+             value if the InheritedAutoUpgradeInfo is non-empty.
+          format: enum
       description: |-
         Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version
          to a workflow execution whose parent/previous workflow has an AutoUpgrade behavior.
+         Also used for Upgrade-on-CaN behaviors AutoUpgrade and UseRampingVersion.
     Input:
       type: object
       properties:
@@ -11612,6 +11629,8 @@ components:
           $ref: '#/components/schemas/Link_WorkflowEvent'
         batchJob:
           $ref: '#/components/schemas/Link_BatchJob'
+        activity:
+          $ref: '#/components/schemas/Link_Activity'
         nexusOperation:
           $ref: '#/components/schemas/Link_NexusOperation'
       description: |-
@@ -11619,6 +11638,16 @@ components:
          related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
          in this case, a history event in workflow A could contain a Link to the workflow started event in
          workflow B, and vice-versa.
+    Link_Activity:
+      type: object
+      properties:
+        namespace:
+          type: string
+        activityId:
+          type: string
+        runId:
+          type: string
+      description: A link to an activity.
     Link_BatchJob:
       type: object
       properties:
@@ -15280,6 +15309,20 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: |-
+            Callbacks to be called by the server when this activity reaches a terminal state.
+             Callback addresses must be whitelisted in the server's dynamic configuration.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: |-
+            Links to be associated with the activity. Callbacks may also have associated links;
+             links already included with a callback should not be duplicated here.
     StartActivityExecutionResponse:
       type: object
       properties:
@@ -15289,6 +15332,10 @@ components:
         started:
           type: boolean
           description: If true, a new activity was started.
+        link:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: Link to the started activity.
     StartBatchOperationRequest:
       type: object
       properties:
@@ -17875,6 +17922,7 @@ components:
           enum:
             - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
             - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION
           type: string
           description: |-
             Experimental. Optionally decide the versioning behavior that the first task of the new run should use.
@@ -18649,6 +18697,24 @@ components:
              Note: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not
              face the problem of inconsistent dispatching that arises from eventual consistency between
              task queues and their partitions.
+        continueAsNewInitialVersioningBehavior:
+          enum:
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION
+          type: string
+          description: |-
+            Experimental.
+             If this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior
+             specified in that command.
+             Only used for the initial task of this run and the initial task of any retries of this run.
+             Not passed to children or to future continue-as-new.
+
+             Note: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,
+             a non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility
+             with ContinueAsNew history commands generated during that time, know that an UNSPECIFIED value here is equivalent
+             to ContinueAsNewVersioningBehaviorAutoUpgrade if the behavior of the workflow is AutoUpgrade.
+          format: enum
       description: |-
         Holds all the information about worker versioning for a particular workflow execution.
          Experimental. Versioning info is experimental and might change in the future.

@@ -125,6 +125,12 @@ nexusrpc-yaml: nexusrpc-yaml-install
 	printf $(COLOR) "Generate nexus/nexusrpc.yaml and nexus/nexusrpc.langs.yaml..."
 	mkdir -p nexus
 	protoc -I $(PROTO_ROOT) \
+		--nexus-rpc-yaml_opt=openapi_ref_prefix=../openapi/openapiv3.yaml#/components/schemas/ \
+		--nexus-rpc-yaml_opt=nexusrpc_out=nexus/temporal-json-schema-models-nexusrpc.yaml \
+		--nexus-rpc-yaml_opt=nexusrpc_langs_out=nexus/temporal-proto-models-nexusrpc.yaml \
+		--nexus-rpc-yaml_opt=python_package_prefix=temporalio.api \
+		--nexus-rpc-yaml_opt=typescript_package_prefix=@temporalio/api \
+		--nexus-rpc-yaml_opt=include_operation_tags=exposed \
 		--nexus-rpc-yaml_out=. \
 		temporal/api/workflowservice/v1/* \
 		temporal/api/operatorservice/v1/*

@@ -196,6 +196,14 @@ message WorkflowExecutionStartedEventAttributes {
     // Used internally by the server during continue-as-new and retry.
     // Should not be read or interpreted by SDKs.
     DeclinedTargetVersionUpgrade declined_target_version_upgrade = 40;
+
+    // Initial time-skipping configuration for this workflow execution, recorded at start time.
+    // This may have been set explicitly via the start workflow request, or propagated from a
+    // parent/previous execution.
+    //
+    // The configuration may be updated after start via UpdateWorkflowExecutionOptions, which
+    // will be reflected in the WorkflowExecutionOptionsUpdatedEvent.
+    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 41;
 }
 
 // Wrapper for a target deployment version that the SDK declined to upgrade to.
@@ -348,16 +356,13 @@ message WorkflowTaskCompletedEventAttributes {
     temporal.api.enums.v1.VersioningBehavior versioning_behavior = 8;
     // The Worker Deployment Version that completed this task. Must be set if `versioning_behavior`
     // is set. This value updates workflow execution's `versioning_info.version`.
-    // Experimental. Worker Deployments are experimental and might significantly change in the future.
     // Deprecated. Replaced with `deployment_version`.
     string worker_deployment_version = 9 [deprecated = true];
     // The name of Worker Deployment that completed this task. Must be set if `versioning_behavior`
     // is set. This value updates workflow execution's `worker_deployment_name`.
-    // Experimental. Worker Deployments are experimental and might significantly change in the future.
     string worker_deployment_name = 10;
     // The Worker Deployment Version that completed this task. Must be set if `versioning_behavior`
     // is set. This value updates workflow execution's `versioning_info.deployment_version`.
-    // Experimental. Worker Deployments are experimental and might significantly change in the future.
     temporal.api.deployment.v1.WorkerDeploymentVersion deployment_version = 11;
 }
 
@@ -1155,7 +1160,7 @@ message HistoryEvent {
     //  * timer_started_event_attributes - summary represents an identifier for the timer for use by
     //    user interfaces.
     temporal.api.sdk.v1.UserMetadata user_metadata = 301;
-    // Links associated with the event.
+    // Links to related entities, such as the entity that started this event's workflow.
     repeated temporal.api.common.v1.Link links = 302;
     // Server-computed authenticated caller identity associated with this event.
     temporal.api.common.v1.Principal principal = 303;

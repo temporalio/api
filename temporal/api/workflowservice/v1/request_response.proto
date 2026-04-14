@@ -2931,6 +2931,12 @@ message StartActivityExecutionRequest {
     temporal.api.sdk.v1.UserMetadata user_metadata = 17;
     // Priority metadata.
     temporal.api.common.v1.Priority priority = 18;
+    // Callbacks to be called by the server when this activity reaches a terminal state.
+    // Callback addresses must be whitelisted in the server's dynamic configuration.
+    repeated temporal.api.common.v1.Callback completion_callbacks = 19;
+    // Links to be associated with the activity. Callbacks may also have associated links;
+    // links already included with a callback should not be duplicated here.
+    repeated temporal.api.common.v1.Link links = 20;
 }
 
 message StartActivityExecutionResponse {
@@ -2938,6 +2944,8 @@ message StartActivityExecutionResponse {
     string run_id = 1;
     // If true, a new activity was started.
     bool started = 2;
+    // Link to the started activity.
+    temporal.api.common.v1.Link link = 3;
 }
 
 message DescribeActivityExecutionRequest {
@@ -2974,6 +2982,9 @@ message DescribeActivityExecutionResponse {
 
     // Token for follow-on long-poll requests. Absent only if the activity is complete.
     bytes long_poll_token = 5;
+
+    // Callbacks attached to this activity execution and their current state.
+    repeated temporal.api.activity.v1.CallbackInfo callbacks = 6;
 }
 
 message PollActivityExecutionRequest {

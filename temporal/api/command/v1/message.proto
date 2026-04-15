@@ -11,8 +11,11 @@ option csharp_namespace = "Temporalio.Api.Command.V1";
 
 import "google/protobuf/duration.proto";
 
-import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/enums/v1/command_type.proto";
+import "temporal/api/enums/v1/workflow.proto";
+import "temporal/api/enums/v1/workspace.proto";
+import "temporal/api/workspace/v1/message.proto";
+import "temporal/api/sandbox/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
@@ -66,6 +69,15 @@ message ScheduleActivityTaskCommandAttributes {
     // Priority metadata. If this message is not present, or any fields are not
     // present, they inherit the values from the workflow.
     temporal.api.common.v1.Priority priority = 14;
+    // If set, this activity uses a durable workspace. The server populates
+    // workspace info when dispatching the task and enforces access control.
+    // If workspace_id is empty, the server auto-assigns "{runID}/default".
+    temporal.api.workspace.v1.ActivityWorkspaceOptions workspace_options = 15;
+    // Reserved: was workspace_access_mode before consolidation into workspace_options.
+    reserved 16;
+    // If set, this activity runs inside an isolated sandbox with the workspace
+    // bind-mounted at /data.
+    temporal.api.sandbox.v1.SandboxOptions sandbox_options = 17;
 }
 
 message RequestCancelActivityTaskCommandAttributes {
@@ -217,6 +229,9 @@ message StartChildWorkflowExecutionCommandAttributes {
     // Priority metadata. If this message is not present, or any fields are not
     // present, they inherit the values from the workflow.
     temporal.api.common.v1.Priority priority = 18;
+    // Workspace transfers to pass to the child workflow. Each transfer gives the child
+    // access to a workspace owned by the parent (or any accessible workspace).
+    repeated temporal.api.workspace.v1.WorkspaceTransfer workspace_transfers = 19;
 }
 
 message ProtocolMessageCommandAttributes {

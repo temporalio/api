@@ -42,6 +42,8 @@ import "temporal/api/batch/v1/message.proto";
 import "temporal/api/sdk/v1/task_complete_metadata.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
 import "temporal/api/nexus/v1/message.proto";
+import "temporal/api/workspace/v1/message.proto";
+import "temporal/api/sandbox/v1/message.proto";
 import "temporal/api/worker/v1/message.proto";
 
 import "google/protobuf/duration.proto";
@@ -516,6 +518,12 @@ message PollActivityTaskQueueResponse {
     temporal.api.common.v1.Priority priority = 19;
     // The run ID of the activity execution, only set for standalone activities.
     string activity_run_id = 20;
+    // If the activity is associated with a workspace, the server populates this field
+    // with the workspace state needed for the worker to reconstruct the filesystem.
+    temporal.api.workspace.v1.WorkspaceInfo workspace_info = 21;
+    // Sandbox configuration for this activity, if any. Populated by the server
+    // from the ScheduleActivityTask command's sandbox_options.
+    temporal.api.sandbox.v1.SandboxOptions sandbox_options = 22;
 }
 
 message RecordActivityTaskHeartbeatRequest {
@@ -595,6 +603,9 @@ message RespondActivityTaskCompletedRequest {
     temporal.api.deployment.v1.Deployment deployment = 6 [deprecated = true];
     // Worker deployment options that user has set in the worker.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 7;
+    // If the activity modified a workspace, the worker includes the diff commit info here.
+    // The server atomically advances the workspace version as part of this completion.
+    temporal.api.workspace.v1.WorkspaceCommit workspace_commit = 9;
 }
 
 message RespondActivityTaskCompletedResponse {

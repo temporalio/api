@@ -24,6 +24,8 @@ import "temporal/api/update/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/sdk/v1/task_complete_metadata.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
+import "temporal/api/workspace/v1/message.proto";
+import "temporal/api/sandbox/v1/message.proto";
 
 // Always the first event in workflow history
 message WorkflowExecutionStartedEventAttributes {
@@ -442,6 +444,10 @@ message ActivityTaskScheduledEventAttributes {
     // Priority metadata. If this message is not present, or any fields are not
     // present, they inherit the values from the workflow.
     temporal.api.common.v1.Priority priority = 14;
+    // Workspace info at the time the activity was scheduled, if the activity uses a workspace.
+    temporal.api.workspace.v1.WorkspaceInfo workspace_info = 15;
+    // Sandbox configuration for this activity, if any.
+    temporal.api.sandbox.v1.SandboxOptions sandbox_options = 16;
 }
 
 message ActivityTaskStartedEventAttributes {
@@ -482,6 +488,8 @@ message ActivityTaskCompletedEventAttributes {
     // Version info of the worker who processed this workflow task.
     // Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     temporal.api.common.v1.WorkerVersionStamp worker_version = 5 [deprecated = true];
+    // Workspace commit produced by the activity, if the activity used a workspace.
+    temporal.api.workspace.v1.WorkspaceCommit workspace_commit = 6;
 }
 
 message ActivityTaskFailedEventAttributes {
@@ -964,6 +972,7 @@ message WorkflowExecutionUnpausedEventAttributes {
     // The request ID of the request that unpaused the workflow execution.
     string request_id = 3;
 }
+
 
 // Event marking that an operation was scheduled by a workflow via the ScheduleNexusOperation command.
 message NexusOperationScheduledEventAttributes {

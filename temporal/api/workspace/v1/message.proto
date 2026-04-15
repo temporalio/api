@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package temporal.api.workspace.v1;
+
+option go_package = "go.temporal.io/api/workspace/v1;workspace";
+option java_package = "io.temporal.api.workspace.v1";
+option java_multiple_files = true;
+option java_outer_classname = "MessageProto";
+option ruby_package = "Temporalio::Api::Workspace::V1";
+option csharp_namespace = "Temporalio.Api.Workspace.V1";
+
+import "google/protobuf/duration.proto";
+
+import "temporal/api/enums/v1/workspace.proto";
+
+// WorkspaceInfo is provided by the server to the worker when dispatching an activity
+// that uses a workspace. It contains everything the worker needs to reconstruct the
+// workspace filesystem state.
+message WorkspaceInfo {
+    // The workspace identifier.
+    string workspace_id = 1;
+    // The latest committed version of the workspace.
+    int64 committed_version = 2;
+    // The base snapshot of the workspace, if any.
+    DiffRecord base_snapshot = 3;
+    // Incremental diffs since the base snapshot.
+    repeated DiffRecord diffs = 4;
+    // The scheduled event ID of the activity that currently holds write access.
+    // Zero means no writer is active.
+    int64 active_writer_scheduled_id = 5;
+    // The scheduled event IDs of activities that currently hold read-only access.
+    repeated int64 active_reader_scheduled_ids = 6;
+    // The access mode for this activity's workspace usage. Set by the server
+    // when dispatching the task so the worker knows whether to commit or discard.
+    temporal.api.enums.v1.WorkspaceAccessMode access_mode = 7;
+    // How this workspace was received from a parent workflow. UNSPECIFIED means
+    // the workspace was created locally (not transferred). Set by the server when
+    // the child first reads the workspace from standalone CHASM.
+    // Used to determine close-time sync behavior:
+    //   - HANDOFF: sync back to standalone on close.
+    //   - SNAPSHOT/FORK: skip sync (changes scoped to this workflow).
+    temporal.api.enums.v1.WorkspaceTransferMode transfer_mode = 8;
+    // For FORK transfers: the workspace ID of the forked copy. Set by the server
+    // when processing the StartChildWorkflowExecution command. The transfer task
+    // uses this to create a new standalone CHASM workspace via ForkWorkspace.
+    string fork_target_workspace_id = 9;
+    // Maximum disk space in megabytes for the workspace. Copied from the
+    // ActivityWorkspaceOptions at schedule time and passed to the worker
+    // so it can enforce the limit via the FUSE overlay. Zero means unlimited.
+    int64 disk_limit_mb = 10;
+}
+
+// WorkspaceCommit is sent by the worker to the server when completing an activity
+// that modified a workspace. The server atomically advances the workspace version
+// as part of the activity completion transaction.
+message WorkspaceCommit {
+    // The workspace identifier.
+    string workspace_id = 1;
+    // The new version number (must be committed_version + 1).
+    int64 new_version = 2;
+    // The name of the storage driver used to upload the diff.
+    string driver_name = 3;
+    // Opaque claim for retrieving the diff from external storage.
+    map<string, string> diff_claim = 4;
+    // Size of the diff in bytes.
+    int64 diff_size_bytes = 5;
+    // The worker's sticky task queue for workspace affinity routing.
+    string worker_task_queue = 6;
+    // Schedule-to-start timeout for the sticky task queue.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration sticky_schedule_to_start_timeout = 7;
+    // Opaque claim for retrieving the manifest from external storage.
+    // Used for lazy loading: the manifest maps files to chunks.
+    map<string, string> manifest_claim = 8;
+}
+
+// ActivityWorkspaceOptions configures workspace usage for an activity.
+// When present on ScheduleActivityTaskCommandAttributes, the activity uses a
+// durable workspace. If workspace_id is empty, the server auto-assigns
+// "{runID}/default".
+message ActivityWorkspaceOptions {
+    // The workspace identifier within the workflow. Multiple activities can
+    // share the same workspace by using the same ID.
+    string workspace_id = 1;
+    // Access mode for the workspace. Controls read-write lock semantics.
+    // If not set, defaults to READ_WRITE (exclusive access).
+    temporal.api.enums.v1.WorkspaceAccessMode access_mode = 2;
+    // Maximum disk space in megabytes for the workspace. Enforced by the
+    // FUSE overlay returning ENOSPC when the limit is exceeded. Covers both
+    // existing content and new writes. Zero means unlimited.
+    int64 disk_limit_mb = 3;
+}
+
+// WorkspaceTransfer specifies how a workspace is passed to a child workflow.
+message WorkspaceTransfer {
+    // The workspace ID being transferred.
+    string source_workspace_id = 1;
+    // How the workspace is shared with the child workflow.
+    temporal.api.enums.v1.WorkspaceTransferMode transfer_mode = 2;
+    // For FORK mode: the workspace ID for the forked copy.
+    // The child workflow uses this ID to reference its independent copy.
+    // Ignored for HANDOFF and SNAPSHOT modes.
+    string target_workspace_id = 3;
+}
+
+// DiffRecord is an opaque reference to a filesystem diff stored in external storage.
+message DiffRecord {
+    // The version this diff starts from.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "from" is used to indicate range. --)
+    int64 from_version = 1;
+    // The version this diff produces.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate range. --)
+    int64 to_version = 2;
+    // Size of the diff in bytes.
+    int64 size_bytes = 3;
+    // The name of the storage driver that can resolve this claim.
+    string driver_name = 4;
+    // Opaque claim for retrieving the diff from external storage.
+    map<string, string> claim = 5;
+    // Opaque claim for retrieving the manifest from external storage.
+    // Used for lazy loading: the manifest maps files to chunks.
+    map<string, string> manifest_claim = 6;
+}

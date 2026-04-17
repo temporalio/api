@@ -19,7 +19,7 @@ import (
 //
 //   - openapi_ref_prefix: optional. When set, nexus-rpc_out emits a bare $ref to the OpenAPI
 //     schema rather than inlining schemas under components/schemas.
-//     Example: "../openapi/openapiv3.yaml#/components/schemas/"
+//     Example: "../openapi/openapiv3.yaml#/types/"
 //
 //   - nexus-rpc_out: optional. Output path for nexus-rpc.yaml (relative to --nexus-rpc-yaml_out dir).
 //     If empty, nexus-rpc.yaml is not written.
@@ -150,8 +150,8 @@ func generate(gen *protogen.Plugin) error {
 					collector.collect(m.Input.Desc)
 					collector.collect(m.Output.Desc)
 					addOperation(nexusDoc, svcName, methodName,
-						map[string]string{"$ref": "#/components/schemas/" + inputName},
-						map[string]string{"$ref": "#/components/schemas/" + outputName},
+						map[string]string{"$ref": "#/types/" + inputName},
+						map[string]string{"$ref": "#/types/" + outputName},
 					)
 				}
 
@@ -168,7 +168,7 @@ func generate(gen *protogen.Plugin) error {
 	}
 
 	if p.openAPIRefPrefix == "" {
-		addComponentsSchemas(nexusDoc, collector)
+		addTypes(nexusDoc, collector)
 	}
 
 	if p.nexusRpcOut != "" {
@@ -440,7 +440,7 @@ func (c *schemaCollector) msgRefNode(msg protoreflect.MessageDescriptor) *yaml.N
 	name := msgSchemaName(msg)
 	c.collect(msg)
 	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-	n.Content = append(n.Content, scalarNode("$ref"), scalarNode("#/components/schemas/"+name))
+	n.Content = append(n.Content, scalarNode("$ref"), scalarNode("#/types/"+name))
 	return n
 }
 
@@ -466,10 +466,10 @@ func typeNode(t string) *yaml.Node {
 	return n
 }
 
-// addComponentsSchemas inserts a "components: schemas:" section into doc, positioned
-// between the "nexusrpc" version header and the "services" block. Schemas are sorted
+// addTypes inserts a "types:" section into doc, positioned between the
+// "nexusrpc" version header and the "services" block. Types are sorted
 // alphabetically for deterministic output.
-func addComponentsSchemas(doc *yaml.Node, c *schemaCollector) {
+func addTypes(doc *yaml.Node, c *schemaCollector) {
 	root := doc.Content[0]
 
 	names := make([]string, 0, len(c.schemas))
@@ -478,19 +478,16 @@ func addComponentsSchemas(doc *yaml.Node, c *schemaCollector) {
 	}
 	sort.Strings(names)
 
-	schemasNode := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	typesNode := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 	for _, name := range names {
-		schemasNode.Content = append(schemasNode.Content, scalarNode(name), c.schemas[name])
+		typesNode.Content = append(typesNode.Content, scalarNode(name), c.schemas[name])
 	}
 
-	componentsNode := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
-	componentsNode.Content = append(componentsNode.Content, scalarNode("schemas"), schemasNode)
-
 	// root.Content layout: [nexusrpc, 1.0.0, services, {...}]
-	// After insert:        [nexusrpc, 1.0.0, components, {...}, services, {...}]
+	// After insert:        [nexusrpc, 1.0.0, types, {...}, services, {...}]
 	newContent := make([]*yaml.Node, 0, len(root.Content)+2)
 	newContent = append(newContent, root.Content[:2]...)
-	newContent = append(newContent, scalarNode("components"), componentsNode)
+	newContent = append(newContent, scalarNode("types"), typesNode)
 	newContent = append(newContent, root.Content[2:]...)
 	root.Content = newContent
 }

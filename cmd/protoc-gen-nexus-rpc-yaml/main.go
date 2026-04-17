@@ -1,5 +1,5 @@
-// protoc-gen-nexus-rpc-yaml is a protoc plugin that generates nexus/nexusrpc.yaml
-// and nexus/nexusrpc.langs.yaml from proto service methods annotated with
+// protoc-gen-nexus-rpc-yaml is a protoc plugin that generates nexus/nexus-rpc.yaml
+// and nexus/nexus-rpc.langs.yaml from proto service methods annotated with
 // option (nexusannotations.v1.operation).tags = "exposed".
 package main
 

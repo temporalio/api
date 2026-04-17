@@ -8,7 +8,7 @@ ci-build: install proto http-api-docs
 install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
-proto: sync-nexus-annotations grpc http-api-docs nexusrpc-yaml
+proto: sync-nexus-annotations grpc http-api-docs nexus-rpc-yaml
 ########################################################################
 
 ##### Variables ######
@@ -121,27 +121,22 @@ buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
 	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
 
-nexusrpc-yaml: nexusrpc-yaml-install
+nexus-rpc-yaml: nexus-rpc-yaml-install
 	printf $(COLOR) "Generate nexus/temporal-json-schema-models-nexusrpc.yaml and nexus/temporal-proto-models-nexusrpc.yaml..."
 	mkdir -p nexus
 	protoc -I $(PROTO_ROOT) \
-		--nexusrpc_opt=openapi_ref_prefix=../openapi/openapiv3.yaml#/components/schemas/ \
-		--nexusrpc_opt=nexusrpc_out=nexus/temporal-json-schema-models-nexusrpc.yaml \
-		--nexusrpc_opt=nexusrpc_langs_out=nexus/temporal-proto-models-nexusrpc.yaml \
-		--nexusrpc_opt=python_package_prefix=temporalio.api \
-		--nexusrpc_opt=typescript_package_prefix=@temporalio/api \
-		--nexusrpc_opt=include_operation_tags=exposed \
-		--nexusrpc_out=. \
+		--nexus-rpc-yaml_opt=nexus-rpc_out=nexus/temporal-json-schema-models-nexusrpc.yaml \
+		--nexus-rpc-yaml_opt=nexus-rpc_langs_out=nexus/temporal-proto-models-nexusrpc.yaml \
+		--nexus-rpc-yaml_opt=python_package_prefix=temporalio.api \
+		--nexus-rpc-yaml_opt=typescript_package_prefix=@temporalio/api \
+		--nexus-rpc-yaml_opt=include_operation_tags=exposed \
+		--nexus-rpc-yaml_out=. \
 		temporal/api/workflowservice/v1/* \
 		temporal/api/operatorservice/v1/*
 
-nexusrpc-yaml-install:
-	# TODO seankane: after merging nexus-rpc/nexus-rpc-gen#36 update this to install from `main` instead of branch
-	printf $(COLOR) "Install protoc-gen-nexusrpc from nexus-rpc/nexus-rpc-gen@spk/protoc-plugin..."
-	@NEXUSRPC_TMP=$$(mktemp -d) && \
-		git clone --quiet --depth=1 --branch=spk/protoc-plugin https://github.com/nexus-rpc/nexus-rpc-gen.git $$NEXUSRPC_TMP && \
-		cd $$NEXUSRPC_TMP/tools/protoc-gen-nexusrpc && go install ./cmd/protoc-gen-nexusrpc && \
-		rm -rf $$NEXUSRPC_TMP
+nexus-rpc-yaml-install:
+	printf $(COLOR) "Build and install protoc-gen-nexus-rpc-yaml..."
+	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Clean #####
 clean:

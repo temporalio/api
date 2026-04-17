@@ -17,17 +17,17 @@ import (
 // params holds the parsed protoc plugin options.
 // Passed via --nexus-rpc-yaml_opt=key=value (multiple opts are comma-joined by protoc).
 //
-//   - openapi_ref_prefix: optional. Prefix prepended to the message name to form the
-//     JSON Schema $ref in nexusrpc.yaml. If empty, nexusrpc.yaml is not written.
+//   - openapi_ref_prefix: optional. When set, nexus-rpc_out emits a bare $ref to the OpenAPI
+//     schema rather than inlining schemas under components/schemas.
 //     Example: "../openapi/openapiv3.yaml#/components/schemas/"
 //
-//   - nexusrpc_out: optional. Output path for nexusrpc.yaml (relative to --nexus-rpc-yaml_out dir).
-//     If empty, nexusrpc.yaml is not written. Requires openapi_ref_prefix to also be set.
-//     Example: "nexus/nexusrpc.yaml"
+//   - nexus-rpc_out: optional. Output path for nexus-rpc.yaml (relative to --nexus-rpc-yaml_out dir).
+//     If empty, nexus-rpc.yaml is not written.
+//     Example: "nexus/nexus-rpc.yaml"
 //
-//   - nexusrpc_langs_out: optional. Output path for nexusrpc.langs.yaml.
-//     If empty, nexusrpc.langs.yaml is not written.
-//     Example: "nexus/nexusrpc.langs.yaml"
+//   - nexus-rpc_langs_out: optional. Output path for nexus-rpc.langs.yaml.
+//     If empty, nexus-rpc.langs.yaml is not written.
+//     Example: "nexus/nexus-rpc.langs.yaml"
 //
 //   - python_package_prefix: optional. Dot-separated package prefix for $pythonRef.
 //     The last two path segments of the go_package ({service}/v{n}) are appended.
@@ -49,8 +49,8 @@ import (
 //     Example: exclude_operation_tags=internal
 type params struct {
 	openAPIRefPrefix        string
-	nexusrpcOut             string
-	nexusrpcLangsOut        string
+	nexusRpcOut             string
+	nexusRpcLangsOut        string
 	pythonPackagePrefix     string
 	typescriptPackagePrefix string
 	includeOperationTags    []string
@@ -71,10 +71,10 @@ func parseParams(raw string) (params, error) {
 		switch key {
 		case "openapi_ref_prefix":
 			p.openAPIRefPrefix = value
-		case "nexusrpc_out":
-			p.nexusrpcOut = value
-		case "nexusrpc_langs_out":
-			p.nexusrpcLangsOut = value
+		case "nexus-rpc_out":
+			p.nexusRpcOut = value
+		case "nexus-rpc_langs_out":
+			p.nexusRpcLangsOut = value
 		case "python_package_prefix":
 			p.pythonPackagePrefix = value
 		case "typescript_package_prefix":
@@ -123,6 +123,7 @@ func generate(gen *protogen.Plugin) error {
 	nexusDoc := newDoc()
 	langsDoc := newDoc()
 	hasOps := false
+	collector := newSchemaCollector()
 
 	for _, f := range gen.Files {
 		if !f.Generate {
@@ -143,6 +144,15 @@ func generate(gen *protogen.Plugin) error {
 						map[string]string{"$ref": p.openAPIRefPrefix + string(m.Input.Desc.Name())},
 						map[string]string{"$ref": p.openAPIRefPrefix + string(m.Output.Desc.Name())},
 					)
+				} else {
+					inputName := msgSchemaName(m.Input.Desc)
+					outputName := msgSchemaName(m.Output.Desc)
+					collector.collect(m.Input.Desc)
+					collector.collect(m.Output.Desc)
+					addOperation(nexusDoc, svcName, methodName,
+						map[string]string{"$ref": "#/components/schemas/" + inputName},
+						map[string]string{"$ref": "#/components/schemas/" + outputName},
+					)
 				}
 
 				addOperation(langsDoc, svcName, methodName,
@@ -157,13 +167,17 @@ func generate(gen *protogen.Plugin) error {
 		return nil
 	}
 
-	if p.openAPIRefPrefix != "" && p.nexusrpcOut != "" {
-		if err := writeFile(gen, p.nexusrpcOut, nexusDoc); err != nil {
+	if p.openAPIRefPrefix == "" {
+		addComponentsSchemas(nexusDoc, collector)
+	}
+
+	if p.nexusRpcOut != "" {
+		if err := writeFile(gen, p.nexusRpcOut, nexusDoc); err != nil {
 			return err
 		}
 	}
-	if p.nexusrpcLangsOut != "" {
-		return writeFile(gen, p.nexusrpcLangsOut, langsDoc)
+	if p.nexusRpcLangsOut != "" {
+		return writeFile(gen, p.nexusRpcLangsOut, langsDoc)
 	}
 	return nil
 }
@@ -212,6 +226,273 @@ func langRefs(p params, file protoreflect.FileDescriptor, msg protoreflect.Messa
 		return nil
 	}
 	return refs
+}
+
+// schemaCollector recursively collects JSON Schema nodes for proto message types.
+type schemaCollector struct {
+	schemas map[string]*yaml.Node
+	visited map[string]bool
+}
+
+func newSchemaCollector() *schemaCollector {
+	return &schemaCollector{
+		schemas: make(map[string]*yaml.Node),
+		visited: make(map[string]bool),
+	}
+}
+
+// msgSchemaName converts a proto message full name to a JSON Schema component name.
+// It strips the proto package prefix and retains at most the last 2 path segments,
+// joining them with "_". This matches the OpenAPI spec naming convention:
+//
+//	temporal.api.common.v1.Payload.ExternalPayloadDetails → Payload_ExternalPayloadDetails
+//	temporal.api.common.v1.Link.WorkflowEvent.EventReference → WorkflowEvent_EventReference
+//	temporal.api.common.v1.Link.WorkflowEvent               → Link_WorkflowEvent
+func msgSchemaName(msg protoreflect.MessageDescriptor) string {
+	fullName := string(msg.FullName())
+	pkg := string(msg.ParentFile().Package())
+	if pkg != "" {
+		fullName = strings.TrimPrefix(fullName, pkg+".")
+	}
+	parts := strings.Split(fullName, ".")
+	if len(parts) > 2 {
+		parts = parts[len(parts)-2:]
+	}
+	return strings.Join(parts, "_")
+}
+
+// collect adds the JSON Schema for msg and all transitively referenced messages to c.schemas.
+// Marking visited before processing fields prevents infinite loops from circular references.
+func (c *schemaCollector) collect(msg protoreflect.MessageDescriptor) {
+	name := msgSchemaName(msg)
+	if c.visited[name] {
+		return
+	}
+	c.visited[name] = true
+
+	objNode := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	objNode.Content = append(objNode.Content, scalarNode("type"), scalarNode("object"))
+
+	fields := msg.Fields()
+	if fields.Len() > 0 {
+		propsNode := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		for i := 0; i < fields.Len(); i++ {
+			field := fields.Get(i)
+			propsNode.Content = append(propsNode.Content,
+				scalarNode(field.JSONName()),
+				c.fieldNode(field),
+			)
+		}
+		objNode.Content = append(objNode.Content, scalarNode("properties"), propsNode)
+	}
+
+	c.schemas[name] = objNode
+}
+
+// fieldNode returns the JSON Schema node for a single proto field, handling map,
+// repeated (list), and singular cardinalities.
+func (c *schemaCollector) fieldNode(field protoreflect.FieldDescriptor) *yaml.Node {
+	if field.IsMap() {
+		// map<K,V> → {type: object, additionalProperties: <value schema>}
+		valueField := field.Message().Fields().ByName("value")
+		node := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		node.Content = append(node.Content,
+			scalarNode("type"),
+			scalarNode("object"),
+			scalarNode("additionalProperties"),
+			c.kindNode(valueField),
+		)
+		return node
+	}
+	item := c.kindNode(field)
+	if field.IsList() {
+		// repeated T → {type: array, items: <item schema>}
+		node := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		node.Content = append(node.Content,
+			scalarNode("type"),
+			scalarNode("array"),
+			scalarNode("items"),
+			item,
+		)
+		return node
+	}
+	return item
+}
+
+// kindNode returns the JSON Schema for the base (scalar/message/enum) type of a field,
+// ignoring any repeated/map cardinality wrapping.
+func (c *schemaCollector) kindNode(field protoreflect.FieldDescriptor) *yaml.Node {
+	switch field.Kind() {
+	case protoreflect.BoolKind:
+		return typeNode("boolean")
+	case protoreflect.StringKind:
+		return typeNode("string")
+	case protoreflect.BytesKind:
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("string"),
+			scalarNode("format"), scalarNode("byte"),
+		)
+		return n
+	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Sfixed32Kind:
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("integer"),
+			scalarNode("format"), scalarNode("int32"),
+		)
+		return n
+	case protoreflect.Uint32Kind, protoreflect.Fixed32Kind:
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("integer"),
+			scalarNode("format"), scalarNode("uint32"),
+		)
+		return n
+	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind,
+		protoreflect.Uint64Kind, protoreflect.Fixed64Kind:
+		// protojson encodes 64-bit integers as decimal strings to avoid JS precision loss.
+		return typeNode("string")
+	case protoreflect.FloatKind:
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("number"),
+			scalarNode("format"), scalarNode("float"),
+		)
+		return n
+	case protoreflect.DoubleKind:
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("number"),
+			scalarNode("format"), scalarNode("double"),
+		)
+		return n
+	case protoreflect.EnumKind:
+		return enumNode(field.Enum())
+	case protoreflect.MessageKind, protoreflect.GroupKind:
+		return c.msgRefNode(field.Message())
+	}
+	return typeNode("object")
+}
+
+// msgRefNode returns an inline schema for well-known proto types, or a $ref for all others.
+// It also triggers recursive schema collection for non-well-known message types.
+func (c *schemaCollector) msgRefNode(msg protoreflect.MessageDescriptor) *yaml.Node {
+	switch string(msg.FullName()) {
+	case "google.protobuf.Duration":
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("string"),
+			scalarNode("pattern"), scalarNode(`^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$`),
+		)
+		return n
+	case "google.protobuf.Timestamp":
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("string"),
+			scalarNode("format"), scalarNode("date-time"),
+		)
+		return n
+	case "google.protobuf.Empty":
+		return typeNode("object")
+	case "google.protobuf.Any",
+		"google.protobuf.Struct",
+		"google.protobuf.Value":
+		return typeNode("object")
+	case "google.protobuf.ListValue":
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("array"),
+			scalarNode("items"), typeNode("object"),
+		)
+		return n
+	case "google.protobuf.BoolValue":
+		return typeNode("boolean")
+	case "google.protobuf.StringValue":
+		return typeNode("string")
+	case "google.protobuf.BytesValue":
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("string"),
+			scalarNode("format"), scalarNode("byte"),
+		)
+		return n
+	case "google.protobuf.Int32Value",
+		"google.protobuf.UInt32Value":
+		return typeNode("integer")
+	case "google.protobuf.Int64Value",
+		"google.protobuf.UInt64Value":
+		return typeNode("string")
+	case "google.protobuf.FloatValue":
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("number"),
+			scalarNode("format"), scalarNode("float"),
+		)
+		return n
+	case "google.protobuf.DoubleValue":
+		n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		n.Content = append(n.Content,
+			scalarNode("type"), scalarNode("number"),
+			scalarNode("format"), scalarNode("double"),
+		)
+		return n
+	}
+	name := msgSchemaName(msg)
+	c.collect(msg)
+	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	n.Content = append(n.Content, scalarNode("$ref"), scalarNode("#/components/schemas/"+name))
+	return n
+}
+
+// enumNode builds a JSON Schema enum node listing all enum value names.
+func enumNode(e protoreflect.EnumDescriptor) *yaml.Node {
+	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	seqNode := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+	values := e.Values()
+	for i := 0; i < values.Len(); i++ {
+		seqNode.Content = append(seqNode.Content, scalarNode(string(values.Get(i).Name())))
+	}
+	n.Content = append(n.Content,
+		scalarNode("enum"), seqNode,
+		scalarNode("type"), scalarNode("string"),
+		scalarNode("format"), scalarNode("enum"),
+	)
+	return n
+}
+
+func typeNode(t string) *yaml.Node {
+	n := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	n.Content = append(n.Content, scalarNode("type"), scalarNode(t))
+	return n
+}
+
+// addComponentsSchemas inserts a "components: schemas:" section into doc, positioned
+// between the "nexusrpc" version header and the "services" block. Schemas are sorted
+// alphabetically for deterministic output.
+func addComponentsSchemas(doc *yaml.Node, c *schemaCollector) {
+	root := doc.Content[0]
+
+	names := make([]string, 0, len(c.schemas))
+	for name := range c.schemas {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	schemasNode := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	for _, name := range names {
+		schemasNode.Content = append(schemasNode.Content, scalarNode(name), c.schemas[name])
+	}
+
+	componentsNode := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	componentsNode.Content = append(componentsNode.Content, scalarNode("schemas"), schemasNode)
+
+	// root.Content layout: [nexusrpc, 1.0.0, services, {...}]
+	// After insert:        [nexusrpc, 1.0.0, components, {...}, services, {...}]
+	newContent := make([]*yaml.Node, 0, len(root.Content)+2)
+	newContent = append(newContent, root.Content[:2]...)
+	newContent = append(newContent, scalarNode("components"), componentsNode)
+	newContent = append(newContent, root.Content[2:]...)
+	root.Content = newContent
 }
 
 // newDoc creates a yaml.Node document with the "nexusrpc: 1.0.0" header

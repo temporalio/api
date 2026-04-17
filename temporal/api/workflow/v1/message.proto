@@ -592,28 +592,28 @@ message WorkflowExecutionOptions {
 // User timers are not classified as in-flight work and will be skipped over.
 // When time advances, it skips to the earlier of the next user timer or the configured bound, if either exists.
 message TimeSkippingConfig {
+    reserved 2;
+    reserved "disable_propagation";
 
     // Enables or disables time skipping for this workflow execution.
-    // By default, this field is propagated to transitively related workflows (child workflows/start-as-new/reset) 
-    // at the time they are started.
-    // Changes made after a transitively related workflow has started are not propagated.
     bool enabled = 1;
 
-    // If set, the enabled field is not propagated to transitively related workflows.
-    bool disable_propagation = 2;
+    // If this execution was started by a previous execution that already skipped some time,
+    // it inherits the virtual time through the propagated skipped duration.
+    google.protobuf.Duration propagated_skipped_duration = 3;
 
-    // Optional bound that limits how long time skipping remains active.
-    // Once the bound is reached, time skipping is automatically disabled.
-    // It can later be re-enabled via UpdateWorkflowExecutionOptions.
+    // Optional bound that limits how far virtual time can advance while time skipping is active.
+    // Once the bound is reached, time skipping is automatically disabled,
+    // but can be re-enabled via UpdateWorkflowExecutionOptions.
     //
-    // This is particularly useful in testing scenarios where workflows
-    // are expected to receive signals, updates, or other events while
-    // timers are in progress.
+    // This is useful in testing scenarios where a workflow is expected to receive
+    // signals, updates, or other external events while timers are in progress.
     //
-    // This bound is not propagated to transitively related workflows. 
-    // When bound is also needed for transitively related workflows,
-    // it is recommended to set disable_propagation to true 
-    // and configure TimeSkippingConfig explicitly for transitively related workflows.
+    // Bound scope:
+    // - Each bound is independent for each workflow execution.
+    //   When a bound is propagated to a child workflow, the child's bound is only applied to that child execution.
+    // - Continue-as-new is an exception: continued workflow executions are treated as extensions of the
+    //   original execution, so the bound is shared across all executions in the chain.
     oneof bound {
 
         // Maximum total virtual time that can be skipped.

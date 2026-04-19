@@ -608,14 +608,18 @@ message TimeSkippingConfig {
     //
     // The bound is propagated to transitively related workflows differently
     // depending on the type and semantics of the related workflow:
-    // - For child workflows, the bound is propagated with the same value as the parent workflow.
-    //   If duration-based bound is used, the child workflow will have the full duration as the bound.
-    //   If target-time based bound is used, the child workflow will have the same target time as the parent workflow.
-    // - For continue-as-new workflows, if a duration-based bound is used, the remaining
-    //   duration is propagated, so the continue-as-new workflow shares the initial bound
-    //   with the parent workflow.
-    // - For reset workflows, the entire TimeSkippingConfig is restored to the value it
-    //   had at the event this workflow is reset to.
+    // - Child workflows: the bound is propagated with the same value as the
+    //   parent workflow, and the child begins execution at the parent's virtual
+    //   time. If the bound is duration-based, each child calculates its skipped
+    //   duration independently from its own start.
+    //
+    // - Continue-as-new workflows: the bound is propagated with the same value
+    //   as the previous workflow. If the bound is duration-based, the
+    //   continue-as-new workflow shares the accumulated duration with the
+    //   previous workflow.
+    //
+    // - Reset workflows: the entire TimeSkippingConfig is restored to the value
+    //   it had at the event this workflow was reset to.
     oneof bound {
 
         // Maximum total virtual time that can be skipped.

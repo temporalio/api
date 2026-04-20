@@ -196,6 +196,14 @@ message WorkflowExecutionStartedEventAttributes {
     // Used internally by the server during continue-as-new and retry.
     // Should not be read or interpreted by SDKs.
     DeclinedTargetVersionUpgrade declined_target_version_upgrade = 40;
+
+    // Initial time-skipping configuration for this workflow execution, recorded at start time.
+    // This may have been set explicitly via the start workflow request, or propagated from a
+    // parent/previous execution.
+    //
+    // The configuration may be updated after start via UpdateWorkflowExecutionOptions, which
+    // will be reflected in the WorkflowExecutionOptionsUpdatedEvent.
+    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 41;
 }
 
 // Wrapper for a target deployment version that the SDK declined to upgrade to.
@@ -604,6 +612,9 @@ message WorkflowExecutionSignaledEventAttributes {
     bool skip_generate_workflow_task = 5 [deprecated = true];
     // When signal origin is a workflow execution, this field is set.
     temporal.api.common.v1.WorkflowExecution external_workflow_execution = 6;
+    // The request ID of the Signal request, used by the server to attach this to
+    // the correct Event ID when generating link.
+    string request_id = 7;
 }
 
 message WorkflowExecutionTerminatedEventAttributes {

@@ -2012,6 +2012,7 @@ paths:
               - TASK_QUEUE_KIND_UNSPECIFIED
               - TASK_QUEUE_KIND_NORMAL
               - TASK_QUEUE_KIND_STICKY
+              - TASK_QUEUE_KIND_WORKER_COMMANDS
             type: string
             format: enum
         - name: taskQueue.normalName
@@ -6678,6 +6679,7 @@ paths:
               - TASK_QUEUE_KIND_UNSPECIFIED
               - TASK_QUEUE_KIND_NORMAL
               - TASK_QUEUE_KIND_STICKY
+              - TASK_QUEUE_KIND_WORKER_COMMANDS
             type: string
             format: enum
         - name: taskQueue.normalName
@@ -12588,18 +12590,16 @@ components:
       properties:
         attachRequestId:
           type: boolean
-          description: Attaches the request ID to the running workflow.
+          description: Attaches the request ID to the running execution.
         attachCompletionCallbacks:
           type: boolean
-          description: Attaches the completion callbacks to the running workflow.
+          description: Attaches the completion callbacks to the running execution.
         attachLinks:
           type: boolean
-          description: Attaches the links to the WorkflowExecutionOptionsUpdatedEvent history event.
+          description: Attaches the links to the running execution.
       description: |-
-        When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and
-         there is already an existing running workflow, OnConflictOptions defines actions to be taken on
-         the existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent
-         history event in the running workflow with the changes requested in this object.
+        When starting an execution with a conflict policy that uses an existing execution and there is already an existing
+         running execution, OnConflictOptions defines actions to be taken on the existing running execution.
     Outcome:
       type: object
       properties:
@@ -15109,6 +15109,13 @@ components:
         started:
           type: boolean
           description: If true, a new workflow was started.
+        signalLink:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: |-
+            Link to be associated with the WorkflowExecutionSignaled event.
+             Added on the response to propagate the backlink.
+             Available from Temporal server 1.31 and up.
     SignalWorkflowExecutionRequest:
       type: object
       properties:
@@ -15149,7 +15156,14 @@ components:
            - temporal.api.workflow.v1.PostResetOperation.SignalWorkflow.
     SignalWorkflowExecutionResponse:
       type: object
-      properties: {}
+      properties:
+        link:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: |-
+            Link to be associated with the WorkflowExecutionSignaled event.
+             Added on the response to propagate the backlink.
+             Available from Temporal server 1.31 and up.
     StartActivityExecutionRequest:
       type: object
       properties:
@@ -15267,6 +15281,10 @@ components:
           description: |-
             Links to be associated with the activity. Callbacks may also have associated links;
              links already included with a callback should not be duplicated here.
+        onConflictOptions:
+          allOf:
+            - $ref: '#/components/schemas/OnConflictOptions'
+          description: Options for handling conflicts when using ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING.
     StartActivityExecutionResponse:
       type: object
       properties:
@@ -15731,6 +15749,7 @@ components:
             - TASK_QUEUE_KIND_UNSPECIFIED
             - TASK_QUEUE_KIND_NORMAL
             - TASK_QUEUE_KIND_STICKY
+            - TASK_QUEUE_KIND_WORKER_COMMANDS
           type: string
           description: 'Default: TASK_QUEUE_KIND_NORMAL.'
           format: enum
@@ -18149,6 +18168,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecution'
           description: When signal origin is a workflow execution, this field is set.
+        requestId:
+          type: string
+          description: |-
+            The request ID of the Signal request, used by the server to attach this to
+             the correct Event ID when generating link.
     WorkflowExecutionStartedEventAttributes:
       type: object
       properties:
@@ -18389,6 +18413,16 @@ components:
 
              Used internally by the server during continue-as-new and retry.
              Should not be read or interpreted by SDKs.
+        timeSkippingConfig:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingConfig'
+          description: |-
+            Initial time-skipping configuration for this workflow execution, recorded at start time.
+             This may have been set explicitly via the start workflow request, or propagated from a
+             parent/previous execution.
+
+             The configuration may be updated after start via UpdateWorkflowExecutionOptions, which
+             will be reflected in the WorkflowExecutionOptionsUpdatedEvent.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object

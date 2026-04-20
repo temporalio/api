@@ -264,12 +264,17 @@ message PollWorkflowTaskQueueRequest {
     // `poller_group_infos` of the last the PollWorkflowTaskQueueResponse according to the
     // instructions. If not set, the poll is routed randomly which can cause it being blocked
     // without receiving a task while the queue actually has tasks in another server location.
-    string poller_group_id = 9;
+    string poller_group_id = 10;
     // The identity of the worker/client who is polling this task queue
     string identity = 3;
     // A unique key for this worker instance, used for tracking worker lifecycle.
     // This is guaranteed to be unique, whereas identity is not guaranteed to be unique.
     string worker_instance_key = 8;
+
+    // A dedicated per-worker Nexus task queue on which the server sends control
+    // tasks (e.g. activity cancellation) to this specific worker instance.
+    string worker_control_task_queue = 9;
+
     // Deprecated. Use deployment_options instead.
     // Each worker process should provide an ID unique to the specific set of code it is running
     // "checksum" in this field name isn't very accurate, it should be though of as an id.
@@ -279,7 +284,6 @@ message PollWorkflowTaskQueueRequest {
     // feature. See the `WorkerVersionCapabilities` docstring for more.
     temporal.api.common.v1.WorkerVersionCapabilities worker_version_capabilities = 5 [deprecated = true];
     // Worker deployment options that user has set in the worker.
-    // Experimental. Worker Deployments are experimental and might significantly change in the future.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
 
     // Removed in 1.55.0; was temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat
@@ -401,6 +405,14 @@ message RespondWorkflowTaskCompletedRequest {
     // Worker deployment options that user has set in the worker.
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 17;
 
+    // A unique key for this worker instance, used for tracking worker lifecycle.
+    // This is guaranteed to be unique, whereas identity is not guaranteed to be unique.
+    string worker_instance_key = 19;
+
+    // A dedicated per-worker Nexus task queue on which the server sends control
+    // tasks (e.g. activity cancellation) to this specific worker instance.
+    string worker_control_task_queue = 20;
+
     // SDK capability details.
     message Capabilities {
         // True if the SDK can handle speculative workflow task with command events. If true, the
@@ -465,12 +477,17 @@ message PollActivityTaskQueueRequest {
     // `poller_group_infos` of the last the PollActivityTaskQueueResponse according to the
     // instructions. If not set, the poll is routed randomly which can cause it being blocked
     // without receiving a task while the queue actually has tasks in another server location.
-    string poller_group_id = 9;
+    string poller_group_id = 10;
     // The identity of the worker/client
     string identity = 3;
     // A unique key for this worker instance, used for tracking worker lifecycle.
     // This is guaranteed to be unique, whereas identity is not guaranteed to be unique.
     string worker_instance_key = 8;
+
+    // A dedicated per-worker Nexus task queue on which the server sends control
+    // tasks (e.g. activity cancellation) to this specific worker instance.
+    string worker_control_task_queue = 9;
+
     temporal.api.taskqueue.v1.TaskQueueMetadata task_queue_metadata = 4;
     // Information about this worker's build identifier and if it is choosing to use the versioning
     // feature. See the `WorkerVersionCapabilities` docstring for more.
@@ -803,6 +820,10 @@ message SignalWorkflowExecutionRequest {
 }
 
 message SignalWorkflowExecutionResponse {
+    // Link to be associated with the WorkflowExecutionSignaled event.
+    // Added on the response to propagate the backlink.
+    // Available from Temporal server 1.31 and up.
+    temporal.api.common.v1.Link link = 1;
 }
 
 message SignalWithStartWorkflowExecutionRequest {
@@ -875,6 +896,10 @@ message SignalWithStartWorkflowExecutionResponse {
     string run_id = 1;
     // If true, a new workflow was started.
     bool started = 2;
+    // Link to be associated with the WorkflowExecutionSignaled event.
+    // Added on the response to propagate the backlink.
+    // Available from Temporal server 1.31 and up.
+    temporal.api.common.v1.Link signal_link = 3;
 }
 
 message ResetWorkflowExecutionRequest {
@@ -2967,6 +2992,14 @@ message StartActivityExecutionRequest {
     temporal.api.sdk.v1.UserMetadata user_metadata = 17;
     // Priority metadata.
     temporal.api.common.v1.Priority priority = 18;
+    // Callbacks to be called by the server when this activity reaches a terminal state.
+    // Callback addresses must be whitelisted in the server's dynamic configuration.
+    repeated temporal.api.common.v1.Callback completion_callbacks = 19;
+    // Links to be associated with the activity. Callbacks may also have associated links;
+    // links already included with a callback should not be duplicated here.
+    repeated temporal.api.common.v1.Link links = 20;
+    // Options for handling conflicts when using ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING.
+    temporal.api.common.v1.OnConflictOptions on_conflict_options = 21;
 }
 
 message StartActivityExecutionResponse {
@@ -2974,6 +3007,8 @@ message StartActivityExecutionResponse {
     string run_id = 1;
     // If true, a new activity was started.
     bool started = 2;
+    // Link to the started activity.
+    temporal.api.common.v1.Link link = 3;
 }
 
 message DescribeActivityExecutionRequest {
@@ -3010,6 +3045,9 @@ message DescribeActivityExecutionResponse {
 
     // Token for follow-on long-poll requests. Absent only if the activity is complete.
     bytes long_poll_token = 5;
+
+    // Callbacks attached to this activity execution and their current state.
+    repeated temporal.api.activity.v1.CallbackInfo callbacks = 6;
 }
 
 message PollActivityExecutionRequest {

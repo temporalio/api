@@ -11,13 +11,13 @@ option csharp_namespace = "Temporalio.Api.Deployment.V1";
 
 import "google/protobuf/timestamp.proto";
 
+import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/task_queue.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/compute/v1/config.proto";
 
 // Worker Deployment options set in SDK that need to be sent to server in every poll.
-// Experimental. Worker Deployments are experimental and might significantly change in the future.
 message WorkerDeploymentOptions {
     // Required when `worker_versioning_mode==VERSIONED`.
     string deployment_name = 1;
@@ -87,13 +87,12 @@ message DeploymentListInfo {
 }
 
 
-// A Worker Deployment Version (Version, for short) represents all workers of the same 
-// code and config within a Deployment. Workers of the same Version are expected to 
-// behave exactly the same so when executions move between them there are no 
+// A Worker Deployment Version (Version, for short) represents all workers of the same
+// code and config within a Deployment. Workers of the same Version are expected to
+// behave exactly the same so when executions move between them there are no
 // non-determinism issues.
-// Worker Deployment Versions are created in Temporal server automatically when 
+// Worker Deployment Versions are created in Temporal server automatically when
 // their first poller arrives to the server.
-// Experimental. Worker Deployments are experimental and might significantly change in the future.
 message WorkerDeploymentVersionInfo {
     // Deprecated. Use `deployment_version`.
     string version = 1 [deprecated = true];
@@ -175,7 +174,6 @@ message WorkerDeploymentVersionInfo {
 
 // Information about workflow drainage to help the user determine when it is safe
 // to decommission a Version. Not present while version is current or ramping.
-// Experimental. Worker Deployments are experimental and might significantly change in the future.
 message VersionDrainageInfo {
     // Set to DRAINING when the version first stops accepting new executions (is no longer current or ramping).
     // Set to DRAINED when no more open pinned workflows exist on this version.
@@ -186,14 +184,13 @@ message VersionDrainageInfo {
     google.protobuf.Timestamp last_checked_time = 3;
 }
 
-// A Worker Deployment (Deployment, for short) represents all workers serving 
-// a shared set of Task Queues. Typically, a Deployment represents one service or 
+// A Worker Deployment (Deployment, for short) represents all workers serving
+// a shared set of Task Queues. Typically, a Deployment represents one service or
 // application.
-// A Deployment contains multiple Deployment Versions, each representing a different 
+// A Deployment contains multiple Deployment Versions, each representing a different
 // version of workers. (see documentation of WorkerDeploymentVersionInfo)
 // Deployment records are created in Temporal server automatically when their
 // first poller arrives to the server.
-// Experimental. Worker Deployments are experimental and might significantly change in the future.
 message WorkerDeploymentInfo {
     // Identifies a Worker Deployment. Must be unique within the namespace.
     string name = 1;
@@ -257,6 +254,7 @@ message WorkerDeploymentInfo {
         // Timestamp when this version last stopped being current or ramping.
         // Cleared if the version becomes current or ramping again.
         google.protobuf.Timestamp last_deactivation_time = 10;
+        temporal.api.compute.v1.ComputeConfigSummary compute_config = 13;
     }
 }
 
@@ -317,11 +315,23 @@ message RoutingConfig {
     int64 revision_number = 10;
 }
 
-// Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version 
+// Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version
 // to a workflow execution whose parent/previous workflow has an AutoUpgrade behavior.
+// Also used for Upgrade-on-CaN behaviors AutoUpgrade and UseRampingVersion.
 message InheritedAutoUpgradeInfo {
     // The source deployment version of the parent/previous workflow.
     temporal.api.deployment.v1.WorkerDeploymentVersion source_deployment_version = 1;
     // The revision number of the source deployment version of the parent/previous workflow.
     int64 source_deployment_revision_number = 2;
+    // Experimental.
+    // If this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior
+    // specified in that command.
+    // Only used for the initial task of this run and the initial task of any retries of this run.
+    // Not passed to children or to future continue-as-new.
+    //
+    // Note: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,
+    // a non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility
+    // with history events generated during that time, know that an UNSPECIFIED value here is equivalent to AutoUpgrade
+    // value if the InheritedAutoUpgradeInfo is non-empty.
+    temporal.api.enums.v1.ContinueAsNewVersioningBehavior continue_as_new_initial_versioning_behavior = 3;
 }

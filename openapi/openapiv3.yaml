@@ -1812,6 +1812,7 @@ paths:
               - TASK_QUEUE_KIND_UNSPECIFIED
               - TASK_QUEUE_KIND_NORMAL
               - TASK_QUEUE_KIND_STICKY
+              - TASK_QUEUE_KIND_WORKER_COMMANDS
             type: string
             format: enum
         - name: taskQueue.normalName
@@ -6046,6 +6047,7 @@ paths:
               - TASK_QUEUE_KIND_UNSPECIFIED
               - TASK_QUEUE_KIND_NORMAL
               - TASK_QUEUE_KIND_STICKY
+              - TASK_QUEUE_KIND_WORKER_COMMANDS
             type: string
             format: enum
         - name: taskQueue.normalName
@@ -8236,6 +8238,11 @@ components:
         canceledReason:
           type: string
           description: Set if activity cancelation was requested.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to related entities, such as the entity that started this activity.
       description: Information about a standalone activity.
     ActivityExecutionListInfo:
       type: object
@@ -9066,10 +9073,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/Callback'
           description: Information on how this callback should be invoked (e.g. its URL and type).
-        trigger:
-          allOf:
-            - $ref: '#/components/schemas/CallbackInfo_Trigger'
-          description: Trigger for this callback.
         registrationTime:
           type: string
           description: The time when the callback was registered.
@@ -9084,6 +9087,7 @@ components:
             - CALLBACK_STATE_SUCCEEDED
             - CALLBACK_STATE_BLOCKED
           type: string
+          description: The current state of the callback.
           format: enum
         attempt:
           type: integer
@@ -9106,16 +9110,7 @@ components:
         blockedReason:
           type: string
           description: If the state is BLOCKED, blocked reason provides additional information.
-      description: CallbackInfo contains the state of an attached workflow callback.
-    CallbackInfo_Trigger:
-      type: object
-      properties:
-        workflowClosed:
-          $ref: '#/components/schemas/CallbackInfo_WorkflowClosed'
-    CallbackInfo_WorkflowClosed:
-      type: object
-      properties: {}
-      description: Trigger for when the workflow is closed.
+      description: Common callback information. Specific CallbackInfo messages should embed this and may include additional fields.
     Callback_Internal:
       type: object
       properties:
@@ -9144,6 +9139,9 @@ components:
       properties:
         details:
           $ref: '#/components/schemas/Payloads'
+        identity:
+          type: string
+          description: The identity of the worker or client that requested the cancellation.
     ChildWorkflowExecutionCanceledEventAttributes:
       type: object
       properties:
@@ -9374,7 +9372,14 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/ComputeConfigScalingGroup'
-          description: "Each scaling group describes a compute config for a specific subset of the worker \n deployment version: covering a specific set of task types and/or regions.\n Having different configurations for different task types, allows independent\n tuning of activity and workflow task processing (for example).\n\n The key of the map is the ID of the scaling group used to reference it in subsequent\n update calls."
+          description: |-
+            Each scaling group describes a compute config for a specific subset of the worker
+             deployment version: covering a specific set of task types and/or regions.
+             Having different configurations for different task types, allows independent
+             tuning of activity and workflow task processing (for example).
+
+             The key of the map is the ID of the scaling group used to reference it in subsequent
+             update calls.
       description: |-
         ComputeConfig stores configuration that helps a worker control plane
          controller understand *when* and *how* to respond to worker lifecycle
@@ -9392,7 +9397,10 @@ components:
               - TASK_QUEUE_TYPE_NEXUS
             type: string
             format: enum
-          description: "Optional. The set of task queue types this scaling group serves. \n If not provided, this scaling group serves all not otherwise defined\n task types."
+          description: |-
+            Optional. The set of task queue types this scaling group serves.
+             If not provided, this scaling group serves all not otherwise defined
+             task types.
         provider:
           allOf:
             - $ref: '#/components/schemas/ComputeProvider'
@@ -9405,6 +9413,21 @@ components:
           description: |-
             Informs a worker lifecycle controller *when* and *how often* to perform
              certain worker lifecycle actions like starting a serverless worker.
+    ComputeConfigScalingGroupSummary:
+      type: object
+      properties:
+        taskQueueTypes:
+          type: array
+          items:
+            enum:
+              - TASK_QUEUE_TYPE_UNSPECIFIED
+              - TASK_QUEUE_TYPE_WORKFLOW
+              - TASK_QUEUE_TYPE_ACTIVITY
+              - TASK_QUEUE_TYPE_NEXUS
+            type: string
+            format: enum
+        providerType:
+          type: string
     ComputeConfigScalingGroupUpdate:
       type: object
       properties:
@@ -9421,6 +9444,14 @@ components:
              - Accepted paths: "task_queue_types", "provider", "provider.type", "provider.details",
                "provider.nexus_endpoint", "scaler", "scaler.type", "scaler.details"
           format: field-mask
+    ComputeConfigSummary:
+      type: object
+      properties:
+        scalingGroups:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComputeConfigScalingGroupSummary'
+      description: A subset of information in ComputeConfig optimized for list views.
     ComputeProvider:
       type: object
       properties:
@@ -9876,6 +9907,11 @@ components:
           type: string
           description: Token for follow-on long-poll requests. Absent only if the activity is complete.
           format: bytes
+        callbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CallbackInfo'
+          description: Callbacks attached to this activity execution and their current state.
     DescribeBatchOperationResponse:
       type: object
       properties:
@@ -10694,7 +10730,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Link'
-          description: Links associated with the event.
+          description: Links to related entities, such as the entity that started this event's workflow.
         principal:
           allOf:
             - $ref: '#/components/schemas/Principal'
@@ -10832,7 +10868,28 @@ components:
         sourceDeploymentRevisionNumber:
           type: string
           description: The revision number of the source deployment version of the parent/previous workflow.
-      description: "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version \n to a workflow execution whose parent/previous workflow has an AutoUpgrade behavior."
+        continueAsNewInitialVersioningBehavior:
+          enum:
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION
+          type: string
+          description: |-
+            Experimental.
+             If this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior
+             specified in that command.
+             Only used for the initial task of this run and the initial task of any retries of this run.
+             Not passed to children or to future continue-as-new.
+
+             Note: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,
+             a non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility
+             with history events generated during that time, know that an UNSPECIFIED value here is equivalent to AutoUpgrade
+             value if the InheritedAutoUpgradeInfo is non-empty.
+          format: enum
+      description: |-
+        Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version
+         to a workflow execution whose parent/previous workflow has an AutoUpgrade behavior.
+         Also used for Upgrade-on-CaN behaviors AutoUpgrade and UseRampingVersion.
     Input:
       type: object
       properties:
@@ -10877,11 +10934,23 @@ components:
           $ref: '#/components/schemas/Link_WorkflowEvent'
         batchJob:
           $ref: '#/components/schemas/Link_BatchJob'
+        activity:
+          $ref: '#/components/schemas/Link_Activity'
       description: |-
         Link can be associated with history events. It might contain information about an external entity
          related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
          in this case, a history event in workflow A could contain a Link to the workflow started event in
          workflow B, and vice-versa.
+    Link_Activity:
+      type: object
+      properties:
+        namespace:
+          type: string
+        activityId:
+          type: string
+        runId:
+          type: string
+      description: A link to an activity.
     Link_BatchJob:
       type: object
       properties:
@@ -11657,18 +11726,16 @@ components:
       properties:
         attachRequestId:
           type: boolean
-          description: Attaches the request ID to the running workflow.
+          description: Attaches the request ID to the running execution.
         attachCompletionCallbacks:
           type: boolean
-          description: Attaches the completion callbacks to the running workflow.
+          description: Attaches the completion callbacks to the running execution.
         attachLinks:
           type: boolean
-          description: Attaches the links to the WorkflowExecutionOptionsUpdatedEvent history event.
+          description: Attaches the links to the running execution.
       description: |-
-        When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and
-         there is already an existing running workflow, OnConflictOptions defines actions to be taken on
-         the existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent
-         history event in the running workflow with the changes requested in this object.
+        When starting an execution with a conflict policy that uses an existing execution and there is already an existing
+         running execution, OnConflictOptions defines actions to be taken on the existing running execution.
     Outcome:
       type: object
       properties:
@@ -14122,6 +14189,13 @@ components:
         started:
           type: boolean
           description: If true, a new workflow was started.
+        signalLink:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: |-
+            Link to be associated with the WorkflowExecutionSignaled event.
+             Added on the response to propagate the backlink.
+             Available from Temporal server 1.31 and up.
     SignalWorkflowExecutionRequest:
       type: object
       properties:
@@ -14162,7 +14236,14 @@ components:
            - temporal.api.workflow.v1.PostResetOperation.SignalWorkflow.
     SignalWorkflowExecutionResponse:
       type: object
-      properties: {}
+      properties:
+        link:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: |-
+            Link to be associated with the WorkflowExecutionSignaled event.
+             Added on the response to propagate the backlink.
+             Available from Temporal server 1.31 and up.
     StartActivityExecutionRequest:
       type: object
       properties:
@@ -14266,6 +14347,24 @@ components:
           allOf:
             - $ref: '#/components/schemas/Priority'
           description: Priority metadata.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: |-
+            Callbacks to be called by the server when this activity reaches a terminal state.
+             Callback addresses must be whitelisted in the server's dynamic configuration.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: |-
+            Links to be associated with the activity. Callbacks may also have associated links;
+             links already included with a callback should not be duplicated here.
+        onConflictOptions:
+          allOf:
+            - $ref: '#/components/schemas/OnConflictOptions'
+          description: Options for handling conflicts when using ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING.
     StartActivityExecutionResponse:
       type: object
       properties:
@@ -14275,6 +14374,10 @@ components:
         started:
           type: boolean
           description: If true, a new activity was started.
+        link:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: Link to the started activity.
     StartBatchOperationRequest:
       type: object
       properties:
@@ -14726,6 +14829,7 @@ components:
             - TASK_QUEUE_KIND_UNSPECIFIED
             - TASK_QUEUE_KIND_NORMAL
             - TASK_QUEUE_KIND_STICKY
+            - TASK_QUEUE_KIND_WORKER_COMMANDS
           type: string
           description: 'Default: TASK_QUEUE_KIND_NORMAL.'
           format: enum
@@ -14926,7 +15030,6 @@ components:
           type: string
           description: Last time versioning information of this Task Queue changed.
           format: date-time
-      description: Experimental. Worker Deployments are experimental and might significantly change in the future.
     TerminateActivityExecutionRequest:
       type: object
       properties:
@@ -14981,7 +15084,10 @@ components:
       properties: {}
     TerminatedFailureInfo:
       type: object
-      properties: {}
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker or client that requested the termination.
     TimeSkippingConfig:
       type: object
       properties:
@@ -15737,7 +15843,6 @@ components:
       description: |-
         Information about workflow drainage to help the user determine when it is safe
          to decommission a Version. Not present while version is current or ramping.
-         Experimental. Worker Deployments are experimental and might significantly change in the future.
     VersionInfo:
       type: object
       properties:
@@ -15928,7 +16033,14 @@ components:
             Indicates whether the routing_config has been fully propagated to all
              relevant task queues and their partitions.
           format: enum
-      description: "A Worker Deployment (Deployment, for short) represents all workers serving \n a shared set of Task Queues. Typically, a Deployment represents one service or \n application.\n A Deployment contains multiple Deployment Versions, each representing a different \n version of workers. (see documentation of WorkerDeploymentVersionInfo)\n Deployment records are created in Temporal server automatically when their\n first poller arrives to the server.\n Experimental. Worker Deployments are experimental and might significantly change in the future."
+      description: |-
+        A Worker Deployment (Deployment, for short) represents all workers serving
+         a shared set of Task Queues. Typically, a Deployment represents one service or
+         application.
+         A Deployment contains multiple Deployment Versions, each representing a different
+         version of workers. (see documentation of WorkerDeploymentVersionInfo)
+         Deployment records are created in Temporal server automatically when their
+         first poller arrives to the server.
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object
       properties:
@@ -16002,6 +16114,8 @@ components:
             Timestamp when this version last stopped being current or ramping.
              Cleared if the version becomes current or ramping again.
           format: date-time
+        computeConfig:
+          $ref: '#/components/schemas/ComputeConfigSummary'
     WorkerDeploymentOptions:
       type: object
       properties:
@@ -16024,9 +16138,7 @@ components:
              same `deployment_name` and `build_id` combination, across all Task Queues.
              When `worker_versioning_mode==VERSIONED`, the worker will be part of a Deployment Version.
           format: enum
-      description: |-
-        Worker Deployment options set in SDK that need to be sent to server in every poll.
-         Experimental. Worker Deployments are experimental and might significantly change in the future.
+      description: Worker Deployment options set in SDK that need to be sent to server in every poll.
     WorkerDeploymentVersion:
       type: object
       properties:
@@ -16156,7 +16268,13 @@ components:
              - `CreateWorkerDeploymentVersion`
              - `UpdateWorkerDeploymentVersionComputeConfig`
              - `UpdateWorkerDeploymentVersionMetadata`
-      description: "A Worker Deployment Version (Version, for short) represents all workers of the same \n code and config within a Deployment. Workers of the same Version are expected to \n behave exactly the same so when executions move between them there are no \n non-determinism issues.\n Worker Deployment Versions are created in Temporal server automatically when \n their first poller arrives to the server.\n Experimental. Worker Deployments are experimental and might significantly change in the future."
+      description: |-
+        A Worker Deployment Version (Version, for short) represents all workers of the same
+         code and config within a Deployment. Workers of the same Version are expected to
+         behave exactly the same so when executions move between them there are no
+         non-determinism issues.
+         Worker Deployment Versions are created in Temporal server automatically when
+         their first poller arrives to the server.
     WorkerDeploymentVersionInfo_VersionTaskQueueInfo:
       type: object
       properties:
@@ -16736,6 +16854,7 @@ components:
           enum:
             - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
             - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION
           type: string
           description: |-
             Experimental. Optionally decide the versioning behavior that the first task of the new run should use.
@@ -16922,9 +17041,7 @@ components:
              Experimental. Versioning info is experimental and might change in the future.
         workerDeploymentName:
           type: string
-          description: |-
-            The name of Worker Deployment that completed the most recent workflow task.
-             Experimental. Worker Deployments are experimental and might change in the future.
+          description: The name of Worker Deployment that completed the most recent workflow task.
         priority:
           allOf:
             - $ref: '#/components/schemas/Priority'
@@ -17041,6 +17158,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecution'
           description: When signal origin is a workflow execution, this field is set.
+        requestId:
+          type: string
+          description: |-
+            The request ID of the Signal request, used by the server to attach this to
+             the correct Event ID when generating link.
     WorkflowExecutionStartedEventAttributes:
       type: object
       properties:
@@ -17281,6 +17403,16 @@ components:
 
              Used internally by the server during continue-as-new and retry.
              Should not be read or interpreted by SDKs.
+        timeSkippingConfig:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingConfig'
+          description: |-
+            Initial time-skipping configuration for this workflow execution, recorded at start time.
+             This may have been set explicitly via the start workflow request, or propagated from a
+             parent/previous execution.
+
+             The configuration may be updated after start via UpdateWorkflowExecutionOptions, which
+             will be reflected in the WorkflowExecutionOptionsUpdatedEvent.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -17512,6 +17644,24 @@ components:
              Note: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not
              face the problem of inconsistent dispatching that arises from eventual consistency between
              task queues and their partitions.
+        continueAsNewInitialVersioningBehavior:
+          enum:
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE
+            - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION
+          type: string
+          description: |-
+            Experimental.
+             If this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior
+             specified in that command.
+             Only used for the initial task of this run and the initial task of any retries of this run.
+             Not passed to children or to future continue-as-new.
+
+             Note: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,
+             a non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility
+             with ContinueAsNew history commands generated during that time, know that an UNSPECIFIED value here is equivalent
+             to ContinueAsNewVersioningBehaviorAutoUpgrade if the behavior of the workflow is AutoUpgrade.
+          format: enum
       description: |-
         Holds all the information about worker versioning for a particular workflow execution.
          Experimental. Versioning info is experimental and might change in the future.
@@ -17711,21 +17861,18 @@ components:
           description: |-
             The Worker Deployment Version that completed this task. Must be set if `versioning_behavior`
              is set. This value updates workflow execution's `versioning_info.version`.
-             Experimental. Worker Deployments are experimental and might significantly change in the future.
              Deprecated. Replaced with `deployment_version`.
         workerDeploymentName:
           type: string
           description: |-
             The name of Worker Deployment that completed this task. Must be set if `versioning_behavior`
              is set. This value updates workflow execution's `worker_deployment_name`.
-             Experimental. Worker Deployments are experimental and might significantly change in the future.
         deploymentVersion:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentVersion'
           description: |-
             The Worker Deployment Version that completed this task. Must be set if `versioning_behavior`
              is set. This value updates workflow execution's `versioning_info.deployment_version`.
-             Experimental. Worker Deployments are experimental and might significantly change in the future.
     WorkflowTaskCompletedMetadata:
       type: object
       properties:

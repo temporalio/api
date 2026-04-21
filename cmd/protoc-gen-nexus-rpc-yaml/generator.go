@@ -149,6 +149,12 @@ func generate(gen *protogen.Plugin) error {
 					outputName := msgSchemaName(m.Output.Desc)
 					collector.collect(m.Input.Desc)
 					collector.collect(m.Output.Desc)
+					if refs := protoRefMap(langRefs(p, f.Desc, m.Input.Desc)); refs != nil {
+						collector.protoRefs[inputName] = refs
+					}
+					if refs := protoRefMap(langRefs(p, f.Desc, m.Output.Desc)); refs != nil {
+						collector.protoRefs[outputName] = refs
+					}
 					addOperation(nexusDoc, svcName, methodName,
 						map[string]string{"$ref": "#/types/" + inputName},
 						map[string]string{"$ref": "#/types/" + outputName},
@@ -230,15 +236,30 @@ func langRefs(p params, file protoreflect.FileDescriptor, msg protoreflect.Messa
 
 // schemaCollector recursively collects JSON Schema nodes for proto message types.
 type schemaCollector struct {
-	schemas map[string]*yaml.Node
-	visited map[string]bool
+	schemas   map[string]*yaml.Node
+	visited   map[string]bool
+	protoRefs map[string]map[string]string // schema name → {$goProtoRef: ..., $pythonProtoRef: ...}
 }
 
 func newSchemaCollector() *schemaCollector {
 	return &schemaCollector{
-		schemas: make(map[string]*yaml.Node),
-		visited: make(map[string]bool),
+		schemas:   make(map[string]*yaml.Node),
+		visited:   make(map[string]bool),
+		protoRefs: make(map[string]map[string]string),
 	}
+}
+
+// protoRefMap converts a langRefs map (keys like $goRef, $pythonRef) to proto ref keys
+// ($goProtoRef, $pythonProtoRef, …). Returns nil if refs is empty.
+func protoRefMap(refs map[string]string) map[string]string {
+	if len(refs) == 0 {
+		return nil
+	}
+	result := make(map[string]string, len(refs))
+	for k, v := range refs {
+		result[strings.TrimSuffix(k, "Ref")+"ProtoRef"] = v
+	}
+	return result
 }
 
 // msgSchemaName converts a proto message full name to a JSON Schema component name.
@@ -480,7 +501,20 @@ func addTypes(doc *yaml.Node, c *schemaCollector) {
 
 	typesNode := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
 	for _, name := range names {
-		typesNode.Content = append(typesNode.Content, scalarNode(name), c.schemas[name])
+		schema := c.schemas[name]
+		if refs, ok := c.protoRefs[name]; ok {
+			refKeys := make([]string, 0, len(refs))
+			for k := range refs {
+				refKeys = append(refKeys, k)
+			}
+			sort.Strings(refKeys)
+			prefix := make([]*yaml.Node, 0, 2*len(refs))
+			for _, k := range refKeys {
+				prefix = append(prefix, scalarNode(k), scalarNode(refs[k]))
+			}
+			schema.Content = append(prefix, schema.Content...)
+		}
+		typesNode.Content = append(typesNode.Content, scalarNode(name), schema)
 	}
 
 	// root.Content layout: [nexusrpc, 1.0.0, services, {...}]

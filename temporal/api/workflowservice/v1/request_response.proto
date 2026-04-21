@@ -2693,7 +2693,7 @@ message RecordWorkerHeartbeatRequest {
     string identity = 2;
 
     repeated temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat = 3;
-    
+
     // Resource ID for routing. Contains the worker grouping key.
     string resource_id = 4;
 }
@@ -3037,32 +3037,49 @@ message StartNexusOperationExecutionRequest {
     string operation = 7;
 
     // Schedule-to-close timeout for this operation.
-    // This is the only timeout settable for a Nexus operation.
+    // Indicates how long the caller is willing to wait for operation completion.
+    // Calls are retried internally by the server.
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration schedule_to_close_timeout = 8;
 
+    // Schedule-to-start timeout for this operation.
+    // Indicates how long the caller is willing to wait for the operation to be started (or completed if synchronous)
+    // by the handler.
+    // If not set or zero, no schedule-to-start timeout is enforced.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_start_timeout = 9;
+
+    // Start-to-close timeout for this operation.
+    // Indicates how long the caller is willing to wait for an asynchronous operation to complete after it has been
+    // started. Synchronous operations ignore this timeout.
+    // If not set or zero, no start-to-close timeout is enforced.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 10;
+
     // Serialized input to the operation. Passed as the request payload.
-    temporal.api.common.v1.Payload input = 9;
+    temporal.api.common.v1.Payload input = 11;
 
     // Defines whether to allow re-using the operation id from a previously *closed* operation.
     // The default policy is NEXUS_OPERATION_ID_REUSE_POLICY_ALLOW_DUPLICATE.
-    temporal.api.enums.v1.NexusOperationIdReusePolicy id_reuse_policy = 10;
+    temporal.api.enums.v1.NexusOperationIdReusePolicy id_reuse_policy = 12;
     // Defines how to resolve an operation id conflict with a *running* operation.
     // The default policy is NEXUS_OPERATION_ID_CONFLICT_POLICY_FAIL.
-    temporal.api.enums.v1.NexusOperationIdConflictPolicy id_conflict_policy = 11;
+    temporal.api.enums.v1.NexusOperationIdConflictPolicy id_conflict_policy = 13;
 
     // Search attributes for indexing.
-    temporal.api.common.v1.SearchAttributes search_attributes = 12;
+    temporal.api.common.v1.SearchAttributes search_attributes = 14;
     // Header to attach to the Nexus request.
     // Users are responsible for encrypting sensitive data in this header as it is stored in workflow history and
     // transmitted to external services as-is.
     // This is useful for propagating tracing information.
     // Note these headers are not the same as Temporal headers on internal activities and child workflows, these are
     // transmitted to Nexus operations that may be external and are not traditional payloads.
-    map<string, string> nexus_header = 13;
+    map<string, string> nexus_header = 15;
     // Metadata for use by user interfaces to display the fixed as-of-start summary and details of the operation.
-    temporal.api.sdk.v1.UserMetadata user_metadata = 14;
+    temporal.api.sdk.v1.UserMetadata user_metadata = 16;
 }
 
 message StartNexusOperationExecutionResponse {

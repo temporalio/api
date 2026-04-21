@@ -11,6 +11,7 @@ option csharp_namespace = "Temporalio.Api.Deployment.V1";
 
 import "google/protobuf/timestamp.proto";
 
+import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/task_queue.proto";
 import "temporal/api/common/v1/message.proto";
@@ -316,9 +317,21 @@ message RoutingConfig {
 
 // Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version
 // to a workflow execution whose parent/previous workflow has an AutoUpgrade behavior.
+// Also used for Upgrade-on-CaN behaviors AutoUpgrade and UseRampingVersion.
 message InheritedAutoUpgradeInfo {
     // The source deployment version of the parent/previous workflow.
     temporal.api.deployment.v1.WorkerDeploymentVersion source_deployment_version = 1;
     // The revision number of the source deployment version of the parent/previous workflow.
     int64 source_deployment_revision_number = 2;
+    // Experimental.
+    // If this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior
+    // specified in that command.
+    // Only used for the initial task of this run and the initial task of any retries of this run.
+    // Not passed to children or to future continue-as-new.
+    //
+    // Note: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,
+    // a non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility
+    // with history events generated during that time, know that an UNSPECIFIED value here is equivalent to AutoUpgrade
+    // value if the InheritedAutoUpgradeInfo is non-empty.
+    temporal.api.enums.v1.ContinueAsNewVersioningBehavior continue_as_new_initial_versioning_behavior = 3;
 }

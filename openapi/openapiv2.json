@@ -1895,14 +1895,15 @@
           },
           {
             "name": "taskQueue.kind",
-            "description": "Default: TASK_QUEUE_KIND_NORMAL.\n\n - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.",
+            "description": "Default: TASK_QUEUE_KIND_NORMAL.\n\n - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.\n - TASK_QUEUE_KIND_WORKER_COMMANDS: A worker-commands task queue is used for server-to-worker communication (e.g. activity\ncancellations). These queues are ephemeral and per-worker-process — they exist only for\nthe lifetime of the worker process. Used with TASK_QUEUE_TYPE_NEXUS and polled via\nPollNexusTaskQueue.",
             "in": "query",
             "required": false,
             "type": "string",
             "enum": [
               "TASK_QUEUE_KIND_UNSPECIFIED",
               "TASK_QUEUE_KIND_NORMAL",
-              "TASK_QUEUE_KIND_STICKY"
+              "TASK_QUEUE_KIND_STICKY",
+              "TASK_QUEUE_KIND_WORKER_COMMANDS"
             ],
             "default": "TASK_QUEUE_KIND_UNSPECIFIED"
           },
@@ -6632,14 +6633,15 @@
           },
           {
             "name": "taskQueue.kind",
-            "description": "Default: TASK_QUEUE_KIND_NORMAL.\n\n - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.",
+            "description": "Default: TASK_QUEUE_KIND_NORMAL.\n\n - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.\n - TASK_QUEUE_KIND_WORKER_COMMANDS: A worker-commands task queue is used for server-to-worker communication (e.g. activity\ncancellations). These queues are ephemeral and per-worker-process — they exist only for\nthe lifetime of the worker process. Used with TASK_QUEUE_TYPE_NEXUS and polled via\nPollNexusTaskQueue.",
             "in": "query",
             "required": false,
             "type": "string",
             "enum": [
               "TASK_QUEUE_KIND_UNSPECIFIED",
               "TASK_QUEUE_KIND_NORMAL",
-              "TASK_QUEUE_KIND_STICKY"
+              "TASK_QUEUE_KIND_STICKY",
+              "TASK_QUEUE_KIND_WORKER_COMMANDS"
             ],
             "default": "TASK_QUEUE_KIND_UNSPECIFIED"
           },
@@ -9041,13 +9043,9 @@
     }
   },
   "definitions": {
-    "CallbackInfoTrigger": {
+    "CallbackInfoActivityClosed": {
       "type": "object",
-      "properties": {
-        "workflowClosed": {
-          "$ref": "#/definitions/CallbackInfoWorkflowClosed"
-        }
-      }
+      "description": "Trigger for when the activity is closed."
     },
     "CallbackInfoWorkflowClosed": {
       "type": "object",
@@ -9155,6 +9153,21 @@
         }
       },
       "description": "Target a worker polling on a Nexus task queue in a specific namespace."
+    },
+    "LinkActivity": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "activityId": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        }
+      },
+      "description": "A link to an activity."
     },
     "LinkBatchJob": {
       "type": "object",
@@ -10437,6 +10450,26 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "description": "Priority metadata."
+        },
+        "completionCallbacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Callback"
+          },
+          "description": "Callbacks to be called by the server when this activity reaches a terminal state.\nCallback addresses must be whitelisted in the server's dynamic configuration."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apiCommonV1Link"
+          },
+          "description": "Links to be associated with the activity. Callbacks may also have associated links;\nlinks already included with a callback should not be duplicated here."
+        },
+        "onConflictOptions": {
+          "$ref": "#/definitions/apiCommonV1OnConflictOptions",
+          "description": "Options for handling conflicts when using ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING."
         }
       }
     },
@@ -10591,7 +10624,7 @@
           "description": "If set, takes precedence over the Versioning Behavior sent by the SDK on Workflow Task completion.\nTo unset the override after the workflow is running, use UpdateWorkflowExecutionOptions."
         },
         "onConflictOptions": {
-          "$ref": "#/definitions/v1OnConflictOptions",
+          "$ref": "#/definitions/apiWorkflowV1OnConflictOptions",
           "description": "Defines actions to be done to the existing running workflow when the conflict policy\nWORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING is used. If not set (ie., nil value) or set to a\nempty object (ie., all options with default value), it won't do anything to the existing\nrunning workflow. If set, it will add a history event to the running workflow."
         },
         "priority": {
@@ -11084,6 +11117,159 @@
       },
       "description": "Used to validate the compute config without attaching it to a Worker Deployment Version."
     },
+    "apiActivityV1CallbackInfo": {
+      "type": "object",
+      "properties": {
+        "trigger": {
+          "$ref": "#/definitions/apiActivityV1CallbackInfoTrigger",
+          "description": "Trigger for this callback."
+        },
+        "info": {
+          "$ref": "#/definitions/apiCallbackV1CallbackInfo",
+          "description": "Common callback info."
+        }
+      },
+      "description": "CallbackInfo contains the state of an attached activity callback."
+    },
+    "apiActivityV1CallbackInfoTrigger": {
+      "type": "object",
+      "properties": {
+        "activityClosed": {
+          "$ref": "#/definitions/CallbackInfoActivityClosed"
+        }
+      }
+    },
+    "apiCallbackV1CallbackInfo": {
+      "type": "object",
+      "properties": {
+        "callback": {
+          "$ref": "#/definitions/v1Callback",
+          "description": "Information on how this callback should be invoked (e.g. its URL and type)."
+        },
+        "registrationTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the callback was registered."
+        },
+        "state": {
+          "$ref": "#/definitions/v1CallbackState",
+          "description": "The current state of the callback."
+        },
+        "attempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The number of attempts made to deliver the callback.\nThis number represents a minimum bound since the attempt is incremented after the callback request completes."
+        },
+        "lastAttemptCompleteTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the last attempt completed."
+        },
+        "lastAttemptFailure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "The last attempt's failure, if any."
+        },
+        "nextAttemptScheduleTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the next attempt is scheduled."
+        },
+        "blockedReason": {
+          "type": "string",
+          "description": "If the state is BLOCKED, blocked reason provides additional information."
+        }
+      },
+      "description": "Common callback information. Specific CallbackInfo messages should embed this and may include additional fields."
+    },
+    "apiCommonV1OnConflictOptions": {
+      "type": "object",
+      "properties": {
+        "attachRequestId": {
+          "type": "boolean",
+          "description": "Attaches the request ID to the running execution."
+        },
+        "attachCompletionCallbacks": {
+          "type": "boolean",
+          "description": "Attaches the completion callbacks to the running execution."
+        },
+        "attachLinks": {
+          "type": "boolean",
+          "description": "Attaches the links to the running execution."
+        }
+      },
+      "description": "When starting an execution with a conflict policy that uses an existing execution and there is already an existing\nrunning execution, OnConflictOptions defines actions to be taken on the existing running execution."
+    },
+    "apiWorkflowV1CallbackInfo": {
+      "type": "object",
+      "properties": {
+        "callback": {
+          "$ref": "#/definitions/v1Callback",
+          "description": "Information on how this callback should be invoked (e.g. its URL and type)."
+        },
+        "trigger": {
+          "$ref": "#/definitions/apiWorkflowV1CallbackInfoTrigger",
+          "description": "Trigger for this callback."
+        },
+        "registrationTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the callback was registered."
+        },
+        "state": {
+          "$ref": "#/definitions/v1CallbackState"
+        },
+        "attempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The number of attempts made to deliver the callback.\nThis number represents a minimum bound since the attempt is incremented after the callback request completes."
+        },
+        "lastAttemptCompleteTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the last attempt completed."
+        },
+        "lastAttemptFailure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "The last attempt's failure, if any."
+        },
+        "nextAttemptScheduleTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the next attempt is scheduled."
+        },
+        "blockedReason": {
+          "type": "string",
+          "description": "If the state is BLOCKED, blocked reason provides additional information."
+        }
+      },
+      "description": "CallbackInfo contains the state of an attached workflow callback."
+    },
+    "apiWorkflowV1CallbackInfoTrigger": {
+      "type": "object",
+      "properties": {
+        "workflowClosed": {
+          "$ref": "#/definitions/CallbackInfoWorkflowClosed"
+        }
+      }
+    },
+    "apiWorkflowV1OnConflictOptions": {
+      "type": "object",
+      "properties": {
+        "attachRequestId": {
+          "type": "boolean",
+          "description": "Attaches the request ID to the running workflow."
+        },
+        "attachCompletionCallbacks": {
+          "type": "boolean",
+          "description": "Attaches the completion callbacks to the running workflow."
+        },
+        "attachLinks": {
+          "type": "boolean",
+          "description": "Attaches the links to the WorkflowExecutionOptionsUpdatedEvent history event."
+        }
+      },
+      "description": "When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and\nthere is already an existing running workflow, OnConflictOptions defines actions to be taken on\nthe existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent\nhistory event in the running workflow with the changes requested in this object."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -11249,6 +11435,14 @@
         "canceledReason": {
           "type": "string",
           "description": "Set if activity cancelation was requested."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Link"
+          },
+          "description": "Links to related entities, such as the entity that started this activity."
         }
       },
       "description": "Information about a standalone activity."
@@ -12092,51 +12286,6 @@
       },
       "description": "Callback to attach to various events in the system, e.g. workflow run completion."
     },
-    "v1CallbackInfo": {
-      "type": "object",
-      "properties": {
-        "callback": {
-          "$ref": "#/definitions/v1Callback",
-          "description": "Information on how this callback should be invoked (e.g. its URL and type)."
-        },
-        "trigger": {
-          "$ref": "#/definitions/CallbackInfoTrigger",
-          "description": "Trigger for this callback."
-        },
-        "registrationTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the callback was registered."
-        },
-        "state": {
-          "$ref": "#/definitions/v1CallbackState"
-        },
-        "attempt": {
-          "type": "integer",
-          "format": "int32",
-          "description": "The number of attempts made to deliver the callback.\nThis number represents a minimum bound since the attempt is incremented after the callback request completes."
-        },
-        "lastAttemptCompleteTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the last attempt completed."
-        },
-        "lastAttemptFailure": {
-          "$ref": "#/definitions/v1Failure",
-          "description": "The last attempt's failure, if any."
-        },
-        "nextAttemptScheduleTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the next attempt is scheduled."
-        },
-        "blockedReason": {
-          "type": "string",
-          "description": "If the state is BLOCKED, blocked reason provides additional information."
-        }
-      },
-      "description": "CallbackInfo contains the state of an attached workflow callback."
-    },
     "v1CallbackState": {
       "type": "string",
       "enum": [
@@ -12548,10 +12697,11 @@
       "type": "string",
       "enum": [
         "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED",
-        "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE"
+        "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE",
+        "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION"
       ],
       "default": "CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_UNSPECIFIED",
-      "description": "Experimental. Defines the versioning behavior to be used by the first task of a new workflow run in a continue-as-new chain.\n\n - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE: Start the new run with AutoUpgrade behavior. Use the Target Version of the workflow's task queue at\nstart-time, as AutoUpgrade workflows do. After the first workflow task completes, use whatever\nVersioning Behavior the workflow is annotated with in the workflow code.\n\nNote that if the previous workflow had a Pinned override, that override will be inherited by the\nnew workflow run regardless of the ContinueAsNewVersioningBehavior specified in the continue-as-new\ncommand. If a Pinned override is inherited by the new run, and the new run starts with AutoUpgrade\nbehavior, the base version of the new run will be the Target Version as described above, but the\neffective version will be whatever is specified by the Versioning Override until the override is removed."
+      "description": "Experimental. Defines the versioning behavior to be used by the first task of a new workflow run in a continue-as-new chain.\n\n - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_AUTO_UPGRADE: Experimental.\nStart the new run with AutoUpgrade behavior. Use the Target Version of the workflow's task queue at\nstart-time, as AutoUpgrade workflows do. After the first workflow task completes, use whatever\nVersioning Behavior the workflow is annotated with in the workflow code.\n\nNote that if the workflow being continued has a Pinned override, that override will be inherited by the\nnew workflow run regardless of the ContinueAsNewVersioningBehavior specified in the continue-as-new\ncommand. Versioning Override always takes precedence until it's removed manually via UpdateWorkflowExecutionOptions.\n - CONTINUE_AS_NEW_VERSIONING_BEHAVIOR_USE_RAMPING_VERSION: Experimental.\nUse the Ramping Version of the workflow's task queue at start time, regardless of the workflow's\nTarget Version (according to f(workflow_id, ramp_percentage)). After the first workflow task completes,\nthe workflow will use whatever Versioning Behavior it is annotated with. If there is no Ramping\nVersion by the time that the first workflow task is dispatched, it will be sent to the Current Version.\n\nIt is highly discouraged to use this if the workflow is annotated with AutoUpgrade behavior, because\nthis setting ONLY applies to the first task of the workflow. If, after the first task, the workflow\nis AutoUpgrade, it will behave like a normal AutoUpgrade workflow and go to the Target Version, which\nmay be the Current Version instead of the Ramping Version.\n\nNote that if the workflow being continued has a Pinned override, that override will be inherited by the\nnew workflow run regardless of the ContinueAsNewVersioningBehavior specified in the continue-as-new\ncommand. Versioning Override always takes precedence until it's removed manually via UpdateWorkflowExecutionOptions."
     },
     "v1CountActivityExecutionsResponse": {
       "type": "object",
@@ -12869,6 +13019,14 @@
           "type": "string",
           "format": "byte",
           "description": "Token for follow-on long-poll requests. Absent only if the activity is complete."
+        },
+        "callbacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/apiActivityV1CallbackInfo"
+          },
+          "description": "Callbacks attached to this activity execution and their current state."
         }
       }
     },
@@ -13106,7 +13264,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1CallbackInfo"
+            "$ref": "#/definitions/apiWorkflowV1CallbackInfo"
           }
         },
         "pendingNexusOperations": {
@@ -13688,7 +13846,7 @@
             "type": "object",
             "$ref": "#/definitions/v1Link"
           },
-          "description": "Links associated with the event."
+          "description": "Links to related entities, such as the entity that started this event's workflow."
         },
         "principal": {
           "$ref": "#/definitions/v1Principal",
@@ -13911,9 +14069,13 @@
           "type": "string",
           "format": "int64",
           "description": "The revision number of the source deployment version of the parent/previous workflow."
+        },
+        "continueAsNewInitialVersioningBehavior": {
+          "$ref": "#/definitions/v1ContinueAsNewVersioningBehavior",
+          "description": "Experimental.\nIf this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior\nspecified in that command.\nOnly used for the initial task of this run and the initial task of any retries of this run.\nNot passed to children or to future continue-as-new.\n\nNote: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,\na non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility\nwith history events generated during that time, know that an UNSPECIFIED value here is equivalent to AutoUpgrade\nvalue if the InheritedAutoUpgradeInfo is non-empty."
         }
       },
-      "description": "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version\nto a workflow execution whose parent/previous workflow has an AutoUpgrade behavior."
+      "description": "Used as part of WorkflowExecutionStartedEventAttributes to pass down the AutoUpgrade behavior and source deployment version\nto a workflow execution whose parent/previous workflow has an AutoUpgrade behavior.\nAlso used for Upgrade-on-CaN behaviors AutoUpgrade and UseRampingVersion."
     },
     "v1Input": {
       "type": "object",
@@ -13952,6 +14114,9 @@
         },
         "batchJob": {
           "$ref": "#/definitions/LinkBatchJob"
+        },
+        "activity": {
+          "$ref": "#/definitions/LinkActivity"
         }
       },
       "description": "Link can be associated with history events. It might contain information about an external entity\nrelated to the history event. For example, workflow A makes a Nexus call that starts workflow B:\nin this case, a history event in workflow A could contain a Link to the workflow started event in\nworkflow B, and vice-versa."
@@ -14805,24 +14970,6 @@
         }
       },
       "description": "Nexus operation timed out."
-    },
-    "v1OnConflictOptions": {
-      "type": "object",
-      "properties": {
-        "attachRequestId": {
-          "type": "boolean",
-          "description": "Attaches the request ID to the running workflow."
-        },
-        "attachCompletionCallbacks": {
-          "type": "boolean",
-          "description": "Attaches the completion callbacks to the running workflow."
-        },
-        "attachLinks": {
-          "type": "boolean",
-          "description": "Attaches the links to the WorkflowExecutionOptionsUpdatedEvent history event."
-        }
-      },
-      "description": "When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and\nthere is already an existing running workflow, OnConflictOptions defines actions to be taken on\nthe existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent\nhistory event in the running workflow with the changes requested in this object."
     },
     "v1Outcome": {
       "type": "object",
@@ -16426,11 +16573,21 @@
         "started": {
           "type": "boolean",
           "description": "If true, a new workflow was started."
+        },
+        "signalLink": {
+          "$ref": "#/definitions/v1Link",
+          "description": "Link to be associated with the WorkflowExecutionSignaled event.\nAdded on the response to propagate the backlink.\nAvailable from Temporal server 1.31 and up."
         }
       }
     },
     "v1SignalWorkflowExecutionResponse": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "link": {
+          "$ref": "#/definitions/v1Link",
+          "description": "Link to be associated with the WorkflowExecutionSignaled event.\nAdded on the response to propagate the backlink.\nAvailable from Temporal server 1.31 and up."
+        }
+      }
     },
     "v1StartActivityExecutionResponse": {
       "type": "object",
@@ -16442,6 +16599,10 @@
         "started": {
           "type": "boolean",
           "description": "If true, a new activity was started."
+        },
+        "link": {
+          "$ref": "#/definitions/v1Link",
+          "description": "Link to the started activity."
         }
       }
     },
@@ -16739,10 +16900,11 @@
       "enum": [
         "TASK_QUEUE_KIND_UNSPECIFIED",
         "TASK_QUEUE_KIND_NORMAL",
-        "TASK_QUEUE_KIND_STICKY"
+        "TASK_QUEUE_KIND_STICKY",
+        "TASK_QUEUE_KIND_WORKER_COMMANDS"
       ],
       "default": "TASK_QUEUE_KIND_UNSPECIFIED",
-      "description": " - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities."
+      "description": " - TASK_QUEUE_KIND_UNSPECIFIED: Tasks from any non workflow task may be unspecified.\n\nTask queue kind is used to differentiate whether a workflow task queue is sticky or \nnormal. If a task is not a workflow task, Task queue kind will sometimes be \nunspecified.\n - TASK_QUEUE_KIND_NORMAL: Tasks from a normal workflow task queue always include complete workflow history\n\nThe task queue specified by the user is always a normal task queue. There can be as many\nworkers as desired for a single normal task queue. All those workers may pick up tasks from\nthat queue.\n - TASK_QUEUE_KIND_STICKY: A sticky queue only includes new history since the last workflow task, and they are\nper-worker.\n\nSticky queues are created dynamically by each worker during their start up. They only exist\nfor the lifetime of the worker process. Tasks in a sticky task queue are only available to\nthe worker that created the sticky queue.\n\nSticky queues are only for workflow tasks. There are no sticky task queues for activities.\n - TASK_QUEUE_KIND_WORKER_COMMANDS: A worker-commands task queue is used for server-to-worker communication (e.g. activity\ncancellations). These queues are ephemeral and per-worker-process — they exist only for\nthe lifetime of the worker process. Used with TASK_QUEUE_TYPE_NEXUS and polled via\nPollNexusTaskQueue."
     },
     "v1TaskQueueReachability": {
       "type": "object",
@@ -18345,6 +18507,10 @@
         "externalWorkflowExecution": {
           "$ref": "#/definitions/v1WorkflowExecution",
           "description": "When signal origin is a workflow execution, this field is set."
+        },
+        "requestId": {
+          "type": "string",
+          "description": "The request ID of the Signal request, used by the server to attach this to\nthe correct Event ID when generating link."
         }
       }
     },
@@ -18503,6 +18669,10 @@
         "declinedTargetVersionUpgrade": {
           "$ref": "#/definitions/v1DeclinedTargetVersionUpgrade",
           "description": "During a previous run of this workflow, the server may have notified the SDK\nthat the Target Worker Deployment Version changed, but the SDK declined to\nupgrade (e.g., by continuing-as-new with PINNED behavior). This field records\nthe target version that was declined.\n\nThis is a wrapper message to distinguish \"never declined\" (nil wrapper) from\n\"declined an unversioned target\" (non-nil wrapper with nil deployment_version).\n\nUsed internally by the server during continue-as-new and retry.\nShould not be read or interpreted by SDKs."
+        },
+        "timeSkippingConfig": {
+          "$ref": "#/definitions/v1TimeSkippingConfig",
+          "description": "Initial time-skipping configuration for this workflow execution, recorded at start time.\nThis may have been set explicitly via the start workflow request, or propagated from a\nparent/previous execution.\n\nThe configuration may be updated after start via UpdateWorkflowExecutionOptions, which\nwill be reflected in the WorkflowExecutionOptionsUpdatedEvent."
         }
       },
       "title": "Always the first event in workflow history"
@@ -18703,6 +18873,10 @@
           "type": "string",
           "format": "int64",
           "description": "Monotonic counter reflecting the latest routing decision for this workflow execution.\nUsed for staleness detection between history and matching when dispatching tasks to workers.\nIncremented when a workflow execution routes to a new deployment version, which happens\nwhen a worker of the new deployment version completes a workflow task.\nNote: Pinned tasks and sticky tasks send a value of 0 for this field since these tasks do not\nface the problem of inconsistent dispatching that arises from eventual consistency between\ntask queues and their partitions."
+        },
+        "continueAsNewInitialVersioningBehavior": {
+          "$ref": "#/definitions/v1ContinueAsNewVersioningBehavior",
+          "description": "Experimental.\nIf this workflow is the result of a continue-as-new, this field is set to the initial_versioning_behavior\nspecified in that command.\nOnly used for the initial task of this run and the initial task of any retries of this run.\nNot passed to children or to future continue-as-new.\n\nNote: In the first release of Upgrade-on-CaN, when the only ContinueAsNewVersioningBehavior was AutoUpgrade,\na non-empty InheritedAutoUpgradeInfo meant that the workflow should start as AutoUpgrade. So for compatibility\nwith ContinueAsNew history commands generated during that time, know that an UNSPECIFIED value here is equivalent\nto ContinueAsNewVersioningBehaviorAutoUpgrade if the behavior of the workflow is AutoUpgrade."
         }
       },
       "description": "Holds all the information about worker versioning for a particular workflow execution.\nExperimental. Versioning info is experimental and might change in the future."

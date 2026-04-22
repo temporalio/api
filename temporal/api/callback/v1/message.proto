@@ -9,6 +9,8 @@ option java_outer_classname = "MessageProto";
 option ruby_package = "Temporalio::Api::Callback::V1";
 option csharp_namespace = "Temporalio.Api.Callback.V1";
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 import "temporal/api/common/v1/message.proto";
@@ -34,4 +36,104 @@ message CallbackInfo {
     google.protobuf.Timestamp next_attempt_schedule_time = 7;
     // If the state is BLOCKED, blocked reason provides additional information.
     string blocked_reason = 8;
+}
+
+// The outcome of a completed callback execution: either success or a failure.
+message CallbackExecutionOutcome {
+    oneof value {
+        // The callback completed successfully.
+        google.protobuf.Empty success = 1;
+        // The failure if the callback completed unsuccessfully.
+        temporal.api.failure.v1.Failure failure = 2;
+    }
+}
+
+// The Nexus completion data that a standalone callback execution will deliver to its target URL.
+// Exactly one of success or failure should be set.
+message CallbackExecutionCompletion {
+    oneof result {
+        // Deliver a successful Nexus operation completion with this result payload.
+        // If set, the callback delivers a successful completion to the target URL.
+        temporal.api.common.v1.Payload success = 1;
+        // Deliver a failed Nexus operation completion with this failure.
+        // If set, the callback delivers a failed completion to the target URL.
+        // If CanceledFailureInfo is set, the target operation is resolved is canceled instead of failed.
+        temporal.api.failure.v1.Failure failure = 2;
+    }
+}
+
+// Information about a standalone callback execution.
+message CallbackExecutionInfo {
+    // Unique identifier of this callback within its namespace.
+    string callback_id = 1;
+
+    // Run ID of the callback execution.
+    string run_id = 2;
+
+    // Information on how this callback should be invoked (e.g. its URL and type).
+    temporal.api.common.v1.Callback callback = 3;
+
+    // A general status for this callback, indicates whether it is currently running or in one of the terminal statuses.
+    temporal.api.enums.v1.CallbackExecutionStatus status = 4;
+
+    // The detailed state of this callback, provides more granular information than the general status.
+    temporal.api.enums.v1.CallbackState state = 5;
+
+    // The number of attempts made to deliver the callback.
+    // This number represents a minimum bound since the attempt is incremented after the callback request completes.
+    int32 attempt = 6;
+
+    // The time when the callback was created/scheduled.
+    google.protobuf.Timestamp create_time = 7;
+
+    // The time when the last attempt completed.
+    google.protobuf.Timestamp last_attempt_complete_time = 8;
+
+    // The last attempt's failure, if any.
+    temporal.api.failure.v1.Failure last_attempt_failure = 9;
+
+    // The time when the next attempt is scheduled.
+    google.protobuf.Timestamp next_attempt_schedule_time = 10;
+
+    // If the state is BLOCKED, provides additional information.
+    string blocked_reason = 11;
+
+    // Time when the callback transitioned to a terminal state.
+    google.protobuf.Timestamp close_time = 12;
+
+    // Search attributes for indexing.
+    temporal.api.common.v1.SearchAttributes search_attributes = 13;
+
+    // Schedule-to-close timeout for this callback.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 14;
+
+    // Incremented each time the callback's state is mutated in persistence.
+    int64 state_transition_count = 15;
+}
+
+// Limited callback information returned in the list response.
+message CallbackExecutionListInfo {
+    // Unique identifier of this callback within its namespace.
+    string callback_id = 1;
+
+    // Run ID of the callback execution.
+    string run_id = 2;
+
+    // Only running and terminal statuses appear here. More detailed information in CallbackExecutionInfo but not
+    // available in the list response.
+    temporal.api.enums.v1.CallbackExecutionStatus status = 3;
+
+    // The time when the callback was created/scheduled.
+    google.protobuf.Timestamp create_time = 4;
+
+    // Time when the callback transitioned to a terminal state.
+    google.protobuf.Timestamp close_time = 5;
+
+    // Search attributes from the start request.
+    temporal.api.common.v1.SearchAttributes search_attributes = 6;
+
+    // Incremented each time the callback's state is mutated.
+    int64 state_transition_count = 7;
 }

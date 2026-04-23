@@ -580,8 +580,8 @@ message WorkflowExecutionOptions {
     temporal.api.common.v1.Priority priority = 2;
 
     // Time-skipping configuration for this workflow execution.
-    // If not set, the time-skipping conf will not get updated upon request, 
-    // i.e. the existing time-skipping conf will be preserved.
+    // If not set, the time-skipping configuration is not updated by this request;
+    // the existing configuration is preserved.
     TimeSkippingConfig time_skipping_config = 3;
 }
 
@@ -594,12 +594,11 @@ message WorkflowExecutionOptions {
 // 
 // Propagation behavior of time skipping:
 // The enabled flag, bound fields, and accumulated skipped duration are propagated to related executions as follows:
-// (1) Child workflows and continue-as-new: both the configuration and accumulated skipped duration are inherited
-//     from the current execution. The configured bound is shared across both the inherited skipped duration
-//     and any additional duration skipped by the new run.
-// (2) Retry and cron: both the configuration and accumulated skipped duration are inherited as recorded in the
-//     StartWorkflowExecutionEvent of the current workflow and the accummulated skipped duration 
-//     of the current run won't be passed.
+// (1) Child workflows and continue-as-new: both the configuration and the accumulated skipped duration are
+//     inherited from the current execution. The configured bound is shared between the inherited skipped
+//     duration and any additional duration skipped by the new run.
+// (2) Retry and cron: the configuration and accumulated skipped duration are inherited as recorded when the
+//     current workflow started; the accumulated skipped duration of the current run is not propagated.
 // (3) Reset: the new run retains the time-skipping configuration of the current execution. Because reset replays
 //     all events up to the reset point and re-applies any UpdateWorkflowExecutionOptions changes made after that
 //     point, the resulting run ends up with the same final time-skipping configuration as the previous run.
@@ -613,7 +612,7 @@ message TimeSkippingConfig {
     // Optional bound that limits the gap between the virtual time of this execution and wall-clock time.
     // Once the bound is reached, time skipping is automatically disabled,
     // but can be re-enabled by setting `enabled` to true via UpdateWorkflowExecutionOptions.
-    // This bound cannot be set to a value smaller than the current skipped duration of the current execution.
+    // This bound cannot be set to a value smaller than the execution's currently skipped duration.
     //
     // This is useful in testing scenarios where a workflow is expected to receive
     // signals, updates, or other external events while timers are in progress.

@@ -591,31 +591,33 @@ message WorkflowExecutionOptions {
 // and possibly other features added in the future.
 // User timers are not classified as in-flight work and will be skipped over.
 // When time advances, it skips to the earlier of the next user timer or the configured bound, if either exists.
+// 
+// Propagation behavior of time skipping:
+// The enabled flag, bound fields, and accumulated skipped duration are propagated to related executions as follows:
+// (1) Child workflows and continue-as-new: both the configuration and accumulated skipped duration are inherited
+//     from the current execution. The configured bound is shared across both the inherited skipped duration
+//     and any additional duration skipped by the new run.
+// (2) Retry and cron: both the configuration and accumulated skipped duration are inherited as recorded in the
+//     StartWorkflowExecutionEvent of the current workflow and the accummulated skipped duration 
+//     of the current run won't be passed.
+// (3) Reset: the new run retains the time-skipping configuration of the current execution. Because reset replays
+//     all events up to the reset point and re-applies any UpdateWorkflowExecutionOptions changes made after that
+//     point, the resulting run ends up with the same final time-skipping configuration as the previous run.
 message TimeSkippingConfig {
-    reserved 2;
-    reserved "disable_propagation";
+    reserved 2, 6;
+    reserved "disable_propagation", "max_target_time";
 
     // Enables or disables time skipping for this workflow execution.
     bool enabled = 1;
 
-    // If this execution was started by a previous execution that already skipped some time,
-    // it inherits the virtual time through the propagated skipped duration.
-    google.protobuf.Duration propagated_skipped_duration = 3;
-
-    // Optional bound that limits how far virtual time can advance while time skipping is active.
+    // Optional bound that limits the gap between the virtual time of this execution and wall-clock time.
     // Once the bound is reached, time skipping is automatically disabled,
-    // but can be re-enabled via UpdateWorkflowExecutionOptions.
+    // but can be re-enabled by setting `enabled` to true via UpdateWorkflowExecutionOptions.
+    // This bound cannot be set to a value smaller than the current skipped duration of the current execution.
     //
     // This is useful in testing scenarios where a workflow is expected to receive
     // signals, updates, or other external events while timers are in progress.
-    //
-    // Bound scope:
-    // - Each bound is independent for each workflow execution.
-    //   When a bound is propagated to a child workflow, the child's bound is only applied to that child execution.
-    // - Continue-as-new is an exception: continued workflow executions are treated as extensions of the
-    //   original execution, so the bound is shared across all executions in the chain.
     oneof bound {
-
         // Maximum total virtual time that can be skipped.
         google.protobuf.Duration max_skipped_duration = 4;
 
@@ -623,11 +625,12 @@ message TimeSkippingConfig {
         // This includes both skipped time and real time elapsing.
         // (-- api-linter: core::0142::time-field-names=disabled --)
         google.protobuf.Duration max_elapsed_duration = 5;
-
-        // Absolute virtual timestamp at which time skipping is disabled.
-        // Time skipping will not advance beyond this point.
-        google.protobuf.Timestamp max_target_time = 6;
     }
+
+    // If this execution was started by a previous execution that had already skipped some time,
+    // it inherits the accumulated skipped duration from that execution through this field.
+    // This field is set internally by the server and cannot be configured by the user.
+    google.protobuf.Duration initial_skipped_duration = 3;
 }
 
 // Used to override the versioning behavior (and pinned deployment version, if applicable) of a

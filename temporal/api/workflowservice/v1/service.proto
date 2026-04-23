@@ -1684,6 +1684,21 @@ service WorkflowService {
         };
     }
 
+    // StartNexusOperationExecution starts a new Nexus operation.
+    //
+    // Returns a `NexusOperationExecutionAlreadyStarted` error if an instance already exists with same operation ID in this
+    // namespace unless permitted by the specified ID conflict policy.
+    rpc StartNexusOperationExecution (StartNexusOperationExecutionRequest) returns (StartNexusOperationExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/nexus-operations/{operation_id}"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}"
+                body: "*"
+            }
+        };
+    }
+
     // DescribeActivityExecution returns information about an activity execution.
     // It can be used to:
     // - Get current activity info without waiting
@@ -1702,6 +1717,20 @@ service WorkflowService {
         };
     }
 
+    // DescribeNexusOperationExecution returns information about a Nexus operation.
+    // Supported use cases include:
+    // - Get current operation info without waiting
+    // - Long-poll for next state change and return new operation info
+    // Response can optionally include operation input or outcome (if the operation has completed).
+    rpc DescribeNexusOperationExecution (DescribeNexusOperationExecutionRequest) returns (DescribeNexusOperationExecutionResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus-operations/{operation_id}"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}"
+            }
+        };
+    }
+
     // PollActivityExecution long-polls for an activity execution to complete and returns the
     // outcome (result or failure).
     rpc PollActivityExecution (PollActivityExecutionRequest) returns (PollActivityExecutionResponse) {
@@ -1717,6 +1746,17 @@ service WorkflowService {
         };
     }
 
+    // PollNexusOperationExecution long-polls for a Nexus operation for a given wait stage to complete and returns
+    // the outcome (result or failure).
+    rpc PollNexusOperationExecution (PollNexusOperationExecutionRequest) returns (PollNexusOperationExecutionResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus-operations/{operation_id}/poll"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}/poll"
+            }
+        };
+    }
+
     // ListActivityExecutions is a visibility API to list activity executions in a specific namespace.
     rpc ListActivityExecutions (ListActivityExecutionsRequest) returns (ListActivityExecutionsResponse) {
         option (google.api.http) = {
@@ -1727,12 +1767,32 @@ service WorkflowService {
         };
     }
 
+    // ListNexusOperationExecutions is a visibility API to list Nexus operations in a specific namespace.
+    rpc ListNexusOperationExecutions (ListNexusOperationExecutionsRequest) returns (ListNexusOperationExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus-operations"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus-operations"
+            }
+        };
+    }
+
     // CountActivityExecutions is a visibility API to count activity executions in a specific namespace.
     rpc CountActivityExecutions (CountActivityExecutionsRequest) returns (CountActivityExecutionsResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/activity-count"
             additional_bindings {
                 get: "/api/v1/namespaces/{namespace}/activity-count"
+            }
+        };
+    }
+
+    // CountNexusOperationExecutions is a visibility API to count Nexus operations in a specific namespace.
+    rpc CountNexusOperationExecutions (CountNexusOperationExecutionsRequest) returns (CountNexusOperationExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/nexus-operation-count"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/nexus-operation-count"
             }
         };
     }
@@ -1755,6 +1815,22 @@ service WorkflowService {
         option (temporal.api.protometa.v1.request_header) = {
             header: "temporal-resource-id"
             value: "activity:{activity_id}"
+        };
+    }
+
+    // RequestCancelNexusOperationExecution requests cancellation of a Nexus operation.
+    //
+    // Requesting to cancel an operation does not automatically transition the operation to canceled status.
+    // The operation will only transition to canceled status if it supports cancellation and the handler
+    // processes the cancellation request.
+    rpc RequestCancelNexusOperationExecution (RequestCancelNexusOperationExecutionRequest) returns (RequestCancelNexusOperationExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/nexus-operations/{operation_id}/cancel"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}/cancel"
+                body: "*"
+            }
         };
     }
 
@@ -1785,4 +1861,27 @@ service WorkflowService {
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: Activity deletion not exposed to HTTP, users should use cancel or terminate. --)
     rpc DeleteActivityExecution (DeleteActivityExecutionRequest) returns (DeleteActivityExecutionResponse) {}
+
+    // TerminateNexusOperationExecution terminates an existing Nexus operation immediately.
+    //
+    // Termination happens immediately and the operation handler cannot react to it. A terminated operation will have
+    // its outcome set to a failure with a termination reason.
+    rpc TerminateNexusOperationExecution (TerminateNexusOperationExecutionRequest) returns (TerminateNexusOperationExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/nexus-operations/{operation_id}/terminate"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}/terminate"
+                body: "*"
+            }
+        };
+    }
+
+    // DeleteNexusOperationExecution asynchronously deletes a specific Nexus operation run (when
+    // run_id is provided) or the latest run (when run_id is not provided). If the operation
+    // is running, it will be terminated before deletion.
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: Nexus operation deletion not exposed to HTTP, users should use cancel or terminate. --)
+    rpc DeleteNexusOperationExecution (DeleteNexusOperationExecutionRequest) returns (DeleteNexusOperationExecutionResponse) {}
 }

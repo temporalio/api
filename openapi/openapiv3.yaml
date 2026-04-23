@@ -15561,6 +15561,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
           description: The propagated time-skipping configuration for the child workflow.
+        initialSkippedDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Propagate the duration skipped to the child workflow.
     StartNexusOperationExecutionRequest:
       type: object
       properties:
@@ -15814,6 +15818,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
           description: Time-skipping configuration. If not set, time skipping is disabled.
+        initialSkippedDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: "If a workflow execution is started by a previous execution (parent-child workflow or continue-as-new) \n that has already skipped some time, the accumulated skipped duration from that execution \n can be passed to the new workflow execution through this field."
     StartWorkflowExecutionResponse:
       type: object
       properties:
@@ -16258,13 +16266,6 @@ components:
           description: |-
             Maximum elapsed time since time skipping was enabled.
              This includes both skipped time and real time elapsing.
-        initialSkippedDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: |-
-            If this execution was started by a previous execution that had already skipped some time,
-             it inherits the accumulated skipped duration from that execution through this field.
-             This field is set internally by the server and cannot be configured by the user.
       description: "Configuration for time skipping during a workflow execution.\n When enabled, virtual time advances automatically whenever there is no in-flight work.\n In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,\n and possibly other features added in the future.\n User timers are not classified as in-flight work and will be skipped over.\n When time advances, it skips to the earlier of the next user timer or the configured bound, if either exists.\n \n Propagation behavior of time skipping:\n The enabled flag, bound fields, and accumulated skipped duration are propagated to related executions as follows:\n (1) Child workflows and continue-as-new: both the configuration and the accumulated skipped duration are\n     inherited from the current execution. The configured bound is shared between the inherited skipped\n     duration and any additional duration skipped by the new run.\n (2) Retry and cron: the configuration and accumulated skipped duration are inherited as recorded when the\n     current workflow started; the accumulated skipped duration of the current run is not propagated.\n (3) Reset: the new run retains the time-skipping configuration of the current execution. Because reset replays\n     all events up to the reset point and re-applies any UpdateWorkflowExecutionOptions changes made after that\n     point, the resulting run ends up with the same final time-skipping configuration as the previous run."
     TimeoutFailureInfo:
       type: object
@@ -18562,6 +18563,12 @@ components:
 
              The configuration may be updated after start via UpdateWorkflowExecutionOptions, which
              will be reflected in the WorkflowExecutionOptionsUpdatedEvent.
+        initialSkippedDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            The time skipped by the previous execution that started this workflow.
+             It can happen in cases of child workflows and continue-as-new workflows.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object

@@ -11446,6 +11446,10 @@
         "timeSkippingConfig": {
           "$ref": "#/definitions/v1TimeSkippingConfig",
           "description": "Time-skipping configuration. If not set, time skipping is disabled."
+        },
+        "initialSkippedDuration": {
+          "type": "string",
+          "description": "If a workflow execution is started by a previous execution (parent-child workflow or continue-as-new) \nthat has already skipped some time, the accumulated skipped duration from that execution \ncan be passed to the new workflow execution through this field."
         }
       }
     },
@@ -17969,6 +17973,10 @@
         "timeSkippingConfig": {
           "$ref": "#/definitions/v1TimeSkippingConfig",
           "description": "The propagated time-skipping configuration for the child workflow."
+        },
+        "initialSkippedDuration": {
+          "type": "string",
+          "description": "Propagate the duration skipped to the child workflow."
         }
       }
     },
@@ -18366,10 +18374,6 @@
         "maxElapsedDuration": {
           "type": "string",
           "description": "Maximum elapsed time since time skipping was enabled.\nThis includes both skipped time and real time elapsing."
-        },
-        "initialSkippedDuration": {
-          "type": "string",
-          "description": "If this execution was started by a previous execution that had already skipped some time,\nit inherits the accumulated skipped duration from that execution through this field.\nThis field is set internally by the server and cannot be configured by the user."
         }
       },
       "description": "Configuration for time skipping during a workflow execution.\nWhen enabled, virtual time advances automatically whenever there is no in-flight work.\nIn-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,\nand possibly other features added in the future.\nUser timers are not classified as in-flight work and will be skipped over.\nWhen time advances, it skips to the earlier of the next user timer or the configured bound, if either exists.\n\nPropagation behavior of time skipping:\nThe enabled flag, bound fields, and accumulated skipped duration are propagated to related executions as follows:\n(1) Child workflows and continue-as-new: both the configuration and the accumulated skipped duration are\n    inherited from the current execution. The configured bound is shared between the inherited skipped\n    duration and any additional duration skipped by the new run.\n(2) Retry and cron: the configuration and accumulated skipped duration are inherited as recorded when the\n    current workflow started; the accumulated skipped duration of the current run is not propagated.\n(3) Reset: the new run retains the time-skipping configuration of the current execution. Because reset replays\n    all events up to the reset point and re-applies any UpdateWorkflowExecutionOptions changes made after that\n    point, the resulting run ends up with the same final time-skipping configuration as the previous run."
@@ -19926,6 +19930,10 @@
         "timeSkippingConfig": {
           "$ref": "#/definitions/v1TimeSkippingConfig",
           "description": "Initial time-skipping configuration for this workflow execution, recorded at start time.\nThis may have been set explicitly via the start workflow request, or propagated from a\nparent/previous execution.\n\nThe configuration may be updated after start via UpdateWorkflowExecutionOptions, which\nwill be reflected in the WorkflowExecutionOptionsUpdatedEvent."
+        },
+        "initialSkippedDuration": {
+          "type": "string",
+          "description": "The time skipped by the previous execution that started this workflow.\nIt can happen in cases of child workflows and continue-as-new workflows."
         }
       },
       "title": "Always the first event in workflow history"

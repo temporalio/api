@@ -20,6 +20,7 @@ import "temporal/api/enums/v1/task_queue.proto";
 import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/update.proto";
 import "temporal/api/enums/v1/activity.proto";
+import "temporal/api/enums/v1/nexus.proto";
 import "temporal/api/activity/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
@@ -260,6 +261,11 @@ message GetWorkflowExecutionHistoryReverseResponse {
 message PollWorkflowTaskQueueRequest {
     string namespace = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
+    // Unless this is the first poll, the client must pass one of the poller group IDs received in
+    // `poller_group_infos` of the last the PollWorkflowTaskQueueResponse according to the
+    // instructions. If not set, the poll is routed randomly which can cause it being blocked
+    // without receiving a task while the queue actually has tasks in another server location.
+    string poller_group_id = 10;
     // The identity of the worker/client who is polling this task queue
     string identity = 3;
     // A unique key for this worker instance, used for tracking worker lifecycle.
@@ -282,7 +288,7 @@ message PollWorkflowTaskQueueRequest {
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
 
     // Removed in 1.55.0; was temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat
-    reserved 7; 
+    reserved 7;
     reserved "worker_heartbeat";
 }
 
@@ -338,6 +344,16 @@ message PollWorkflowTaskQueueResponse {
     repeated temporal.api.protocol.v1.Message messages = 15;
     // Server-advised information the SDK may use to adjust its poller count.
     temporal.api.taskqueue.v1.PollerScalingDecision poller_scaling_decision = 16;
+    // This poller group ID identifies the owner of the workflow task awaiting for query response.
+    // Corresponding RespondQueryTaskCompleted should pass this value for proper routing.
+    string poller_group_id = 17;
+    // The weighted list of poller groups IDs that client should use for future polls to this task
+    // queue. Client is expected to:
+    //   1. Maintain minimum number of pollers no less than the number of groups.
+    //   2. Try to assign the next poll to a group without any pending polls,
+    //   3. If every group has some pending polls, assign the next poll to a group randomly
+    //     according to the weights.
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 18;
 }
 
 message RespondWorkflowTaskCompletedRequest {
@@ -458,6 +474,11 @@ message RespondWorkflowTaskFailedResponse {
 message PollActivityTaskQueueRequest {
     string namespace = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
+    // Unless this is the first poll, the client must pass one of the poller group IDs received in
+    // `poller_group_infos` of the last the PollActivityTaskQueueResponse according to the
+    // instructions. If not set, the poll is routed randomly which can cause it being blocked
+    // without receiving a task while the queue actually has tasks in another server location.
+    string poller_group_id = 10;
     // The identity of the worker/client
     string identity = 3;
     // A unique key for this worker instance, used for tracking worker lifecycle.
@@ -477,7 +498,7 @@ message PollActivityTaskQueueRequest {
     temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
 
     // Removed in 1.55.0; was temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat
-    reserved 7; 
+    reserved 7;
     reserved "worker_heartbeat";
 }
 
@@ -536,6 +557,13 @@ message PollActivityTaskQueueResponse {
     temporal.api.common.v1.Priority priority = 19;
     // The run ID of the activity execution, only set for standalone activities.
     string activity_run_id = 20;
+    // The weighted list of poller groups IDs that client should use for future polls to this task
+    // queue. Client is expected to:
+    //   1. Maintain minimum number of pollers no less than the number of groups.
+    //   2. Try to assign the next poll to a group without any pending polls,
+    //   3. If every group has some pending polls, assign the next poll to a group randomly
+    //     according to the weights.
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 21;
 }
 
 message RecordActivityTaskHeartbeatRequest {
@@ -1058,6 +1086,9 @@ message RespondQueryTaskCompletedRequest {
     // Why did the task fail? It's important to note that many of the variants in this enum cannot
     // apply to worker responses. See the type's doc for more.
     temporal.api.enums.v1.WorkflowTaskFailedCause cause = 8;
+    // Client must forward the poller_group_id received in PollWorkflowTaskQueueResponse for proper
+    // routing of the response.
+    string poller_group_id = 9;
 }
 
 message RespondQueryTaskCompletedResponse {
@@ -1907,12 +1938,17 @@ message PollWorkflowExecutionUpdateResponse {
 
 message PollNexusTaskQueueRequest {
     string namespace = 1;
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 3;
+    // Unless this is the first poll, the client must pass one of the poller group IDs received in
+    // `poller_group_infos` of the last the PollNexusTaskQueueResponse according to the
+    // instructions. If not set, the poll is routed randomly which can cause it being blocked
+    // without receiving a task while the queue actually has tasks in another server location.
+    string poller_group_id = 9;
     // The identity of the client who initiated this request.
     string identity = 2;
     // A unique key for this worker instance, used for tracking worker lifecycle.
     // This is guaranteed to be unique, whereas identity is not guaranteed to be unique.
     string worker_instance_key = 8;
-    temporal.api.taskqueue.v1.TaskQueue task_queue = 3;
     // Information about this worker's build identifier and if it is choosing to use the versioning
     // feature. See the `WorkerVersionCapabilities` docstring for more.
     // Deprecated. Replaced by deployment_options.
@@ -1931,6 +1967,18 @@ message PollNexusTaskQueueResponse {
     temporal.api.nexus.v1.Request request = 2;
     // Server-advised information the SDK may use to adjust its poller count.
     temporal.api.taskqueue.v1.PollerScalingDecision poller_scaling_decision = 3;
+    // This poller group ID identifies the owner of the nexus task awaiting for synchronous
+    // response.
+    // Corresponding `RespondNexusTaskCompleted` and `RespondNexusTaskFailed` calls should pass this
+    // value for proper response routing.
+    string poller_group_id = 4;
+    // The weighted list of poller groups IDs that client should use for future polls to this task
+    // queue. Client is expected to:
+    //   1. Maintain minimum number of pollers no less than the number of groups.
+    //   2. Try to assign the next poll to a group without any pending polls,
+    //   3. If every group has some pending polls, assign the next poll to a group randomly
+    //     according to the weights.
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 5;
 }
 
 message RespondNexusTaskCompletedRequest {
@@ -1941,6 +1989,9 @@ message RespondNexusTaskCompletedRequest {
     bytes task_token = 3;
     // Embedded response to be translated into a frontend response.
     temporal.api.nexus.v1.Response response = 4;
+    // Client must forward the poller_group_id received in PollNexusTaskQueueResponse for proper
+    // routing of the response.
+    string poller_group_id = 5;
 }
 
 message RespondNexusTaskCompletedResponse {
@@ -1956,6 +2007,9 @@ message RespondNexusTaskFailedRequest {
     temporal.api.nexus.v1.HandlerError error = 4 [deprecated = true];
     // The error the handler failed with. Must contain a NexusHandlerFailureInfo object.
     temporal.api.failure.v1.Failure failure = 5;
+    // Client must forward the poller_group_id received in PollNexusTaskQueueResponse for proper
+    // routing of the response.
+    string poller_group_id = 6;
 }
 
 message RespondNexusTaskFailedResponse {
@@ -2700,7 +2754,7 @@ message RecordWorkerHeartbeatRequest {
     string identity = 2;
 
     repeated temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat = 3;
-    
+
     // Resource ID for routing. Contains the worker grouping key.
     string resource_id = 4;
 }
@@ -2947,6 +3001,8 @@ message StartActivityExecutionRequest {
     repeated temporal.api.common.v1.Link links = 20;
     // Options for handling conflicts when using ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING.
     temporal.api.common.v1.OnConflictOptions on_conflict_options = 21;
+    // Time to wait before dispatching the first activity task. This delay is not applied to retry attempts.
+    google.protobuf.Duration start_delay = 22;
 }
 
 message StartActivityExecutionResponse {
@@ -3027,6 +3083,176 @@ message ListActivityExecutionsResponse {
     bytes next_page_token = 2;
 }
 
+message StartNexusOperationExecutionRequest {
+    string namespace = 1;
+    // The identity of the client who initiated this request.
+    string identity = 2;
+    // A unique identifier for this caller-side start request. Typically UUIDv4.
+    // StartOperation requests sent to the handler will use a server-generated request ID.
+    string request_id = 3;
+    // Identifier for this operation. This is a caller-side ID, distinct from any internal
+    // operation identifiers generated by the handler. Must be unique among operations in the
+    // same namespace, subject to the rules imposed by id_reuse_policy and id_conflict_policy.
+    string operation_id = 4;
+    // Endpoint name, resolved to a URL via the cluster's endpoint registry.
+    string endpoint = 5;
+    // Service name.
+    string service = 6;
+    // Operation name.
+    string operation = 7;
+
+    // Schedule-to-close timeout for this operation.
+    // Indicates how long the caller is willing to wait for operation completion.
+    // Calls are retried internally by the server.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 8;
+
+    // Schedule-to-start timeout for this operation.
+    // Indicates how long the caller is willing to wait for the operation to be started (or completed if synchronous)
+    // by the handler.
+    // If not set or zero, no schedule-to-start timeout is enforced.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_start_timeout = 9;
+
+    // Start-to-close timeout for this operation.
+    // Indicates how long the caller is willing to wait for an asynchronous operation to complete after it has been
+    // started. Synchronous operations ignore this timeout.
+    // If not set or zero, no start-to-close timeout is enforced.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 10;
+
+    // Serialized input to the operation. Passed as the request payload.
+    temporal.api.common.v1.Payload input = 11;
+
+    // Defines whether to allow re-using the operation id from a previously *closed* operation.
+    // The default policy is NEXUS_OPERATION_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+    temporal.api.enums.v1.NexusOperationIdReusePolicy id_reuse_policy = 12;
+    // Defines how to resolve an operation id conflict with a *running* operation.
+    // The default policy is NEXUS_OPERATION_ID_CONFLICT_POLICY_FAIL.
+    temporal.api.enums.v1.NexusOperationIdConflictPolicy id_conflict_policy = 13;
+
+    // Search attributes for indexing.
+    temporal.api.common.v1.SearchAttributes search_attributes = 14;
+    // Header to attach to the Nexus request.
+    // Users are responsible for encrypting sensitive data in this header as it is stored in workflow history and
+    // transmitted to external services as-is.
+    // This is useful for propagating tracing information.
+    // Note these headers are not the same as Temporal headers on internal activities and child workflows, these are
+    // transmitted to Nexus operations that may be external and are not traditional payloads.
+    map<string, string> nexus_header = 15;
+    // Metadata for use by user interfaces to display the fixed as-of-start summary and details of the operation.
+    temporal.api.sdk.v1.UserMetadata user_metadata = 16;
+}
+
+message StartNexusOperationExecutionResponse {
+    // The run ID of the operation that was started - or used (via NEXUS_OPERATION_ID_CONFLICT_POLICY_USE_EXISTING).
+    string run_id = 1;
+    // If true, a new operation was started.
+    bool started = 2;
+}
+
+message DescribeNexusOperationExecutionRequest {
+    string namespace = 1;
+    string operation_id = 2;
+    // Operation run ID. If empty the request targets the latest run.
+    string run_id = 3;
+    // Include the input field in the response.
+    bool include_input = 4;
+    // Include the outcome (result/failure) in the response if the operation has completed.
+    bool include_outcome = 5;
+    // Token from a previous DescribeNexusOperationExecutionResponse. If present, this RPC will long-poll until operation
+    // state changes from the state encoded in this token. If absent, return current state immediately.
+    // If present, run_id must also be present.
+    // Note that operation state may change multiple times between requests, therefore it is not
+    // guaranteed that a client making a sequence of long-poll requests will see a complete
+    // sequence of state changes.
+    bytes long_poll_token = 6;
+}
+
+message DescribeNexusOperationExecutionResponse {
+    // The run ID of the operation, useful when run_id was not specified in the request.
+    string run_id = 1;
+
+    // Information about the operation.
+    temporal.api.nexus.v1.NexusOperationExecutionInfo info = 2;
+
+    // Serialized operation input, passed as the request payload.
+    // Only set if include_input was true in the request.
+    temporal.api.common.v1.Payload input = 3;
+
+    // Only set if the operation is completed and include_outcome was true in the request.
+    oneof outcome {
+        // The result if the operation completed successfully.
+        temporal.api.common.v1.Payload result = 4;
+        // The failure if the operation completed unsuccessfully.
+        temporal.api.failure.v1.Failure failure = 5;
+    }
+
+    // Token for follow-on long-poll requests. Absent only if the operation is complete.
+    bytes long_poll_token = 6;
+}
+
+message PollNexusOperationExecutionRequest {
+    string namespace = 1;
+    string operation_id = 2;
+    // Operation run ID. If empty the request targets the latest run.
+    string run_id = 3;
+
+    // Stage to wait for. The operation may be in a more advanced stage when the poll is unblocked.
+    temporal.api.enums.v1.NexusOperationWaitStage wait_stage = 4;
+}
+
+message PollNexusOperationExecutionResponse {
+    // The run ID of the operation, useful when run_id was not specified in the request.
+    string run_id = 1;
+
+    // The current stage of the operation. May be more advanced than the stage requested in the poll.
+    temporal.api.enums.v1.NexusOperationWaitStage wait_stage = 2;
+
+    // Operation token. Only populated for asynchronous operations after a successful StartOperation call.
+    string operation_token = 3;
+
+    // The operation outcome, available if the operation is in a closed state.
+    oneof outcome {
+        // The result if the operation completed successfully.
+        temporal.api.common.v1.Payload result = 4;
+        // The failure if the operation completed unsuccessfully.
+        temporal.api.failure.v1.Failure failure = 5;
+    }
+}
+
+message ListNexusOperationExecutionsRequest {
+    string namespace = 1;
+    // Max number of operations to return per page.
+    int32 page_size = 2;
+    // Token returned in ListNexusOperationExecutionsResponse.
+    bytes next_page_token = 3;
+    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+    // Search attributes that are avaialble for Nexus operations include:
+    // - OperationId
+    // - RunId
+    // - Endpoint
+    // - Service
+    // - Operation
+    // - RequestId
+    // - StartTime
+    // - ExecutionTime
+    // - CloseTime
+    // - ExecutionStatus
+    // - ExecutionDuration
+    // - StateTransitionCount
+    string query = 4;
+}
+
+message ListNexusOperationExecutionsResponse {
+    repeated temporal.api.nexus.v1.NexusOperationExecutionListInfo operations = 1;
+    // Token to use to fetch the next page. If empty, there is no next page.
+    bytes next_page_token = 2;
+}
+
 message CountActivityExecutionsRequest {
     string namespace = 1;
     // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
@@ -3039,6 +3265,31 @@ message CountActivityExecutionsResponse {
     // If `query` is grouping by a field, the count is simply the sum of the counts
     // of the groups returned in the response. This number can be smaller than the
     // total number of activities matching the query.
+    int64 count = 1;
+
+    // Contains the groups if the request is grouping by a field.
+    // The list might not be complete, and the counts of each group is approximate.
+    repeated AggregationGroup groups = 2;
+
+    message AggregationGroup {
+        repeated temporal.api.common.v1.Payload group_values = 1;
+        int64 count = 2;
+    }
+}
+
+message CountNexusOperationExecutionsRequest {
+    string namespace = 1;
+    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+    // See also ListNexusOperationExecutionsRequest for search attributes available for Nexus operations.
+    string query = 2;
+}
+
+message CountNexusOperationExecutionsResponse {
+    // If `query` is not grouping by any field, the count is an approximate number
+    // of operations that match the query.
+    // If `query` is grouping by a field, the count is simply the sum of the counts
+    // of the groups returned in the response. This number can be smaller than the
+    // total number of operations matching the query.
     int64 count = 1;
 
     // Contains the groups if the request is grouping by a field.
@@ -3092,4 +3343,46 @@ message DeleteActivityExecutionRequest {
 }
 
 message DeleteActivityExecutionResponse {
+}
+
+message RequestCancelNexusOperationExecutionRequest {
+    string namespace = 1;
+    string operation_id = 2;
+    // Operation run ID, targets the latest run if empty.
+    string run_id = 3;
+    // The identity of the client who initiated this request.
+    string identity = 4;
+    // Used to de-dupe cancellation requests.
+    string request_id = 5;
+    // Reason for requesting the cancellation, recorded and available via the DescribeNexusOperationExecution API.
+    string reason = 6;
+}
+
+message RequestCancelNexusOperationExecutionResponse {
+}
+
+message TerminateNexusOperationExecutionRequest {
+    string namespace = 1;
+    string operation_id = 2;
+    // Operation run ID, targets the latest run if empty.
+    string run_id = 3;
+    // The identity of the client who initiated this request.
+    string identity = 4;
+    // Used to de-dupe termination requests.
+    string request_id = 5;
+    // Reason for requesting the termination, recorded in the operation's result failure outcome.
+    string reason = 6;
+}
+
+message TerminateNexusOperationExecutionResponse {
+}
+
+message DeleteNexusOperationExecutionRequest {
+    string namespace = 1;
+    string operation_id = 2;
+    // Operation run ID, targets the latest run if empty.
+    string run_id = 3;
+}
+
+message DeleteNexusOperationExecutionResponse {
 }

@@ -1887,4 +1887,26 @@ service WorkflowService {
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: Nexus operation deletion not exposed to HTTP, users should use cancel or terminate. --)
     rpc DeleteNexusOperationExecution (DeleteNexusOperationExecutionRequest) returns (DeleteNexusOperationExecutionResponse) {}
+    // WaitForExternalWorkflow asynchronously waits for an external workflow to complete
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: Activity deletion not exposed to HTTP, users should use cancel or terminate. --)
+    // (-- api-linter: core::0136::prepositions=disabled
+    //     aip.dev/not-precedent: WaitForExternalWorkflow is the established name for this operation. --)
+    rpc WaitForExternalWorkflow (WaitForExternalWorkflowRequest) returns (WaitForExternalWorkflowResponse) {
+        option (nexusannotations.v1.operation).tags = "exposed";
+
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "workflow:{execution.workflow_id}"
+        };
+    }
 }

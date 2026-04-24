@@ -3551,6 +3551,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        WaitForExternalWorkflow asynchronously waits for an external workflow to complete
+
+         (-- api-linter: core::0127::http-annotation=disabled
+             aip.dev/not-precedent: Activity deletion not exposed to HTTP, users should use cancel or terminate. --)
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: WaitForExternalWorkflow is the established name for this operation. --)
+      operationId: WaitForExternalWorkflow
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WaitForExternalWorkflowRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitForExternalWorkflowResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{workflowId}:
     post:
       tags:
@@ -8068,6 +8110,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TriggerWorkflowRuleResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        WaitForExternalWorkflow asynchronously waits for an external workflow to complete
+
+         (-- api-linter: core::0127::http-annotation=disabled
+             aip.dev/not-precedent: Activity deletion not exposed to HTTP, users should use cancel or terminate. --)
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: WaitForExternalWorkflow is the established name for this operation. --)
+      operationId: WaitForExternalWorkflow
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WaitForExternalWorkflowRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitForExternalWorkflowResponse'
         default:
           description: Default error response
           content:
@@ -17086,6 +17170,21 @@ components:
 
              If omitted and the target workflow is not pinned, the override request
              will be rejected with a PreconditionFailed error.
+    WaitForExternalWorkflowRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: The workflow execution to wait for.
+        requestId:
+          type: string
+          description: Used to de-dupe requests. Typically should be UUID.
+    WaitForExternalWorkflowResponse:
+      type: object
+      properties: {}
     WaitPolicy:
       type: object
       properties:

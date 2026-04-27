@@ -22,6 +22,7 @@ import "temporal/api/enums/v1/update.proto";
 import "temporal/api/enums/v1/activity.proto";
 import "temporal/api/enums/v1/nexus.proto";
 import "temporal/api/activity/v1/message.proto";
+import "temporal/api/callback/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
@@ -3386,4 +3387,143 @@ message DeleteNexusOperationExecutionRequest {
 }
 
 message DeleteNexusOperationExecutionResponse {
+}
+
+message StartCallbackExecutionRequest {
+    string namespace = 1;
+    // The identity of the client who initiated this request.
+    string identity = 2;
+    // A unique identifier for this start request. Typically UUIDv4.
+    string request_id = 3;
+    // Identifier for this callback. Required. Must be unique among callbacks in the same namespace.
+    // If a callback with this ID already exists, the request will fail with CallbackExecutionAlreadyStarted.
+    string callback_id = 4;
+    // Information on how this callback should be invoked (e.g. its URL and type).
+    temporal.api.common.v1.Callback callback = 5;
+    // Schedule-to-close timeout for this callback.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 6;
+    // Search attributes for indexing.
+    temporal.api.common.v1.SearchAttributes search_attributes = 7;
+    // The input data to deliver to the callback URL.
+    oneof input {
+        // The Nexus completion data to deliver to the callback URL.
+        // Contains either a successful result payload or a failure.
+        temporal.api.callback.v1.CallbackExecutionCompletion completion = 8;
+    }
+}
+
+message StartCallbackExecutionResponse {
+    // The run ID of the callback that was started.
+    string run_id = 1;
+}
+
+message DescribeCallbackExecutionRequest {
+    string namespace = 1;
+    // Identifier for the callback
+    string callback_id = 2;
+    // Run ID of the callback execution to describe. If empty, the latest run will be described.
+    string run_id = 3;
+    // Include the input field in the response.
+    bool include_input = 4;
+    // Include the outcome (result/failure) in the response if the callback has completed.
+    bool include_outcome = 5;
+    // Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until callback
+    // state changes from the state encoded in this token. If absent, return current state immediately.
+    // Note that callback state may change multiple times between requests, therefore it is not
+    // guaranteed that a client making a sequence of long-poll requests will see a complete
+    // sequence of state changes.
+    bytes long_poll_token = 6;
+}
+
+message DescribeCallbackExecutionResponse {
+    // Information about the callback execution.
+    temporal.api.callback.v1.CallbackExecutionInfo info = 1;
+    // Only set if the callback is completed and include_outcome was true in the request.
+    temporal.api.callback.v1.CallbackExecutionOutcome outcome = 2;
+    // Token for follow-on long-poll requests. Absent only if the callback is complete.
+    bytes long_poll_token = 3;
+}
+
+message PollCallbackExecutionRequest {
+    string namespace = 1;
+    // Identifier for the callback
+    string callback_id = 2;
+    // Run ID of the callback execution to poll. If empty, the latest run will be polled.
+    string run_id = 3;
+}
+
+message PollCallbackExecutionResponse {   
+    // The run ID of the callback, useful when run_id was not specified in the request.
+    string run_id = 1;
+    temporal.api.callback.v1.CallbackExecutionOutcome outcome = 2;
+}
+
+message ListCallbackExecutionsRequest {
+    string namespace = 1;
+    // Max number of executions to return per page.
+    int32 page_size = 2;
+    // Token returned in ListCallbackExecutionsResponse.
+    bytes next_page_token = 3;
+    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+    string query = 4;
+}
+
+message ListCallbackExecutionsResponse {
+    repeated temporal.api.callback.v1.CallbackExecutionListInfo executions = 1;
+    // Token to use to fetch the next page. If empty, there is no next page.
+    bytes next_page_token = 2;
+}
+
+message CountCallbackExecutionsRequest {
+    string namespace = 1;
+    // Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+    string query = 2;
+}
+
+message CountCallbackExecutionsResponse {
+    // If `query` is not grouping by any field, the count is an approximate number
+    // of callbacks that match the query.
+    // If `query` is grouping by a field, the count is simply the sum of the counts
+    // of the groups returned in the response. This number can be smaller than the
+    // total number of callbacks matching the query.
+    int64 count = 1;
+
+    // Contains the groups if the request is grouping by a field.
+    // The list might not be complete, and the counts of each group is approximate.
+    repeated AggregationGroup groups = 2;
+
+    message AggregationGroup {
+        repeated temporal.api.common.v1.Payload group_values = 1;
+        int64 count = 2;
+    }
+}
+
+message TerminateCallbackExecutionRequest {
+    string namespace = 1;
+    // Identifier for the callback
+    string callback_id = 2;
+    // Run ID of the callback execution to terminate. If empty, the latest run will be terminated.
+    string run_id = 3;
+    // The identity of the worker/client.
+    string identity = 4;
+    // Used to de-dupe termination requests.
+    string request_id = 5;
+    // Reason for requesting the termination.
+    string reason = 6;
+}
+
+message TerminateCallbackExecutionResponse {
+}
+
+message DeleteCallbackExecutionRequest {
+    string namespace = 1;
+    // Identifier for the callback
+    string callback_id = 2;
+    // Run ID of the callback execution to delete. If empty, the latest run will be deleted.
+    string run_id = 3;
+}
+
+message DeleteCallbackExecutionResponse {
 }

@@ -122,10 +122,9 @@ buf-breaking:
 	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
 
 nexus-rpc-yaml: nexus-rpc-yaml-install
-	printf $(COLOR) "Generate nexus/temporal-json-schema-models-nexusrpc.yaml and nexus/temporal-proto-models-nexusrpc.yaml..."
+	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."
 	mkdir -p nexus
 	protoc -I $(PROTO_ROOT) \
-		--nexus-rpc-yaml_opt=nexus-rpc_out=nexus/temporal-json-schema-models-nexusrpc.yaml \
 		--nexus-rpc-yaml_opt=nexus-rpc_langs_out=nexus/temporal-proto-models-nexusrpc.yaml \
 		--nexus-rpc-yaml_opt=python_package_prefix=temporalio.api \
 		--nexus-rpc-yaml_opt=typescript_package_prefix=@temporalio/api \

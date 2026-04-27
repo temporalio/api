@@ -8,7 +8,7 @@ ci-build: install proto http-api-docs
 install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
-proto: sync-nexus-annotations grpc http-api-docs nexus-rpc-yaml
+proto: grpc http-api-docs nexus-rpc-yaml
 ########################################################################
 
 ##### Variables ######

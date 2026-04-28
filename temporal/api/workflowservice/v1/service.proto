@@ -1888,4 +1888,87 @@ service WorkflowService {
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: Nexus operation deletion not exposed to HTTP, users should use cancel or terminate. --)
     rpc DeleteNexusOperationExecution (DeleteNexusOperationExecutionRequest) returns (DeleteNexusOperationExecutionResponse) {}
+
+    // StartCallbackExecution starts a new standalone callback execution.
+    //
+    // Returns a `CallbackExecutionAlreadyStarted` error if a callback already exists with the same
+    // callback ID in this namespace, either in running or terminal states.
+    rpc StartCallbackExecution (StartCallbackExecutionRequest) returns (StartCallbackExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/callbacks/{callback_id}"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/callbacks/{callback_id}"
+                body: "*"
+            }
+        };
+    }
+
+    // DescribeCallbackExecution returns information about a callback execution.
+    //
+    // It can be used to:
+    // - Get current callback info without waiting
+    // - Long-poll for next state change and return new callback info
+    //
+    // Response can optionally include the outcome if the callback has completed.
+    rpc DescribeCallbackExecution (DescribeCallbackExecutionRequest) returns (DescribeCallbackExecutionResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/callbacks/{callback_id}"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/callbacks/{callback_id}"
+            }
+        };
+    }
+
+    // PollCallbackExecution long-polls for a callback execution to complete and returns the outcome.
+    rpc PollCallbackExecution (PollCallbackExecutionRequest) returns (PollCallbackExecutionResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/callbacks/{callback_id}/outcome"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/callbacks/{callback_id}/outcome"
+            }
+        };
+    }
+
+    // ListCallbackExecutions is a visibility API to list callback executions in a specific namespace.
+    rpc ListCallbackExecutions (ListCallbackExecutionsRequest) returns (ListCallbackExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/callbacks"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/callbacks"
+            }
+        };
+    }
+
+    // CountCallbackExecutions is a visibility API to count callback executions in a specific namespace.
+    rpc CountCallbackExecutions (CountCallbackExecutionsRequest) returns (CountCallbackExecutionsResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/callback-count"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/callback-count"
+            }
+        };
+    }
+
+    // TerminateCallbackExecution terminates an existing callback execution immediately.
+    //
+    // Termination happens immediately. A terminated callback will have its state set to
+    // CALLBACK_STATE_TERMINATED.
+    rpc TerminateCallbackExecution (TerminateCallbackExecutionRequest) returns (TerminateCallbackExecutionResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/callbacks/{callback_id}/terminate"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/callbacks/{callback_id}/terminate"
+                body: "*"
+            }
+        };
+    }
+
+    // DeleteCallbackExecution asynchronously deletes a callback execution. If the callback is
+    // running, it will be terminated before deletion.
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: Callback deletion not exposed to HTTP, users should use cancel or terminate. --)
+    rpc DeleteCallbackExecution (DeleteCallbackExecutionRequest) returns (DeleteCallbackExecutionResponse) {}
 }

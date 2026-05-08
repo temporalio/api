@@ -8,7 +8,7 @@ ci-build: install proto http-api-docs
 install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
-proto: grpc http-api-docs
+proto: stable-api grpc http-api-docs
 ########################################################################
 
 ##### Variables ######
@@ -23,7 +23,7 @@ STAMPDIR := .stamp
 COLOR := "\e[1;36m%s\e[0m\n"
 
 PROTO_ROOT := .
-PROTO_FILES = $(shell find temporal -name "*.proto")
+PROTO_FILES = $(shell find temporal/api -name "*.proto")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 PROTO_OUT := .gen
 PROTO_IMPORTS = \
@@ -37,7 +37,11 @@ $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
 
 ##### Compile proto files for go #####
-grpc: buf-lint api-linter buf-breaking clean go-grpc fix-path
+stable-api:
+	printf $(COLOR) "Generate stable temporal/api protos from temporal/api_next..."
+	(cd cmd/generate-stable-api && go run .)
+
+grpc: stable-api buf-lint api-linter buf-breaking clean go-grpc fix-path
 
 go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
@@ -111,6 +115,10 @@ $(STAMPDIR)/buf-mod-prune: $(STAMPDIR) buf.yaml
 buf-lint: $(STAMPDIR)/buf-mod-prune
 	printf $(COLOR) "Run buf linter..."
 	(cd $(PROTO_ROOT) && buf lint)
+
+buf-lint-next:
+	printf $(COLOR) "Run buf linter for api_next..."
+	(cd $(PROTO_ROOT) && buf lint --config buf.next.yaml)
 
 buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check against master branch..."	

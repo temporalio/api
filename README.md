@@ -6,9 +6,25 @@ This repository contains both the protobuf descriptors and OpenAPI documentation
 
 Install as git submodule to the project.
 
+## Proto source layout
+
+`temporal/api_next` is the authored proto source. It may contain stable API plus
+draft declarations marked with `temporal.api.draft_*` options.
+
+`temporal/api` is generated from `temporal/api_next` by stripping draft
+declarations and adding generated-file headers. This stable tree is the default
+public source consumed by SDKs and other downstream proto users.
+
+Regenerate the stable tree with:
+
+```sh
+go run ./cmd/generate-stable-api
+```
+
 ## Contribution
 
-Make your change to the temporal/proto files, and run `make` to update the openapi definitions.
+Make your change to the `temporal/api_next` proto files, and run `make` to update
+the stable proto tree and OpenAPI definitions.
 
 ## Breaking changes
 

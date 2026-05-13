@@ -1321,7 +1321,10 @@ paths:
             type: string
         - name: query
           in: query
-          description: Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+          description: |-
+            Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+             Search attributes that are available:
+             - ExecutionStatus
           schema:
             type: string
       responses:
@@ -1363,7 +1366,10 @@ paths:
             format: bytes
         - name: query
           in: query
-          description: Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+          description: |-
+            Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+             Search attributes that are available:
+             - ExecutionStatus
           schema:
             type: string
       responses:
@@ -1400,7 +1406,7 @@ paths:
             type: string
         - name: callbackId
           in: path
-          description: Identifier for the callback
+          description: Identifier for the callback.
           required: true
           schema:
             type: string
@@ -1422,8 +1428,9 @@ paths:
         - name: longPollToken
           in: query
           description: |-
-            Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until callback
+            Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until the callback
              state changes from the state encoded in this token. If absent, return current state immediately.
+             If present, run_id must also be present.
              Note that callback state may change multiple times between requests, therefore it is not
              guaranteed that a client making a sequence of long-poll requests will see a complete
              sequence of state changes.
@@ -1499,7 +1506,7 @@ paths:
             type: string
         - name: callbackId
           in: path
-          description: Identifier for the callback
+          description: Identifier for the callback.
           required: true
           schema:
             type: string
@@ -1539,7 +1546,7 @@ paths:
             type: string
         - name: callbackId
           in: path
-          description: Identifier for the callback
+          description: Identifier for the callback.
           required: true
           schema:
             type: string
@@ -6579,7 +6586,10 @@ paths:
             type: string
         - name: query
           in: query
-          description: Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+          description: |-
+            Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+             Search attributes that are available:
+             - ExecutionStatus
           schema:
             type: string
       responses:
@@ -6621,7 +6631,10 @@ paths:
             format: bytes
         - name: query
           in: query
-          description: Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+          description: |-
+            Visibility query, see https://docs.temporal.io/list-filter for the syntax.
+             Search attributes that are available:
+             - ExecutionStatus
           schema:
             type: string
       responses:
@@ -6658,7 +6671,7 @@ paths:
             type: string
         - name: callbackId
           in: path
-          description: Identifier for the callback
+          description: Identifier for the callback.
           required: true
           schema:
             type: string
@@ -6680,8 +6693,9 @@ paths:
         - name: longPollToken
           in: query
           description: |-
-            Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until callback
+            Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until the callback
              state changes from the state encoded in this token. If absent, return current state immediately.
+             If present, run_id must also be present.
              Note that callback state may change multiple times between requests, therefore it is not
              guaranteed that a client making a sequence of long-poll requests will see a complete
              sequence of state changes.
@@ -6757,7 +6771,7 @@ paths:
             type: string
         - name: callbackId
           in: path
-          description: Identifier for the callback
+          description: Identifier for the callback.
           required: true
           schema:
             type: string
@@ -6797,7 +6811,7 @@ paths:
             type: string
         - name: callbackId
           in: path
-          description: Identifier for the callback
+          description: Identifier for the callback.
           required: true
           schema:
             type: string
@@ -11117,18 +11131,24 @@ components:
             - CALLBACK_STATE_SUCCEEDED
             - CALLBACK_STATE_BLOCKED
             - CALLBACK_STATE_TERMINATED
+            - CALLBACK_STATE_TIMED_OUT
           type: string
           description: The detailed state of this callback, provides more granular information than the general status.
           format: enum
         attempt:
           type: integer
           description: |-
-            The number of attempts made to deliver the callback.
-             This number represents a minimum bound since the attempt is incremented after the callback request completes.
+            The number of attempts made to deliver the start callback execution request.
+             This number is approximate. There could be more attempts if callback invocation fails, or fewer
+             if it was terminated.
           format: int32
         createTime:
           type: string
           description: The time when the callback was created/scheduled.
+          format: date-time
+        closeTime:
+          type: string
+          description: Time when the callback transitioned to a terminal state.
           format: date-time
         lastAttemptCompleteTime:
           type: string
@@ -11140,15 +11160,11 @@ components:
           description: The last attempt's failure, if any.
         nextAttemptScheduleTime:
           type: string
-          description: The time when the next attempt is scheduled.
+          description: The time when the next attempt is scheduled (only set when in BACKING_OFF state).
           format: date-time
         blockedReason:
           type: string
           description: If the state is BLOCKED, provides additional information.
-        closeTime:
-          type: string
-          description: Time when the callback transitioned to a terminal state.
-          format: date-time
         searchAttributes:
           allOf:
             - $ref: '#/components/schemas/SearchAttributes'
@@ -11230,6 +11246,7 @@ components:
             - CALLBACK_STATE_SUCCEEDED
             - CALLBACK_STATE_BLOCKED
             - CALLBACK_STATE_TERMINATED
+            - CALLBACK_STATE_TIMED_OUT
           type: string
           description: The current state of the callback.
           format: enum
@@ -11280,7 +11297,9 @@ components:
           description: Header to attach to callback request.
         token:
           type: string
-          description: Standard token to use for identifying the callback, used for completion.
+          description: |-
+            Standard token to use for identifying the callback, used for completion.
+             Clients should also populate the token header field for compatibility with older servers.
     CanceledFailureInfo:
       type: object
       properties:
@@ -17897,7 +17916,7 @@ components:
           type: string
         callbackId:
           type: string
-          description: Identifier for the callback
+          description: Identifier for the callback.
         runId:
           type: string
           description: Run ID of the callback execution to terminate. If empty, the latest run will be terminated.

@@ -59,12 +59,15 @@ message CallbackExecutionInfo {
     // The detailed state of this callback, provides more granular information than the general status.
     temporal.api.enums.v1.CallbackState state = 5;
 
-    // The number of attempts made to deliver the callback.
-    // This number represents a minimum bound since the attempt is incremented after the callback request completes.
+    // The number of attempts made to deliver the start callback execution request.
+    // This number is approximate. There could be more attempts if callback invocation fails, or fewer
+    // if it was terminated.
     int32 attempt = 6;
 
     // The time when the callback was created/scheduled.
     google.protobuf.Timestamp create_time = 7;
+    // Time when the callback transitioned to a terminal state.
+    google.protobuf.Timestamp close_time = 12;
 
     // The time when the last attempt completed.
     google.protobuf.Timestamp last_attempt_complete_time = 8;
@@ -72,14 +75,11 @@ message CallbackExecutionInfo {
     // The last attempt's failure, if any.
     temporal.api.failure.v1.Failure last_attempt_failure = 9;
 
-    // The time when the next attempt is scheduled.
+    // The time when the next attempt is scheduled (only set when in BACKING_OFF state).
     google.protobuf.Timestamp next_attempt_schedule_time = 10;
 
     // If the state is BLOCKED, provides additional information.
     string blocked_reason = 11;
-
-    // Time when the callback transitioned to a terminal state.
-    google.protobuf.Timestamp close_time = 12;
 
     // Search attributes for indexing.
     temporal.api.common.v1.SearchAttributes search_attributes = 13;

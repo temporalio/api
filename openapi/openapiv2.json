@@ -1462,7 +1462,7 @@
           },
           {
             "name": "query",
-            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.",
+            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.\nSearch attributes that are available:\n- ExecutionStatus",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1516,7 +1516,7 @@
           },
           {
             "name": "query",
-            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.",
+            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.\nSearch attributes that are available:\n- ExecutionStatus",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1555,7 +1555,7 @@
           },
           {
             "name": "callbackId",
-            "description": "Identifier for the callback",
+            "description": "Identifier for the callback.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1583,7 +1583,7 @@
           },
           {
             "name": "longPollToken",
-            "description": "Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until callback\nstate changes from the state encoded in this token. If absent, return current state immediately.\nNote that callback state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
+            "description": "Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until the callback\nstate changes from the state encoded in this token. If absent, return current state immediately.\nIf present, run_id must also be present.\nNote that callback state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1667,7 +1667,7 @@
           },
           {
             "name": "callbackId",
-            "description": "Identifier for the callback",
+            "description": "Identifier for the callback.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1713,7 +1713,7 @@
           },
           {
             "name": "callbackId",
-            "description": "Identifier for the callback",
+            "description": "Identifier for the callback.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -7304,7 +7304,7 @@
           },
           {
             "name": "query",
-            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.",
+            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.\nSearch attributes that are available:\n- ExecutionStatus",
             "in": "query",
             "required": false,
             "type": "string"
@@ -7358,7 +7358,7 @@
           },
           {
             "name": "query",
-            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.",
+            "description": "Visibility query, see https://docs.temporal.io/list-filter for the syntax.\nSearch attributes that are available:\n- ExecutionStatus",
             "in": "query",
             "required": false,
             "type": "string"
@@ -7397,7 +7397,7 @@
           },
           {
             "name": "callbackId",
-            "description": "Identifier for the callback",
+            "description": "Identifier for the callback.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -7425,7 +7425,7 @@
           },
           {
             "name": "longPollToken",
-            "description": "Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until callback\nstate changes from the state encoded in this token. If absent, return current state immediately.\nNote that callback state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
+            "description": "Token from a previous DescribeCallbackExecutionResponse. If present, long-poll until the callback\nstate changes from the state encoded in this token. If absent, return current state immediately.\nIf present, run_id must also be present.\nNote that callback state may change multiple times between requests, therefore it is not\nguaranteed that a client making a sequence of long-poll requests will see a complete\nsequence of state changes.",
             "in": "query",
             "required": false,
             "type": "string",
@@ -7509,7 +7509,7 @@
           },
           {
             "name": "callbackId",
-            "description": "Identifier for the callback",
+            "description": "Identifier for the callback.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -7555,7 +7555,7 @@
           },
           {
             "name": "callbackId",
-            "description": "Identifier for the callback",
+            "description": "Identifier for the callback.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -11224,7 +11224,7 @@
         },
         "token": {
           "type": "string",
-          "description": "Standard token to use for identifying the callback, used for completion."
+          "description": "Standard token to use for identifying the callback, used for completion.\nClients should also populate the token header field for compatibility with older servers."
         }
       }
     },
@@ -14782,12 +14782,17 @@
         "attempt": {
           "type": "integer",
           "format": "int32",
-          "description": "The number of attempts made to deliver the callback.\nThis number represents a minimum bound since the attempt is incremented after the callback request completes."
+          "description": "The number of attempts made to deliver the start callback execution request.\nThis number is approximate. There could be more attempts if callback invocation fails, or fewer\nif it was terminated."
         },
         "createTime": {
           "type": "string",
           "format": "date-time",
           "description": "The time when the callback was created/scheduled."
+        },
+        "closeTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time when the callback transitioned to a terminal state."
         },
         "lastAttemptCompleteTime": {
           "type": "string",
@@ -14801,16 +14806,11 @@
         "nextAttemptScheduleTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The time when the next attempt is scheduled."
+          "description": "The time when the next attempt is scheduled (only set when in BACKING_OFF state)."
         },
         "blockedReason": {
           "type": "string",
           "description": "If the state is BLOCKED, provides additional information."
-        },
-        "closeTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Time when the callback transitioned to a terminal state."
         },
         "searchAttributes": {
           "$ref": "#/definitions/v1SearchAttributes",
@@ -14902,10 +14902,11 @@
         "CALLBACK_STATE_FAILED",
         "CALLBACK_STATE_SUCCEEDED",
         "CALLBACK_STATE_BLOCKED",
-        "CALLBACK_STATE_TERMINATED"
+        "CALLBACK_STATE_TERMINATED",
+        "CALLBACK_STATE_TIMED_OUT"
       ],
       "default": "CALLBACK_STATE_UNSPECIFIED",
-      "description": "State of a callback.\n\n - CALLBACK_STATE_UNSPECIFIED: Default value, unspecified state.\n - CALLBACK_STATE_STANDBY: Callback is standing by, waiting to be triggered.\n - CALLBACK_STATE_SCHEDULED: Callback is in the queue waiting to be executed or is currently executing.\n - CALLBACK_STATE_BACKING_OFF: Callback has failed with a retryable error and is backing off before the next attempt.\n - CALLBACK_STATE_FAILED: Callback has failed.\n - CALLBACK_STATE_SUCCEEDED: Callback has succeeded.\n - CALLBACK_STATE_BLOCKED: Callback is blocked (eg: by circuit breaker).\n - CALLBACK_STATE_TERMINATED: Callback was terminated via TerminateCallbackExecution. Only possible for standalone callbacks."
+      "description": "State of a callback.\n\n - CALLBACK_STATE_UNSPECIFIED: Default value, unspecified state.\n - CALLBACK_STATE_STANDBY: Callback is standing by, waiting to be triggered.\n - CALLBACK_STATE_SCHEDULED: Callback is in the queue waiting to be executed or is currently executing.\n - CALLBACK_STATE_BACKING_OFF: Callback has failed with a retryable error and is backing off before the next attempt.\n - CALLBACK_STATE_FAILED: Callback has failed.\n - CALLBACK_STATE_SUCCEEDED: Callback has succeeded.\n - CALLBACK_STATE_BLOCKED: Callback is blocked (eg: by circuit breaker).\n - CALLBACK_STATE_TERMINATED: Callback was terminated via TerminateCallbackExecution. Only possible for standalone callbacks.\n - CALLBACK_STATE_TIMED_OUT: Callback exceeded the schedule-to-close timeout."
     },
     "v1CancelExternalWorkflowExecutionFailedCause": {
       "type": "string",

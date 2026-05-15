@@ -8,7 +8,7 @@ ci-build: install proto http-api-docs
 install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
-proto: sync-nexus-annotations grpc http-api-docs nexus-rpc-yaml
+proto: grpc http-api-docs nexus-rpc-yaml
 ########################################################################
 
 ##### Variables ######
@@ -119,13 +119,12 @@ buf-lint: $(STAMPDIR)/buf-mod-prune
 
 buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
-# 	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
+	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
 
 nexus-rpc-yaml: nexus-rpc-yaml-install
-	printf $(COLOR) "Generate nexus/temporal-json-schema-models-nexusrpc.yaml and nexus/temporal-proto-models-nexusrpc.yaml..."
+	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."
 	mkdir -p nexus
 	protoc -I $(PROTO_ROOT) \
-		--nexus-rpc-yaml_opt=nexus-rpc_out=nexus/temporal-json-schema-models-nexusrpc.yaml \
 		--nexus-rpc-yaml_opt=nexus-rpc_langs_out=nexus/temporal-proto-models-nexusrpc.yaml \
 		--nexus-rpc-yaml_opt=python_package_prefix=temporalio.api \
 		--nexus-rpc-yaml_opt=typescript_package_prefix=@temporalio/api \

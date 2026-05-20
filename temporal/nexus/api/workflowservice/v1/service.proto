@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package temporal.nexus.api.workflowservice.v1;
+
+option go_package = "go.temporal.io/nexus/api/workflowservice/v1;workflowservice";
+option java_package = "io.temporal.nexus.api.workflowservice.v1";
+option java_multiple_files = true;
+option java_outer_classname = "ServiceProto";
+option ruby_package = "Temporalio::Nexus::Api::WorkflowService::V1";
+option csharp_namespace = "Temporalio.Nexus.Api.WorkflowService.V1";
+
+
+import "google/api/annotations.proto";
+import "nexusannotations/v1/options.proto";
+import "temporal/api/protometa/v1/annotations.proto";
+import "temporal/nexus/api/workflowservice/v1/request_response.proto";
+
+// Nexus WorkflowService API defines how Temporal SDKs and other clients interact with the Temporal server
+// through Nexus operations. Nexus operations can be either sync or async. 
+service NexusWorkflowService {
+    // WaitForExternalWorkflow asynchronously waits for an external workflow to complete.
+    //
+    // (-- api-linter: core::0127::http-annotation=disabled
+    //     aip.dev/not-precedent: Activity deletion not exposed to HTTP, users should use cancel or terminate. --)
+    // (-- api-linter: core::0136::prepositions=disabled
+    //     aip.dev/not-precedent: WaitForExternalWorkflow is the established name for this operation. --)
+    rpc WaitForExternalWorkflow (WaitForExternalWorkflowRequest) returns (WaitForExternalWorkflowResponse) {
+        option (nexusannotations.v1.operation).tags = "exposed";
+
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "workflow:{execution.workflow_id}"
+        };
+    }
+}

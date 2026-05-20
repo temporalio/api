@@ -20,6 +20,17 @@ type params struct {
 	input       string
 }
 
+// parseParams parses the comma-separated key=value parameter string provided by protoc.
+//
+//   - output: required. Path to the WIT file to generate, relative to the
+//     --system-nexus-wit_out directory. Example: "nexus/temporal-system.wit".
+//
+//   - nexus_api_gen: optional. Path to the nexus-api-gen binary. Defaults to
+//     "nexus-api-gen".
+//
+//   - input: optional. Existing WIT file to update. Defaults to output, so
+//     existing handwritten annotations and type refinements are preserved when
+//     regenerating in place.
 func parseParams(raw string) (params, error) {
 	p := params{
 		nexusAPIGen: "nexus-api-gen",

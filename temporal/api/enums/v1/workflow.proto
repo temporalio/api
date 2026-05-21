@@ -91,6 +91,14 @@ enum PendingActivityState {
     PENDING_ACTIVITY_STATE_PAUSED = 4;
     // PAUSE_REQUESTED means activity is currently running on the worker, but paused on the server
     PENDING_ACTIVITY_STATE_PAUSE_REQUESTED = 5;
+    // WAITING_FOR_COMPLETION means the worker completed an attempt by signalling the activity is
+    // pending external completion (via `RespondActivityTaskPending`). The activity is no longer
+    // running on a worker; the server is waiting for an external caller to deliver the result via
+    // `RespondActivityTaskCompleted` / `RespondActivityTaskFailed` (typically via
+    // `Client.CompleteActivity` / `CompleteActivityByID`). The deadline that applies in this state
+    // is `min(AsyncCompletionOptions.wait_for_completion_timeout, remaining StartToClose)`.
+    // Heartbeats remain valid in this state and reset `HeartbeatTimeout`.
+    PENDING_ACTIVITY_STATE_WAITING_FOR_COMPLETION = 6;
 }
 
 enum PendingWorkflowTaskState {

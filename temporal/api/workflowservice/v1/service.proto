@@ -443,6 +443,69 @@ service WorkflowService {
         };
     }
 
+    // RespondActivityTaskPending is called by workers to signal that an activity attempt has
+    // handed off its work to an external system and should transition to
+    // `PENDING_ACTIVITY_STATE_WAITING_FOR_COMPLETION`. The activity is no longer running on a
+    // worker; the server waits for an external caller to deliver the final result via
+    // `RespondActivityTaskCompleted` / `RespondActivityTaskFailed` (typically through
+    // `Client.CompleteActivity` / `CompleteActivityByID`).
+    //
+    // The wait deadline that applies is `min(AsyncCompletionOptions.wait_for_completion_timeout,
+    // remaining start_to_close_timeout)`. Wait-deadline expiration is terminal (`TIMED_OUT`); it
+    // does not re-run the handoff. `RetryPolicy` still applies to handoff-phase failures.
+    //
+    // Heartbeats remain valid in the waiting state and reset `heartbeat_timeout`. Cancellation
+    // requested while waiting is delivered via the heartbeat / pending response's
+    // `cancel_requested` field.
+    //
+    // Fails with `NotFound` if the task token is no longer valid due to activity timeout, already
+    // being completed, or never having existed.
+    rpc RespondActivityTaskPending (RespondActivityTaskPendingRequest) returns (RespondActivityTaskPendingResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activity-pending"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activity-pending"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "{resource_id}"
+        };
+    }
+
+    // See `RespondActivityTaskPending`. This version allows callers to mark an activity as pending
+    // external completion by namespace/workflow id/activity id instead of task token.
+    //
+    // (-- api-linter: core::0136::prepositions=disabled
+    //     aip.dev/not-precedent: "By" is used to indicate request type. --)
+    rpc RespondActivityTaskPendingById (RespondActivityTaskPendingByIdRequest) returns (RespondActivityTaskPendingByIdResponse) {
+        option (google.api.http) = {
+            // Standalone
+            post: "/namespaces/{namespace}/activities/{activity_id}/pending"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activities/{activity_id}/pending"
+                body: "*"
+            }
+
+            // Workflow
+            additional_bindings {
+                post: "/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/pending"
+                body: "*"
+            }
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{workflow_id}/activities/{activity_id}/pending"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "{resource_id}"
+        };
+    }
+
     // RequestCancelWorkflowExecution is called by workers when they want to request cancellation of
     // a workflow execution.
     //

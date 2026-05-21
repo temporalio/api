@@ -781,6 +781,61 @@ message RespondActivityTaskCanceledByIdRequest {
 message RespondActivityTaskCanceledByIdResponse {
 }
 
+message RespondActivityTaskPendingRequest {
+    // The task token as received in `PollActivityTaskQueueResponse`.
+    bytes task_token = 1;
+    // Optional initial details to attach to the wait state, surfaced in `PendingActivityInfo` /
+    // `ActivityExecutionInfo` so describe/list responses can show user-visible context (e.g. the
+    // external system's request ID). Equivalent to immediately calling
+    // `RecordActivityTaskHeartbeat` with these details after the activity transitions to
+    // `WAITING_FOR_COMPLETION`, but delivered in one round-trip.
+    temporal.api.common.v1.Payloads details = 2;
+    // The identity of the worker/client.
+    string identity = 3;
+    string namespace = 4;
+    // Resource ID for routing. Contains the workflow ID or activity ID for standalone activities.
+    string resource_id = 5;
+    // Worker deployment options that user has set in the worker.
+    temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 6;
+}
+
+message RespondActivityTaskPendingResponse {
+    // True if the activity should consider itself canceled (cancellation was requested while the
+    // attempt was running). Mirrors `RecordActivityTaskHeartbeatResponse.cancel_requested` so the
+    // worker can see the bit without an extra heartbeat round-trip.
+    bool cancel_requested = 1;
+    // True if the activity was paused while the attempt was running.
+    bool activity_paused = 2;
+    // True if the activity was reset while the attempt was running. Applies only to the current run.
+    bool activity_reset = 3;
+}
+
+message RespondActivityTaskPendingByIdRequest {
+    // Namespace of the workflow which scheduled this activity.
+    string namespace = 1;
+    // Id of the workflow which scheduled this activity, leave empty to target a standalone activity.
+    string workflow_id = 2;
+    // For a workflow activity - the run ID of the workflow which scheduled this activity.
+    // For a standalone activity - the run ID of the activity.
+    string run_id = 3;
+    // Id of the activity to mark as pending external completion.
+    string activity_id = 4;
+    // Optional initial details to attach to the wait state. See `RespondActivityTaskPendingRequest.details`.
+    temporal.api.common.v1.Payloads details = 5;
+    // The identity of the worker/client.
+    string identity = 6;
+    // Resource ID for routing. Contains "workflow:workflow_id" or "activity:activity_id" for standalone activities.
+    string resource_id = 7;
+    // Worker deployment options that user has set in the worker.
+    temporal.api.deployment.v1.WorkerDeploymentOptions deployment_options = 8;
+}
+
+message RespondActivityTaskPendingByIdResponse {
+    bool cancel_requested = 1;
+    bool activity_paused = 2;
+    bool activity_reset = 3;
+}
+
 message RequestCancelWorkflowExecutionRequest {
     string namespace = 1;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;

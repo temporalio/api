@@ -63,6 +63,42 @@ message ActivityOptions {
     // Priority metadata. If this message is not present, or any fields are not
     // present, they inherit the values from the workflow.
     temporal.api.common.v1.Priority priority = 7;
+
+    // Configuration for manually-completed activities. When set, an activity that returns
+    // "async completion pending" via `RespondActivityTaskPending` transitions to
+    // `PENDING_ACTIVITY_STATE_WAITING_FOR_COMPLETION` and these timeouts apply. Leaving this
+    // unset preserves today's behavior: the activity still transitions to
+    // `WAITING_FOR_COMPLETION` on `RespondActivityTaskPending`, but the wait deadline falls back
+    // to the remaining `start_to_close_timeout`. The activity implementation alone decides at
+    // runtime whether to go async; setting this message just configures the deadlines.
+    AsyncCompletionOptions async_completion = 8;
+}
+
+// Configuration for activities that may opt to be completed manually by an external caller.
+// See `PendingActivityState.PENDING_ACTIVITY_STATE_WAITING_FOR_COMPLETION` for the corresponding
+// run state.
+message AsyncCompletionOptions {
+    // Maximum time the in-worker handoff attempt is allowed to take before being treated as a
+    // failed attempt. Per-attempt; resets on retry. Bounds only the synchronous portion of the
+    // activity (before the worker returns "async completion pending"). When unset, the in-worker
+    // attempt is bounded by `start_to_close_timeout` as today.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration handoff_timeout = 1;
+
+    // Maximum time the server will wait for an external caller to deliver the result via
+    // `RespondActivityTaskCompleted` / `RespondActivityTaskFailed` after the activity has
+    // transitioned to `WAITING_FOR_COMPLETION`. Per-attempt; the clock starts when the server
+    // receives `RespondActivityTaskPending`. The effective wait deadline is
+    // `min(wait_for_completion_timeout, remaining start_to_close_timeout)` — `start_to_close_timeout`
+    // remains the per-attempt outer envelope and clamps the wait if it would otherwise exceed it.
+    // Expiration is terminal (`TIMED_OUT`); it does not re-run the handoff. `RetryPolicy` still
+    // applies to handoff-phase failures.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration wait_for_completion_timeout = 2;
 }
 
 // Information about a standalone activity.
@@ -168,6 +204,11 @@ message ActivityExecutionInfo {
 
     // Total number of heartbeats recorded across all attempts of this activity, including retries.
     int64 total_heartbeat_count = 34;
+
+    // Configuration for manual completion, if this activity opted into it via
+    // `ActivityOptions.async_completion`. Reflected here so describe/list responses can show the
+    // wait-completion deadline when `run_state == WAITING_FOR_COMPLETION`.
+    AsyncCompletionOptions async_completion = 35;
 }
 
 // Limited activity information returned in the list response.

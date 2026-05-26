@@ -8,7 +8,7 @@ ci-build: install proto http-api-docs
 install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
-proto: grpc http-api-docs nexus-rpc-yaml system-nexus-wit
+proto: grpc http-api-docs system-nexus-wit
 ########################################################################
 
 ##### Variables ######
@@ -35,15 +35,12 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
-SYSTEM_NEXUS_OUT := nexus
-SYSTEM_NEXUS_WIT := $(SYSTEM_NEXUS_OUT)/temporal-system.wit
-SYSTEM_NEXUS_DESCRIPTOR := $(PROTO_OUT)/system-nexus/temporal_api.bin
+SYSTEM_NEXUS_WIT := nexus/temporal-system.wit
 SYSTEM_NEXUS_SERVICE_PROTO_FILES := $(shell find temporal/api -name "service.proto" | sort)
-GO_BUILD_CACHE ?= $(abspath $(PROTO_OUT)/go-build-cache)
 NEXUS_API_GEN ?= nexus-api-gen
 
 $(PROTO_OUT):
-	mkdir -p $(PROTO_OUT)
+	mkdir $(PROTO_OUT)
 
 ##### Compile proto files for go #####
 grpc: buf-lint api-linter buf-breaking clean go-grpc fix-path
@@ -115,7 +112,7 @@ api-linter:
 	@api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml --output-format json $(PROTO_FILES) | gojq -r 'map(select(.problems != []) | . as $$file | .problems[] | {rule: .rule_doc_uri, location: "\($$file.file_path):\(.location.start_position.line_number)"}) | group_by(.rule) | .[] | .[0].rule + ":\n" + (map("\t" + .location) | join("\n"))'
 
 $(STAMPDIR):
-	mkdir -p $@
+	mkdir $@
 
 $(STAMPDIR)/buf-mod-prune: $(STAMPDIR) buf.yaml
 	printf $(COLOR) "Pruning buf module"
@@ -130,48 +127,22 @@ buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
 	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
 
-nexus-rpc-yaml: nexus-rpc-yaml-install
-	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."
-	mkdir -p nexus
-	protoc -I $(PROTO_ROOT) \
-		--nexus-rpc-yaml_opt=nexus-rpc_langs_out=nexus/temporal-proto-models-nexusrpc.yaml \
-		--nexus-rpc-yaml_opt=python_package_prefix=temporalio.api \
-		--nexus-rpc-yaml_opt=typescript_package_prefix=@temporalio/api \
-		--nexus-rpc-yaml_opt=include_operation_tags=exposed \
-		--nexus-rpc-yaml_out=. \
-		temporal/api/workflowservice/v1/* \
-		temporal/api/operatorservice/v1/*
-
-nexus-rpc-yaml-install:
-	printf $(COLOR) "Build and install protoc-gen-nexus-rpc-yaml..."
-	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
-
 ##### Compile system Nexus WIT files #####
-system-nexus-wit: $(SYSTEM_NEXUS_WIT)
-
-$(SYSTEM_NEXUS_DESCRIPTOR): $(PROTO_FILES) | $(PROTO_OUT)
-	printf $(COLOR) "Build Temporal API descriptor set for system Nexus WIT..."
-	mkdir -p $(@D)
-	protoc -I $(PROTO_ROOT) \
-		--include_imports \
-		--include_source_info \
-		--descriptor_set_out=$@ \
-		$(SYSTEM_NEXUS_SERVICE_PROTO_FILES)
-
-$(SYSTEM_NEXUS_WIT): $(SYSTEM_NEXUS_DESCRIPTOR) cmd/gen-system-nexus-wit/main.go $(SYSTEM_NEXUS_SERVICE_PROTO_FILES) | $(STAMPDIR)/nexus-api-gen-install
+system-nexus-wit: system-nexus-wit-install nexus-api-gen-install
 	printf $(COLOR) "Generate system Nexus WIT..."
-	GOCACHE=$(GO_BUILD_CACHE) go run cmd/gen-system-nexus-wit/main.go \
-		--descriptors $(SYSTEM_NEXUS_DESCRIPTOR) \
-		--nexus-api-gen $(NEXUS_API_GEN) \
-		--output $@ \
+	protoc -I $(PROTO_ROOT) \
+		--system-nexus-wit_opt=output=$(SYSTEM_NEXUS_WIT) \
+		--system-nexus-wit_opt=nexus_api_gen=$(NEXUS_API_GEN) \
+		--system-nexus-wit_out=. \
 		$(SYSTEM_NEXUS_SERVICE_PROTO_FILES)
 
-$(STAMPDIR)/nexus-api-gen-install: | $(STAMPDIR)
+system-nexus-wit-install:
+	printf $(COLOR) "Build and install protoc-gen-system-nexus-wit..."
+	@cd cmd/protoc-gen-system-nexus-wit && go install .
+
+nexus-api-gen-install:
 	printf $(COLOR) "Install nexus-api-gen if missing..."
 	command -v $(NEXUS_API_GEN) >/dev/null || CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --git https://github.com/temporalio/nexus-api-gen
-	touch $@
-
-nexus-api-gen-install: $(STAMPDIR)/nexus-api-gen-install
 
 ##### Clean #####
 clean:

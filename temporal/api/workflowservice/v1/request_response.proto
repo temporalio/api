@@ -1109,6 +1109,11 @@ message ResetStickyTaskQueueResponse {
 }
 
 message ShutdownWorkerRequest {
+    message WorkerPollerTaskQueue {
+        string name = 1;
+        temporal.api.enums.v1.TaskQueueType type = 2;
+    }
+
     string namespace = 1;
     // sticky_task_queue may not always be populated. We want to ensure all workers
     // send a shutdown request to update worker state for heartbeating, as well
@@ -1127,13 +1132,13 @@ message ShutdownWorkerRequest {
     string task_queue = 7 [deprecated = true];
     // Task queue types that help server cancel outstanding poll RPC
     // calls from SDK. This avoids a race condition that can lead to tasks being lost.
-    repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 8;
-    // Task queue names the worker is polling on. This allows server to cancel
+    repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 8 [deprecated = true];
+    // Task queues the worker is polling on. This allows server to cancel
     // all outstanding poll RPC calls from SDK. This avoids a race condition that
-    // can lead to tasks being lost. This list of task queues potentially contains
-    // the regular task queue, the sticky task queue, and the 2 internal task
-    // queues that Go sessions use.
-    repeated string task_queues = 9;
+    // can lead to tasks being lost. Each entry identifies a specific task queue
+    // name and type pair, allowing the same task queue name to appear multiple
+    // times for workers polling more than one task queue type.
+    repeated WorkerPollerTaskQueue task_queues = 9;
 }
 
 message ShutdownWorkerResponse {

@@ -64,7 +64,7 @@ http-api-docs:
 		--openapiv2_out=openapi \
         --openapiv2_opt=allow_merge=true,merge_file_name=openapiv2,simple_operation_ids=true \
 		temporal/api/workflowservice/v1/* \
-		temporal/api/workflownexusservice/v1/* \
+		temporal/api/applicationservice/v1/* \
 		temporal/api/operatorservice/v1/*
 
 	jq --rawfile desc $(OAPI_OUT)/payload_description.txt < $(OAPI_OUT)/openapiv2.swagger.json '.definitions.v1Payload={description: $$desc}' > $(OAPI_OUT)/v2.tmp
@@ -132,7 +132,7 @@ nexus-rpc-yaml: nexus-rpc-yaml-install
 		--nexus-rpc-yaml_opt=include_operation_tags=exposed \
 		--nexus-rpc-yaml_out=. \
 		temporal/api/workflowservice/v1/* \
-		temporal/api/workflownexusservice/v1/* \
+		temporal/api/applicationservice/v1/* \
 		temporal/api/operatorservice/v1/*
 
 nexus-rpc-yaml-install:

@@ -118,7 +118,7 @@ func generate(gen *protogen.Plugin) error {
 				if !shouldIncludeOperation(p, m) {
 					continue
 				}
-				svcName := string(svc.Desc.Name())
+				svcName := string(svc.Desc.FullName())
 				methodName := string(m.Desc.Name())
 				hasOps = true
 				addOperation(langsDoc, svcName, methodName,

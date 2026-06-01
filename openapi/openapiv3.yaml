@@ -11840,6 +11840,62 @@ components:
           type: string
           description: Nexus task queue to route requests to.
       description: Target a worker polling on a Nexus task queue in a specific namespace.
+    EventGroupMarker:
+      type: object
+      properties:
+        label:
+          $ref: '#/components/schemas/EventGroupMarker_Label'
+        inboundEvent:
+          $ref: '#/components/schemas/EventGroupMarker_InboundEvent'
+        inboundUpdate:
+          $ref: '#/components/schemas/EventGroupMarker_InboundUpdate'
+    EventGroupMarker_InboundEvent:
+      type: object
+      properties:
+        inboundEventId:
+          type: string
+      description: |-
+        The event ID of an event in the present workflow that triggered implicit
+         creation of this group Marker.
+
+         The target event's type must be one of the following:
+          - `WORKFLOW_EXECUTION_STARTED`
+          - `WORKFLOW_EXECUTION_SIGNALED`
+    EventGroupMarker_InboundUpdate:
+      type: object
+      properties:
+        inboundUpdateId:
+          type: string
+      description: |-
+        The identifier of an inbound Update (request.meta.update_id)
+         whose handler triggered implicit creation of this group Marker.
+
+         Used in place of `inbound_event_id` for Updates because the event ID of the
+         UpdateAccepted history event is not known until the Workflow Task is
+         completed and recorded by the server, which may be too late.
+    EventGroupMarker_Label:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Opaque identifier assigned by the SDK.
+        label:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            This payload should be a "json/plain"-encoded payload that is a single
+             JSON string for use in user interfaces. User interface formatting may not
+             apply to this text when used in "label" situations. The payload data
+             section is limited to 400 bytes by default.
+
+             Payload only needs to be set on the first use of a given Marker ID;
+             further references to an existing Marker ID reuse existing attributes of
+             the referenced Marker -- i.e. further label payloads are ignored.
+
+             Note that it is valid to have distinct Markers (i.e. distinct Marker IDs)
+             in a given workflow execution that carry the same label, provided that
+             they have the distinct ID.
+      description: A user-defined short-form string value to be used as the group's label.
     ExternalWorkflowExecutionCancelRequestedEventAttributes:
       type: object
       properties:
@@ -12308,6 +12364,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/Principal'
           description: Server-computed authenticated caller identity associated with this event.
+        eventGroupMarkers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventGroupMarker'
+          description: Event group markers attached to this event.
         workflowExecutionStartedEventAttributes:
           $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes'
         workflowExecutionCompletedEventAttributes:

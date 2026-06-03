@@ -406,6 +406,16 @@ paths:
           schema:
             type: string
             format: bytes
+        - name: includeHeartbeatDetails
+          in: query
+          description: Include the heartbeat_details field inside info in the response if available.
+          schema:
+            type: boolean
+        - name: includeLastFailure
+          in: query
+          description: Include the last_failure field inside info in the response if available.
+          schema:
+            type: boolean
       responses:
         "200":
           description: OK
@@ -2229,6 +2239,7 @@ paths:
         - WorkflowService
       description: |-
         Deprecated. Use `GetWorkerVersioningRules`.
+         Will be removed in server version v1.32.0.
          Fetches the worker build id versioning sets for a task queue.
       operationId: GetWorkerBuildIdCompatibility
       parameters:
@@ -2270,7 +2281,7 @@ paths:
         - WorkflowService
       description: |-
         Fetches the Build ID assignment and redirect rules for a Task Queue.
-         WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+         Will be removed in server version v1.32.0.
       operationId: GetWorkerVersioningRules
       parameters:
         - name: namespace
@@ -3048,6 +3059,7 @@ paths:
         - WorkflowService
       description: |-
         Deprecated. Use `DescribeTaskQueue`.
+         Will be removed in server version v1.32.0.
 
          Fetches task reachability to determine whether a worker may be retired.
          The request may specify task queues to query for or let the server fetch all task queues mapped to the given
@@ -5409,6 +5421,16 @@ paths:
           schema:
             type: string
             format: bytes
+        - name: includeHeartbeatDetails
+          in: query
+          description: Include the heartbeat_details field inside info in the response if available.
+          schema:
+            type: boolean
+        - name: includeLastFailure
+          in: query
+          description: Include the last_failure field inside info in the response if available.
+          schema:
+            type: boolean
       responses:
         "200":
           description: OK
@@ -7207,6 +7229,7 @@ paths:
         - WorkflowService
       description: |-
         Deprecated. Use `GetWorkerVersioningRules`.
+         Will be removed in server version v1.32.0.
          Fetches the worker build id versioning sets for a task queue.
       operationId: GetWorkerBuildIdCompatibility
       parameters:
@@ -7248,7 +7271,7 @@ paths:
         - WorkflowService
       description: |-
         Fetches the Build ID assignment and redirect rules for a Task Queue.
-         WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+         Will be removed in server version v1.32.0.
       operationId: GetWorkerVersioningRules
       parameters:
         - name: namespace
@@ -7993,6 +8016,7 @@ paths:
         - WorkflowService
       description: |-
         Deprecated. Use `DescribeTaskQueue`.
+         Will be removed in server version v1.32.0.
 
          Fetches task reachability to determine whether a worker may be retired.
          The request may specify task queues to query for or let the server fetch all task queues mapped to the given
@@ -9642,7 +9666,9 @@ components:
         heartbeatDetails:
           allOf:
             - $ref: '#/components/schemas/Payloads'
-          description: Details provided in the last recorded activity heartbeat.
+          description: |-
+            Details provided in the last recorded activity heartbeat.
+             DescribeActivityExecution does not set this field unless include_heartbeat_details was true in the request.
         lastHeartbeatTime:
           type: string
           description: Time the last heartbeat was recorded.
@@ -9674,7 +9700,9 @@ components:
         lastFailure:
           allOf:
             - $ref: '#/components/schemas/Failure'
-          description: Failure details from the last failed attempt.
+          description: |-
+            Failure details from the last failed attempt.
+             DescribeActivityExecution does not set this field unless include_last_failure was true in the request.
         lastWorkerIdentity:
           type: string
         currentRetryInterval:
@@ -9732,6 +9760,16 @@ components:
         totalHeartbeatCount:
           type: string
           description: Total number of heartbeats recorded across all attempts of this activity, including retries.
+        sdkName:
+          type: string
+          description: |-
+            The name of the SDK of the worker that most recently picked up an attempt of this activity.
+             Overwritten on each new attempt. Empty if unknown.
+        sdkVersion:
+          type: string
+          description: |-
+            The version of the SDK of the worker that most recently picked up an attempt of this activity.
+             Overwritten on each new attempt. Empty if unknown.
       description: Information about a standalone activity.
     ActivityExecutionListInfo:
       type: object
@@ -11415,7 +11453,9 @@ components:
         info:
           allOf:
             - $ref: '#/components/schemas/ActivityExecutionInfo'
-          description: Information about the activity execution.
+          description: |-
+            Information about the activity execution. Fields heartbeat_details and last_failure are omitted unless
+             the request has include_heartbeat_details or include_last_failure set to true, respectively.
         input:
           allOf:
             - $ref: '#/components/schemas/Payloads'
@@ -11514,6 +11554,14 @@ components:
           description: |-
             Contains the historical state of failover_versions for the cluster, truncated to contain only the last N
              states to ensure that the list does not grow unbounded.
+        pollerGroupInfos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollerGroupInfo'
+          description: |-
+            The initial info that client should use for poller group assignment. This information is
+             updated through poll response. Client is supposed to use the info received in the latest
+             poll response.
     DescribeNexusOperationExecutionResponse:
       type: object
       properties:
@@ -13349,6 +13397,9 @@ components:
         identity:
           type: string
           description: The identity of the client who started this operation.
+        stateSizeBytes:
+          type: string
+          description: Updated once on scheduled and once on terminal status.
       description: Full current state of a standalone Nexus operation, as of the time of the request.
     NexusOperationExecutionListInfo:
       type: object
@@ -13401,6 +13452,9 @@ components:
           description: |-
             The difference between close time and scheduled time.
              This field is only populated if the operation is closed.
+        stateSizeBytes:
+          type: string
+          description: Updated once on scheduled and once on terminal status.
       description: |-
         Limited Nexus operation information returned in the list response.
          When adding fields here, ensure that it is also present in NexusOperationExecutionInfo (note that it may already be present in
@@ -15483,6 +15537,9 @@ components:
         invalidScheduleError:
           type: string
           description: Deprecated.
+        stateSizeBytes:
+          type: string
+          description: Size of the schedule's internal state (including payloads) in bytes.
     ScheduleListEntry:
       type: object
       properties:
@@ -15526,6 +15583,9 @@ components:
           items:
             type: string
             format: date-time
+        stateSizeBytes:
+          type: string
+          description: Size of the schedule's internal state (including payloads) in bytes.
       description: |-
         ScheduleListInfo is an abbreviated set of values from Schedule and ScheduleInfo
          that's returned in ListSchedules.

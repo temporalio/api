@@ -15,9 +15,9 @@ import (
 )
 
 type params struct {
-	nexusAPIGen string
-	output      string
-	input       string
+	nexGen string
+	output string
+	input  string
 }
 
 // parseParams parses the comma-separated key=value parameter string provided by protoc.
@@ -25,15 +25,14 @@ type params struct {
 //   - output: required. Path to the WIT file to generate, relative to the
 //     --system-nexus-wit_out directory. Example: "nexus/temporal-system.wit".
 //
-//   - nexus_api_gen: optional. Path to the nexus-api-gen binary. Defaults to
-//     "nexus-api-gen".
+//   - nex_gen: optional. Path to the nex-gen binary. Defaults to "nex-gen".
 //
 //   - input: optional. Existing WIT file to update. Defaults to output, so
 //     existing handwritten annotations and type refinements are preserved when
 //     regenerating in place.
 func parseParams(raw string) (params, error) {
 	p := params{
-		nexusAPIGen: "nexus-api-gen",
+		nexGen: "nex-gen",
 	}
 	if raw == "" {
 		return p, nil
@@ -44,8 +43,8 @@ func parseParams(raw string) (params, error) {
 			return p, fmt.Errorf("invalid parameter %q: expected key=value", kv)
 		}
 		switch key {
-		case "nexus_api_gen":
-			p.nexusAPIGen = value
+		case "nex_gen":
+			p.nexGen = value
 		case "output":
 			p.output = value
 		case "input":
@@ -97,7 +96,7 @@ func generate(gen *protogen.Plugin) error {
 	}
 
 	for _, rpc := range rpcs {
-		if err := runAddRPC(p.nexusAPIGen, descriptorPath, rpc, tempOutput, input); err != nil {
+		if err := runAddRPC(p.nexGen, descriptorPath, rpc, tempOutput, input); err != nil {
 			return err
 		}
 		input = tempOutput
@@ -150,7 +149,7 @@ func writeDescriptorSet(gen *protogen.Plugin, descriptorPath string) error {
 	return os.WriteFile(descriptorPath, data, 0o644)
 }
 
-func runAddRPC(nexusAPIGen string, descriptors string, rpc string, output string, input string) error {
+func runAddRPC(nexGen string, descriptors string, rpc string, output string, input string) error {
 	args := []string{
 		"add-rpc",
 		"--descriptors", descriptors,
@@ -161,11 +160,11 @@ func runAddRPC(nexusAPIGen string, descriptors string, rpc string, output string
 		args = append(args, "--input", input)
 	}
 
-	command := exec.Command(nexusAPIGen, args...)
+	command := exec.Command(nexGen, args...)
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	if err := command.Run(); err != nil {
-		return fmt.Errorf("%s %s: %w", nexusAPIGen, strings.Join(args, " "), err)
+		return fmt.Errorf("%s %s: %w", nexGen, strings.Join(args, " "), err)
 	}
 	return nil
 }

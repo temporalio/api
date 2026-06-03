@@ -37,7 +37,7 @@ OAPI3_PATH := .components.schemas.Payload
 
 SYSTEM_NEXUS_WIT := nexus/workflow-service.wit
 SYSTEM_NEXUS_SERVICE_PROTO_FILES := $(shell find temporal/api -name "service.proto" | sort)
-NEXUS_API_GEN ?= nexus-api-gen
+NEX_GEN ?= nex-gen
 
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
@@ -144,11 +144,11 @@ nexus-rpc-yaml-install:
 	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Compile system Nexus WIT files #####
-system-nexus-wit: system-nexus-wit-install nexus-api-gen-install
+system-nexus-wit: system-nexus-wit-install nex-gen-install
 	printf $(COLOR) "Generate system Nexus WIT..."
 	protoc -I $(PROTO_ROOT) \
 		--system-nexus-wit_opt=output=$(SYSTEM_NEXUS_WIT) \
-		--system-nexus-wit_opt=nexus_api_gen=$(NEXUS_API_GEN) \
+		--system-nexus-wit_opt=nex_gen=$(NEX_GEN) \
 		--system-nexus-wit_out=. \
 		$(SYSTEM_NEXUS_SERVICE_PROTO_FILES)
 
@@ -156,9 +156,9 @@ system-nexus-wit-install:
 	printf $(COLOR) "Build and install protoc-gen-system-nexus-wit..."
 	@cd cmd/protoc-gen-system-nexus-wit && go install .
 
-nexus-api-gen-install:
-	printf $(COLOR) "Install nexus-api-gen if missing..."
-	command -v $(NEXUS_API_GEN) >/dev/null || CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install --git https://github.com/temporalio/nexus-api-gen
+nex-gen-install:
+	printf $(COLOR) "Install nex-gen if missing..."
+	command -v $(NEX_GEN) >/dev/null || cargo install nex-gen
 
 ##### Clean #####
 clean:

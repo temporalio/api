@@ -1,4 +1,4 @@
-// protoc-gen-system-nexus-wit generates nexus/temporal-system.wit from proto service
+// protoc-gen-system-nexus-wit generates Nexus WIT from proto service
 // methods annotated with option (nexusannotations.v1.operation).tags = "exposed".
 package main
 

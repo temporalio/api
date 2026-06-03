@@ -35,7 +35,7 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
-SYSTEM_NEXUS_WIT := nexus/temporal-system.wit
+SYSTEM_NEXUS_WIT := nexus/workflow-service.wit
 SYSTEM_NEXUS_SERVICE_PROTO_FILES := $(shell find temporal/api -name "service.proto" | sort)
 NEXUS_API_GEN ?= nexus-api-gen
 
@@ -124,7 +124,7 @@ buf-lint: $(STAMPDIR)/buf-mod-prune
 	(cd $(PROTO_ROOT) && buf lint)
 
 buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
+	@printf $(COLOR) "Run buf breaking changes check against master branch..."
 	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
 
 nexus-rpc-yaml: nexus-rpc-yaml-install

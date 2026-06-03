@@ -15,9 +15,10 @@ import (
 )
 
 type params struct {
-	nexGen string
-	output string
-	input  string
+	nexGen       string
+	output       string
+	input        string
+	linkedInputs []string
 }
 
 // parseParams parses the comma-separated key=value parameter string provided by protoc.
@@ -26,6 +27,9 @@ type params struct {
 //     --system-nexus-wit_out directory. Example: "nexus/temporal-system.wit".
 //
 //   - nex_gen: optional. Path to the nex-gen binary. Defaults to "nex-gen".
+//
+//   - linked_input: optional, repeatable. Additional WIT input passed to
+//     nex-gen after the main input.
 //
 //   - input: optional. Existing WIT file to update. Defaults to output, so
 //     existing handwritten annotations and type refinements are preserved when
@@ -49,6 +53,8 @@ func parseParams(raw string) (params, error) {
 			p.output = value
 		case "input":
 			p.input = value
+		case "linked_input":
+			p.linkedInputs = append(p.linkedInputs, value)
 		default:
 			return p, fmt.Errorf("unknown parameter %q", key)
 		}
@@ -96,7 +102,7 @@ func generate(gen *protogen.Plugin) error {
 	}
 
 	for _, rpc := range rpcs {
-		if err := runAddRPC(p.nexGen, descriptorPath, rpc, tempOutput, input); err != nil {
+		if err := runAddRPC(p.nexGen, descriptorPath, rpc, tempOutput, input, p.linkedInputs); err != nil {
 			return err
 		}
 		input = tempOutput
@@ -149,7 +155,7 @@ func writeDescriptorSet(gen *protogen.Plugin, descriptorPath string) error {
 	return os.WriteFile(descriptorPath, data, 0o644)
 }
 
-func runAddRPC(nexGen string, descriptors string, rpc string, output string, input string) error {
+func runAddRPC(nexGen string, descriptors string, rpc string, output string, input string, linkedInputs []string) error {
 	args := []string{
 		"add-rpc",
 		"--descriptors", descriptors,
@@ -158,6 +164,9 @@ func runAddRPC(nexGen string, descriptors string, rpc string, output string, inp
 	}
 	if input != "" {
 		args = append(args, "--input", input)
+	}
+	for _, linkedInput := range linkedInputs {
+		args = append(args, "--input", linkedInput)
 	}
 
 	command := exec.Command(nexGen, args...)

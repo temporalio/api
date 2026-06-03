@@ -36,6 +36,7 @@ OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
 SYSTEM_NEXUS_WIT := nexus/workflow-service.wit
+SYSTEM_NEXUS_WIT_DEPS := nexus/deps/nexus-temporal-types/model.wit
 SYSTEM_NEXUS_SERVICE_PROTO_FILES := $(shell find temporal/api -name "service.proto" | sort)
 NEX_GEN ?= nex-gen
 
@@ -149,6 +150,7 @@ system-nexus-wit: system-nexus-wit-install nex-gen-install
 	protoc -I $(PROTO_ROOT) \
 		--system-nexus-wit_opt=output=$(SYSTEM_NEXUS_WIT) \
 		--system-nexus-wit_opt=nex_gen=$(NEX_GEN) \
+		--system-nexus-wit_opt=linked_input=$(SYSTEM_NEXUS_WIT_DEPS) \
 		--system-nexus-wit_out=. \
 		$(SYSTEM_NEXUS_SERVICE_PROTO_FILES)
 

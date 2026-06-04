@@ -8,7 +8,7 @@ ci-build: install proto http-api-docs
 install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
-proto: grpc http-api-docs
+proto: grpc http-api-docs nexus-rpc-yaml
 ########################################################################
 
 ##### Variables ######
@@ -76,7 +76,7 @@ http-api-docs:
 ##### Plugins & tools #####
 grpc-install:
 	@printf $(COLOR) "Install/update protoc and plugins..."
-	@go install go.temporal.io/api/cmd/protogen@master
+	@go install go.temporal.io/api/cmd/protogen@main
 	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	@go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
@@ -94,6 +94,11 @@ api-linter-install:
 buf-install:
 	printf $(COLOR) "Install/update buf..."
 	go install github.com/bufbuild/buf/cmd/buf@v1.27.0
+
+##### Sync external proto dependencies #####
+sync-nexus-annotations:
+	printf $(COLOR) "Sync nexusannotations from buf.build/temporalio/nexus-annotations..."
+	buf export buf.build/temporalio/nexus-annotations --output .
 
 ##### Linters #####
 api-linter:
@@ -113,8 +118,24 @@ buf-lint: $(STAMPDIR)/buf-mod-prune
 	(cd $(PROTO_ROOT) && buf lint)
 
 buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
-	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
+	@printf $(COLOR) "Run buf breaking changes check against main branch..."
+	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=main')
+
+nexus-rpc-yaml: nexus-rpc-yaml-install
+	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."
+	mkdir -p nexus
+	protoc -I $(PROTO_ROOT) \
+		--nexus-rpc-yaml_opt=nexus-rpc_langs_out=nexus/temporal-proto-models-nexusrpc.yaml \
+		--nexus-rpc-yaml_opt=python_package_prefix=temporalio.api \
+		--nexus-rpc-yaml_opt=typescript_package_prefix=@temporalio/api \
+		--nexus-rpc-yaml_opt=include_operation_tags=exposed \
+		--nexus-rpc-yaml_out=. \
+		temporal/api/workflowservice/v1/* \
+		temporal/api/operatorservice/v1/*
+
+nexus-rpc-yaml-install:
+	printf $(COLOR) "Build and install protoc-gen-nexus-rpc-yaml..."
+	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Clean #####
 clean:

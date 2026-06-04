@@ -3726,6 +3726,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/result:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        GetWorkflowExecutionResult returns the state of a workflow execution, which may be still running,
+         completed, or failed. It can optionally register new callbacks to be invoked when Workflow reaches
+         a terminal state.
+         If the workflow is completed, it returns the result of the completed workflow.
+         NOTE: This has to be a POST since we're optionally attaching callbacks to the running workflow, which mutates it.
+      operationId: GetWorkflowExecutionResult
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetWorkflowExecutionResultRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowExecutionResultResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/trigger-rule:
     post:
       tags:
@@ -8683,6 +8724,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{execution.workflow_id}/result:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        GetWorkflowExecutionResult returns the state of a workflow execution, which may be still running,
+         completed, or failed. It can optionally register new callbacks to be invoked when Workflow reaches
+         a terminal state.
+         If the workflow is completed, it returns the result of the completed workflow.
+         NOTE: This has to be a POST since we're optionally attaching callbacks to the running workflow, which mutates it.
+      operationId: GetWorkflowExecutionResult
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetWorkflowExecutionResultRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowExecutionResultResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{execution.workflow_id}/trigger-rule:
     post:
       tags:
@@ -12197,6 +12279,73 @@ components:
           type: string
           description: Will be set if there are more history events than were included in this response
           format: bytes
+    GetWorkflowExecutionResultRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: |-
+            For now, server will always provide the result of the latest run of the workflow_id
+             provided even if the run_id is set here. We use WorkflowExecution message for forward
+             compatibility if we want to enable getting the result of a specific run_id in the future.
+        requestId:
+          type: string
+          description: A unique identifier for this request for idempotence. Typically UUIDv4.
+        identity:
+          type: string
+          description: The identity of the client who initiated this request.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: |-
+            Callbacks to be called by the server when this worflow reaches a terminal state,
+             in the case when we're getting the result of a running workflow.
+             Callback addresses must be allowlisted in the server's dynamic configuration.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: |-
+            Links to be associated with this request. Note that completion_callbacks may also have
+             associated links; links already included with a callback should not be duplicated here.
+    GetWorkflowExecutionResultResponse:
+      type: object
+      properties:
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: Information about the workflow execution, including the runID that this result is associated to.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: |-
+            Link to the relevant history event:
+             - completion event, if the workflow has finished
+             - options-updated event, if callbacks were registered on a running workflow
+        running:
+          $ref: '#/components/schemas/GetWorkflowExecutionResultResponse_Running'
+        success:
+          $ref: '#/components/schemas/GetWorkflowExecutionResultResponse_Success'
+        failed:
+          $ref: '#/components/schemas/GetWorkflowExecutionResultResponse_Failed'
+    GetWorkflowExecutionResultResponse_Failed:
+      type: object
+      properties:
+        failure:
+          $ref: '#/components/schemas/Failure'
+    GetWorkflowExecutionResultResponse_Running:
+      type: object
+      properties: {}
+    GetWorkflowExecutionResultResponse_Success:
+      type: object
+      properties:
+        result:
+          $ref: '#/components/schemas/Payloads'
     GoogleProtobufAny:
       type: object
       properties:

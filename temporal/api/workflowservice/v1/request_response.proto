@@ -1167,6 +1167,52 @@ message DescribeWorkflowExecutionResponse {
     temporal.api.workflow.v1.WorkflowExecutionExtendedInfo workflow_extended_info = 8;
 }
 
+message GetWorkflowExecutionResultRequest {
+    string namespace = 1;
+    // For now, server will always provide the result of the latest run of the workflow_id
+    // provided even if the run_id is set here. We use WorkflowExecution message for forward
+    // compatibility if we want to enable getting the result of a specific run_id in the future.
+    temporal.api.common.v1.WorkflowExecution execution = 2;
+    // A unique identifier for this request for idempotence. Typically UUIDv4.
+    string request_id = 3;
+    // The identity of the client who initiated this request.
+    string identity = 4;
+    // Callbacks to be called by the server when this worflow reaches a terminal state,
+    // in the case when we're getting the result of a running workflow.
+    // Callback addresses must be allowlisted in the server's dynamic configuration.
+    repeated temporal.api.common.v1.Callback completion_callbacks = 5;
+    // Links to be associated with this request. Note that completion_callbacks may also have
+    // associated links; links already included with a callback should not be duplicated here.
+    repeated temporal.api.common.v1.Link links = 6;
+}
+
+message GetWorkflowExecutionResultResponse {
+    // Information about the workflow execution, including the runID that this result is associated to.
+    temporal.api.common.v1.WorkflowExecution execution = 1;
+
+    // Link to the relevant history event:
+    // - completion event, if the workflow has finished
+    // - options-updated event, if callbacks were registered on a running workflow
+    repeated temporal.api.common.v1.Link links = 2;
+
+    // Completion status of the workflow, which carries relevant information for the caller.
+    oneof completion_status {
+        Running running = 3;
+        Success success = 4;
+        Failed failed = 5;
+    }
+
+    message Running {}
+
+    message Success {
+        temporal.api.common.v1.Payloads result = 1;
+    }
+
+    message Failed {
+        temporal.api.failure.v1.Failure failure = 1;
+    }
+}
+
 // (-- api-linter: core::0203::optional=disabled
 //     aip.dev/not-precedent: field_behavior annotation not available in our gogo fork --)
 message DescribeTaskQueueRequest {

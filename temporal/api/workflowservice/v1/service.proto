@@ -2029,4 +2029,24 @@ service WorkflowService {
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: Nexus operation deletion not exposed to HTTP, users should use cancel or terminate. --)
     rpc DeleteNexusOperationExecution (DeleteNexusOperationExecutionRequest) returns (DeleteNexusOperationExecutionResponse) {}
+
+    // GetWorkflowExecutionResult returns the state of a workflow execution, which may be still running,
+    // completed, or failed. It can optionally register new callbacks to be invoked when Workflow reaches
+    // a terminal state.
+    // If the workflow is completed, it returns the result of the completed workflow.
+    // NOTE: This has to be a POST since we're optionally attaching callbacks to the running workflow, which mutates it.
+    rpc GetWorkflowExecutionResult (GetWorkflowExecutionResultRequest) returns (GetWorkflowExecutionResultResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/workflows/{execution.workflow_id}/result"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/result"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "workflow:{execution.workflow_id}"
+        };
+    }
 }

@@ -279,7 +279,40 @@ message Principal {
     // Low-cardinality category of the principal (e.g., "jwt", "users").
     string type = 1;
     // Identifier within that category (e.g., sub JWT claim, email address).
+    // Human-readable display name at write time; may change over time.
     string name = 2;
+    // Stable, globally unique identifier for the principal. Unlike name, never
+    // changes. Must not be surfaced to users in UI/API (show the resolved name
+    // instead). Empty when the authentication material has no stable identity
+    // (e.g. an mTLS certificate, or self-hosted deployments that only resolve a
+    // name).
+    string id = 3;
+}
+
+// Actor is a Principal acting at one hop of a caller chain, together with the
+// namespace it was acting in. Following RFC 8693, actors model delegation: the
+// chain is the ordered list of actors that acted on behalf of the root between
+// the chain's origin and the current hop.
+message Actor {
+    // The identity acting at this hop (e.g. the worker or SDK client).
+    Principal principal = 1;
+    // The namespace this actor was acting in, as a Principal of type
+    // "namespaces". Names are not globally unique; only meaningful scoped to the
+    // chain's verified issuer.
+    Principal namespace = 2;
+}
+
+// Caller is the authenticated caller of an execution: the chain-originating
+// end-user (root) plus the ordered chain of actors that delegated the call
+// across hops. Computed server-side and immutable from user code.
+message Caller {
+    // The chain-originating end-user principal — the identity established at the
+    // edge that started the chain. Empty when no end-user identity is available
+    // (e.g. an execution started before the feature, or no derived identity).
+    Principal root = 1;
+    // The actors acting on behalf of the root, one per verified hop, most recent
+    // last. In Phase 1 this holds at most the single immediate caller hop.
+    repeated Actor actors = 2;
 }
 
 // Priority contains metadata that controls relative ordering of task processing

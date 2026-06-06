@@ -369,3 +369,19 @@ message NexusOperationExecutionListInfo {
     // Updated once on scheduled and once on terminal status.
     int64 state_size_bytes = 12;
 }
+
+// NexusCallerInfo carries the verified caller identity attributed by the
+// handler server to an inbound Nexus request, surfaced to the handler worker
+// (e.g. on PollNexusTaskQueueResponse) for authorization and audit. All fields
+// are server-set and trusted; a worker observes but cannot influence them.
+message NexusCallerInfo {
+    // The identity that originated the execution chain at the edge (the caller
+    // that started the root workflow). Empty when unattributed.
+    temporal.api.common.v1.Principal root = 1;
+    // The immediate (service) caller that issued the Nexus call (e.g. the worker
+    // that scheduled the operation, or the SDK client for standalone Nexus).
+    temporal.api.common.v1.Principal service = 2;
+    // The caller's namespace (Principal.Type = "namespace"). Only meaningful
+    // scoped to the verified issuer; namespace names are not globally unique.
+    temporal.api.common.v1.Principal namespace = 3;
+}

@@ -10743,6 +10743,25 @@
       },
       "description": "Target a worker polling on a Nexus task queue in a specific namespace."
     },
+    "EventGroupMarkerInboundEvent": {
+      "type": "object",
+      "properties": {
+        "inboundEventId": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "The event ID of an event in the present workflow that triggered implicit\ncreation of this group Marker.\n\nThe target event's type must be one of the following:\n - `WORKFLOW_EXECUTION_STARTED`\n - `WORKFLOW_EXECUTION_SIGNALED`"
+    },
+    "EventGroupMarkerInboundUpdate": {
+      "type": "object",
+      "properties": {
+        "inboundUpdateId": {
+          "type": "string"
+        }
+      },
+      "description": "The identifier of an inbound Update (request.meta.update_id)\nwhose handler triggered implicit creation of this group Marker.\n\nUsed in place of `inbound_event_id` for Updates because the event ID of the\nUpdateAccepted history event is not known until the Workflow Task is\ncompleted and recorded by the server, which may be too late."
+    },
     "LinkActivity": {
       "type": "object",
       "properties": {
@@ -15351,6 +15370,34 @@
       },
       "description": "Target to route requests to."
     },
+    "v1EventGroupMarker": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "$ref": "#/definitions/v1EventGroupMarkerLabel"
+        },
+        "inboundEvent": {
+          "$ref": "#/definitions/EventGroupMarkerInboundEvent"
+        },
+        "inboundUpdate": {
+          "$ref": "#/definitions/EventGroupMarkerInboundUpdate"
+        }
+      }
+    },
+    "v1EventGroupMarkerLabel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Opaque identifier assigned by the SDK."
+        },
+        "label": {
+          "$ref": "#/definitions/v1Payload",
+          "description": "This payload should be a \"json/plain\"-encoded payload that is a single\nJSON string for use in user interfaces. User interface formatting may not\napply to this text when used in \"label\" situations. The payload data\nsection is limited to 400 bytes by default.\n\nPayload only needs to be set on the first use of a given Marker ID;\nfurther references to an existing Marker ID reuse existing attributes of\nthe referenced Marker -- i.e. further label payloads are ignored.\n\nNote that it is valid to have distinct Markers (i.e. distinct Marker IDs)\nin a given workflow execution that carry the same label, provided that\nthey have the distinct ID."
+        }
+      },
+      "description": "A user-defined short-form string value to be used as the group's label."
+    },
     "v1EventType": {
       "type": "string",
       "enum": [
@@ -15842,6 +15889,14 @@
         "principal": {
           "$ref": "#/definitions/v1Principal",
           "description": "Server-computed authenticated caller identity associated with this event."
+        },
+        "eventGroupMarkers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EventGroupMarker"
+          },
+          "description": "Event group markers attached to this event."
         },
         "workflowExecutionStartedEventAttributes": {
           "$ref": "#/definitions/v1WorkflowExecutionStartedEventAttributes"

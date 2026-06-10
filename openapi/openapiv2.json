@@ -19285,9 +19285,9 @@
           "$ref": "#/definitions/v1TimeSkippingConfig",
           "description": "The propagated time-skipping configuration for the child workflow."
         },
-        "initialSkippedDuration": {
-          "type": "string",
-          "description": "Propagate the duration skipped to the child workflow."
+        "timeSkippingStatePropagation": {
+          "$ref": "#/definitions/v1TimeSkippingStatePropagation",
+          "description": "The time-skipping state propagated from the parent workflow. This can be nil if no time skipping\nhas occurred or there is no previous run."
         }
       }
     },
@@ -19688,6 +19688,21 @@
         }
       },
       "description": "The configuration for time skipping of a workflow execution (a chain of runs including retries, cron, continue-as-new).\nWhen time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.\nIn-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,\nand possibly other features added in the future.\nUser timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the\ntime point of the registered fast_forward when there is no in-flight work.\n\nFor child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,\nbut a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the\n\"enabled\" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the\nparent execution as its start time."
+    },
+    "v1TimeSkippingStatePropagation": {
+      "type": "object",
+      "properties": {
+        "initialSkippedDuration": {
+          "type": "string",
+          "description": "The time skipped by the previous execution that started this workflow.\nIt can happen in child workflows and a chain of runs (CaN, cron, retry)."
+        },
+        "fastForwardTargetTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "If there is a fast-forward action set for the previous run in a chain of runs,\nthe target time should be propagated to the next run as well."
+        }
+      },
+      "description": "The time-skipping state that needs to be propagated from a parent workflow to a child workflow,\nor through a chain of runs."
     },
     "v1TimeoutFailureInfo": {
       "type": "object",
@@ -21273,9 +21288,9 @@
           "$ref": "#/definitions/v1TimeSkippingConfig",
           "description": "Initial time-skipping configuration for this workflow execution, recorded at start time.\nThis may have been set explicitly via the start workflow request, or propagated from a\nparent/previous execution.\n\nThe configuration may be updated after start via UpdateWorkflowExecutionOptions, which\nwill be reflected in the WorkflowExecutionOptionsUpdatedEvent."
         },
-        "initialSkippedDuration": {
-          "type": "string",
-          "description": "The time skipped by the previous execution that started this workflow.\nIt can happen in cases of child workflows and continue-as-new workflows."
+        "timeSkippingStatePropagation": {
+          "$ref": "#/definitions/v1TimeSkippingStatePropagation",
+          "description": "The time-skipping state propagated from a previous run of this workflow. This can be nil\nif no time skipping has occurred or there is no previous run."
         }
       },
       "title": "Always the first event in workflow history"

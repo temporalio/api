@@ -16739,10 +16739,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
           description: The propagated time-skipping configuration for the child workflow.
-        initialSkippedDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: Propagate the duration skipped to the child workflow.
+        timeSkippingStatePropagation:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingStatePropagation'
+          description: |-
+            The time-skipping state propagated from the parent workflow. This can be nil if no time skipping
+             has occurred or there is no previous run.
     StartNexusOperationExecutionRequest:
       type: object
       properties:
@@ -17457,6 +17459,24 @@ components:
          but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the
          "enabled" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the
          parent execution as its start time.
+    TimeSkippingStatePropagation:
+      type: object
+      properties:
+        initialSkippedDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            The time skipped by the previous execution that started this workflow.
+             It can happen in child workflows and a chain of runs (CaN, cron, retry).
+        fastForwardTargetTime:
+          type: string
+          description: |-
+            If there is a fast-forward action set for the previous run in a chain of runs,
+             the target time should be propagated to the next run as well.
+          format: date-time
+      description: |-
+        The time-skipping state that needs to be propagated from a parent workflow to a child workflow,
+         or through a chain of runs.
     TimeoutFailureInfo:
       type: object
       properties:
@@ -19874,12 +19894,12 @@ components:
 
              The configuration may be updated after start via UpdateWorkflowExecutionOptions, which
              will be reflected in the WorkflowExecutionOptionsUpdatedEvent.
-        initialSkippedDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
+        timeSkippingStatePropagation:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingStatePropagation'
           description: |-
-            The time skipped by the previous execution that started this workflow.
-             It can happen in cases of child workflows and continue-as-new workflows.
+            The time-skipping state propagated from a previous run of this workflow. This can be nil
+             if no time skipping has occurred or there is no previous run.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object

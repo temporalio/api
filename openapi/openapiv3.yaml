@@ -17442,6 +17442,12 @@ components:
              setting `enabled` to true via UpdateWorkflowExecutionOptions.
              The current workflow execution is a chain of runs (retries, cron, continue-as-new);
              child workflows are separate executions, so this fast_forward won't affect them.
+
+             For a given workflow execution, only one active fast-forward is allowed at a time.
+             If a new fast-forward is set via UpdateWorkflowExecutionOptions before the previous
+             one completes, the new one will override the previous one.
+             If the fast-forward duration exceeds the remaining execution timeout, time will only
+             be fast-forwarded up to the end of the execution.
         disableChildPropagation:
           type: boolean
           description: |-
@@ -17453,7 +17459,9 @@ components:
          In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,
          and possibly other features added in the future.
          User timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the
-         time point of the registered fast_forward when there is no in-flight work.
+         time point of the registered fast forward when there is no in-flight work.
+         When time is skipped, a WorkflowExecutionTimeSkippingTransitionedEvent will be
+         added to the workflow history to capture the state changes.
 
          For child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,
          but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the

@@ -81,6 +81,33 @@ message CancelOperationRequest {
     string operation_token = 4;
 }
 
+// A request that delivers the result of a completed operation to a worker for processing.
+// Currently only Nexus operation completions are supported; the variant may be extended to
+// support activity and workflow completions.
+message CompletionRequest {
+    // The result of a completed Nexus operation, delivered to a worker for processing.
+    message NexusOperationCompletion {
+        // The Nexus service that the result came from.
+        string service = 1;
+        // The Nexus operation within the service that the result came from.
+        string operation = 2;
+        // The ID of the Nexus operation.
+        string operation_id = 3;
+        // The token the operation produced if it was an asynchronous Nexus operation.
+        string operation_token = 4;
+        // The Payload the operation produced if it completed successfully.
+        temporal.api.common.v1.Payload result = 5;
+        // The Failure the operation produced if it completed unsuccessfully.
+        temporal.api.failure.v1.Failure failure = 6;
+        // Links that should be used to associate any further invocations with the completed operation.
+        repeated Link links = 7;
+    }
+
+    oneof variant {
+        NexusOperationCompletion nexus_operation = 1;
+    }
+}
+
 // A Nexus request.
 message Request {
     message Capabilities {
@@ -103,6 +130,7 @@ message Request {
     oneof variant {
         StartOperationRequest start_operation = 3;
         CancelOperationRequest cancel_operation = 4;
+        CompletionRequest completion = 5;
     }
 
     // The endpoint this request was addressed to before forwarding to the worker.
@@ -143,14 +171,23 @@ message StartOperationResponse {
 message CancelOperationResponse {
 }
 
+// A response acknowledging that the handler has processed a CompletionRequest.
+message CompletionResponse {
+    // The failure the handler produced while processing the completion, if any.
+    // An unset failure indicates that the completion was acknowledged successfully.
+    temporal.api.failure.v1.Failure failure = 1;
+}
+
 // A response indicating that the handler has successfully processed a request.
 message Response {
     // Variant must correlate to the corresponding Request's variant.
     oneof variant {
         StartOperationResponse start_operation = 1;
         CancelOperationResponse cancel_operation = 2;
+        CompletionResponse completion = 3;
     }
 }
+
 
 // A cluster-global binding from an endpoint ID to a target for dispatching incoming Nexus requests.
 message Endpoint {

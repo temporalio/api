@@ -16739,10 +16739,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
           description: The propagated time-skipping configuration for the child workflow.
-        initialSkippedDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: Propagate the duration skipped to the child workflow.
+        timeSkippingStatePropagation:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingStatePropagation'
+          description: |-
+            The time-skipping state propagated from the parent workflow. This can be nil if no time skipping
+             has occurred or there is no previous run.
     StartNexusOperationExecutionRequest:
       type: object
       properties:
@@ -17430,17 +17432,59 @@ components:
         enabled:
           type: boolean
           description: Enables or disables time skipping for this workflow execution.
-        maxSkippedDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: Maximum total virtual time that can be skipped.
-        maxElapsedDuration:
+        fastForward:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Maximum elapsed time since time skipping was enabled.
-             This includes both skipped time and real time elapsing.
-      description: "Configuration for time skipping during a workflow execution.\n When enabled, virtual time advances automatically whenever there is no in-flight work.\n In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,\n and possibly other features added in the future.\n User timers are not classified as in-flight work and will be skipped over.\n When time advances, it skips to the earlier of the next user timer or the configured bound, if either exists.\n \n Propagation behavior of time skipping:\n The enabled flag, bound fields, and accumulated skipped duration are propagated to related executions as follows:\n (1) Child workflows and continue-as-new: both the configuration and the accumulated skipped duration are\n     inherited from the current execution. The configured bound is shared between the inherited skipped\n     duration and any additional duration skipped by the new run.\n (2) Retry and cron: the configuration and accumulated skipped duration are inherited as recorded when the\n     current workflow started; the accumulated skipped duration of the current run is not propagated.\n (3) Reset: the new run retains the time-skipping configuration of the current execution. Because reset replays\n     all events up to the reset point and re-applies any UpdateWorkflowExecutionOptions changes made after that\n     point, the resulting run ends up with the same final time-skipping configuration as the previous run."
+            Optionally fast-forward the current workflow execution by this duration ahead of current workflow execution time.
+             After the fast-forward completes, time skipping is disabled, and this
+             action is recorded in the WorkflowExecutionTimeSkippingTransitionedEvent. It can be re-enabled by
+             setting `enabled` to true or setting `fast_forward` again via UpdateWorkflowExecutionOptions.
+             The current workflow execution is a chain of runs (retries, cron, continue-as-new);
+             child workflows are separate executions, so this fast_forward won't affect them.
+
+             For a given workflow execution, only one active fast-forward is allowed at a time.
+             If a new fast-forward is set via UpdateWorkflowExecutionOptions before the previous
+             one completes, the new one will override the previous one.
+             If the fast-forward duration exceeds the remaining execution timeout, time will only
+             be fast-forwarded up to the end of the execution.
+        disableChildPropagation:
+          type: boolean
+          description: |-
+            By default, child workflows inherit the "enabled" flag when they are started.
+             This flag disables that inheritance.
+      description: |-
+        The configuration for time skipping of a workflow execution (a chain of runs including retries, cron, continue-as-new).
+         When time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.
+         In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,
+         and possibly other features added in the future.
+         User timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the
+         time point of the registered fast forward when there is no in-flight work.
+         When time is skipped, a WorkflowExecutionTimeSkippingTransitionedEvent will be
+         added to the workflow history to capture the state changes.
+
+         For child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,
+         but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the
+         "enabled" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the
+         parent execution as its start time.
+    TimeSkippingStatePropagation:
+      type: object
+      properties:
+        initialSkippedDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            The time skipped by the previous execution that started this workflow.
+             It can happen in child workflows and a chain of runs (CaN, cron, retry).
+        fastForwardTargetTime:
+          type: string
+          description: |-
+            If there is a fast-forward action set for the previous run in a chain of runs,
+             the target time should be propagated to the next run as well.
+          format: date-time
+      description: |-
+        The time-skipping state that needs to be propagated from a parent workflow to a child workflow,
+         or through a chain of runs.
     TimeoutFailureInfo:
       type: object
       properties:
@@ -18105,6 +18149,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionOptions'
           description: Workflow Execution options after update.
+        updateTime:
+          type: string
+          description: |-
+            The Workflow Execution time when the options were updated. When time skipping is
+             enabled, this is the workflow's virtual time rather than wall-clock time.
+          format: date-time
     UpdateWorkflowExecutionRequest:
       type: object
       properties:
@@ -19484,10 +19534,7 @@ components:
         timeSkippingConfig:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
-          description: |-
-            Time-skipping configuration for this workflow execution.
-             If not set, the time-skipping configuration is not updated by this request;
-             the existing configuration is preserved.
+          description: "The time-skipping configuration for this workflow execution.\n When `fast_forward` is set, time will be fast-forwarded to a future point relative\n to the current workflow timestamp. Each call takes effect, even if\n `fast_forward` is set to the same duration, since the target time is recalculated\n from the current timestamp on every call.\n\n This field must be updated as a whole; updating individual sub-fields is not supported.\n When setting the update mask in `UpdateWorkflowExecutionOptionsRequest`, \n `BatchOperationUpdateWorkflowExecutionOptions`, etc., use a mask that covers the entire field."
     WorkflowExecutionOptionsUpdatedEventAttributes:
       type: object
       properties:
@@ -19522,7 +19569,12 @@ components:
         timeSkippingConfig:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
-          description: If set, the time-skipping configuration was changed. Contains the full updated configuration.
+          description: TimeSkippingConfig override upserted in this event. Represents the full config.
+        timeSkippingConfigUpdated:
+          type: boolean
+          description: |-
+            Indicates the time skipping config was updated by the recent call to update
+             workflow execution options.
         workflowUpdateOptions:
           type: array
           items:
@@ -19852,12 +19904,12 @@ components:
 
              The configuration may be updated after start via UpdateWorkflowExecutionOptions, which
              will be reflected in the WorkflowExecutionOptionsUpdatedEvent.
-        initialSkippedDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
+        timeSkippingStatePropagation:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingStatePropagation'
           description: |-
-            The time skipped by the previous execution that started this workflow.
-             It can happen in cases of child workflows and continue-as-new workflows.
+            The time-skipping state propagated from a previous run of this workflow. This can be nil
+             if no time skipping has occurred or there is no previous run.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -19875,12 +19927,12 @@ components:
       properties:
         targetTime:
           type: string
-          description: The virtual time after time skipping was applied.
+          description: The virtual time point that time skipping advanced to.
           format: date-time
-        disabledAfterBound:
+        disabledAfterFastForward:
           type: boolean
           description: |-
-            when true, time skipping was disabled automatically due to a bound being reached.
+            When true, time skipping has been disabled automatically due to a call to fast_forward completing.
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "after" is used to indicate temporal ordering. --)
         wallClockTime:
@@ -19889,7 +19941,7 @@ components:
           format: date-time
       description: |-
         Attributes for an event indicating that time skipping state changed for a workflow execution,
-         either time was advanced or time skipping was disabled automatically due to a bound being reached.
+         either time was advanced or time skipping was disabled automatically due to the fast_forward completing.
          The worker_may_ignore field in HistoryEvent should always be set true for this event.
     WorkflowExecutionTimedOutEventAttributes:
       type: object

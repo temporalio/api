@@ -114,7 +114,7 @@ $(STAMPDIR):
 
 $(STAMPDIR)/buf-mod-prune: $(STAMPDIR) buf.yaml
 	printf $(COLOR) "Pruning buf module"
-	buf mod prune
+# 	buf mod prune
 	touch $@
 
 buf-lint: $(STAMPDIR)/buf-mod-prune

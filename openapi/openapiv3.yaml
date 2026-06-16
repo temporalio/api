@@ -12911,6 +12911,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentInfo_WorkerDeploymentVersionSummary'
           description: Summary of the ramping version of the Worker Deployment.
+        validationSummary:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentValidationSummary'
+          description: Aggregated WCI validation status counts across all versions with compute config.
       description: A subset of WorkerDeploymentInfo
     ListWorkersResponse:
       type: object
@@ -18581,6 +18585,12 @@ components:
           format: date-time
         computeConfig:
           $ref: '#/components/schemas/ComputeConfigSummary'
+        validationStatus:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersionValidationStatus'
+          description: |-
+            The result of the most recent connectivity check for this version's compute resource.
+             Only populated for versions that have compute config.
     WorkerDeploymentOptions:
       type: object
       properties:
@@ -18604,6 +18614,21 @@ components:
              When `worker_versioning_mode==VERSIONED`, the worker will be part of a Deployment Version.
           format: enum
       description: Worker Deployment options set in SDK that need to be sent to server in every poll.
+    WorkerDeploymentValidationSummary:
+      type: object
+      properties:
+        connectedCount:
+          type: integer
+          format: int32
+        failedCount:
+          type: integer
+          format: int32
+        unknownCount:
+          type: integer
+          format: int32
+      description: |-
+        WorkerDeploymentValidationSummary aggregates validation status counts across all
+         versions in a Worker Deployment that have compute config configured.
     WorkerDeploymentVersion:
       type: object
       properties:
@@ -18753,6 +18778,27 @@ components:
             - TASK_QUEUE_TYPE_NEXUS
           type: string
           format: enum
+    WorkerDeploymentVersionValidationStatus:
+      type: object
+      properties:
+        health:
+          enum:
+            - HEALTH_UNSPECIFIED
+            - HEALTH_OK
+            - HEALTH_ERROR
+          type: string
+          description: The health of the compute resource connection.
+          format: enum
+        errorMessage:
+          type: string
+          description: Human-readable error message if health is HEALTH_ERROR.
+        lastCheckTime:
+          type: string
+          description: Timestamp of the last validation check.
+          format: date-time
+      description: |-
+        WorkerDeploymentVersionValidationStatus represents the result of the most
+         recent connectivity check between Temporal and a customer's compute resource.
     WorkerHeartbeat:
       type: object
       properties:

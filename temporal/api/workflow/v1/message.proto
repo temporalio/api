@@ -614,6 +614,9 @@ message VersioningOverride {
 
         // Override the workflow to have AutoUpgrade behavior.
         bool auto_upgrade = 4;
+
+        // Move the workflow to a specific Worker Deployment Version for one successful Workflow Task.
+        OneTimeMove one_time = 5;
     }
 
     // Required.
@@ -645,6 +648,26 @@ message VersioningOverride {
         // If omitted and the target workflow is not pinned, the override request
         // will be rejected with a PreconditionFailed error.
         temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+    }
+
+    // Routes this workflow execution to a specific Worker Deployment Version for one
+    // successful Workflow Task, then clears the override.
+    //
+    // This does not force the workflow's normal Versioning Behavior to become
+    // Pinned. After the Workflow Task completes on `target_deployment_version`,
+    // the workflow execution's normal Versioning Behavior and Deployment Version
+    // are taken from the worker's completion response.
+    //
+    // For example, if the target worker reports Pinned, the execution will remain
+    // pinned after this override is cleared. If the target worker reports
+    // AutoUpgrade, the execution will resume AutoUpgrade routing after this
+    // override is cleared.
+    //
+    // If no Workflow Task completes on `target_deployment_version`, this override
+    // remains pending.
+    message OneTimeMove {
+        // Required. Worker Deployment Version to receive the one-time Workflow Task.
+        temporal.api.deployment.v1.WorkerDeploymentVersion target_deployment_version = 1;
     }
 
     enum PinnedOverrideBehavior {

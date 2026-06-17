@@ -18343,6 +18343,10 @@ components:
         autoUpgrade:
           type: boolean
           description: Override the workflow to have AutoUpgrade behavior.
+        oneTime:
+          allOf:
+            - $ref: '#/components/schemas/VersioningOverride_OneTimeMove'
+          description: Move the workflow to a specific Worker Deployment Version for one successful Workflow Task.
         behavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
@@ -18377,6 +18381,29 @@ components:
 
          Pinned behavior overrides are automatically inherited by child workflows, workflow retries, continue-as-new
          workflows, and cron workflows.
+    VersioningOverride_OneTimeMove:
+      type: object
+      properties:
+        targetDeploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: Required. Worker Deployment Version to receive the one-time Workflow Task.
+      description: |-
+        Routes this workflow execution to a specific Worker Deployment Version for one
+         successful Workflow Task, then clears the override.
+
+         This does not force the workflow's normal Versioning Behavior to become
+         Pinned. After the Workflow Task completes on `target_deployment_version`,
+         the workflow execution's normal Versioning Behavior and Deployment Version
+         are taken from the worker's completion response.
+
+         For example, if the target worker reports Pinned, the execution will remain
+         pinned after this override is cleared. If the target worker reports
+         AutoUpgrade, the execution will resume AutoUpgrade routing after this
+         override is cleared.
+
+         If no Workflow Task completes on `target_deployment_version`, this override
+         remains pending.
     VersioningOverride_PinnedOverride:
       type: object
       properties:

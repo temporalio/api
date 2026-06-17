@@ -412,8 +412,14 @@ message OnConflictOptions {
 // parent execution as its start time.
 //
 // For a scheduler execution: {{ TBD }}
+//
+// For a standalone activity: time skipping applies to the activity's own retry/backoff schedule.
+// Activities scheduled by a workflow do not carry their own configuration; they inherit time
+// skipping from the workflow execution. The `disable_child_propagation` and
+// `disable_scheduled_action_propagation` fields are workflow/scheduler concepts and are ignored
+// for standalone activities.
 message TimeSkippingConfig {
-    // Enables or disables time skipping for this workflow execution.
+    // Enables or disables time skipping for this execution.
     bool enabled = 1;
 
     // Optionally fast-forward the current execution by this duration ahead of current execution time.
@@ -431,12 +437,12 @@ message TimeSkippingConfig {
     // child workflows are separate executions, so this fast_forward won't affect them.
     google.protobuf.Duration fast_forward = 2;
 
-    // By default, child workflows inherit the "enabled" flag when they are started.
-    // This flag disables that inheritance.
+    // Workflow executions only. By default, child workflows inherit the "enabled" flag when they
+    // are started. This flag disables that inheritance. Ignored for standalone activities.
     bool disable_child_propagation = 3;
 
-    // By default, executions inherit the "enabled" flag when they are started by a scheduler.
-    // This flag disables that inheritance.
+    // Scheduler executions only. By default, executions inherit the "enabled" flag when they are
+    // started by a scheduler. This flag disables that inheritance. Ignored for standalone activities.
     bool disable_scheduled_action_propagation = 4;
 }
 

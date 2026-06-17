@@ -9852,6 +9852,12 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: Time to wait before dispatching the first activity task. This delay is not applied to retry attempts.
+        timeSkippingConfig:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingConfig'
+          description: |-
+            The current time-skipping configuration for this activity. Reflects the value set at start
+             and any subsequent updates via UpdateActivityExecutionOptions. Nil if time skipping is disabled.
       description: Information about a standalone activity.
     ActivityExecutionListInfo:
       type: object
@@ -9997,6 +10003,10 @@ components:
           description: |-
             Priority metadata. If this message is not present, or any fields are not
              present, they inherit the values from the workflow.
+        timeSkippingConfig:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingConfig'
+          description: Time-skipping configuration.
     ActivityPropertiesModifiedExternallyEventAttributes:
       type: object
       properties:
@@ -13164,6 +13174,9 @@ components:
         workflowUpdateCallbacks:
           type: boolean
           description: True if the namespace supports attaching callbacks on workflow updates
+        pollerAutoscalingAutoEnroll:
+          type: boolean
+          description: When true, workers should use poller autoscaling by default unless explicitly configured otherwise.
       description: Namespace capability details. Should contain what features are enabled in a namespace.
     NamespaceInfo_Limits:
       type: object
@@ -16591,6 +16604,10 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: Time to wait before dispatching the first activity task. This delay is not applied to retry attempts.
+        timeSkippingConfig:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingConfig'
+          description: Time-skipping configuration. If not set, time skipping is disabled.
     StartActivityExecutionResponse:
       type: object
       properties:
@@ -17461,7 +17478,7 @@ components:
       properties:
         enabled:
           type: boolean
-          description: Enables or disables time skipping for this workflow execution.
+          description: Enables or disables time skipping for this execution.
         fastForward:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
@@ -17482,13 +17499,13 @@ components:
         disableChildPropagation:
           type: boolean
           description: |-
-            By default, child workflows inherit the "enabled" flag when they are started.
-             This flag disables that inheritance.
+            Workflow executions only. By default, child workflows inherit the "enabled" flag when they
+             are started. This flag disables that inheritance. Ignored for standalone activities.
         disableScheduledActionPropagation:
           type: boolean
           description: |-
-            By default, executions inherit the "enabled" flag when they are started by a scheduler.
-             This flag disables that inheritance.
+            Scheduler executions only. By default, executions inherit the "enabled" flag when they are
+             started by a scheduler. This flag disables that inheritance. Ignored for standalone activities.
       description: |-
         The configuration for time skipping of an execution.
 
@@ -17507,6 +17524,12 @@ components:
          parent execution as its start time.
 
          For a scheduler execution: {{ TBD }}
+
+         For a standalone activity: time skipping applies to the activity's own retry/backoff schedule.
+         Activities scheduled by a workflow do not carry their own configuration; they inherit time
+         skipping from the workflow execution. The `disable_child_propagation` and
+         `disable_scheduled_action_propagation` fields are workflow/scheduler concepts and are ignored
+         for standalone activities.
     TimeSkippingStatePropagation:
       type: object
       properties:
@@ -19619,14 +19642,15 @@ components:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
           description: |-
-            Time-skipping configuration for this workflow execution.
-             If not set, the time-skipping configuration is not updated by this request;
-             the existing configuration is preserved.
-
+            The time-skipping configuration for this workflow execution.
              When `fast_forward` is set, time will be fast-forwarded to a future point relative
              to the current workflow timestamp. Each call takes effect, even if
              `fast_forward` is set to the same duration, since the target time is recalculated
              from the current timestamp on every call.
+
+             This field must be updated as a whole; updating individual sub-fields is not supported.
+             When setting the update mask in `UpdateWorkflowExecutionOptionsRequest`,
+             `BatchOperationUpdateWorkflowExecutionOptions`, etc., use a mask that covers the entire field.
     WorkflowExecutionOptionsUpdatedEventAttributes:
       type: object
       properties:
@@ -19661,7 +19685,12 @@ components:
         timeSkippingConfig:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
-          description: If set, the time-skipping configuration was changed. Contains the full updated configuration.
+          description: TimeSkippingConfig override upserted in this event. Represents the full config.
+        timeSkippingConfigUpdated:
+          type: boolean
+          description: |-
+            Indicates the time skipping config was updated by the recent call to update
+             workflow execution options.
         workflowUpdateOptions:
           type: array
           items:

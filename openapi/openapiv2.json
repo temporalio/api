@@ -12339,6 +12339,10 @@
         "startDelay": {
           "type": "string",
           "description": "Time to wait before dispatching the first activity task. This delay is not applied to retry attempts."
+        },
+        "timeSkippingConfig": {
+          "$ref": "#/definitions/v1TimeSkippingConfig",
+          "description": "Time-skipping configuration. If not set, time skipping is disabled."
         }
       }
     },
@@ -13500,6 +13504,10 @@
         "startDelay": {
           "type": "string",
           "description": "Time to wait before dispatching the first activity task. This delay is not applied to retry attempts."
+        },
+        "timeSkippingConfig": {
+          "$ref": "#/definitions/v1TimeSkippingConfig",
+          "description": "The current time-skipping configuration for this activity. Reflects the value set at start\nand any subsequent updates via UpdateActivityExecutionOptions. Nil if time skipping is disabled."
         }
       },
       "description": "Information about a standalone activity."
@@ -13661,6 +13669,10 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "description": "Priority metadata. If this message is not present, or any fields are not\npresent, they inherit the values from the workflow."
+        },
+        "timeSkippingConfig": {
+          "$ref": "#/definitions/v1TimeSkippingConfig",
+          "description": "Time-skipping configuration."
         }
       }
     },
@@ -16778,6 +16790,10 @@
         "workflowUpdateCallbacks": {
           "type": "boolean",
           "title": "True if the namespace supports attaching callbacks on workflow updates"
+        },
+        "pollerAutoscalingAutoEnroll": {
+          "type": "boolean",
+          "description": "When true, workers should use poller autoscaling by default unless explicitly configured otherwise."
         }
       },
       "description": "Namespace capability details. Should contain what features are enabled in a namespace."
@@ -19719,7 +19735,7 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enables or disables time skipping for this workflow execution."
+          "description": "Enables or disables time skipping for this execution."
         },
         "fastForward": {
           "type": "string",
@@ -19727,14 +19743,14 @@
         },
         "disableChildPropagation": {
           "type": "boolean",
-          "description": "By default, child workflows inherit the \"enabled\" flag when they are started.\nThis flag disables that inheritance."
+          "description": "Workflow executions only. By default, child workflows inherit the \"enabled\" flag when they\nare started. This flag disables that inheritance. Ignored for standalone activities."
         },
         "disableScheduledActionPropagation": {
           "type": "boolean",
-          "description": "By default, executions inherit the \"enabled\" flag when they are started by a scheduler.\nThis flag disables that inheritance."
+          "description": "Scheduler executions only. By default, executions inherit the \"enabled\" flag when they are\nstarted by a scheduler. This flag disables that inheritance. Ignored for standalone activities."
         }
       },
-      "description": "The configuration for time skipping of an execution.\n\nFor a workflow execution (a chain of runs including retries, cron, continue-as-new):\nWhen time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.\nIn-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,\nand possibly other features added in the future.\nUser timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the\ntime point of the registered fast forward when there is no in-flight work.\nWhen time is skipped, a WorkflowExecutionTimeSkippingTransitionedEvent will be\nadded to the workflow history to capture the state changes.\n\nFor child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,\nbut a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the\n\"enabled\" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the\nparent execution as its start time.\n\nFor a scheduler execution: {{ TBD }}"
+      "description": "The configuration for time skipping of an execution.\n\nFor a workflow execution (a chain of runs including retries, cron, continue-as-new):\nWhen time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.\nIn-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,\nand possibly other features added in the future.\nUser timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the\ntime point of the registered fast forward when there is no in-flight work.\nWhen time is skipped, a WorkflowExecutionTimeSkippingTransitionedEvent will be\nadded to the workflow history to capture the state changes.\n\nFor child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,\nbut a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the\n\"enabled\" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the\nparent execution as its start time.\n\nFor a scheduler execution: {{ TBD }}\n\nFor a standalone activity: time skipping applies to the activity's own retry/backoff schedule.\nActivities scheduled by a workflow do not carry their own configuration; they inherit time\nskipping from the workflow execution. The `disable_child_propagation` and\n`disable_scheduled_action_propagation` fields are workflow/scheduler concepts and are ignored\nfor standalone activities."
     },
     "v1TimeSkippingStatePropagation": {
       "type": "object",
@@ -21060,7 +21076,7 @@
         },
         "timeSkippingConfig": {
           "$ref": "#/definitions/v1TimeSkippingConfig",
-          "description": "Time-skipping configuration for this workflow execution.\nIf not set, the time-skipping configuration is not updated by this request;\nthe existing configuration is preserved.\n\nWhen `fast_forward` is set, time will be fast-forwarded to a future point relative\nto the current workflow timestamp. Each call takes effect, even if\n`fast_forward` is set to the same duration, since the target time is recalculated\nfrom the current timestamp on every call."
+          "description": "The time-skipping configuration for this workflow execution.\nWhen `fast_forward` is set, time will be fast-forwarded to a future point relative\nto the current workflow timestamp. Each call takes effect, even if\n`fast_forward` is set to the same duration, since the target time is recalculated\nfrom the current timestamp on every call.\n\nThis field must be updated as a whole; updating individual sub-fields is not supported.\nWhen setting the update mask in `UpdateWorkflowExecutionOptionsRequest`,\n`BatchOperationUpdateWorkflowExecutionOptions`, etc., use a mask that covers the entire field."
         }
       }
     },
@@ -21097,7 +21113,11 @@
         },
         "timeSkippingConfig": {
           "$ref": "#/definitions/v1TimeSkippingConfig",
-          "description": "If set, the time-skipping configuration was changed. Contains the full updated configuration."
+          "description": "TimeSkippingConfig override upserted in this event. Represents the full config."
+        },
+        "timeSkippingConfigUpdated": {
+          "type": "boolean",
+          "description": "Indicates the time skipping config was updated by the recent call to update\nworkflow execution options."
         },
         "workflowUpdateOptions": {
           "type": "array",

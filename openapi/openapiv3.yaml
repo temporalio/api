@@ -10334,6 +10334,11 @@ components:
         identity:
           type: string
           description: The identity of the worker/client
+        reason:
+          type: string
+          description: |-
+            Reason for requesting the cancellation, recorded and available via the PollActivityExecution API.
+             Not propagated to a worker if an activity attempt is currently running.
       description: |-
         BatchOperationCancellation sends cancel requests to a batch of activities.
          Keep the parameter in sync with temporal.api.workflowservice.v1.RequestCancelActivityExecutionRequest.
@@ -10385,6 +10390,30 @@ components:
           type: string
           description: Batch operation close time
           format: date-time
+        operationType:
+          enum:
+            - BATCH_OPERATION_TYPE_UNSPECIFIED
+            - BATCH_OPERATION_TYPE_TERMINATE
+            - BATCH_OPERATION_TYPE_TERMINATE_WORKFLOW
+            - BATCH_OPERATION_TYPE_CANCEL
+            - BATCH_OPERATION_TYPE_CANCEL_WORKFLOW
+            - BATCH_OPERATION_TYPE_SIGNAL
+            - BATCH_OPERATION_TYPE_SIGNAL_WORKFLOW
+            - BATCH_OPERATION_TYPE_DELETE
+            - BATCH_OPERATION_TYPE_DELETE_WORKFLOW
+            - BATCH_OPERATION_TYPE_RESET
+            - BATCH_OPERATION_TYPE_RESET_WORKFLOW
+            - BATCH_OPERATION_TYPE_UPDATE_EXECUTION_OPTIONS
+            - BATCH_OPERATION_TYPE_UPDATE_WORKFLOW_EXECUTION_OPTIONS
+            - BATCH_OPERATION_TYPE_UNPAUSE_ACTIVITY
+            - BATCH_OPERATION_TYPE_UPDATE_ACTIVITY_OPTIONS
+            - BATCH_OPERATION_TYPE_RESET_ACTIVITY
+            - BATCH_OPERATION_TYPE_TERMINATE_ACTIVITY
+            - BATCH_OPERATION_TYPE_CANCEL_ACTIVITY
+            - BATCH_OPERATION_TYPE_DELETE_ACTIVITY
+          type: string
+          description: Operation type
+          format: enum
     BatchOperationReset:
       type: object
       properties:
@@ -10485,6 +10514,11 @@ components:
         identity:
           type: string
           description: The identity of the worker/client
+        reason:
+          type: string
+          description: |-
+            Reason for requesting the termination, recorded and available via the PollActivityExecution API.
+             Not propagated to a worker if an activity attempt is currently running.
       description: |-
         BatchOperationTerminateActivities sends terminate requests to a batch of activities.
          Keep the parameter in sync with temporal.api.workflowservice.v1.TerminateActivityExecutionRequest.
@@ -11594,14 +11628,23 @@ components:
           enum:
             - BATCH_OPERATION_TYPE_UNSPECIFIED
             - BATCH_OPERATION_TYPE_TERMINATE
+            - BATCH_OPERATION_TYPE_TERMINATE_WORKFLOW
             - BATCH_OPERATION_TYPE_CANCEL
+            - BATCH_OPERATION_TYPE_CANCEL_WORKFLOW
             - BATCH_OPERATION_TYPE_SIGNAL
+            - BATCH_OPERATION_TYPE_SIGNAL_WORKFLOW
             - BATCH_OPERATION_TYPE_DELETE
+            - BATCH_OPERATION_TYPE_DELETE_WORKFLOW
             - BATCH_OPERATION_TYPE_RESET
+            - BATCH_OPERATION_TYPE_RESET_WORKFLOW
             - BATCH_OPERATION_TYPE_UPDATE_EXECUTION_OPTIONS
+            - BATCH_OPERATION_TYPE_UPDATE_WORKFLOW_EXECUTION_OPTIONS
             - BATCH_OPERATION_TYPE_UNPAUSE_ACTIVITY
             - BATCH_OPERATION_TYPE_UPDATE_ACTIVITY_OPTIONS
             - BATCH_OPERATION_TYPE_RESET_ACTIVITY
+            - BATCH_OPERATION_TYPE_TERMINATE_ACTIVITY
+            - BATCH_OPERATION_TYPE_CANCEL_ACTIVITY
+            - BATCH_OPERATION_TYPE_DELETE_ACTIVITY
           type: string
           description: Batch operation type
           format: enum
@@ -12034,6 +12077,20 @@ components:
              in a given workflow execution that carry the same label, provided that
              they have the distinct ID.
       description: A user-defined short-form string value to be used as the group's label.
+    Execution:
+      type: object
+      properties:
+        archetype:
+          enum:
+            - EXECUTION_TYPE_UNSPECIFIED
+            - EXECUTION_TYPE_WORKFLOW
+            - EXECUTION_TYPE_ACTIVITY
+          type: string
+          format: enum
+        businessId:
+          type: string
+        runId:
+          type: string
     ExternalWorkflowExecutionCancelRequestedEventAttributes:
       type: object
       properties:
@@ -16622,10 +16679,12 @@ components:
           description: |-
             Executions to apply the batch operation
              This field and `visibility_query` are mutually exclusive
-        activityExecutions:
+             DEPRECATED: Use `archetype_executions` instead.
+        archetypeExecutions:
           type: array
           items:
-            $ref: '#/components/schemas/StartBatchOperationRequest_ActivityExecution'
+            $ref: '#/components/schemas/Execution'
+          description: "Archetype executions to apply the batch operation. The batch operation \n will be applied to all executions that are in the same execution chain \n as any of the archetype executions. This field and `visibility_query` \n are mutually exclusive."
         maxOperationsPerSecond:
           type: number
           description: |-
@@ -16660,14 +16719,6 @@ components:
           $ref: '#/components/schemas/BatchOperationTerminateActivities'
         deleteActivitiesOperation:
           $ref: '#/components/schemas/BatchOperationDeleteActivities'
-    StartBatchOperationRequest_ActivityExecution:
-      type: object
-      properties:
-        activityId:
-          type: string
-        runId:
-          type: string
-      description: 'TODO(seankane): support listing activity executions'
     StartBatchOperationResponse:
       type: object
       properties: {}

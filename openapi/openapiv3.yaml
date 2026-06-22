@@ -11111,6 +11111,37 @@ components:
       description: |-
         ComputeScaler instructs the Temporal Service when to scale up or down the number of
          Workers that comprise a WorkerDeployment.
+    ComputeStatus:
+      type: object
+      properties:
+        providerValidation:
+          allOf:
+            - $ref: '#/components/schemas/ComputeStatus_ProviderValidationStatus'
+          description: provider_validation encapsulates the health signal for validating the compute provider.
+      description: |-
+        A Worker Deployment (Deployment, for short) represents all workers serving
+         a shared set of Task Queues. Typically, a Deployment represents one service or
+         application.
+         A Deployment contains multiple Deployment Versions, each representing a different
+         version of workers. (see documentation of WorkerDeploymentVersionInfo)
+         Deployment records are created in Temporal server automatically when their
+         first poller arrives to the server.
+         ComputeStatus represents compute-related configuration and health checks.
+    ComputeStatus_ProviderValidationStatus:
+      type: object
+      properties:
+        errorMessage:
+          type: string
+          description: |-
+            Human-readable error message if connectivity validation failed.
+             An empty string means validation passed.
+        lastCheckTime:
+          type: string
+          description: Timestamp of the last validation check.
+          format: date-time
+      description: |-
+        ProviderValidationStatus represents the result of the most recent
+         connectivity check between Temporal and a customer's compute provider.
     ConfigMetadata:
       type: object
       properties:
@@ -18498,14 +18529,6 @@ components:
             Indicates whether the routing_config has been fully propagated to all
              relevant task queues and their partitions.
           format: enum
-      description: |-
-        A Worker Deployment (Deployment, for short) represents all workers serving
-         a shared set of Task Queues. Typically, a Deployment represents one service or
-         application.
-         A Deployment contains multiple Deployment Versions, each representing a different
-         version of workers. (see documentation of WorkerDeploymentVersionInfo)
-         Deployment records are created in Temporal server automatically when their
-         first poller arrives to the server.
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object
       properties:
@@ -18581,6 +18604,10 @@ components:
           format: date-time
         computeConfig:
           $ref: '#/components/schemas/ComputeConfigSummary'
+        computeStatus:
+          allOf:
+            - $ref: '#/components/schemas/ComputeStatus'
+          description: ComputeStatus represents compute-related configuration and healthchecks.
     WorkerDeploymentOptions:
       type: object
       properties:

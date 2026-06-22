@@ -11111,6 +11111,37 @@ components:
       description: |-
         ComputeScaler instructs the Temporal Service when to scale up or down the number of
          Workers that comprise a WorkerDeployment.
+    ComputeStatus:
+      type: object
+      properties:
+        providerValidation:
+          allOf:
+            - $ref: '#/components/schemas/ComputeStatus_ProviderValidationStatus'
+          description: provider_validation encapsulates the health signal for validating the compute provider.
+      description: |-
+        A Worker Deployment (Deployment, for short) represents all workers serving
+         a shared set of Task Queues. Typically, a Deployment represents one service or
+         application.
+         A Deployment contains multiple Deployment Versions, each representing a different
+         version of workers. (see documentation of WorkerDeploymentVersionInfo)
+         Deployment records are created in Temporal server automatically when their
+         first poller arrives to the server.
+         ComputeStatus represents compute-related configuration and health checks.
+    ComputeStatus_ProviderValidationStatus:
+      type: object
+      properties:
+        errorMessage:
+          type: string
+          description: |-
+            Human-readable error message if connectivity validation failed.
+             An empty string means validation passed.
+        lastCheckTime:
+          type: string
+          description: Timestamp of the last validation check.
+          format: date-time
+      description: |-
+        ProviderValidationStatus represents the result of the most recent
+         connectivity check between Temporal and a customer's compute provider.
     ConfigMetadata:
       type: object
       properties:
@@ -12911,10 +12942,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkerDeploymentInfo_WorkerDeploymentVersionSummary'
           description: Summary of the ramping version of the Worker Deployment.
-        validationSummary:
-          allOf:
-            - $ref: '#/components/schemas/WorkerDeploymentValidationSummary'
-          description: Aggregated WCI validation status counts across all versions with compute config.
       description: A subset of WorkerDeploymentInfo
     ListWorkersResponse:
       type: object
@@ -18502,14 +18529,6 @@ components:
             Indicates whether the routing_config has been fully propagated to all
              relevant task queues and their partitions.
           format: enum
-      description: |-
-        A Worker Deployment (Deployment, for short) represents all workers serving
-         a shared set of Task Queues. Typically, a Deployment represents one service or
-         application.
-         A Deployment contains multiple Deployment Versions, each representing a different
-         version of workers. (see documentation of WorkerDeploymentVersionInfo)
-         Deployment records are created in Temporal server automatically when their
-         first poller arrives to the server.
     WorkerDeploymentInfo_WorkerDeploymentVersionSummary:
       type: object
       properties:
@@ -18585,12 +18604,10 @@ components:
           format: date-time
         computeConfig:
           $ref: '#/components/schemas/ComputeConfigSummary'
-        validationStatus:
+        computeStatus:
           allOf:
-            - $ref: '#/components/schemas/WorkerDeploymentVersionValidationStatus'
-          description: |-
-            The result of the most recent connectivity check for this version's compute resource.
-             Only populated for versions that have compute config.
+            - $ref: '#/components/schemas/ComputeStatus'
+          description: ComputeStatus represents compute-related configuration and healthchecks.
     WorkerDeploymentOptions:
       type: object
       properties:
@@ -18614,21 +18631,6 @@ components:
              When `worker_versioning_mode==VERSIONED`, the worker will be part of a Deployment Version.
           format: enum
       description: Worker Deployment options set in SDK that need to be sent to server in every poll.
-    WorkerDeploymentValidationSummary:
-      type: object
-      properties:
-        connectedCount:
-          type: integer
-          format: int32
-        failedCount:
-          type: integer
-          format: int32
-        unknownCount:
-          type: integer
-          format: int32
-      description: |-
-        WorkerDeploymentValidationSummary aggregates validation status counts across all
-         versions in a Worker Deployment that have compute config configured.
     WorkerDeploymentVersion:
       type: object
       properties:
@@ -18778,27 +18780,6 @@ components:
             - TASK_QUEUE_TYPE_NEXUS
           type: string
           format: enum
-    WorkerDeploymentVersionValidationStatus:
-      type: object
-      properties:
-        health:
-          enum:
-            - HEALTH_UNSPECIFIED
-            - HEALTH_OK
-            - HEALTH_ERROR
-          type: string
-          description: The health of the compute resource connection.
-          format: enum
-        errorMessage:
-          type: string
-          description: Human-readable error message if health is HEALTH_ERROR.
-        lastCheckTime:
-          type: string
-          description: Timestamp of the last validation check.
-          format: date-time
-      description: |-
-        WorkerDeploymentVersionValidationStatus represents the result of the most
-         recent connectivity check between Temporal and a customer's compute resource.
     WorkerHeartbeat:
       type: object
       properties:

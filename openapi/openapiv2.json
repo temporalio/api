@@ -10757,6 +10757,21 @@
         }
       }
     },
+    "ComputeStatusProviderValidationStatus": {
+      "type": "object",
+      "properties": {
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message if connectivity validation failed.\nAn empty string means validation passed."
+        },
+        "lastCheckTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the last validation check."
+        }
+      },
+      "description": "ProviderValidationStatus represents the result of the most recent\nconnectivity check between Temporal and a customer's compute provider."
+    },
     "DeploymentInfoTaskQueueInfo": {
       "type": "object",
       "properties": {
@@ -10953,10 +10968,6 @@
         "rampingVersionSummary": {
           "$ref": "#/definitions/WorkerDeploymentInfoWorkerDeploymentVersionSummary",
           "description": "Summary of the ramping version of the Worker Deployment."
-        },
-        "validationSummary": {
-          "$ref": "#/definitions/v1WorkerDeploymentValidationSummary",
-          "description": "Aggregated WCI validation status counts across all versions with compute config."
         }
       },
       "title": "A subset of WorkerDeploymentInfo"
@@ -11212,9 +11223,9 @@
         "computeConfig": {
           "$ref": "#/definitions/v1ComputeConfigSummary"
         },
-        "validationStatus": {
-          "$ref": "#/definitions/v1WorkerDeploymentVersionValidationStatus",
-          "description": "The result of the most recent connectivity check for this version's compute resource.\nOnly populated for versions that have compute config."
+        "computeStatus": {
+          "$ref": "#/definitions/v1ComputeStatus",
+          "description": "ComputeStatus represents compute-related configuration and healthchecks."
         }
       }
     },
@@ -11228,15 +11239,6 @@
           "$ref": "#/definitions/v1TaskQueueType"
         }
       }
-    },
-    "WorkerDeploymentVersionValidationStatusHealth": {
-      "type": "string",
-      "enum": [
-        "HEALTH_UNSPECIFIED",
-        "HEALTH_OK",
-        "HEALTH_ERROR"
-      ],
-      "default": "HEALTH_UNSPECIFIED"
     },
     "WorkflowEventEventReference": {
       "type": "object",
@@ -14708,6 +14710,16 @@
         }
       },
       "description": "ComputeScaler instructs the Temporal Service when to scale up or down the number of\nWorkers that comprise a WorkerDeployment."
+    },
+    "v1ComputeStatus": {
+      "type": "object",
+      "properties": {
+        "providerValidation": {
+          "$ref": "#/definitions/ComputeStatusProviderValidationStatus",
+          "description": "provider_validation encapsulates the health signal for validating the compute provider."
+        }
+      },
+      "description": "A Worker Deployment (Deployment, for short) represents all workers serving\na shared set of Task Queues. Typically, a Deployment represents one service or\napplication.\nA Deployment contains multiple Deployment Versions, each representing a different\nversion of workers. (see documentation of WorkerDeploymentVersionInfo)\nDeployment records are created in Temporal server automatically when their\nfirst poller arrives to the server.\nComputeStatus represents compute-related configuration and health checks."
     },
     "v1ConfigMetadata": {
       "type": "object",
@@ -20238,8 +20250,7 @@
           "$ref": "#/definitions/v1RoutingConfigUpdateState",
           "description": "Indicates whether the routing_config has been fully propagated to all\nrelevant task queues and their partitions."
         }
-      },
-      "description": "A Worker Deployment (Deployment, for short) represents all workers serving\na shared set of Task Queues. Typically, a Deployment represents one service or\napplication.\nA Deployment contains multiple Deployment Versions, each representing a different\nversion of workers. (see documentation of WorkerDeploymentVersionInfo)\nDeployment records are created in Temporal server automatically when their\nfirst poller arrives to the server."
+      }
     },
     "v1WorkerDeploymentOptions": {
       "type": "object",
@@ -20258,24 +20269,6 @@
         }
       },
       "description": "Worker Deployment options set in SDK that need to be sent to server in every poll."
-    },
-    "v1WorkerDeploymentValidationSummary": {
-      "type": "object",
-      "properties": {
-        "connectedCount": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "failedCount": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "unknownCount": {
-          "type": "integer",
-          "format": "int32"
-        }
-      },
-      "description": "WorkerDeploymentValidationSummary aggregates validation status counts across all\nversions in a Worker Deployment that have compute config configured."
     },
     "v1WorkerDeploymentVersion": {
       "type": "object",
@@ -20389,25 +20382,6 @@
       ],
       "default": "WORKER_DEPLOYMENT_VERSION_STATUS_UNSPECIFIED",
       "description": "Specify the status of a Worker Deployment Version.\n\n - WORKER_DEPLOYMENT_VERSION_STATUS_INACTIVE: The Worker Deployment Version has been created inside the Worker Deployment but is not used by any\nworkflow executions. These Versions can still have workflows if they have an explicit Versioning Override targeting\nthis Version. Such Versioning Override could be set at workflow start time, or at a later time via `UpdateWorkflowExecutionOptions`.\n - WORKER_DEPLOYMENT_VERSION_STATUS_CURRENT: The Worker Deployment Version is the current version of the Worker Deployment. All new workflow executions \nand tasks of existing unversioned or AutoUpgrade workflows are routed to this version.\n - WORKER_DEPLOYMENT_VERSION_STATUS_RAMPING: The Worker Deployment Version is the ramping version of the Worker Deployment. A subset of new Pinned workflow executions are \nrouted to this version. Moreover, a portion of existing unversioned or AutoUpgrade workflow executions are also routed to this version.\n - WORKER_DEPLOYMENT_VERSION_STATUS_DRAINING: The Worker Deployment Version is not used by new workflows but is still used by\nopen pinned workflows. The version cannot be decommissioned safely.\n - WORKER_DEPLOYMENT_VERSION_STATUS_DRAINED: The Worker Deployment Version is not used by new or open workflows, but might be still needed by\nQueries sent to closed workflows. The version can be decommissioned safely if user does\nnot query closed workflows. If the user does query closed workflows for some time x after\nworkflows are closed, they should decommission the version after it has been drained for that duration.\n - WORKER_DEPLOYMENT_VERSION_STATUS_CREATED: The Worker Deployment Version is created by user (via `CreateWorkerDeploymentVersion` API)\nbut server has not seen any poller for it yet."
-    },
-    "v1WorkerDeploymentVersionValidationStatus": {
-      "type": "object",
-      "properties": {
-        "health": {
-          "$ref": "#/definitions/WorkerDeploymentVersionValidationStatusHealth",
-          "description": "The health of the compute resource connection."
-        },
-        "errorMessage": {
-          "type": "string",
-          "description": "Human-readable error message if health is HEALTH_ERROR."
-        },
-        "lastCheckTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp of the last validation check."
-        }
-      },
-      "description": "WorkerDeploymentVersionValidationStatus represents the result of the most\nrecent connectivity check between Temporal and a customer's compute resource."
     },
     "v1WorkerHeartbeat": {
       "type": "object",

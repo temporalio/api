@@ -16,7 +16,6 @@ import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/task_queue.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/compute/v1/config.proto";
-import "temporal/api/compute/v1/validation.proto";
 
 // Worker Deployment options set in SDK that need to be sent to server in every poll.
 message WorkerDeploymentOptions {
@@ -192,6 +191,21 @@ message VersionDrainageInfo {
 // version of workers. (see documentation of WorkerDeploymentVersionInfo)
 // Deployment records are created in Temporal server automatically when their
 // first poller arrives to the server.
+// ComputeStatus represents compute-related configuration and health checks.
+message ComputeStatus {
+    // ProviderValidationStatus represents the result of the most recent
+    // connectivity check between Temporal and a customer's compute provider.
+    message ProviderValidationStatus {
+        // Human-readable error message if connectivity validation failed.
+        // An empty string means validation passed.
+        string error_message = 1;
+        // Timestamp of the last validation check.
+        google.protobuf.Timestamp last_check_time = 2;
+    }
+    // provider_validation encapsulates the health signal for validating the compute provider.
+    ProviderValidationStatus provider_validation = 1;
+}
+
 message WorkerDeploymentInfo {
     // Identifies a Worker Deployment. Must be unique within the namespace.
     string name = 1;
@@ -256,9 +270,8 @@ message WorkerDeploymentInfo {
         // Cleared if the version becomes current or ramping again.
         google.protobuf.Timestamp last_deactivation_time = 10;
         temporal.api.compute.v1.ComputeConfigSummary compute_config = 13;
-        // The result of the most recent connectivity check for this version's compute resource.
-        // Only populated for versions that have compute config.
-        temporal.api.compute.v1.WorkerDeploymentVersionValidationStatus validation_status = 14;
+        // ComputeStatus represents compute-related configuration and healthchecks.
+        ComputeStatus compute_status = 14;
     }
 }
 

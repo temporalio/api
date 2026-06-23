@@ -10667,6 +10667,8 @@ components:
           $ref: '#/components/schemas/Callback_Nexus'
         internal:
           $ref: '#/components/schemas/Callback_Internal'
+        worker:
+          $ref: '#/components/schemas/Callback_Worker'
         links:
           type: array
           items:
@@ -10720,6 +10722,14 @@ components:
           type: string
           description: If the state is BLOCKED, blocked reason provides additional information.
       description: Common callback information. Specific CallbackInfo messages should embed this and may include additional fields.
+    CallbackType:
+      type: object
+      properties:
+        name:
+          type: string
+      description: |-
+        Represents the identifier used by a worker callback author to define the callback. Typically, the
+         name of a function. This is sometimes referred to as the callback's "name"
     Callback_Internal:
       type: object
       properties:
@@ -10743,6 +10753,16 @@ components:
           additionalProperties:
             type: string
           description: Header to attach to callback request.
+    Callback_Worker:
+      type: object
+      properties:
+        taskQueue:
+          type: string
+          description: |-
+            BUG: This is just the task queue _name_, but this should(?) be a TaskQueue type.
+             But importing that from "temporal/api/taskqueue/v1/message.proto" creates a cycle.
+        callbackType:
+          $ref: '#/components/schemas/CallbackType'
     CanceledFailureInfo:
       type: object
       properties:
@@ -16869,6 +16889,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/UserMetadata'
           description: Metadata for use by user interfaces to display the fixed as-of-start summary and details of the operation.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: Completion callbacks to be invoked once the Nexus operation reaches a terminal state.
     StartNexusOperationExecutionResponse:
       type: object
       properties:
@@ -17177,7 +17202,7 @@ components:
           description: |-
             Iff kind == TASK_QUEUE_KIND_STICKY, then this field contains the name of
              the normal task queue that the sticky worker is running on.
-      description: See https://docs.temporal.io/docs/concepts/task-queues/
+      description: See https://docs.temporal.io/task-queue
     TaskQueueConfig:
       type: object
       properties:

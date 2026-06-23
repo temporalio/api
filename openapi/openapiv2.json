@@ -10834,20 +10834,6 @@
       },
       "description": "Target an external server by URL.\nAt a later point, this will support providing credentials, in the meantime, an http.RoundTripper can be injected\ninto the server to modify the request."
     },
-    "EndpointTargetWorker": {
-      "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string",
-          "description": "Namespace to route requests to."
-        },
-        "taskQueue": {
-          "type": "string",
-          "description": "Nexus task queue to route requests to."
-        }
-      },
-      "description": "Target a worker polling on a Nexus task queue in a specific namespace."
-    },
     "EventGroupMarkerInboundEvent": {
       "type": "object",
       "properties": {
@@ -12446,6 +12432,14 @@
         "userMetadata": {
           "$ref": "#/definitions/v1UserMetadata",
           "description": "Metadata for use by user interfaces to display the fixed as-of-start summary and details of the operation."
+        },
+        "completionCallbacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Callback"
+          },
+          "description": "Completion callbacks to be invoked once the Nexus operation reaches a terminal state."
         }
       }
     },
@@ -14322,6 +14316,9 @@
         "internal": {
           "$ref": "#/definitions/CallbackInternal"
         },
+        "worker": {
+          "$ref": "#/definitions/v1CallbackWorker"
+        },
         "links": {
           "type": "array",
           "items": {
@@ -14346,6 +14343,27 @@
       ],
       "default": "CALLBACK_STATE_UNSPECIFIED",
       "description": "State of a callback.\n\n - CALLBACK_STATE_UNSPECIFIED: Default value, unspecified state.\n - CALLBACK_STATE_STANDBY: Callback is standing by, waiting to be triggered.\n - CALLBACK_STATE_SCHEDULED: Callback is in the queue waiting to be executed or is currently executing.\n - CALLBACK_STATE_BACKING_OFF: Callback has failed with a retryable error and is backing off before the next attempt.\n - CALLBACK_STATE_FAILED: Callback has failed.\n - CALLBACK_STATE_SUCCEEDED: Callback has succeeded.\n - CALLBACK_STATE_BLOCKED: Callback is blocked (eg: by circuit breaker)."
+    },
+    "v1CallbackType": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "title": "Represents the identifier used by a worker callback author to define the callback. Typically, the\nname of a function. This is sometimes referred to as the callback's \"name\""
+    },
+    "v1CallbackWorker": {
+      "type": "object",
+      "properties": {
+        "taskQueue": {
+          "type": "string",
+          "description": "BUG: This is just the task queue _name_, but this should(?) be a TaskQueue type.\nBut importing that from \"temporal/api/taskqueue/v1/message.proto\" creates a cycle."
+        },
+        "callbackType": {
+          "$ref": "#/definitions/v1CallbackType"
+        }
+      }
     },
     "v1CancelExternalWorkflowExecutionFailedCause": {
       "type": "string",
@@ -15491,13 +15509,27 @@
       "type": "object",
       "properties": {
         "worker": {
-          "$ref": "#/definitions/EndpointTargetWorker"
+          "$ref": "#/definitions/v1EndpointTargetWorker"
         },
         "external": {
           "$ref": "#/definitions/EndpointTargetExternal"
         }
       },
       "description": "Target to route requests to."
+    },
+    "v1EndpointTargetWorker": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "description": "Namespace to route requests to."
+        },
+        "taskQueue": {
+          "type": "string",
+          "description": "Nexus task queue to route requests to."
+        }
+      },
+      "description": "Target a worker polling on a Nexus task queue in a specific namespace."
     },
     "v1EventGroupMarker": {
       "type": "object",
@@ -19475,7 +19507,7 @@
           "description": "Iff kind == TASK_QUEUE_KIND_STICKY, then this field contains the name of\nthe normal task queue that the sticky worker is running on."
         }
       },
-      "title": "See https://docs.temporal.io/docs/concepts/task-queues/"
+      "title": "See https://docs.temporal.io/task-queue"
     },
     "v1TaskQueueConfig": {
       "type": "object",

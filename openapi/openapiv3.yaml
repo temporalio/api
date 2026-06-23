@@ -3805,6 +3805,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow:
+    post:
+      tags:
+        - ApplicationService
+      description: |-
+        GetWorkflowExecutionResult asynchronously waits for an external workflow to complete.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: GetWorkflowExecutionResult is the established name for this operation. --)
+         (-- api-linter: core::0131::http-body=disabled
+             aip.dev/not-precedent: This is an async long-poll, not a standard Get; it carries a request body. --)
+         (-- api-linter: core::0131::http-method=disabled
+             aip.dev/not-precedent: POST is used to allow a request body for the long-poll wait. --)
+         (-- api-linter: core::0131::http-uri-name=disabled
+             aip.dev/not-precedent: Uses a custom verb path for the wait operation. --)
+         (-- api-linter: core::0131::method-signature=disabled
+             aip.dev/not-precedent: Request has no `name` field; identifies the workflow by namespace + execution. --)
+         (-- api-linter: core::0131::response-message-name=disabled
+             aip.dev/not-precedent: Returns a dedicated response message, not the workflow resource itself. --)
+         (-- api-linter: core::0127::resource-name-extraction=disabled
+             aip.dev/not-precedent: Path variables use existing workflow_id field, not AIP-122 resource names. --)
+      operationId: GetWorkflowExecutionResult
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetWorkflowExecutionResultRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowExecutionResultResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{workflowId}:
     post:
       tags:
@@ -8801,6 +8853,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow:
+    post:
+      tags:
+        - ApplicationService
+      description: |-
+        GetWorkflowExecutionResult asynchronously waits for an external workflow to complete.
+
+         (-- api-linter: core::0136::prepositions=disabled
+             aip.dev/not-precedent: GetWorkflowExecutionResult is the established name for this operation. --)
+         (-- api-linter: core::0131::http-body=disabled
+             aip.dev/not-precedent: This is an async long-poll, not a standard Get; it carries a request body. --)
+         (-- api-linter: core::0131::http-method=disabled
+             aip.dev/not-precedent: POST is used to allow a request body for the long-poll wait. --)
+         (-- api-linter: core::0131::http-uri-name=disabled
+             aip.dev/not-precedent: Uses a custom verb path for the wait operation. --)
+         (-- api-linter: core::0131::method-signature=disabled
+             aip.dev/not-precedent: Request has no `name` field; identifies the workflow by namespace + execution. --)
+         (-- api-linter: core::0131::response-message-name=disabled
+             aip.dev/not-precedent: Returns a dedicated response message, not the workflow resource itself. --)
+         (-- api-linter: core::0127::resource-name-extraction=disabled
+             aip.dev/not-precedent: Path variables use existing workflow_id field, not AIP-122 resource names. --)
+      operationId: GetWorkflowExecutionResult
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetWorkflowExecutionResultRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowExecutionResultResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{workflowId}:
     post:
       tags:
@@ -12364,6 +12468,36 @@ components:
           type: string
           description: Will be set if there are more history events than were included in this response
           format: bytes
+    GetWorkflowExecutionResultRequest:
+      type: object
+      properties:
+        namespace:
+          type: string
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowExecution'
+          description: The workflow execution to wait for.
+    GetWorkflowExecutionResultResponse:
+      type: object
+      properties:
+        status:
+          enum:
+            - WORKFLOW_EXECUTION_STATUS_UNSPECIFIED
+            - WORKFLOW_EXECUTION_STATUS_RUNNING
+            - WORKFLOW_EXECUTION_STATUS_COMPLETED
+            - WORKFLOW_EXECUTION_STATUS_FAILED
+            - WORKFLOW_EXECUTION_STATUS_CANCELED
+            - WORKFLOW_EXECUTION_STATUS_TERMINATED
+            - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
+            - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
+          type: string
+          description: The status of the workflow execution being waited on. This is needed to determine whether the workflow completed successfully or failed.
+          format: enum
+        result:
+          $ref: '#/components/schemas/Payload'
+        failure:
+          $ref: '#/components/schemas/Failure'
     GoogleProtobufAny:
       type: object
       properties:
@@ -20640,6 +20774,8 @@ components:
         Represents the identifier used by a workflow author to define the workflow. Typically, the
          name of a function. This is sometimes referred to as the workflow's "name"
 tags:
+  - name: ApplicationService
+    description: ApplicationService API defines how Temporal SDKs and other clients interact with the Temporal server.
   - name: OperatorService
     description: |-
       OperatorService API defines how Temporal SDKs and other clients interact with the Temporal server

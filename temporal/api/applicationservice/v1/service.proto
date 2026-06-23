@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package temporal.api.applicationservice.v1;
+
+option go_package = "go.temporal.io/api/applicationservice/v1;applicationservice";
+option java_package = "io.temporal.api.applicationservice.v1";
+option java_multiple_files = true;
+option java_outer_classname = "ServiceProto";
+option ruby_package = "Temporalio::Api::Applicationservice::V1";
+option csharp_namespace = "Temporalio.Api.Applicationservice.V1";
+
+import "google/api/annotations.proto";
+import "nexusannotations/v1/options.proto";
+import "temporal/api/protometa/v1/annotations.proto";
+import "temporal/api/applicationservice/v1/request_response.proto";
+
+// ApplicationService API defines how Temporal SDKs and other clients interact with the Temporal server.
+service ApplicationService {
+    // GetWorkflowExecutionResult asynchronously waits for an external workflow to complete.
+    //
+    // (-- api-linter: core::0136::prepositions=disabled
+    //     aip.dev/not-precedent: GetWorkflowExecutionResult is the established name for this operation. --)
+    // (-- api-linter: core::0131::http-body=disabled
+    //     aip.dev/not-precedent: This is an async long-poll, not a standard Get; it carries a request body. --)
+    // (-- api-linter: core::0131::http-method=disabled
+    //     aip.dev/not-precedent: POST is used to allow a request body for the long-poll wait. --)
+    // (-- api-linter: core::0131::http-uri-name=disabled
+    //     aip.dev/not-precedent: Uses a custom verb path for the wait operation. --)
+    // (-- api-linter: core::0131::method-signature=disabled
+    //     aip.dev/not-precedent: Request has no `name` field; identifies the workflow by namespace + execution. --)
+    // (-- api-linter: core::0131::response-message-name=disabled
+    //     aip.dev/not-precedent: Returns a dedicated response message, not the workflow resource itself. --)
+    // (-- api-linter: core::0127::resource-name-extraction=disabled
+    //     aip.dev/not-precedent: Path variables use existing workflow_id field, not AIP-122 resource names. --)
+  rpc GetWorkflowExecutionResult (GetWorkflowExecutionResultRequest) returns (GetWorkflowExecutionResultResponse) {
+    option (nexusannotations.v1.operation).tags = "exposed";
+
+    option (google.api.http) = {
+      post: "/namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow"
+      body: "*"
+      additional_bindings {
+        post: "/api/v1/namespaces/{namespace}/workflows/{execution.workflow_id}/wait-for-external-workflow"
+        body: "*"
+      }
+    };
+    option (temporal.api.protometa.v1.request_header) = {
+      header: "temporal-resource-id"
+      value : "workflow:{execution.workflow_id}"
+    };
+  }
+}

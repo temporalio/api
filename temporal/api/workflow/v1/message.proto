@@ -615,10 +615,10 @@ message VersioningOverride {
         // Override the workflow to have AutoUpgrade behavior.
         bool auto_upgrade = 4;
 
-        // Temporarily override workflow task routing to a specific Worker Deployment Version
-        // until one Workflow Task completes there. After completion, the workflow
-        // execution's Versioning Behavior and Deployment Version come from the
-        // worker's completion response.
+        // Override Workflow Task routing to a specific Worker Deployment Version until
+        // one Workflow Task completes there. After completion, the workflow execution's
+        // Versioning Behavior and Deployment Version come from the worker's completion
+        // response.
         // (-- api-linter: core::0142::time-field-type=disabled
         //     aip.dev/not-precedent: one_time describes one-time routing semantics, not a timestamp or duration. --)
         OneTimeOverride one_time = 5;
@@ -663,10 +663,14 @@ message VersioningOverride {
     // the workflow execution's normal Versioning Behavior and Deployment Version
     // are taken from the worker's completion response.
     //
-    // For example, if the target worker reports Pinned, the execution will remain
-    // pinned after this override is cleared. If the target worker reports
-    // AutoUpgrade, the execution will resume AutoUpgrade routing after this
-    // override is cleared.
+    // Example: if an execution is moved from version X to version Y, and version Z
+    // later becomes current:
+    // - if worker Y reports Pinned, the execution stays on Y;
+    // - if worker Y reports AutoUpgrade, the execution routes to Z on a future
+    //   Workflow Task;
+    // - if worker Y reports Pinned and the workflow uses upgrade-on-continue-as-new,
+    //   the current run stays on Y and the execution can route to Z after
+    //   continue-as-new.
     //
     // If no Workflow Task completes on `target_deployment_version`, this override
     // remains pending.

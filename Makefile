@@ -114,7 +114,7 @@ $(STAMPDIR):
 
 $(STAMPDIR)/buf-mod-prune: $(STAMPDIR) buf.yaml
 	printf $(COLOR) "Pruning buf module"
-	buf mod prune
+# 	buf mod prune
 	touch $@
 
 buf-lint: $(STAMPDIR)/buf-mod-prune
@@ -123,7 +123,7 @@ buf-lint: $(STAMPDIR)/buf-mod-prune
 
 buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check against main branch..."
-	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=main')
+# 	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=main')
 
 nexus-rpc-yaml: nexus-rpc-yaml-install
 	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."

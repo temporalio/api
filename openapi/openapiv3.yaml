@@ -11169,6 +11169,29 @@ components:
       description: |-
         ComputeScaler instructs the Temporal Service when to scale up or down the number of
          Workers that comprise a WorkerDeployment.
+    ComputeStatus:
+      type: object
+      properties:
+        providerValidation:
+          allOf:
+            - $ref: '#/components/schemas/ComputeStatus_ProviderValidationStatus'
+          description: provider_validation encapsulates the health signal for validating the compute provider.
+      description: ComputeStatus represents compute-related configuration and health for a Worker Deployment Version.
+    ComputeStatus_ProviderValidationStatus:
+      type: object
+      properties:
+        errorMessage:
+          type: string
+          description: |-
+            Human-readable error message if connectivity validation failed.
+             An empty string means validation passed.
+        lastCheckTime:
+          type: string
+          description: Timestamp of the last validation check.
+          format: date-time
+      description: |-
+        ProviderValidationStatus represents the result of the most recent
+         connectivity check between Temporal and a customer's compute provider.
     ConfigMetadata:
       type: object
       properties:
@@ -18441,10 +18464,23 @@ components:
         pinned:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride_PinnedOverride'
-          description: Override the workflow to have Pinned behavior.
+          description: |-
+            Override the workflow to have Pinned behavior. This is a sticky override:
+             Workflow Tasks continue to route according to this override until it is
+             explicitly removed.
         autoUpgrade:
           type: boolean
           description: Override the workflow to have AutoUpgrade behavior.
+        oneTime:
+          allOf:
+            - $ref: '#/components/schemas/VersioningOverride_OneTimeOverride'
+          description: |-
+            Override Workflow Task routing to a specific Worker Deployment Version until
+             one Workflow Task completes there. After completion, the workflow execution's
+             Versioning Behavior and Deployment Version come from the worker's completion
+             response.
+             (-- api-linter: core::0142::time-field-type=disabled
+                 aip.dev/not-precedent: one_time describes one-time routing semantics, not a timestamp or duration. --)
         behavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
@@ -18479,6 +18515,33 @@ components:
 
          Pinned behavior overrides are automatically inherited by child workflows, workflow retries, continue-as-new
          workflows, and cron workflows.
+    VersioningOverride_OneTimeOverride:
+      type: object
+      properties:
+        targetDeploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: Required. Worker Deployment Version to receive the one-time Workflow Task.
+      description: |-
+        Routes Workflow Tasks for this execution to `target_deployment_version`
+         until a Workflow Task completes on that version, then clears the override.
+
+         This does not force the workflow's normal Versioning Behavior to become
+         Pinned. After the Workflow Task completes on `target_deployment_version`,
+         the workflow execution's normal Versioning Behavior and Deployment Version
+         are taken from the worker's completion response.
+
+         Example: if an execution is one-time moved from version X to version Y, and
+         version Z later becomes current:
+         - if worker Y reports Pinned, the execution stays on Y;
+         - if worker Y reports AutoUpgrade, the execution routes to Z on a future
+           Workflow Task;
+         - if worker Y reports Pinned and the workflow uses upgrade-on-continue-as-new,
+           the current run stays on Y and the execution can route to Z after
+           continue-as-new.
+
+         If no Workflow Task completes on `target_deployment_version`, this override
+         remains pending.
     VersioningOverride_PinnedOverride:
       type: object
       properties:
@@ -18683,6 +18746,10 @@ components:
           format: date-time
         computeConfig:
           $ref: '#/components/schemas/ComputeConfigSummary'
+        computeStatus:
+          allOf:
+            - $ref: '#/components/schemas/ComputeStatus'
+          description: ComputeStatus represents compute-related configuration and healthchecks.
     WorkerDeploymentOptions:
       type: object
       properties:

@@ -9851,7 +9851,13 @@ components:
         startDelay:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Time to wait before dispatching the first activity task. This delay is not applied to retry attempts.
+          description: Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
+        executionTime:
+          type: string
+          description: |-
+            The time at which the first activity task is made available for dispatch, computed as
+             `schedule_time + start_delay`. Same as `schedule_time` if `start_delay` is not set.
+          format: date-time
       description: Information about a standalone activity.
     ActivityExecutionListInfo:
       type: object
@@ -9997,6 +10003,13 @@ components:
           description: |-
             Priority metadata. If this message is not present, or any fields are not
              present, they inherit the values from the workflow.
+        startDelay:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
+             When updated, the time is added to the original `schedule_time`, not to the current time.
+             If the resulting time is in the past, the task is made available for dispatch immediately.
     ActivityPropertiesModifiedExternallyEventAttributes:
       type: object
       properties:
@@ -16370,9 +16383,9 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
+            Time to wait before making the first workflow task available for dispatch. Cannot be used with `cron_schedule`.
              Note that the signal will be delivered with the first workflow task. If the workflow gets
-             another SignalWithStartWorkflow before the delay a workflow task will be dispatched immediately
+             another SignalWithStartWorkflow before the delay a workflow task will be made available for dispatch immediately
              and the rest of the delay period will be ignored, even if that request also had a delay.
              Signal via SignalWorkflowExecution will not unblock the workflow.
         userMetadata:
@@ -16589,7 +16602,7 @@ components:
         startDelay:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Time to wait before dispatching the first activity task. This delay is not applied to retry attempts.
+          description: Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
     StartActivityExecutionResponse:
       type: object
       properties:
@@ -16978,8 +16991,8 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
-             If the workflow gets a signal before the delay, a workflow task will be dispatched and the rest
+            Time to wait before making the first workflow task available for dispatch. Cannot be used with `cron_schedule`.
+             If the workflow gets a signal before the delay, a workflow task will be made available for dispatch and the rest
              of the delay will be ignored.
         completionCallbacks:
           type: array

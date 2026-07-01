@@ -1830,7 +1830,13 @@ message StartBatchOperationRequest {
     string reason = 4;
     // Executions to apply the batch operation
     // This field and `visibility_query` are mutually exclusive
+    // DEPRECATED: Use `archetype_executions` instead. 
     repeated temporal.api.common.v1.WorkflowExecution executions = 5;
+    // Archetype executions to apply the batch operation. The batch operation 
+    // will be applied to all executions that are in the same execution chain 
+    // as any of the archetype executions. This field and `visibility_query` 
+    // are mutually exclusive.
+    repeated temporal.api.common.v1.Execution archetype_executions = 22;
     // Limit for the number of operations processed per second within this batch.
     // Its purpose is to reduce the stress on the system caused by batch operations, which helps to prevent system
     // overload and minimize potential delays in executing ongoing tasks for user workers.
@@ -1849,6 +1855,9 @@ message StartBatchOperationRequest {
         temporal.api.batch.v1.BatchOperationUnpauseActivities unpause_activities_operation = 16;
         temporal.api.batch.v1.BatchOperationResetActivities reset_activities_operation = 17;
         temporal.api.batch.v1.BatchOperationUpdateActivityOptions update_activity_options_operation = 18;
+        temporal.api.batch.v1.BatchOperationCancelActivities cancel_activities_operation = 19;
+        temporal.api.batch.v1.BatchOperationTerminateActivities terminate_activities_operation = 20;
+        temporal.api.batch.v1.BatchOperationDeleteActivities delete_activities_operation = 21;
     }
 }
 
@@ -1897,6 +1906,8 @@ message DescribeBatchOperationResponse {
     string identity = 9;
     // Reason indicates the reason to stop a operation
     string reason = 10;
+    string query = 11;
+    repeated temporal.api.common.v1.Execution executions = 12;
 }
 
 message ListBatchOperationsRequest {

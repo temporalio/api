@@ -609,11 +609,21 @@ message WorkflowExecutionOptions {
 message VersioningOverride {
     // Indicates whether to override the workflow to be AutoUpgrade or Pinned.
     oneof override {
-        // Override the workflow to have Pinned behavior.
+        // Override the workflow to have Pinned behavior. This is a sticky override:
+        // Workflow Tasks continue to route according to this override until it is
+        // explicitly removed.
         PinnedOverride pinned = 3;
 
         // Override the workflow to have AutoUpgrade behavior.
         bool auto_upgrade = 4;
+
+        // Override Workflow Task routing to a specific Worker Deployment Version until
+        // one Workflow Task completes there. After completion, the workflow execution's
+        // Versioning Behavior and Deployment Version come from the worker's completion
+        // response.
+        // (-- api-linter: core::0142::time-field-type=disabled
+        //     aip.dev/not-precedent: one_time describes one-time routing semantics, not a timestamp or duration. --)
+        OneTimeOverride one_time = 5;
     }
 
     // Required.
@@ -645,6 +655,30 @@ message VersioningOverride {
         // If omitted and the target workflow is not pinned, the override request
         // will be rejected with a PreconditionFailed error.
         temporal.api.deployment.v1.WorkerDeploymentVersion version = 2;
+    }
+
+    // Routes Workflow Tasks for this execution to `target_deployment_version`
+    // until a Workflow Task completes on that version, then clears the override.
+    //
+    // This does not force the workflow's normal Versioning Behavior to become
+    // Pinned. After the Workflow Task completes on `target_deployment_version`,
+    // the workflow execution's normal Versioning Behavior and Deployment Version
+    // are taken from the worker's completion response.
+    //
+    // Example: if an execution is one-time moved from version X to version Y, and
+    // version Z later becomes current:
+    // - if worker Y reports Pinned, the execution stays on Y;
+    // - if worker Y reports AutoUpgrade, the execution routes to Z on a future
+    //   Workflow Task;
+    // - if worker Y reports Pinned and the workflow uses upgrade-on-continue-as-new,
+    //   the current run stays on Y and the execution can route to Z after
+    //   continue-as-new.
+    //
+    // If no Workflow Task completes on `target_deployment_version`, this override
+    // remains pending.
+    message OneTimeOverride {
+        // Required. Worker Deployment Version to receive the one-time Workflow Task.
+        temporal.api.deployment.v1.WorkerDeploymentVersion target_deployment_version = 1;
     }
 
     enum PinnedOverrideBehavior {

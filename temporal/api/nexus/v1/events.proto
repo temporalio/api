@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package temporal.api.nexus.v1;
+
+option go_package = "go.temporal.io/api/nexus/v1;nexus";
+option java_package = "io.temporal.api.nexus.v1";
+option java_multiple_files = true;
+option java_outer_classname = "EventsProto";
+option ruby_package = "Temporalio::Api::Nexus::V1";
+option csharp_namespace = "Temporalio.Api.Nexus.V1";
+
+import "temporal/api/common/v1/message.proto";
+import "temporal/api/failure/v1/message.proto";
+
+// OnCompleteHandlerInput is the input data for a Nexus operation's OnComplete handler.
+message OnCompleteHandlerInput {
+
+    // Source operation that was called, and the OnCompleteHandler is responding to.
+    message SourceOperation {
+        // The Nexus endpoint that was called.
+        string endpoint = 1;
+        // The Nexus service that was called.
+        string service = 2;
+        // The Nexus operation that was called.
+        string operation = 3;
+
+        // The token the operation produced. (If it was an asynchronous Nexus operation.)
+        string operation_token = 4;
+
+        // Links that should be used to associate any further operations with the source.
+        repeated temporal.api.common.v1.Link links = 5;
+    }
+
+    // The outcome of the source operation.
+    message Outcome {
+        oneof result {
+            // The operation was successful, and resulted in the given payload.
+            temporal.api.common.v1.Payload success = 1;
+            // The operation failed. Includes timeout, cancellation, and application errors.
+            temporal.api.failure.v1.Failure failure = 2;
+        }
+    }
+
+    SourceOperation source_operation = 1;
+    Outcome outcome = 2;
+
+    // User-supplied data added to the source invocation. (If applicable.)
+    temporal.api.common.v1.Payload source_context = 3;
+}

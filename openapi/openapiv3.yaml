@@ -10680,6 +10680,8 @@ components:
           $ref: '#/components/schemas/Callback_Nexus'
         internal:
           $ref: '#/components/schemas/Callback_Internal'
+        nexusWorker:
+          $ref: '#/components/schemas/Callback_NexusWorker'
         links:
           type: array
           items:
@@ -10756,6 +10758,31 @@ components:
           additionalProperties:
             type: string
           description: Header to attach to callback request.
+    Callback_NexusWorker:
+      type: object
+      properties:
+        taskqueueName:
+          type: string
+          description: |-
+            Task queue of the waiting Nexus worker.
+
+             This is not a temporal.api.taskqueue.v1.TaskQueue to avoid a circular dependency.
+        sourceContext:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: |-
+            Arbitrary user-supplied data from the source operation's callsite. (As applicable, not all operations
+             support attatching context data.)
+      description: |-
+        Callbacks to be delivered to a waiting Temporal worker exposing a Nexus service. The targeted Nexus service
+         just be registered within the same namespace as the source operation.
+
+         NexusWorker callbacks are only supported for certain types of operations, e.g. standalone Nexus operations.
+         Attempting to attach a NexusWorker callback for an unsupported operation will result in an INVALID_ARGUMENT
+         error from the server.
+
+         There may be additional restrictions imposed by the operation the callback is being attached to. For example,
+         completion handers have a fixed start_to_close timeout.
     CanceledFailureInfo:
       type: object
       properties:
@@ -16933,6 +16960,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/UserMetadata'
           description: Metadata for use by user interfaces to display the fixed as-of-start summary and details of the operation.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: Completion callbacks to be invoked once the Nexus operation reaches a terminal state.
     StartNexusOperationExecutionResponse:
       type: object
       properties:

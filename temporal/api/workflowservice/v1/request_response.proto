@@ -1992,6 +1992,37 @@ message PollWorkflowExecutionUpdateResponse {
     temporal.api.update.v1.UpdateRef update_ref = 3;
 }
 
+message PollTimeSkippingFastForwardCompletionRequest {
+    // Namespace of the execution to poll.
+    string namespace = 1;
+    // The kind of entity that business_id refers to. Unspecified is treated as a
+    // workflow execution, so it may be omitted when targeting a regular workflow.
+    temporal.api.common.v1.Archetype archetype = 2;
+    // The business identifier of the execution (e.g. workflow ID, scheduler ID)
+    // whose time-skipping fast-forward is being polled.
+    string business_id = 3;
+    // Run ID of the execution. If empty, the request targets the current run.
+    string run_id = 4;
+    // Identifies which fast-forward to poll for, by the time it was created (as
+    // reported in the WorkflowExecutionTimeSkippingTransitionedEvent). If not set,
+    // the request polls for the currently active fast-forward.
+    google.protobuf.Timestamp fast_forward_create_time = 5;
+}
+
+message PollTimeSkippingFastForwardCompletionResponse {
+    // The run ID of the execution, useful when run_id was not specified in the request.
+    string run_id = 1;
+    // The time the completed fast-forward was created (registered), as reported in the
+    // WorkflowExecutionTimeSkippingTransitionedEvent. Set if and only if the fast-forward
+    // has completed. If the server's maximum wait time was reached before the fast-forward
+    // completed, the server returns an empty, successful response (not an error) with this
+    // and fast_forward_target_time unset, and clients may re-poll.
+    google.protobuf.Timestamp fast_forward_create_time = 2;
+    // The target virtual time that the fast-forward advanced the execution to.
+    // Set if and only if the fast-forward has completed.
+    google.protobuf.Timestamp fast_forward_target_time = 3;
+}
+
 message PollNexusTaskQueueRequest {
     string namespace = 1;
     temporal.api.taskqueue.v1.TaskQueue task_queue = 3;

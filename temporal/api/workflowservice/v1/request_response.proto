@@ -102,10 +102,16 @@ message DescribeNamespaceResponse {
     // Contains the historical state of failover_versions for the cluster, truncated to contain only the last N
     // states to ensure that the list does not grow unbounded.
     repeated temporal.api.replication.v1.FailoverStatus failover_history = 6;
+    // Deprecated. Use `poller_groups_info` instead, which carries a version so the client can
+    // ignore stale updates.
     // The initial info that client should use for poller group assignment. This information is
     // updated through poll response. Client is supposed to use the info received in the latest
     // poll response.
-    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 7;
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 7 [deprecated = true];
+    // The initial, versioned info that client should use for poller group assignment. This
+    // information is updated through poll responses. Client is supposed to use the info with the
+    // highest version it has received.
+    temporal.api.taskqueue.v1.PollerGroupsInfo poller_groups_info = 8;
 }
 
 message UpdateNamespaceRequest {
@@ -357,13 +363,23 @@ message PollWorkflowTaskQueueResponse {
     // This poller group ID identifies the owner of the workflow task awaiting for query response.
     // Corresponding RespondQueryTaskCompleted should pass this value for proper routing.
     string poller_group_id = 17;
+    // Deprecated. Use `poller_groups_info` instead, which carries a version so the client can
+    // ignore stale updates.
     // The weighted list of poller groups IDs that client should use for future polls to this task
     // queue. Client is expected to:
     //   1. Maintain minimum number of pollers no less than the number of groups.
     //   2. Try to assign the next poll to a group without any pending polls,
     //   3. If every group has some pending polls, assign the next poll to a group randomly
     //     according to the weights.
-    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 18;
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 18 [deprecated = true];
+    // The weighted, versioned list of poller groups IDs that client should use for future polls to
+    // this task queue. Client should ignore this if it has already applied a snapshot with a
+    // version greater than or equal to `poller_groups_info.version`. Client is expected to:
+    //   1. Maintain minimum number of pollers no less than the number of groups.
+    //   2. Try to assign the next poll to a group without any pending polls,
+    //   3. If every group has some pending polls, assign the next poll to a group randomly
+    //     according to the weights.
+    temporal.api.taskqueue.v1.PollerGroupsInfo poller_groups_info = 19;
 }
 
 message RespondWorkflowTaskCompletedRequest {
@@ -423,6 +439,16 @@ message RespondWorkflowTaskCompletedRequest {
     // A dedicated per-worker Nexus task queue on which the server sends control
     // tasks (e.g. activity cancellation) to this specific worker instance.
     string worker_control_task_queue = 20;
+
+    // 0-indexed page number when the workflow task completion is split across multiple
+    // requests ("pages"). 0 for single-page requests. May only be set to non-zero value
+    // when the namespace capability workflow_task_completion_pagination is true.
+    int32 page_number = 21;
+
+    // True for non-final pages of a paginated workflow task completion. The final page's
+    // `page_number` tells the server how many intermediate pages (0..page_number-1) preceded it.
+    // May only be used when the namespace capability workflow_task_completion_pagination is true.
+    bool intermediate_page = 22;
 
     // SDK capability details.
     message Capabilities {
@@ -573,7 +599,15 @@ message PollActivityTaskQueueResponse {
     //   2. Try to assign the next poll to a group without any pending polls,
     //   3. If every group has some pending polls, assign the next poll to a group randomly
     //     according to the weights.
-    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 21;
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 21 [deprecated = true];
+    // The weighted, versioned list of poller groups IDs that client should use for future polls to
+    // this task queue. Client should ignore this if it has already applied a snapshot with a
+    // version greater than or equal to `poller_groups_info.version`. Client is expected to:
+    //   1. Maintain minimum number of pollers no less than the number of groups.
+    //   2. Try to assign the next poll to a group without any pending polls,
+    //   3. If every group has some pending polls, assign the next poll to a group randomly
+    //     according to the weights.
+    temporal.api.taskqueue.v1.PollerGroupsInfo poller_groups_info = 22;
 }
 
 message RecordActivityTaskHeartbeatRequest {
@@ -1996,7 +2030,15 @@ message PollNexusTaskQueueResponse {
     //   2. Try to assign the next poll to a group without any pending polls,
     //   3. If every group has some pending polls, assign the next poll to a group randomly
     //     according to the weights.
-    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 5;
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 5 [deprecated = true];
+    // The weighted, versioned list of poller groups IDs that client should use for future polls to
+    // this task queue. Client should ignore this if it has already applied a snapshot with a
+    // version greater than or equal to `poller_groups_info.version`. Client is expected to:
+    //   1. Maintain minimum number of pollers no less than the number of groups.
+    //   2. Try to assign the next poll to a group without any pending polls,
+    //   3. If every group has some pending polls, assign the next poll to a group randomly
+    //     according to the weights.
+    temporal.api.taskqueue.v1.PollerGroupsInfo poller_groups_info = 6;
 }
 
 message RespondNexusTaskCompletedRequest {

@@ -15242,7 +15242,11 @@
             "type": "object",
             "$ref": "#/definitions/v1PollerGroupInfo"
           },
-          "description": "The initial info that client should use for poller group assignment. This information is\nupdated through poll response. Client is supposed to use the info received in the latest\npoll response."
+          "description": "Deprecated. Use `poller_groups_info` instead, which carries a version so the client can\nignore stale updates.\nThe initial info that client should use for poller group assignment. This information is\nupdated through poll response. Client is supposed to use the info received in the latest\npoll response."
+        },
+        "pollerGroupsInfo": {
+          "$ref": "#/definitions/v1PollerGroupsInfo",
+          "description": "The initial, versioned info that client should use for poller group assignment. This\ninformation is updated through poll responses. Client is supposed to use the info with the\nhighest version it has received."
         }
       }
     },
@@ -16795,6 +16799,10 @@
         "pollerAutoscalingAutoEnroll": {
           "type": "boolean",
           "description": "When true, workers should use poller autoscaling by default unless explicitly configured otherwise."
+        },
+        "workflowTaskCompletionPagination": {
+          "type": "boolean",
+          "description": "True if the namespace supports pagination of `RespondWorkflowTaskCompleted` request."
         }
       },
       "description": "Namespace capability details. Should contain what features are enabled in a namespace."
@@ -17939,7 +17947,11 @@
             "type": "object",
             "$ref": "#/definitions/v1PollerGroupInfo"
           },
-          "description": "The weighted list of poller groups IDs that client should use for future polls to this task\nqueue. Client is expected to:\n  1. Maintain minimum number of pollers no less than the number of groups.\n  2. Try to assign the next poll to a group without any pending polls,\n  3. If every group has some pending polls, assign the next poll to a group randomly\n    according to the weights."
+          "description": "Deprecated. Use `poller_groups_info` instead, which carries a version so the client can\nignore stale updates.\nThe weighted list of poller groups IDs that client should use for future polls to this task\nqueue. Client is expected to:\n  1. Maintain minimum number of pollers no less than the number of groups.\n  2. Try to assign the next poll to a group without any pending polls,\n  3. If every group has some pending polls, assign the next poll to a group randomly\n    according to the weights."
+        },
+        "pollerGroupsInfo": {
+          "$ref": "#/definitions/v1PollerGroupsInfo",
+          "description": "The weighted, versioned list of poller groups IDs that client should use for future polls to\nthis task queue. Client should ignore this if it has already applied a snapshot with a\nversion greater than or equal to `poller_groups_info.version`. Client is expected to:\n  1. Maintain minimum number of pollers no less than the number of groups.\n  2. Try to assign the next poll to a group without any pending polls,\n  3. If every group has some pending polls, assign the next poll to a group randomly\n    according to the weights."
         }
       }
     },
@@ -17954,6 +17966,25 @@
           "format": "float"
         }
       }
+    },
+    "v1PollerGroupsInfo": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Monotonically increasing version of this snapshot. A client should ignore any snapshot whose\nversion is not greater than the one it last applied."
+        },
+        "pollerGroups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PollerGroupInfo"
+          },
+          "description": "The weighted list of poller groups the client should use for future polls to this task queue."
+        }
+      },
+      "description": "A versioned snapshot of the poller groups the client should use for future polls to a task\nqueue. The version is monotonically increasing so that a client can ignore a snapshot that is\nolder than the one it has already applied."
     },
     "v1PollerInfo": {
       "type": "object",

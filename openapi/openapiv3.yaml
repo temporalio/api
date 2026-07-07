@@ -11683,9 +11683,18 @@ components:
           items:
             $ref: '#/components/schemas/PollerGroupInfo'
           description: |-
-            The initial info that client should use for poller group assignment. This information is
+            Deprecated. Use `poller_groups_info` instead, which carries a version so the client can
+             ignore stale updates.
+             The initial info that client should use for poller group assignment. This information is
              updated through poll response. Client is supposed to use the info received in the latest
              poll response.
+        pollerGroupsInfo:
+          allOf:
+            - $ref: '#/components/schemas/PollerGroupsInfo'
+          description: |-
+            The initial, versioned info that client should use for poller group assignment. This
+             information is updated through poll responses. Client is supposed to use the info with the
+             highest version it has received.
     DescribeNexusOperationExecutionResponse:
       type: object
       properties:
@@ -14377,8 +14386,21 @@ components:
           items:
             $ref: '#/components/schemas/PollerGroupInfo'
           description: |-
-            The weighted list of poller groups IDs that client should use for future polls to this task
+            Deprecated. Use `poller_groups_info` instead, which carries a version so the client can
+             ignore stale updates.
+             The weighted list of poller groups IDs that client should use for future polls to this task
              queue. Client is expected to:
+               1. Maintain minimum number of pollers no less than the number of groups.
+               2. Try to assign the next poll to a group without any pending polls,
+               3. If every group has some pending polls, assign the next poll to a group randomly
+                 according to the weights.
+        pollerGroupsInfo:
+          allOf:
+            - $ref: '#/components/schemas/PollerGroupsInfo'
+          description: |-
+            The weighted, versioned list of poller groups IDs that client should use for future polls to
+             this task queue. Client should ignore this if it has already applied a snapshot with a
+             version greater than or equal to `poller_groups_info.version`. Client is expected to:
                1. Maintain minimum number of pollers no less than the number of groups.
                2. Try to assign the next poll to a group without any pending polls,
                3. If every group has some pending polls, assign the next poll to a group randomly
@@ -14391,6 +14413,23 @@ components:
         weight:
           type: number
           format: float
+    PollerGroupsInfo:
+      type: object
+      properties:
+        version:
+          type: string
+          description: |-
+            Monotonically increasing version of this snapshot. A client should ignore any snapshot whose
+             version is not greater than the one it last applied.
+        pollerGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollerGroupInfo'
+          description: The weighted list of poller groups the client should use for future polls to this task queue.
+      description: |-
+        A versioned snapshot of the poller groups the client should use for future polls to a task
+         queue. The version is monotonically increasing so that a client can ignore a snapshot that is
+         older than the one it has already applied.
     PollerInfo:
       type: object
       properties:

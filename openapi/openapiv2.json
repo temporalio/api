@@ -12178,7 +12178,7 @@
         },
         "workflowStartDelay": {
           "type": "string",
-          "description": "Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.\nNote that the signal will be delivered with the first workflow task. If the workflow gets\nanother SignalWithStartWorkflow before the delay a workflow task will be dispatched immediately\nand the rest of the delay period will be ignored, even if that request also had a delay.\nSignal via SignalWorkflowExecution will not unblock the workflow."
+          "description": "Time to wait before making the first workflow task available for dispatch. Cannot be used with `cron_schedule`.\nNote that the signal will be delivered with the first workflow task. If the workflow gets\nanother SignalWithStartWorkflow before the delay a workflow task will be made available for dispatch immediately\nand the rest of the delay period will be ignored, even if that request also had a delay.\nSignal via SignalWorkflowExecution will not unblock the workflow."
         },
         "userMetadata": {
           "$ref": "#/definitions/v1UserMetadata",
@@ -12338,7 +12338,7 @@
         },
         "startDelay": {
           "type": "string",
-          "description": "Time to wait before dispatching the first activity task. This delay is not applied to retry attempts."
+          "description": "Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts."
         }
       }
     },
@@ -12530,7 +12530,7 @@
         },
         "workflowStartDelay": {
           "type": "string",
-          "description": "Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.\nIf the workflow gets a signal before the delay, a workflow task will be dispatched and the rest\nof the delay will be ignored."
+          "description": "Time to wait before making the first workflow task available for dispatch. Cannot be used with `cron_schedule`.\nIf the workflow gets a signal before the delay, a workflow task will be made available for dispatch and the rest\nof the delay will be ignored."
         },
         "completionCallbacks": {
           "type": "array",
@@ -13499,7 +13499,12 @@
         },
         "startDelay": {
           "type": "string",
-          "description": "Time to wait before dispatching the first activity task. This delay is not applied to retry attempts."
+          "description": "Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts."
+        },
+        "executionTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time at which the first activity task is made available for dispatch, computed as\n`schedule_time + start_delay`. Same as `schedule_time` if `start_delay` is not set."
         }
       },
       "description": "Information about a standalone activity."
@@ -13661,6 +13666,10 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "description": "Priority metadata. If this message is not present, or any fields are not\npresent, they inherit the values from the workflow."
+        },
+        "startDelay": {
+          "type": "string",
+          "description": "Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.\nWhen updated, the time is added to the original `schedule_time`, not to the current time.\nIf the resulting time is in the past, the task is made available for dispatch immediately."
         }
       }
     },
@@ -15233,7 +15242,11 @@
             "type": "object",
             "$ref": "#/definitions/v1PollerGroupInfo"
           },
-          "description": "The initial info that client should use for poller group assignment. This information is\nupdated through poll response. Client is supposed to use the info received in the latest\npoll response."
+          "description": "Deprecated. Use `poller_groups_info` instead, which carries a version so the client can\nignore stale updates.\nThe initial info that client should use for poller group assignment. This information is\nupdated through poll response. Client is supposed to use the info received in the latest\npoll response."
+        },
+        "pollerGroupsInfo": {
+          "$ref": "#/definitions/v1PollerGroupsInfo",
+          "description": "The initial, versioned info that client should use for poller group assignment. This\ninformation is updated through poll responses. Client is supposed to use the info with the\nhighest version it has received."
         }
       }
     },
@@ -15866,6 +15879,10 @@
         "serverScaledDeployments": {
           "type": "boolean",
           "description": "True if the server supports server-scaled deployments.\nThis flag is dependent both on server version and for server-scaled deployments\nto be enabled via server configuration."
+        },
+        "serverScaledProviderCloudRun": {
+          "type": "boolean",
+          "description": "True if the server supports the Cloud Run compute provider for\nserver-scaled deployments. Dependent on server version and the\nprovider being enabled via server configuration."
         }
       },
       "description": "System capability details."
@@ -16782,6 +16799,10 @@
         "pollerAutoscalingAutoEnroll": {
           "type": "boolean",
           "description": "When true, workers should use poller autoscaling by default unless explicitly configured otherwise."
+        },
+        "workflowTaskCompletionPagination": {
+          "type": "boolean",
+          "description": "True if the namespace supports pagination of `RespondWorkflowTaskCompleted` request."
         }
       },
       "description": "Namespace capability details. Should contain what features are enabled in a namespace."
@@ -17926,7 +17947,11 @@
             "type": "object",
             "$ref": "#/definitions/v1PollerGroupInfo"
           },
-          "description": "The weighted list of poller groups IDs that client should use for future polls to this task\nqueue. Client is expected to:\n  1. Maintain minimum number of pollers no less than the number of groups.\n  2. Try to assign the next poll to a group without any pending polls,\n  3. If every group has some pending polls, assign the next poll to a group randomly\n    according to the weights."
+          "description": "Deprecated. Use `poller_groups_info` instead, which carries a version so the client can\nignore stale updates.\nThe weighted list of poller groups IDs that client should use for future polls to this task\nqueue. Client is expected to:\n  1. Maintain minimum number of pollers no less than the number of groups.\n  2. Try to assign the next poll to a group without any pending polls,\n  3. If every group has some pending polls, assign the next poll to a group randomly\n    according to the weights."
+        },
+        "pollerGroupsInfo": {
+          "$ref": "#/definitions/v1PollerGroupsInfo",
+          "description": "The weighted, versioned list of poller groups IDs that client should use for future polls to\nthis task queue. Client should ignore this if it has already applied a snapshot with a\nversion greater than or equal to `poller_groups_info.version`. Client is expected to:\n  1. Maintain minimum number of pollers no less than the number of groups.\n  2. Try to assign the next poll to a group without any pending polls,\n  3. If every group has some pending polls, assign the next poll to a group randomly\n    according to the weights."
         }
       }
     },
@@ -17941,6 +17966,25 @@
           "format": "float"
         }
       }
+    },
+    "v1PollerGroupsInfo": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "Monotonically increasing version of this snapshot. A client should ignore any snapshot whose\nversion is not greater than the one it last applied."
+        },
+        "pollerGroups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PollerGroupInfo"
+          },
+          "description": "The weighted list of poller groups the client should use for future polls to this task queue."
+        }
+      },
+      "description": "A versioned snapshot of the poller groups the client should use for future polls to a task\nqueue. The version is monotonically increasing so that a client can ignore a snapshot that is\nolder than the one it has already applied."
     },
     "v1PollerInfo": {
       "type": "object",
@@ -19556,6 +19600,10 @@
           "type": "number",
           "format": "float",
           "description": "The approximate tasks per second dispatched from the task queue, averaging the last 30 seconds. These includes\ntasks whether or not they were added to/dispatched from the backlog or they were dispatched immediately without\ngoing to the backlog (sync-matched).\n\nThe difference between `tasks_add_rate` and `tasks_dispatch_rate` is a reliable metric for the rate at which\nbacklog grows/shrinks.\n\nNote: the actual tasks delivered to the workers may significantly be higher than the numbers reported by\ntasks_dispatch_rate, because:\n- Tasks can be sent to workers without going to the task queue. This is called Eager dispatch. Eager dispatch is\n  enable for activities by default in the latest SDKs.\n- Tasks going to Sticky queue are not accounted for. Note that, typically, only the first workflow task of each\n  workflow goes to a normal queue, and the rest workflow tasks go to the Sticky queue associated with a specific\n  worker instance."
+        },
+        "rateLimitingActive": {
+          "type": "boolean",
+          "description": "Whether rate limiting blocked any dispatches within the recent observation window (approximately\n30 seconds). When true, adding more workers will not increase throughput — the bottleneck is the\nrate limit, not worker count. This field is useful for auto-scaling systems to avoid unnecessary\nscale-up."
         }
       },
       "description": "TaskQueueStats contains statistics about task queue backlog and activity.\n\nFor workflow task queue type, this result is partial because tasks sent to sticky queues are not included. Read\ncomments above each metric to understand the impact of sticky queue exclusion on that metric accuracy."

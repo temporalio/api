@@ -1255,24 +1255,12 @@ service WorkflowService {
         };
     }
 
-    // Long-polls for a time-skipping fast-forward on an execution to complete. A
-    // fast-forward is registered via the TimeSkippingConfig on
-    // UpdateWorkflowExecutionOptions; this RPC blocks until it completes (time has
-    // advanced to the target and time skipping is disabled) or the server's maximum
-    // wait time is reached. The effective timeout is the shorter of the caller-supplied
-    // gRPC timeout and the server's configured long-poll timeout.
-    //
-    // On completion the response carries the completed fast-forward's create and target
-    // times. If the server's maximum wait time is reached first, it returns an empty,
-    // successful response (not an error) with those fields unset, as an invitation to
-    // re-poll — mirroring the other long-poll RPCs.
-    //
-    // Returns a `NotFound` error if the targeted execution does not exist, and an
-    // `InvalidArgument` error if the execution exists but has no matching fast-forward
-    // registered (i.e. there is nothing to wait for).
-    //
+    // Polls a time-skipping fast-forward on an execution to complete. A
+    // fast-forward is registered via the TimeSkippingConfig.
+    // The effective timeout on this call will be shorter of the the caller-supplied gRPC
+    // timeout and the server's configured long-poll timeout.
     // (-- api-linter: core::0127::http-annotation=disabled
-    //     aip.dev/not-precedent: We don't expose fast-forward polling to HTTP in favor of a potential future non-blocking form. --)
+    //     aip.dev/not-precedent: We do not expose fast-forward polling over HTTP because there is currently no identified use case. --)
     rpc PollTimeSkippingFastForwardCompletion(PollTimeSkippingFastForwardCompletionRequest) returns (PollTimeSkippingFastForwardCompletionResponse) {}
 
     // StartBatchOperation starts a new batch operation

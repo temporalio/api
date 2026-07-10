@@ -68,6 +68,16 @@ message WorkflowExecution {
     string run_id = 2;
 }
 
+// ExecutionKey uniquely identifies an execution within a namespace.
+message ExecutionKey {
+    // The execution type.
+    Archetype archetype = 1;
+    // The business identifier of the execution (e.g. workflow ID, schedule ID)
+    string execution_id = 2;
+    // (Optional) The run ID of the execution. If empty, the request targets the current run.
+    string run_id = 3;
+}
+
 // Represents the identifier used by a workflow author to define the workflow. Typically, the
 // name of a function. This is sometimes referred to as the workflow's "name"
 message WorkflowType {
@@ -413,17 +423,17 @@ message TimeSkippingConfig {
     bool enabled = 1;
 
     // Optionally fast-forward the current workflow execution by this duration ahead of current workflow execution time.
-    // After the fast-forward completes, time skipping is disabled, and this
-    // action is recorded in the WorkflowExecutionTimeSkippingTransitionedEvent. It can be re-enabled by
-    // setting `enabled` to true or setting `fast_forward` again via UpdateWorkflowExecutionOptions.
-    // The current workflow execution is a chain of runs (retries, cron, continue-as-new);
-    // child workflows are separate executions, so this fast_forward won't affect them.
+    // After the fast-forward target time is reached, time will not skip anymore. But time skipping can be resumed by
+    // setting a new `fast_forward` or just enabling time skipping with no `fast_forward` via UpdateWorkflowExecutionOptions.
     //
-    // For a given workflow execution, only one active fast-forward is allowed at a time.
+    // For a given execution, only one active fast-forward is allowed at a time.
     // If a new fast-forward is set via UpdateWorkflowExecutionOptions before the previous
     // one completes, the new one will override the previous one.
     // If the fast-forward duration exceeds the remaining execution timeout, time will only
     // be fast-forwarded up to the end of the execution.
+    //
+    // For workflows, the current workflow execution refers to a chain of runs (retries, cron, continue-as-new);
+    // child workflows are separate executions, so this fast_forward won't affect them.
     google.protobuf.Duration fast_forward = 2;
 
     // By default, executions started by another execution (e.g. a child workflow of a parent workflow or
@@ -445,15 +455,10 @@ message TimeSkippingStatePropagation {
     google.protobuf.Timestamp fast_forward_target_time = 2;
 }
 
-// Archetype identifies the kind of entity that a business ID + run ID pair refers to.
-// A single business ID namespace (e.g. workflow ID, scheduler ID) can back different
-// kinds of executions, so callers use the archetype to disambiguate which one to target.
 enum Archetype {
     // Unspecified is treated as ARCHETYPE_WORKFLOW by the server, so the field may be
     // omitted entirely when targeting a regular workflow execution.
     ARCHETYPE_UNSPECIFIED = 0;
-    // A standalone activity execution (not scheduled by a workflow).
     ARCHETYPE_STANDALONE_ACTIVITY = 1;
-    // A scheduler execution.
-    ARCHETYPE_SCHEDULER = 2;
+    ARCHETYPE_SCHEDULE = 2;
 }

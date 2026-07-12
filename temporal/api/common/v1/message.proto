@@ -68,16 +68,6 @@ message WorkflowExecution {
     string run_id = 2;
 }
 
-// ExecutionKey uniquely identifies an execution within a namespace.
-message ExecutionKey {
-    // The execution type.
-    Archetype archetype = 1;
-    // The business identifier of the execution (e.g. workflow ID, schedule ID)
-    string execution_id = 2;
-    // (Optional) The run ID of the execution. If empty, the request targets the current run.
-    string run_id = 3;
-}
-
 // Represents the identifier used by a workflow author to define the workflow. Typically, the
 // name of a function. This is sometimes referred to as the workflow's "name"
 message WorkflowType {
@@ -455,10 +445,12 @@ message TimeSkippingStatePropagation {
     google.protobuf.Timestamp fast_forward_target_time = 2;
 }
 
-enum Archetype {
-    // Unspecified is treated as ARCHETYPE_WORKFLOW by the server, so the field may be
-    // omitted entirely when targeting a regular workflow execution.
-    ARCHETYPE_UNSPECIFIED = 0;
-    ARCHETYPE_STANDALONE_ACTIVITY = 1;
-    ARCHETYPE_SCHEDULE = 2;
+// TimeSkippingFastForward describes the current time-skipping fast-forward on an execution.
+message TimeSkippingFastForward {
+    // The virtual time at which the fast-forward was created.
+    google.protobuf.Timestamp create_time = 1;
+    // The target virtual time at which the fast-forward completes.
+    google.protobuf.Timestamp target_time = 2;
+    // True once `target_time` has been reached.
+    bool has_completed = 3;
 }

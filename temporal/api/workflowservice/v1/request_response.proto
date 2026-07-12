@@ -1992,23 +1992,24 @@ message PollWorkflowExecutionUpdateResponse {
     temporal.api.update.v1.UpdateRef update_ref = 3;
 }
 
-message PollTimeSkippingFastForwardCompletionRequest {
-    // Namespace of the execution to poll.
+message GetWorkflowTimeSkippingRequest {
     string namespace = 1;
-    // Identifies the execution whose time-skipping fast-forward is being polled.
-    temporal.api.common.v1.ExecutionKey execution_key = 2;
+    // The workflow execution whose time-skipping info is requested.
+    // An empty run_id targets the latest run of the workflow.
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+    // If true, the call does not resolve until the current fast-forward completes
+    // (its target virtual time is reached) or a timeout is hit. Ignored if the
+    // workflow has no fast-forward registered.
+    bool wait_fast_forward_completion = 3;
 }
 
-message PollTimeSkippingFastForwardCompletionResponse {
-    bool fast_forward_has_completed = 1;
-    FastForwardInfo current_fast_forward = 2;
-
-    message FastForwardInfo {
-        // The virtual time at which the fast-forward was created.
-        google.protobuf.Timestamp fast_forward_create_time = 1;
-        // The target virtual time at which fast-forward should be completed.
-        google.protobuf.Timestamp fast_forward_target_time = 2;
-    }
+message GetWorkflowTimeSkippingResponse {
+    // The current virtual time of the execution.
+    google.protobuf.Timestamp current_time = 1;
+    // The current fast-forward on the execution, if any. Use `create_time` and
+    // `target_time` to detect whether it was overridden by another request, and
+    // `has_completed` to check whether it has completed.
+    temporal.api.common.v1.TimeSkippingFastForward fast_forward = 2;
 }
 
 message PollNexusTaskQueueRequest {

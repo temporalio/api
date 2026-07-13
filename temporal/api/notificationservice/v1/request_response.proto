@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package temporal.api.notificationservice.v1;
+
+option go_package = "go.temporal.io/api/notificationservice/v1;notificationservice";
+option java_package = "io.temporal.api.notificationservice.v1";
+option java_multiple_files = true;
+option java_outer_classname = "RequestResponseProto";
+option ruby_package = "Temporalio::Api::NotificationService::V1";
+option csharp_namespace = "Temporalio.Api.NotificationService.V1";
+
+import "temporal/api/common/v1/message.proto";
+import "temporal/api/failure/v1/message.proto";
+
+// OnCompleteHandlerRequest is sent when an asynchronous operation completes.
+message OnCompleteHandlerRequest {
+
+    message NexusOperation {
+        // The Nexus endpoint.
+        string endpoint = 1;
+        // The Nexus service.
+        string service = 2;
+        // The Nexus operation.
+        string operation = 3;
+
+        // The token the operation produced. (If it was an asynchronous Nexus operation.)
+        string operation_token = 4;
+
+        // NOTE: The Link(s) to the source operation would be available
+        // when this handler is invoked, via the `nexus.StartOperationOptions`.
+    }
+
+    // The asynchronous operation for which this completion handler is responding to.
+    message SourceOperation {
+        reserved 1;  // Activity
+        reserved 2;  // Workflow
+        reserved 3;  // WorkflowUpdate
+
+        oneof variant {
+            NexusOperation nexus_operation = 4;
+        }
+    }
+
+    // The outcome of the source operation.
+    message Outcome {
+        oneof result {
+            // The operation was successful, and resulted in the given payload.
+            temporal.api.common.v1.Payload success = 1;
+            // The operation failed. Includes timeout, cancellation, and application errors.
+            temporal.api.failure.v1.Failure failure = 2;
+        }
+    }
+
+    SourceOperation source_operation = 1;
+    Outcome outcome = 2;
+
+    // User-supplied data added to the source invocation. (If applicable.)
+    //
+    // There is a relatively maximum size the source context can be, e.g. 10KiB.
+    temporal.api.common.v1.Payload source_context = 3;
+}
+
+// OnCompleteHandlerResponse is the return type from the completion handler.
+message OnCompleteHandlerResponse {}

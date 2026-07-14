@@ -102,6 +102,16 @@ message DescribeNamespaceResponse {
     // Contains the historical state of failover_versions for the cluster, truncated to contain only the last N
     // states to ensure that the list does not grow unbounded.
     repeated temporal.api.replication.v1.FailoverStatus failover_history = 6;
+    // Deprecated. Use `poller_groups_info` instead, which carries a version so the client can
+    // ignore stale updates.
+    // The initial info that client should use for poller group assignment. This information is
+    // updated through poll response. Client is supposed to use the info received in the latest
+    // poll response.
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 7 [deprecated = true];
+    // The initial, versioned info that client should use for poller group assignment. This
+    // information is updated through poll responses. Client is supposed to use the info with the
+    // highest version it has received.
+    temporal.api.taskqueue.v1.PollerGroupsInfo poller_groups_info = 8;
 }
 
 message UpdateNamespaceRequest {
@@ -178,8 +188,8 @@ message StartWorkflowExecutionRequest {
     // StartWorkflowExecution.
     temporal.api.failure.v1.Failure continued_failure = 18;
     temporal.api.common.v1.Payloads last_completion_result = 19;
-    // Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
-    // If the workflow gets a signal before the delay, a workflow task will be dispatched and the rest
+    // Time to wait before making the first workflow task available for dispatch. Cannot be used with `cron_schedule`.
+    // If the workflow gets a signal before the delay, a workflow task will be made available for dispatch and the rest
     // of the delay will be ignored.
     google.protobuf.Duration workflow_start_delay = 20;
     // Callbacks to be called by the server when this workflow reaches a terminal state.
@@ -206,12 +216,14 @@ message StartWorkflowExecutionRequest {
     temporal.api.deployment.v1.WorkerDeploymentOptions eager_worker_deployment_options = 28;
 
     // Time-skipping configuration. If not set, time skipping is disabled.
-    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 29;
+    temporal.api.common.v1.TimeSkippingConfig time_skipping_config = 29;
 }
 
 message StartWorkflowExecutionResponse {
     // The run id of the workflow that was started - or used (via WorkflowIdConflictPolicy USE_EXISTING).
     string run_id = 1;
+    // If the workflow was started as a result of a de-dupe, this field will contain the run id of the first execution in the chain.
+    string first_execution_run_id = 6;
     // If true, a new workflow was started.
     bool started = 3;
     // Current execution status of the workflow. Typically remains WORKFLOW_EXECUTION_STATUS_RUNNING
@@ -269,7 +281,7 @@ message PollWorkflowTaskQueueRequest {
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
     // Unless this is the first poll, the client must pass one of the poller group IDs received in
     // `poller_group_infos` of the last the PollWorkflowTaskQueueResponse according to the
-    // instructions. If not set, the poll is routed randomly which can cause it being blocked
+    // instructions. If not set, the poll is routed randomly which can cause it to be blocked
     // without receiving a task while the queue actually has tasks in another server location.
     string poller_group_id = 10;
     // The identity of the worker/client who is polling this task queue
@@ -353,13 +365,23 @@ message PollWorkflowTaskQueueResponse {
     // This poller group ID identifies the owner of the workflow task awaiting for query response.
     // Corresponding RespondQueryTaskCompleted should pass this value for proper routing.
     string poller_group_id = 17;
+    // Deprecated. Use `poller_groups_info` instead, which carries a version so the client can
+    // ignore stale updates.
     // The weighted list of poller groups IDs that client should use for future polls to this task
     // queue. Client is expected to:
     //   1. Maintain minimum number of pollers no less than the number of groups.
     //   2. Try to assign the next poll to a group without any pending polls,
     //   3. If every group has some pending polls, assign the next poll to a group randomly
     //     according to the weights.
-    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 18;
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 18 [deprecated = true];
+    // The weighted, versioned list of poller groups IDs that client should use for future polls to
+    // this task queue. Client should ignore this if it has already applied a snapshot with a
+    // version greater than or equal to `poller_groups_info.version`. Client is expected to:
+    //   1. Maintain minimum number of pollers no less than the number of groups.
+    //   2. Try to assign the next poll to a group without any pending polls,
+    //   3. If every group has some pending polls, assign the next poll to a group randomly
+    //     according to the weights.
+    temporal.api.taskqueue.v1.PollerGroupsInfo poller_groups_info = 19;
 }
 
 message RespondWorkflowTaskCompletedRequest {
@@ -419,6 +441,16 @@ message RespondWorkflowTaskCompletedRequest {
     // A dedicated per-worker Nexus task queue on which the server sends control
     // tasks (e.g. activity cancellation) to this specific worker instance.
     string worker_control_task_queue = 20;
+
+    // 0-indexed page number when the workflow task completion is split across multiple
+    // requests ("pages"). 0 for single-page requests. May only be set to non-zero value
+    // when the namespace capability workflow_task_completion_pagination is true.
+    int32 page_number = 21;
+
+    // True for non-final pages of a paginated workflow task completion. The final page's
+    // `page_number` tells the server how many intermediate pages (0..page_number-1) preceded it.
+    // May only be used when the namespace capability workflow_task_completion_pagination is true.
+    bool intermediate_page = 22;
 
     // SDK capability details.
     message Capabilities {
@@ -482,7 +514,7 @@ message PollActivityTaskQueueRequest {
     temporal.api.taskqueue.v1.TaskQueue task_queue = 2;
     // Unless this is the first poll, the client must pass one of the poller group IDs received in
     // `poller_group_infos` of the last the PollActivityTaskQueueResponse according to the
-    // instructions. If not set, the poll is routed randomly which can cause it being blocked
+    // instructions. If not set, the poll is routed randomly which can cause it to be blocked
     // without receiving a task while the queue actually has tasks in another server location.
     string poller_group_id = 10;
     // The identity of the worker/client
@@ -569,7 +601,15 @@ message PollActivityTaskQueueResponse {
     //   2. Try to assign the next poll to a group without any pending polls,
     //   3. If every group has some pending polls, assign the next poll to a group randomly
     //     according to the weights.
-    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 21;
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 21 [deprecated = true];
+    // The weighted, versioned list of poller groups IDs that client should use for future polls to
+    // this task queue. Client should ignore this if it has already applied a snapshot with a
+    // version greater than or equal to `poller_groups_info.version`. Client is expected to:
+    //   1. Maintain minimum number of pollers no less than the number of groups.
+    //   2. Try to assign the next poll to a group without any pending polls,
+    //   3. If every group has some pending polls, assign the next poll to a group randomly
+    //     according to the weights.
+    temporal.api.taskqueue.v1.PollerGroupsInfo poller_groups_info = 22;
 }
 
 message RecordActivityTaskHeartbeatRequest {
@@ -875,9 +915,9 @@ message SignalWithStartWorkflowExecutionRequest {
     temporal.api.common.v1.Memo memo = 17;
     temporal.api.common.v1.SearchAttributes search_attributes = 18;
     temporal.api.common.v1.Header header = 19;
-    // Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
+    // Time to wait before making the first workflow task available for dispatch. Cannot be used with `cron_schedule`.
     // Note that the signal will be delivered with the first workflow task. If the workflow gets
-    // another SignalWithStartWorkflow before the delay a workflow task will be dispatched immediately
+    // another SignalWithStartWorkflow before the delay a workflow task will be made available for dispatch immediately
     // and the rest of the delay period will be ignored, even if that request also had a delay.
     // Signal via SignalWorkflowExecution will not unblock the workflow.
     google.protobuf.Duration workflow_start_delay = 20;
@@ -895,12 +935,14 @@ message SignalWithStartWorkflowExecutionRequest {
     // Priority metadata
     temporal.api.common.v1.Priority priority = 26;
     // Time-skipping configuration. If not set, time skipping is disabled.
-    temporal.api.workflow.v1.TimeSkippingConfig time_skipping_config = 27;
+    temporal.api.common.v1.TimeSkippingConfig time_skipping_config = 27;
 }
 
 message SignalWithStartWorkflowExecutionResponse {
     // The run id of the workflow that was started - or just signaled, if it was already running.
     string run_id = 1;
+    // If the workflow was started as a result of a de-dupe, this field will contain the run id of the first execution in the chain.
+    string first_execution_run_id = 4;
     // If true, a new workflow was started.
     bool started = 2;
     // Link to be associated with the WorkflowExecutionSignaled event.
@@ -1338,6 +1380,11 @@ message GetSystemInfoResponse {
         // This flag is dependent both on server version and for server-scaled deployments
         // to be enabled via server configuration.
         bool server_scaled_deployments = 12;
+
+        // True if the server supports the Cloud Run compute provider for
+        // server-scaled deployments. Dependent on server version and the
+        // provider being enabled via server configuration.
+        bool server_scaled_provider_cloud_run = 13;
 
     }
 }
@@ -1809,6 +1856,9 @@ message UpdateWorkflowExecutionResponse {
     // request WaitPolicy, and before the context deadline expired; clients may
     // may then retry the call as needed.
     temporal.api.enums.v1.UpdateWorkflowExecutionLifecycleStage stage = 3;
+
+    // Link to the update event. May be null if the update has not yet been accepted.
+    temporal.api.common.v1.Link link = 4;
 }
 
 message StartBatchOperationRequest {
@@ -1947,7 +1997,7 @@ message PollNexusTaskQueueRequest {
     temporal.api.taskqueue.v1.TaskQueue task_queue = 3;
     // Unless this is the first poll, the client must pass one of the poller group IDs received in
     // `poller_group_infos` of the last the PollNexusTaskQueueResponse according to the
-    // instructions. If not set, the poll is routed randomly which can cause it being blocked
+    // instructions. If not set, the poll is routed randomly which can cause it to be blocked
     // without receiving a task while the queue actually has tasks in another server location.
     string poller_group_id = 9;
     // The identity of the client who initiated this request.
@@ -1984,7 +2034,15 @@ message PollNexusTaskQueueResponse {
     //   2. Try to assign the next poll to a group without any pending polls,
     //   3. If every group has some pending polls, assign the next poll to a group randomly
     //     according to the weights.
-    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 5;
+    repeated temporal.api.taskqueue.v1.PollerGroupInfo poller_group_infos = 5 [deprecated = true];
+    // The weighted, versioned list of poller groups IDs that client should use for future polls to
+    // this task queue. Client should ignore this if it has already applied a snapshot with a
+    // version greater than or equal to `poller_groups_info.version`. Client is expected to:
+    //   1. Maintain minimum number of pollers no less than the number of groups.
+    //   2. Try to assign the next poll to a group without any pending polls,
+    //   3. If every group has some pending polls, assign the next poll to a group randomly
+    //     according to the weights.
+    temporal.api.taskqueue.v1.PollerGroupsInfo poller_groups_info = 6;
 }
 
 message RespondNexusTaskCompletedRequest {
@@ -2376,6 +2434,10 @@ message UpdateWorkflowExecutionOptionsRequest {
 message UpdateWorkflowExecutionOptionsResponse {
     // Workflow Execution options after update.
     temporal.api.workflow.v1.WorkflowExecutionOptions workflow_execution_options = 1;
+
+    // The Workflow Execution time when the options were updated. When time skipping is
+    // enabled, this is the workflow's virtual time rather than wall-clock time.
+    google.protobuf.Timestamp update_time = 2;
 }
 
 // [cleanup-wv-pre-release] Pre-release deployment APIs, clean up later
@@ -2896,6 +2958,7 @@ message TriggerWorkflowRuleResponse {
     // True is the rule was applied, based on the rule conditions (predicate/visibility_query).
     bool applied = 1;
 }
+
 message RecordWorkerHeartbeatRequest {
     // Namespace this worker belongs to.
     string namespace = 1;
@@ -3050,6 +3113,21 @@ message DescribeWorkerResponse {
     temporal.api.worker.v1.WorkerInfo worker_info = 1;
 }
 
+message CountWorkersRequest {
+    string namespace = 1;
+    // Query to filter workers before counting.
+    // Supported filter fields are the same as in ListWorkersRequest.
+    string query = 2;
+    // When true, the count will include system workers that are created implicitly
+    // by the server and not by the user. By default, system workers are excluded.
+    bool include_system_workers = 3;
+}
+
+message CountWorkersResponse {
+    // Number of workers matching the query.
+    int64 count = 1;
+}
+
 // Request to pause a workflow execution.
 message PauseWorkflowExecutionRequest {
     // Namespace of the workflow to pause.
@@ -3155,7 +3233,7 @@ message StartActivityExecutionRequest {
     repeated temporal.api.common.v1.Link links = 20;
     // Options for handling conflicts when using ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING.
     temporal.api.common.v1.OnConflictOptions on_conflict_options = 21;
-    // Time to wait before dispatching the first activity task. This delay is not applied to retry attempts.
+    // Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
     google.protobuf.Duration start_delay = 22;
 }
 
@@ -3184,13 +3262,18 @@ message DescribeActivityExecutionRequest {
     // guaranteed that a client making a sequence of long-poll requests will see a complete
     // sequence of state changes.
     bytes long_poll_token = 6;
+    // Include the heartbeat_details field inside info in the response if available.
+    bool include_heartbeat_details = 7;
+    // Include the last_failure field inside info in the response if available.
+    bool include_last_failure = 8;
 }
 
 message DescribeActivityExecutionResponse {
     // The run ID of the activity, useful when run_id was not specified in the request.
     string run_id = 1;
 
-    // Information about the activity execution.
+    // Information about the activity execution. Fields heartbeat_details and last_failure are omitted unless
+    // the request has include_heartbeat_details or include_last_failure set to true, respectively.
     temporal.api.activity.v1.ActivityExecutionInfo info = 2;
 
     // Serialized activity input, passed as arguments to the activity function.

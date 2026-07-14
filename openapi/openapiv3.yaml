@@ -406,6 +406,16 @@ paths:
           schema:
             type: string
             format: bytes
+        - name: includeHeartbeatDetails
+          in: query
+          description: Include the heartbeat_details field inside info in the response if available.
+          schema:
+            type: boolean
+        - name: includeLastFailure
+          in: query
+          description: Include the last_failure field inside info in the response if available.
+          schema:
+            type: boolean
       responses:
         "200":
           description: OK
@@ -2229,6 +2239,7 @@ paths:
         - WorkflowService
       description: |-
         Deprecated. Use `GetWorkerVersioningRules`.
+         Will be removed in server version v1.32.0.
          Fetches the worker build id versioning sets for a task queue.
       operationId: GetWorkerBuildIdCompatibility
       parameters:
@@ -2270,7 +2281,7 @@ paths:
         - WorkflowService
       description: |-
         Fetches the Build ID assignment and redirect rules for a Task Queue.
-         WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+         Will be removed in server version v1.32.0.
       operationId: GetWorkerVersioningRules
       parameters:
         - name: namespace
@@ -2470,6 +2481,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UpdateNamespaceResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/worker-count:
+    get:
+      tags:
+        - WorkflowService
+      description: CountWorkers counts the number of workers in a specific namespace.
+      operationId: CountWorkers
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: |-
+            Query to filter workers before counting.
+             Supported filter fields are the same as in ListWorkersRequest.
+          schema:
+            type: string
+        - name: includeSystemWorkers
+          in: query
+          description: |-
+            When true, the count will include system workers that are created implicitly
+             by the server and not by the user. By default, system workers are excluded.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountWorkersResponse'
         default:
           description: Default error response
           content:
@@ -3048,6 +3098,7 @@ paths:
         - WorkflowService
       description: |-
         Deprecated. Use `DescribeTaskQueue`.
+         Will be removed in server version v1.32.0.
 
          Fetches task reachability to determine whether a worker may be retired.
          The request may specify task queues to query for or let the server fetch all task queues mapped to the given
@@ -5409,6 +5460,16 @@ paths:
           schema:
             type: string
             format: bytes
+        - name: includeHeartbeatDetails
+          in: query
+          description: Include the heartbeat_details field inside info in the response if available.
+          schema:
+            type: boolean
+        - name: includeLastFailure
+          in: query
+          description: Include the last_failure field inside info in the response if available.
+          schema:
+            type: boolean
       responses:
         "200":
           description: OK
@@ -7207,6 +7268,7 @@ paths:
         - WorkflowService
       description: |-
         Deprecated. Use `GetWorkerVersioningRules`.
+         Will be removed in server version v1.32.0.
          Fetches the worker build id versioning sets for a task queue.
       operationId: GetWorkerBuildIdCompatibility
       parameters:
@@ -7248,7 +7310,7 @@ paths:
         - WorkflowService
       description: |-
         Fetches the Build ID assignment and redirect rules for a Task Queue.
-         WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+         Will be removed in server version v1.32.0.
       operationId: GetWorkerVersioningRules
       parameters:
         - name: namespace
@@ -7415,6 +7477,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DescribeTaskQueueResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/worker-count:
+    get:
+      tags:
+        - WorkflowService
+      description: CountWorkers counts the number of workers in a specific namespace.
+      operationId: CountWorkers
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: |-
+            Query to filter workers before counting.
+             Supported filter fields are the same as in ListWorkersRequest.
+          schema:
+            type: string
+        - name: includeSystemWorkers
+          in: query
+          description: |-
+            When true, the count will include system workers that are created implicitly
+             by the server and not by the user. By default, system workers are excluded.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountWorkersResponse'
         default:
           description: Default error response
           content:
@@ -7993,6 +8094,7 @@ paths:
         - WorkflowService
       description: |-
         Deprecated. Use `DescribeTaskQueue`.
+         Will be removed in server version v1.32.0.
 
          Fetches task reachability to determine whether a worker may be retired.
          The request may specify task queues to query for or let the server fetch all task queues mapped to the given
@@ -9642,7 +9744,9 @@ components:
         heartbeatDetails:
           allOf:
             - $ref: '#/components/schemas/Payloads'
-          description: Details provided in the last recorded activity heartbeat.
+          description: |-
+            Details provided in the last recorded activity heartbeat.
+             DescribeActivityExecution does not set this field unless include_heartbeat_details was true in the request.
         lastHeartbeatTime:
           type: string
           description: Time the last heartbeat was recorded.
@@ -9674,7 +9778,9 @@ components:
         lastFailure:
           allOf:
             - $ref: '#/components/schemas/Failure'
-          description: Failure details from the last failed attempt.
+          description: |-
+            Failure details from the last failed attempt.
+             DescribeActivityExecution does not set this field unless include_last_failure was true in the request.
         lastWorkerIdentity:
           type: string
         currentRetryInterval:
@@ -9732,6 +9838,26 @@ components:
         totalHeartbeatCount:
           type: string
           description: Total number of heartbeats recorded across all attempts of this activity, including retries.
+        sdkName:
+          type: string
+          description: |-
+            The name of the SDK of the worker that most recently picked up an attempt of this activity.
+             Overwritten on each new attempt. Empty if unknown.
+        sdkVersion:
+          type: string
+          description: |-
+            The version of the SDK of the worker that most recently picked up an attempt of this activity.
+             Overwritten on each new attempt. Empty if unknown.
+        startDelay:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
+        executionTime:
+          type: string
+          description: |-
+            The time at which the first activity task is made available for dispatch, computed as
+             `schedule_time + start_delay`. Same as `schedule_time` if `start_delay` is not set.
+          format: date-time
       description: Information about a standalone activity.
     ActivityExecutionListInfo:
       type: object
@@ -9877,6 +10003,13 @@ components:
           description: |-
             Priority metadata. If this message is not present, or any fields are not
              present, they inherit the values from the workflow.
+        startDelay:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
+             When updated, the time is added to the original `schedule_time`, not to the current time.
+             If the resulting time is in the past, the task is made available for dispatch immediately.
     ActivityPropertiesModifiedExternallyEventAttributes:
       type: object
       properties:
@@ -10991,6 +11124,29 @@ components:
       description: |-
         ComputeScaler instructs the Temporal Service when to scale up or down the number of
          Workers that comprise a WorkerDeployment.
+    ComputeStatus:
+      type: object
+      properties:
+        providerValidation:
+          allOf:
+            - $ref: '#/components/schemas/ComputeStatus_ProviderValidationStatus'
+          description: provider_validation encapsulates the health signal for validating the compute provider.
+      description: ComputeStatus represents compute-related configuration and health for a Worker Deployment Version.
+    ComputeStatus_ProviderValidationStatus:
+      type: object
+      properties:
+        errorMessage:
+          type: string
+          description: |-
+            Human-readable error message if connectivity validation failed.
+             An empty string means validation passed.
+        lastCheckTime:
+          type: string
+          description: Timestamp of the last validation check.
+          format: date-time
+      description: |-
+        ProviderValidationStatus represents the result of the most recent
+         connectivity check between Temporal and a customer's compute provider.
     ConfigMetadata:
       type: object
       properties:
@@ -11087,6 +11243,12 @@ components:
             $ref: '#/components/schemas/Payload'
         count:
           type: string
+    CountWorkersResponse:
+      type: object
+      properties:
+        count:
+          type: string
+          description: Number of workers matching the query.
     CountWorkflowExecutionsResponse:
       type: object
       properties:
@@ -11415,7 +11577,9 @@ components:
         info:
           allOf:
             - $ref: '#/components/schemas/ActivityExecutionInfo'
-          description: Information about the activity execution.
+          description: |-
+            Information about the activity execution. Fields heartbeat_details and last_failure are omitted unless
+             the request has include_heartbeat_details or include_last_failure set to true, respectively.
         input:
           allOf:
             - $ref: '#/components/schemas/Payloads'
@@ -11514,6 +11678,23 @@ components:
           description: |-
             Contains the historical state of failover_versions for the cluster, truncated to contain only the last N
              states to ensure that the list does not grow unbounded.
+        pollerGroupInfos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollerGroupInfo'
+          description: |-
+            Deprecated. Use `poller_groups_info` instead, which carries a version so the client can
+             ignore stale updates.
+             The initial info that client should use for poller group assignment. This information is
+             updated through poll response. Client is supposed to use the info received in the latest
+             poll response.
+        pollerGroupsInfo:
+          allOf:
+            - $ref: '#/components/schemas/PollerGroupsInfo'
+          description: |-
+            The initial, versioned info that client should use for poller group assignment. This
+             information is updated through poll responses. Client is supposed to use the info with the
+             highest version it has received.
     DescribeNexusOperationExecutionResponse:
       type: object
       properties:
@@ -11818,6 +11999,62 @@ components:
           type: string
           description: Nexus task queue to route requests to.
       description: Target a worker polling on a Nexus task queue in a specific namespace.
+    EventGroupMarker:
+      type: object
+      properties:
+        label:
+          $ref: '#/components/schemas/EventGroupMarker_Label'
+        inboundEvent:
+          $ref: '#/components/schemas/EventGroupMarker_InboundEvent'
+        inboundUpdate:
+          $ref: '#/components/schemas/EventGroupMarker_InboundUpdate'
+    EventGroupMarker_InboundEvent:
+      type: object
+      properties:
+        inboundEventId:
+          type: string
+      description: |-
+        The event ID of an event in the present workflow that triggered implicit
+         creation of this group Marker.
+
+         The target event's type must be one of the following:
+          - `WORKFLOW_EXECUTION_STARTED`
+          - `WORKFLOW_EXECUTION_SIGNALED`
+    EventGroupMarker_InboundUpdate:
+      type: object
+      properties:
+        inboundUpdateId:
+          type: string
+      description: |-
+        The identifier of an inbound Update (request.meta.update_id)
+         whose handler triggered implicit creation of this group Marker.
+
+         Used in place of `inbound_event_id` for Updates because the event ID of the
+         UpdateAccepted history event is not known until the Workflow Task is
+         completed and recorded by the server, which may be too late.
+    EventGroupMarker_Label:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Opaque identifier assigned by the SDK.
+        label:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            This payload should be a "json/plain"-encoded payload that is a single
+             JSON string for use in user interfaces. User interface formatting may not
+             apply to this text when used in "label" situations. The payload data
+             section is limited to 400 bytes by default.
+
+             Payload only needs to be set on the first use of a given Marker ID;
+             further references to an existing Marker ID reuse existing attributes of
+             the referenced Marker -- i.e. further label payloads are ignored.
+
+             Note that it is valid to have distinct Markers (i.e. distinct Marker IDs)
+             in a given workflow execution that carry the same label, provided that
+             they have the distinct ID.
+      description: A user-defined short-form string value to be used as the group's label.
     ExternalWorkflowExecutionCancelRequestedEventAttributes:
       type: object
       properties:
@@ -12068,6 +12305,12 @@ components:
             True if the server supports server-scaled deployments.
              This flag is dependent both on server version and for server-scaled deployments
              to be enabled via server configuration.
+        serverScaledProviderCloudRun:
+          type: boolean
+          description: |-
+            True if the server supports the Cloud Run compute provider for
+             server-scaled deployments. Dependent on server version and the
+             provider being enabled via server configuration.
       description: System capability details.
     GetWorkerBuildIdCompatibilityResponse:
       type: object
@@ -12286,6 +12529,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/Principal'
           description: Server-computed authenticated caller identity associated with this event.
+        eventGroupMarkers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventGroupMarker'
+          description: Event group markers attached to this event.
         workflowExecutionStartedEventAttributes:
           $ref: '#/components/schemas/WorkflowExecutionStartedEventAttributes'
         workflowExecutionCompletedEventAttributes:
@@ -12489,6 +12737,8 @@ components:
           $ref: '#/components/schemas/Link_Activity'
         nexusOperation:
           $ref: '#/components/schemas/Link_NexusOperation'
+        workflow:
+          $ref: '#/components/schemas/Link_Workflow'
       description: |-
         Link can be associated with history events. It might contain information about an external entity
          related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
@@ -12523,6 +12773,18 @@ components:
         runId:
           type: string
       description: A link to a standalone Nexus operation.
+    Link_Workflow:
+      type: object
+      properties:
+        namespace:
+          type: string
+        workflowId:
+          type: string
+        runId:
+          type: string
+        reason:
+          type: string
+      description: "A link to a workflow execution. This is a more general version of WorkflowEvent that doesn't specify a \n particular event within the workflow, useful when you want to link to a workflow but there is no particular event to link to,\n such as a Query or a Rejected Update."
     Link_WorkflowEvent:
       type: object
       properties:
@@ -12924,6 +13186,18 @@ components:
         workerCommands:
           type: boolean
           description: True if the namespace supports worker commands (server-to-worker communication via control queues).
+        standaloneNexusOperation:
+          type: boolean
+          description: True if the namespace supports standalone Nexus operations.
+        workflowUpdateCallbacks:
+          type: boolean
+          description: True if the namespace supports attaching callbacks on workflow updates
+        pollerAutoscalingAutoEnroll:
+          type: boolean
+          description: When true, workers should use poller autoscaling by default unless explicitly configured otherwise.
+        workflowTaskCompletionPagination:
+          type: boolean
+          description: True if the namespace supports pagination of `RespondWorkflowTaskCompleted` request.
       description: Namespace capability details. Should contain what features are enabled in a namespace.
     NamespaceInfo_Limits:
       type: object
@@ -13329,6 +13603,9 @@ components:
         identity:
           type: string
           description: The identity of the client who started this operation.
+        stateSizeBytes:
+          type: string
+          description: Updated once on scheduled and once on terminal status.
       description: Full current state of a standalone Nexus operation, as of the time of the request.
     NexusOperationExecutionListInfo:
       type: object
@@ -13381,6 +13658,9 @@ components:
           description: |-
             The difference between close time and scheduled time.
              This field is only populated if the operation is closed.
+        stateSizeBytes:
+          type: string
+          description: Updated once on scheduled and once on terminal status.
       description: |-
         Limited Nexus operation information returned in the list response.
          When adding fields here, ensure that it is also present in NexusOperationExecutionInfo (note that it may already be present in
@@ -14106,8 +14386,21 @@ components:
           items:
             $ref: '#/components/schemas/PollerGroupInfo'
           description: |-
-            The weighted list of poller groups IDs that client should use for future polls to this task
+            Deprecated. Use `poller_groups_info` instead, which carries a version so the client can
+             ignore stale updates.
+             The weighted list of poller groups IDs that client should use for future polls to this task
              queue. Client is expected to:
+               1. Maintain minimum number of pollers no less than the number of groups.
+               2. Try to assign the next poll to a group without any pending polls,
+               3. If every group has some pending polls, assign the next poll to a group randomly
+                 according to the weights.
+        pollerGroupsInfo:
+          allOf:
+            - $ref: '#/components/schemas/PollerGroupsInfo'
+          description: |-
+            The weighted, versioned list of poller groups IDs that client should use for future polls to
+             this task queue. Client should ignore this if it has already applied a snapshot with a
+             version greater than or equal to `poller_groups_info.version`. Client is expected to:
                1. Maintain minimum number of pollers no less than the number of groups.
                2. Try to assign the next poll to a group without any pending polls,
                3. If every group has some pending polls, assign the next poll to a group randomly
@@ -14120,6 +14413,23 @@ components:
         weight:
           type: number
           format: float
+    PollerGroupsInfo:
+      type: object
+      properties:
+        version:
+          type: string
+          description: |-
+            Monotonically increasing version of this snapshot. A client should ignore any snapshot whose
+             version is not greater than the one it last applied.
+        pollerGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollerGroupInfo'
+          description: The weighted list of poller groups the client should use for future polls to this task queue.
+      description: |-
+        A versioned snapshot of the poller groups the client should use for future polls to a task
+         queue. The version is monotonically increasing so that a client can ignore a snapshot that is
+         older than the one it has already applied.
     PollerInfo:
       type: object
       properties:
@@ -14555,6 +14865,19 @@ components:
           $ref: '#/components/schemas/Meta'
         input:
           $ref: '#/components/schemas/Input'
+        requestId:
+          type: string
+          description: The request ID of the request.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: Callbacks to be called by the server when this update reaches a terminal state.
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          description: Links to be associated with this update.
       description: The client request that triggers a Workflow Update.
     RequestCancelActivityExecutionRequest:
       type: object
@@ -15445,6 +15768,9 @@ components:
         invalidScheduleError:
           type: string
           description: Deprecated.
+        stateSizeBytes:
+          type: string
+          description: Size of the schedule's internal state (including payloads) in bytes.
     ScheduleListEntry:
       type: object
       properties:
@@ -15488,6 +15814,9 @@ components:
           items:
             type: string
             format: date-time
+        stateSizeBytes:
+          type: string
+          description: Size of the schedule's internal state (including payloads) in bytes.
       description: |-
         ScheduleListInfo is an abbreviated set of values from Schedule and ScheduleInfo
          that's returned in ListSchedules.
@@ -16091,9 +16420,9 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
+            Time to wait before making the first workflow task available for dispatch. Cannot be used with `cron_schedule`.
              Note that the signal will be delivered with the first workflow task. If the workflow gets
-             another SignalWithStartWorkflow before the delay a workflow task will be dispatched immediately
+             another SignalWithStartWorkflow before the delay a workflow task will be made available for dispatch immediately
              and the rest of the delay period will be ignored, even if that request also had a delay.
              Signal via SignalWorkflowExecution will not unblock the workflow.
         userMetadata:
@@ -16128,6 +16457,9 @@ components:
         runId:
           type: string
           description: The run id of the workflow that was started - or just signaled, if it was already running.
+        firstExecutionRunId:
+          type: string
+          description: If the workflow was started as a result of a de-dupe, this field will contain the run id of the first execution in the chain.
         started:
           type: boolean
           description: If true, a new workflow was started.
@@ -16310,7 +16642,7 @@ components:
         startDelay:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Time to wait before dispatching the first activity task. This delay is not applied to retry attempts.
+          description: Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
     StartActivityExecutionResponse:
       type: object
       properties:
@@ -16489,10 +16821,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
           description: The propagated time-skipping configuration for the child workflow.
-        initialSkippedDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: Propagate the duration skipped to the child workflow.
+        timeSkippingStatePropagation:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingStatePropagation'
+          description: |-
+            The time-skipping state propagated from the parent workflow. This can be nil if no time skipping
+             has occurred or there is no previous run.
     StartNexusOperationExecutionRequest:
       type: object
       properties:
@@ -16697,8 +17031,8 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Time to wait before dispatching the first workflow task. Cannot be used with `cron_schedule`.
-             If the workflow gets a signal before the delay, a workflow task will be dispatched and the rest
+            Time to wait before making the first workflow task available for dispatch. Cannot be used with `cron_schedule`.
+             If the workflow gets a signal before the delay, a workflow task will be made available for dispatch and the rest
              of the delay will be ignored.
         completionCallbacks:
           type: array
@@ -16752,6 +17086,9 @@ components:
         runId:
           type: string
           description: The run id of the workflow that was started - or used (via WorkflowIdConflictPolicy USE_EXISTING).
+        firstExecutionRunId:
+          type: string
+          description: If the workflow was started as a result of a de-dupe, this field will contain the run id of the first execution in the chain.
         started:
           type: boolean
           description: If true, a new workflow was started.
@@ -16999,6 +17336,13 @@ components:
                workflow goes to a normal queue, and the rest workflow tasks go to the Sticky queue associated with a specific
                worker instance.
           format: float
+        rateLimitingActive:
+          type: boolean
+          description: |-
+            Whether rate limiting blocked any dispatches within the recent observation window (approximately
+             30 seconds). When true, adding more workers will not increase throughput — the bottleneck is the
+             rate limit, not worker count. This field is useful for auto-scaling systems to avoid unnecessary
+             scale-up.
       description: |-
         TaskQueueStats contains statistics about task queue backlog and activity.
 
@@ -17180,17 +17524,60 @@ components:
         enabled:
           type: boolean
           description: Enables or disables time skipping for this workflow execution.
-        maxSkippedDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: Maximum total virtual time that can be skipped.
-        maxElapsedDuration:
+        fastForward:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Maximum elapsed time since time skipping was enabled.
-             This includes both skipped time and real time elapsing.
-      description: "Configuration for time skipping during a workflow execution.\n When enabled, virtual time advances automatically whenever there is no in-flight work.\n In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,\n and possibly other features added in the future.\n User timers are not classified as in-flight work and will be skipped over.\n When time advances, it skips to the earlier of the next user timer or the configured bound, if either exists.\n \n Propagation behavior of time skipping:\n The enabled flag, bound fields, and accumulated skipped duration are propagated to related executions as follows:\n (1) Child workflows and continue-as-new: both the configuration and the accumulated skipped duration are\n     inherited from the current execution. The configured bound is shared between the inherited skipped\n     duration and any additional duration skipped by the new run.\n (2) Retry and cron: the configuration and accumulated skipped duration are inherited as recorded when the\n     current workflow started; the accumulated skipped duration of the current run is not propagated.\n (3) Reset: the new run retains the time-skipping configuration of the current execution. Because reset replays\n     all events up to the reset point and re-applies any UpdateWorkflowExecutionOptions changes made after that\n     point, the resulting run ends up with the same final time-skipping configuration as the previous run."
+            Optionally fast-forward the current workflow execution by this duration ahead of current workflow execution time.
+             After the fast-forward completes, time skipping is disabled, and this
+             action is recorded in the WorkflowExecutionTimeSkippingTransitionedEvent. It can be re-enabled by
+             setting `enabled` to true or setting `fast_forward` again via UpdateWorkflowExecutionOptions.
+             The current workflow execution is a chain of runs (retries, cron, continue-as-new);
+             child workflows are separate executions, so this fast_forward won't affect them.
+
+             For a given workflow execution, only one active fast-forward is allowed at a time.
+             If a new fast-forward is set via UpdateWorkflowExecutionOptions before the previous
+             one completes, the new one will override the previous one.
+             If the fast-forward duration exceeds the remaining execution timeout, time will only
+             be fast-forwarded up to the end of the execution.
+        disablePropagation:
+          type: boolean
+          description: |-
+            By default, executions started by another execution (e.g. a child workflow of a parent workflow or
+             a schedule with the timeskipping policy enabled), inherit the "enabled" flag and skip time when possible.
+             This flag disables that inheritance.
+      description: |-
+        The configuration for time skipping of a workflow execution (a chain of runs including retries, cron, continue-as-new).
+         When time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.
+         In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,
+         and possibly other features added in the future.
+         User timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the
+         time point of the registered fast forward when there is no in-flight work.
+         When time is skipped, a WorkflowExecutionTimeSkippingTransitionedEvent will be
+         added to the workflow history to capture the state changes.
+
+         For child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,
+         but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the
+         "enabled" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the
+         parent execution as its start time.
+    TimeSkippingStatePropagation:
+      type: object
+      properties:
+        initialSkippedDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            The time skipped by the previous execution that started this workflow.
+             It can happen in child workflows and a chain of runs (CaN, cron, retry).
+        fastForwardTargetTime:
+          type: string
+          description: |-
+            If there is a fast-forward action set for the previous run in a chain of runs,
+             the target time should be propagated to the next run as well.
+          format: date-time
+      description: |-
+        The time-skipping state that needs to be propagated from a parent workflow to a child workflow,
+         or through a chain of runs.
     TimeoutFailureInfo:
       type: object
       properties:
@@ -17855,6 +18242,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionOptions'
           description: Workflow Execution options after update.
+        updateTime:
+          type: string
+          description: |-
+            The Workflow Execution time when the options were updated. When time skipping is
+             enabled, this is the workflow's virtual time rather than wall-clock time.
+          format: date-time
     UpdateWorkflowExecutionRequest:
       type: object
       properties:
@@ -17925,6 +18318,10 @@ components:
              request WaitPolicy, and before the context deadline expired; clients may
              may then retry the call as needed.
           format: enum
+        link:
+          allOf:
+            - $ref: '#/components/schemas/Link'
+          description: Link to the update event. May be null if the update has not yet been accepted.
     UpsertWorkflowSearchAttributesEventAttributes:
       type: object
       properties:
@@ -18035,10 +18432,23 @@ components:
         pinned:
           allOf:
             - $ref: '#/components/schemas/VersioningOverride_PinnedOverride'
-          description: Override the workflow to have Pinned behavior.
+          description: |-
+            Override the workflow to have Pinned behavior. This is a sticky override:
+             Workflow Tasks continue to route according to this override until it is
+             explicitly removed.
         autoUpgrade:
           type: boolean
           description: Override the workflow to have AutoUpgrade behavior.
+        oneTime:
+          allOf:
+            - $ref: '#/components/schemas/VersioningOverride_OneTimeOverride'
+          description: |-
+            Override Workflow Task routing to a specific Worker Deployment Version until
+             one Workflow Task completes there. After completion, the workflow execution's
+             Versioning Behavior and Deployment Version come from the worker's completion
+             response.
+             (-- api-linter: core::0142::time-field-type=disabled
+                 aip.dev/not-precedent: one_time describes one-time routing semantics, not a timestamp or duration. --)
         behavior:
           enum:
             - VERSIONING_BEHAVIOR_UNSPECIFIED
@@ -18073,6 +18483,33 @@ components:
 
          Pinned behavior overrides are automatically inherited by child workflows, workflow retries, continue-as-new
          workflows, and cron workflows.
+    VersioningOverride_OneTimeOverride:
+      type: object
+      properties:
+        targetDeploymentVersion:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentVersion'
+          description: Required. Worker Deployment Version to receive the one-time Workflow Task.
+      description: |-
+        Routes Workflow Tasks for this execution to `target_deployment_version`
+         until a Workflow Task completes on that version, then clears the override.
+
+         This does not force the workflow's normal Versioning Behavior to become
+         Pinned. After the Workflow Task completes on `target_deployment_version`,
+         the workflow execution's normal Versioning Behavior and Deployment Version
+         are taken from the worker's completion response.
+
+         Example: if an execution is one-time moved from version X to version Y, and
+         version Z later becomes current:
+         - if worker Y reports Pinned, the execution stays on Y;
+         - if worker Y reports AutoUpgrade, the execution routes to Z on a future
+           Workflow Task;
+         - if worker Y reports Pinned and the workflow uses upgrade-on-continue-as-new,
+           the current run stays on Y and the execution can route to Z after
+           continue-as-new.
+
+         If no Workflow Task completes on `target_deployment_version`, this override
+         remains pending.
     VersioningOverride_PinnedOverride:
       type: object
       properties:
@@ -18277,6 +18714,10 @@ components:
           format: date-time
         computeConfig:
           $ref: '#/components/schemas/ComputeConfigSummary'
+        computeStatus:
+          allOf:
+            - $ref: '#/components/schemas/ComputeStatus'
+          description: ComputeStatus represents compute-related configuration and healthchecks.
     WorkerDeploymentOptions:
       type: object
       properties:
@@ -19230,10 +19671,7 @@ components:
         timeSkippingConfig:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
-          description: |-
-            Time-skipping configuration for this workflow execution.
-             If not set, the time-skipping configuration is not updated by this request;
-             the existing configuration is preserved.
+          description: "The time-skipping configuration for this workflow execution.\n When `fast_forward` is set, time will be fast-forwarded to a future point relative\n to the current workflow timestamp. Each call takes effect, even if\n `fast_forward` is set to the same duration, since the target time is recalculated\n from the current timestamp on every call.\n\n This field must be updated as a whole; updating individual sub-fields is not supported.\n When setting the update mask in `UpdateWorkflowExecutionOptionsRequest`, \n `BatchOperationUpdateWorkflowExecutionOptions`, etc., use a mask that covers the entire field."
     WorkflowExecutionOptionsUpdatedEventAttributes:
       type: object
       properties:
@@ -19268,7 +19706,33 @@ components:
         timeSkippingConfig:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingConfig'
-          description: If set, the time-skipping configuration was changed. Contains the full updated configuration.
+          description: TimeSkippingConfig override upserted in this event. Represents the full config.
+        timeSkippingConfigUpdated:
+          type: boolean
+          description: |-
+            Indicates the time skipping config was updated by the recent call to update
+             workflow execution options.
+        workflowUpdateOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowExecutionOptionsUpdatedEventAttributes_WorkflowUpdateOptionsUpdate'
+          description: Updates to workflow updates options.
+    WorkflowExecutionOptionsUpdatedEventAttributes_WorkflowUpdateOptionsUpdate:
+      type: object
+      properties:
+        updateId:
+          type: string
+          description: The ID of the workflow update this update options update corresponds to.
+        attachedRequestId:
+          type: string
+          description: |-
+            Request ID attached to the running workflow update so that subsequent requests with same
+             request ID will be deduped
+        attachedCompletionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: Completion callbacks attached to the running workflow update.
     WorkflowExecutionPauseInfo:
       type: object
       properties:
@@ -19577,12 +20041,12 @@ components:
 
              The configuration may be updated after start via UpdateWorkflowExecutionOptions, which
              will be reflected in the WorkflowExecutionOptionsUpdatedEvent.
-        initialSkippedDuration:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
+        timeSkippingStatePropagation:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingStatePropagation'
           description: |-
-            The time skipped by the previous execution that started this workflow.
-             It can happen in cases of child workflows and continue-as-new workflows.
+            The time-skipping state propagated from a previous run of this workflow. This can be nil
+             if no time skipping has occurred or there is no previous run.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -19600,12 +20064,12 @@ components:
       properties:
         targetTime:
           type: string
-          description: The virtual time after time skipping was applied.
+          description: The virtual time point that time skipping advanced to.
           format: date-time
-        disabledAfterBound:
+        disabledAfterFastForward:
           type: boolean
           description: |-
-            when true, time skipping was disabled automatically due to a bound being reached.
+            When true, time skipping has been disabled automatically due to a call to fast_forward completing.
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "after" is used to indicate temporal ordering. --)
         wallClockTime:
@@ -19614,7 +20078,7 @@ components:
           format: date-time
       description: |-
         Attributes for an event indicating that time skipping state changed for a workflow execution,
-         either time was advanced or time skipping was disabled automatically due to a bound being reached.
+         either time was advanced or time skipping was disabled automatically due to the fast_forward completing.
          The worker_may_ignore field in HistoryEvent should always be set true for this event.
     WorkflowExecutionTimedOutEventAttributes:
       type: object
@@ -20147,6 +20611,8 @@ components:
             - WORKFLOW_TASK_FAILED_CAUSE_FEATURE_DISABLED
             - WORKFLOW_TASK_FAILED_CAUSE_GRPC_MESSAGE_TOO_LARGE
             - WORKFLOW_TASK_FAILED_CAUSE_PAYLOADS_TOO_LARGE
+            - WORKFLOW_TASK_FAILED_CAUSE_EXTERNAL_STORAGE_FAILURE
+            - WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_PAUSE_REQUESTED_BEFORE_TASK_STARTED
           type: string
           format: enum
         failure:

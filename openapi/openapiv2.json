@@ -11099,6 +11099,26 @@
       },
       "description": "UpdateWorkflowOptions represents updating workflow execution options after a workflow reset.\nKeep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest."
     },
+    "TimeSkippingInfoTimeSkippingFastForwardInfo": {
+      "type": "object",
+      "properties": {
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The virtual time at which the fast-forward was created."
+        },
+        "targetTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The target virtual time at which the fast-forward completes."
+        },
+        "hasCompleted": {
+          "type": "boolean",
+          "description": "True once `target_time` has been reached."
+        }
+      },
+      "description": "TimeSkippingFastForwardInfo describes the current time-skipping fast-forward on an execution."
+    },
     "UpdateTaskQueueConfigRequestRateLimitUpdate": {
       "type": "object",
       "properties": {
@@ -19790,6 +19810,25 @@
       },
       "description": "The configuration for time skipping of a workflow execution (a chain of runs including retries, cron, continue-as-new).\nWhen time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.\nIn-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,\nand possibly other features added in the future.\nUser timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the\ntime point of the registered fast forward when there is no in-flight work.\nWhen time is skipped, a WorkflowExecutionTimeSkippingTransitionedEvent will be\nadded to the workflow history to capture the state changes.\n\nFor child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,\nbut a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the\n\"enabled\" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the\nparent execution as its start time."
     },
+    "v1TimeSkippingInfo": {
+      "type": "object",
+      "properties": {
+        "currentTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Current virtual time of the execution. If the execution hasn't skipped\nany time yet, it will be the same as wall clock time."
+        },
+        "fastForward": {
+          "$ref": "#/definitions/TimeSkippingInfoTimeSkippingFastForwardInfo",
+          "description": "The current fast-forward information of the execution. Nil if\nthe execution has no fast-forward set.\n`create_time` and `target_time` can be used to verify whether\nfast-forward configuration was overridden by another request,\nand `has_completed` shows whether the fast-forward duration has completed."
+        },
+        "isRunning": {
+          "type": "boolean",
+          "description": "If the execution is actively trying to skip time automatically when there is a chance,\nthis field will be set to true. If time has stopped skipping either by fast-forward completion\nor user configuration, it will be false."
+        }
+      },
+      "description": "Describes the current time-skipping state of a workflow execution, including its virtual\ntime, any active fast-forward, and whether it is actively skipping time."
+    },
     "v1TimeSkippingStatePropagation": {
       "type": "object",
       "properties": {
@@ -20973,6 +21012,10 @@
         "pauseInfo": {
           "$ref": "#/definitions/v1WorkflowExecutionPauseInfo",
           "description": "Information about the workflow execution pause operation."
+        },
+        "timeSkippingInfo": {
+          "$ref": "#/definitions/v1TimeSkippingInfo",
+          "description": "Information about time skipping of the workflow execution. If the execution has never enabled time skipping, it will be nil."
         }
       },
       "description": "Holds all the extra information about workflow execution that is not part of Visibility."

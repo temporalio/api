@@ -17573,6 +17573,48 @@ components:
          but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the
          "enabled" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the
          parent execution as its start time.
+    TimeSkippingInfo:
+      type: object
+      properties:
+        currentTime:
+          type: string
+          description: |-
+            Current virtual time of the execution. If the execution hasn't skipped
+             any time yet, it will be the same as wall clock time.
+          format: date-time
+        fastForward:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingInfo_TimeSkippingFastForwardInfo'
+          description: |-
+            The current fast-forward information of the execution. Nil if
+             the execution has no fast-forward set.
+             `create_time` and `target_time` can be used to verify whether
+             fast-forward configuration was overridden by another request,
+             and `has_completed` shows whether the fast-forward duration has completed.
+        isRunning:
+          type: boolean
+          description: |-
+            If the execution is actively trying to skip time automatically when there is a chance,
+             this field will be set to true. If time has stopped skipping either by fast-forward completion
+             or user configuration, it will be false.
+      description: |-
+        Describes the current time-skipping state of a workflow execution, including its virtual
+         time, any active fast-forward, and whether it is actively skipping time.
+    TimeSkippingInfo_TimeSkippingFastForwardInfo:
+      type: object
+      properties:
+        createTime:
+          type: string
+          description: The virtual time at which the fast-forward was created.
+          format: date-time
+        targetTime:
+          type: string
+          description: The target virtual time at which the fast-forward completes.
+          format: date-time
+        hasCompleted:
+          type: boolean
+          description: True once `target_time` has been reached.
+      description: TimeSkippingFastForwardInfo describes the current time-skipping fast-forward on an execution.
     TimeSkippingStatePropagation:
       type: object
       properties:
@@ -19516,6 +19558,10 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionPauseInfo'
           description: Information about the workflow execution pause operation.
+        timeSkippingInfo:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingInfo'
+          description: Information about time skipping of the workflow execution. If the execution has never enabled time skipping, it will be nil.
       description: Holds all the extra information about workflow execution that is not part of Visibility.
     WorkflowExecutionFailedEventAttributes:
       type: object

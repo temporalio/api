@@ -444,3 +444,34 @@ message TimeSkippingStatePropagation {
     // the target time should be propagated to the next run as well.
     google.protobuf.Timestamp fast_forward_target_time = 2;
 }
+
+
+// Describes the current time-skipping state of a workflow execution, including its virtual
+// time, any active fast-forward, and whether it is actively skipping time.
+message TimeSkippingInfo {
+    // Current virtual time of the execution. If the execution hasn't skipped
+    // any time yet, it will be the same as wall clock time.
+    google.protobuf.Timestamp current_time = 1;
+
+    // The current fast-forward information of the execution. Nil if
+    // the execution has no fast-forward set.
+    // `create_time` and `target_time` can be used to verify whether
+    // fast-forward configuration was overridden by another request,
+    // and `has_completed` shows whether the fast-forward duration has completed.
+    TimeSkippingFastForwardInfo fast_forward = 2;
+
+    // TimeSkippingFastForwardInfo describes the current time-skipping fast-forward on an execution.
+    message TimeSkippingFastForwardInfo {
+        // The virtual time at which the fast-forward was created.
+        google.protobuf.Timestamp create_time = 1;
+        // The target virtual time at which the fast-forward completes.
+        google.protobuf.Timestamp target_time = 2;
+        // True once `target_time` has been reached.
+        bool has_completed = 3;
+    }
+
+    // If the execution is actively trying to skip time automatically when there is a chance,
+    // this field will be set to true. If time has stopped skipping either by fast-forward completion
+    // or user configuration, it will be false.
+    bool is_running = 3;
+}

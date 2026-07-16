@@ -97,7 +97,7 @@ api-linter-install:
 
 buf-install:
 	printf $(COLOR) "Install/update buf..."
-	go install github.com/bufbuild/buf/cmd/buf@v1.27.0
+	go install github.com/bufbuild/buf/cmd/buf@v1.71.0
 
 ##### Sync external proto dependencies #####
 sync-nexus-annotations:

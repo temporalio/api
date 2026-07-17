@@ -1873,7 +1873,11 @@ message StartBatchOperationRequest {
     string reason = 4;
     // Executions to apply the batch operation
     // This field and `visibility_query` are mutually exclusive
-    repeated temporal.api.common.v1.WorkflowExecution executions = 5;
+    // DEPRECATED: Use `target_executions` instead.
+    repeated temporal.api.common.v1.WorkflowExecution executions = 5 [deprecated = true];
+    // Target executions to apply the batch operation. This field and `visibility_query`
+    // are mutually exclusive.
+    repeated temporal.api.common.v1.Execution target_executions = 22;
     // Limit for the number of operations processed per second within this batch.
     // Its purpose is to reduce the stress on the system caused by batch operations, which helps to prevent system
     // overload and minimize potential delays in executing ongoing tasks for user workers.
@@ -1892,6 +1896,9 @@ message StartBatchOperationRequest {
         temporal.api.batch.v1.BatchOperationUnpauseActivities unpause_activities_operation = 16;
         temporal.api.batch.v1.BatchOperationResetActivities reset_activities_operation = 17;
         temporal.api.batch.v1.BatchOperationUpdateActivityOptions update_activity_options_operation = 18;
+        temporal.api.batch.v1.BatchOperationCancelActivities cancel_activities_operation = 19;
+        temporal.api.batch.v1.BatchOperationTerminateActivities terminate_activities_operation = 20;
+        temporal.api.batch.v1.BatchOperationDeleteActivities delete_activities_operation = 21;
     }
 }
 
@@ -1940,6 +1947,10 @@ message DescribeBatchOperationResponse {
     string identity = 9;
     // Reason indicates the reason to stop a operation
     string reason = 10;
+    // Query is the visibility query that defines the group of workflow to apply the batch operation
+    string query = 11;
+    // Executions is the list of workflow OR standalone activity executions to apply the batch operation
+    repeated temporal.api.common.v1.Execution executions = 12;
 }
 
 message ListBatchOperationsRequest {
@@ -2170,7 +2181,7 @@ message UpdateActivityExecutionOptionsRequest {
     // If provided, targets a workflow activity for the given workflow ID.
     // If empty, targets a standalone activity.
     string workflow_id = 2;
-    // The ID of the activity to target. 
+    // The ID of the activity to target.
     string activity_id = 3;
     // Run ID of the workflow or standalone activity.
     string run_id = 4;
@@ -2240,7 +2251,7 @@ message PauseActivityExecutionRequest {
     // If provided, pause a workflow activity (or activities) for the given workflow ID.
     // If empty, targets a standalone activity.
     string workflow_id = 2;
-    // The ID of the activity to target. 
+    // The ID of the activity to target.
     string activity_id = 3;
     // Run ID of the workflow or standalone activity.
     string run_id = 4;
@@ -2302,7 +2313,7 @@ message UnpauseActivityExecutionRequest {
     // If provided, targets a workflow activity for the given workflow ID.
     // If empty, targets a standalone activity.
     string workflow_id = 2;
-    // The ID of the activity to target. 
+    // The ID of the activity to target.
     string activity_id = 3;
     // Run ID of the workflow or standalone activity.
     string run_id = 4;
@@ -2703,7 +2714,7 @@ message CreateWorkerDeploymentVersionRequest {
 
     // Optional. The identity of the client who initiated this request.
     string identity = 3;
-    
+
     // A unique identifier for this create request for idempotence. Typically UUIDv4.
     // If a second request with the same ID is recieved, it is considered a successful no-op.
     // Retrying with a different request ID for the same deployment name + build ID is an error.

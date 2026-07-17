@@ -12355,7 +12355,15 @@
             "type": "object",
             "$ref": "#/definitions/v1WorkflowExecution"
           },
-          "title": "Executions to apply the batch operation\nThis field and `visibility_query` are mutually exclusive"
+          "description": "Executions to apply the batch operation\nThis field and `visibility_query` are mutually exclusive\nDEPRECATED: Use `target_executions` instead."
+        },
+        "targetExecutions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Execution"
+          },
+          "description": "Target executions to apply the batch operation. This field and `visibility_query`\nare mutually exclusive."
         },
         "maxOperationsPerSecond": {
           "type": "number",
@@ -12388,6 +12396,15 @@
         },
         "updateActivityOptionsOperation": {
           "$ref": "#/definitions/v1BatchOperationUpdateActivityOptions"
+        },
+        "cancelActivitiesOperation": {
+          "$ref": "#/definitions/v1BatchOperationCancelActivities"
+        },
+        "terminateActivitiesOperation": {
+          "$ref": "#/definitions/v1BatchOperationTerminateActivities"
+        },
+        "deleteActivitiesOperation": {
+          "$ref": "#/definitions/v1BatchOperationDeleteActivities"
         }
       }
     },
@@ -14008,6 +14025,20 @@
         }
       }
     },
+    "v1BatchOperationCancelActivities": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "title": "The identity of the worker/client"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for requesting the cancellation, recorded and available via the PollActivityExecution API.\nNot propagated to a worker if an activity attempt is currently running."
+        }
+      },
+      "description": "BatchOperationCancelActivities sends cancel requests to a batch of activities.\nKeep the parameter in sync with temporal.api.workflowservice.v1.RequestCancelActivityExecutionRequest."
+    },
     "v1BatchOperationCancellation": {
       "type": "object",
       "properties": {
@@ -14017,6 +14048,10 @@
         }
       },
       "description": "BatchOperationCancellation sends cancel requests to batch workflows.\nKeep the parameter in sync with temporal.api.workflowservice.v1.RequestCancelWorkflowExecutionRequest.\nIgnore first_execution_run_id because this is used for single workflow operation."
+    },
+    "v1BatchOperationDeleteActivities": {
+      "type": "object",
+      "description": "BatchOperationDeleteActivities sends deletion requests to a batch of activities.\nKeep the parameter in sync with temporal.api.workflowservice.v1.DeleteActivityExecutionRequest."
     },
     "v1BatchOperationDeletion": {
       "type": "object",
@@ -14048,6 +14083,10 @@
           "type": "string",
           "format": "date-time",
           "title": "Batch operation close time"
+        },
+        "operationType": {
+          "$ref": "#/definitions/v1BatchOperationType",
+          "title": "Operation type"
         }
       }
     },
@@ -14149,6 +14188,20 @@
       ],
       "default": "BATCH_OPERATION_STATE_UNSPECIFIED"
     },
+    "v1BatchOperationTerminateActivities": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "title": "The identity of the worker/client"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for requesting the termination, recorded and available via the PollActivityExecution API.\nNot propagated to a worker if an activity attempt is currently running."
+        }
+      },
+      "description": "BatchOperationTerminateActivities sends terminate requests to a batch of activities.\nKeep the parameter in sync with temporal.api.workflowservice.v1.TerminateActivityExecutionRequest."
+    },
     "v1BatchOperationTermination": {
       "type": "object",
       "properties": {
@@ -14168,16 +14221,26 @@
       "enum": [
         "BATCH_OPERATION_TYPE_UNSPECIFIED",
         "BATCH_OPERATION_TYPE_TERMINATE",
+        "BATCH_OPERATION_TYPE_TERMINATE_WORKFLOW",
         "BATCH_OPERATION_TYPE_CANCEL",
+        "BATCH_OPERATION_TYPE_CANCEL_WORKFLOW",
         "BATCH_OPERATION_TYPE_SIGNAL",
+        "BATCH_OPERATION_TYPE_SIGNAL_WORKFLOW",
         "BATCH_OPERATION_TYPE_DELETE",
+        "BATCH_OPERATION_TYPE_DELETE_WORKFLOW",
         "BATCH_OPERATION_TYPE_RESET",
+        "BATCH_OPERATION_TYPE_RESET_WORKFLOW",
         "BATCH_OPERATION_TYPE_UPDATE_EXECUTION_OPTIONS",
+        "BATCH_OPERATION_TYPE_UPDATE_WORKFLOW_EXECUTION_OPTIONS",
         "BATCH_OPERATION_TYPE_UNPAUSE_ACTIVITY",
         "BATCH_OPERATION_TYPE_UPDATE_ACTIVITY_OPTIONS",
-        "BATCH_OPERATION_TYPE_RESET_ACTIVITY"
+        "BATCH_OPERATION_TYPE_RESET_ACTIVITY",
+        "BATCH_OPERATION_TYPE_TERMINATE_ACTIVITY",
+        "BATCH_OPERATION_TYPE_CANCEL_ACTIVITY",
+        "BATCH_OPERATION_TYPE_DELETE_ACTIVITY"
       ],
-      "default": "BATCH_OPERATION_TYPE_UNSPECIFIED"
+      "default": "BATCH_OPERATION_TYPE_UNSPECIFIED",
+      "description": " - BATCH_OPERATION_TYPE_TERMINATE: DEPRECATED: Use BATCH_OPERATION_TYPE_TERMINATE_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_CANCEL: DEPRECATED: Use BATCH_OPERATION_TYPE_CANCEL_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_SIGNAL: DEPRECATED: Use BATCH_OPERATION_TYPE_SIGNAL_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_DELETE: DEPRECATED: Use BATCH_OPERATION_TYPE_DELETE_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_RESET: DEPRECATED: Use BATCH_OPERATION_TYPE_RESET_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_UPDATE_EXECUTION_OPTIONS: DEPRECATED: Use BATCH_OPERATION_TYPE_UPDATE_WORKFLOW_EXECUTION_OPTIONS instead."
     },
     "v1BatchOperationUnpauseActivities": {
       "type": "object",
@@ -15198,6 +15261,18 @@
         "reason": {
           "type": "string",
           "title": "Reason indicates the reason to stop a operation"
+        },
+        "query": {
+          "type": "string",
+          "title": "Query is the visibility query that defines the group of workflow to apply the batch operation"
+        },
+        "executions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Execution"
+          },
+          "title": "Executions is the list of workflow OR standalone activity executions to apply the batch operation"
         }
       }
     },
@@ -15619,6 +15694,31 @@
       "default": "EVENT_TYPE_UNSPECIFIED",
       "description": "- EVENT_TYPE_UNSPECIFIED: Place holder and should never appear in a Workflow execution history\n - EVENT_TYPE_WORKFLOW_EXECUTION_STARTED: Workflow execution has been triggered/started\nIt contains Workflow execution inputs, as well as Workflow timeout configurations\n - EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED: Workflow execution has successfully completed and contains Workflow execution results\n - EVENT_TYPE_WORKFLOW_EXECUTION_FAILED: Workflow execution has unsuccessfully completed and contains the Workflow execution error\n - EVENT_TYPE_WORKFLOW_EXECUTION_TIMED_OUT: Workflow execution has timed out by the Temporal Server\nUsually due to the Workflow having not been completed within timeout settings\n - EVENT_TYPE_WORKFLOW_TASK_SCHEDULED: Workflow Task has been scheduled and the SDK client should now be able to process any new history events\n - EVENT_TYPE_WORKFLOW_TASK_STARTED: Workflow Task has started and the SDK client has picked up the Workflow Task and is processing new history events\n - EVENT_TYPE_WORKFLOW_TASK_COMPLETED: Workflow Task has completed\nThe SDK client picked up the Workflow Task and processed new history events\nSDK client may or may not ask the Temporal Server to do additional work, such as:\nEVENT_TYPE_ACTIVITY_TASK_SCHEDULED\nEVENT_TYPE_TIMER_STARTED\nEVENT_TYPE_UPSERT_WORKFLOW_SEARCH_ATTRIBUTES\nEVENT_TYPE_MARKER_RECORDED\nEVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_INITIATED\nEVENT_TYPE_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED\nEVENT_TYPE_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED\nEVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED\nEVENT_TYPE_WORKFLOW_EXECUTION_FAILED\nEVENT_TYPE_WORKFLOW_EXECUTION_CANCELED\nEVENT_TYPE_WORKFLOW_EXECUTION_CONTINUED_AS_NEW\n - EVENT_TYPE_WORKFLOW_TASK_TIMED_OUT: Workflow Task encountered a timeout\nEither an SDK client with a local cache was not available at the time, or it took too long for the SDK client to process the task\n - EVENT_TYPE_WORKFLOW_TASK_FAILED: Workflow Task encountered a failure\nUsually this means that the Workflow was non-deterministic\nHowever, the Workflow reset functionality also uses this event\n - EVENT_TYPE_ACTIVITY_TASK_SCHEDULED: Activity Task was scheduled\nThe SDK client should pick up this activity task and execute\nThis event type contains activity inputs, as well as activity timeout configurations\n - EVENT_TYPE_ACTIVITY_TASK_STARTED: Activity Task has started executing\nThe SDK client has picked up the Activity Task and is processing the Activity invocation\n - EVENT_TYPE_ACTIVITY_TASK_COMPLETED: Activity Task has finished successfully\nThe SDK client has picked up and successfully completed the Activity Task\nThis event type contains Activity execution results\n - EVENT_TYPE_ACTIVITY_TASK_FAILED: Activity Task has finished unsuccessfully\nThe SDK picked up the Activity Task but unsuccessfully completed it\nThis event type contains Activity execution errors\n - EVENT_TYPE_ACTIVITY_TASK_TIMED_OUT: Activity has timed out according to the Temporal Server\nActivity did not complete within the timeout settings\n - EVENT_TYPE_ACTIVITY_TASK_CANCEL_REQUESTED: A request to cancel the Activity has occurred\nThe SDK client will be able to confirm cancellation of an Activity during an Activity heartbeat\n - EVENT_TYPE_ACTIVITY_TASK_CANCELED: Activity has been cancelled\n - EVENT_TYPE_TIMER_STARTED: A timer has started\n - EVENT_TYPE_TIMER_FIRED: A timer has fired\n - EVENT_TYPE_TIMER_CANCELED: A time has been cancelled\n - EVENT_TYPE_WORKFLOW_EXECUTION_CANCEL_REQUESTED: A request has been made to cancel the Workflow execution\n - EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED: SDK client has confirmed the cancellation request and the Workflow execution has been cancelled\n - EVENT_TYPE_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED: Workflow has requested that the Temporal Server try to cancel another Workflow\n - EVENT_TYPE_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_FAILED: Temporal Server could not cancel the targeted Workflow\nThis is usually because the target Workflow could not be found\n - EVENT_TYPE_EXTERNAL_WORKFLOW_EXECUTION_CANCEL_REQUESTED: Temporal Server has successfully requested the cancellation of the target Workflow\n - EVENT_TYPE_MARKER_RECORDED: A marker has been recorded.\nThis event type is transparent to the Temporal Server\nThe Server will only store it and will not try to understand it.\n - EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED: Workflow has received a Signal event\nThe event type contains the Signal name, as well as a Signal payload\n - EVENT_TYPE_WORKFLOW_EXECUTION_TERMINATED: Workflow execution has been forcefully terminated\nThis is usually because the terminate Workflow API was called\n - EVENT_TYPE_WORKFLOW_EXECUTION_CONTINUED_AS_NEW: Workflow has successfully completed and a new Workflow has been started within the same transaction\nContains last Workflow execution results as well as new Workflow execution inputs\n - EVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_INITIATED: Temporal Server will try to start a child Workflow\n - EVENT_TYPE_START_CHILD_WORKFLOW_EXECUTION_FAILED: Child Workflow execution cannot be started/triggered\nUsually due to a child Workflow ID collision\n - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_STARTED: Child Workflow execution has successfully started/triggered\n - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_COMPLETED: Child Workflow execution has successfully completed\n - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_FAILED: Child Workflow execution has unsuccessfully completed\n - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_CANCELED: Child Workflow execution has been cancelled\n - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_TIMED_OUT: Child Workflow execution has timed out by the Temporal Server\n - EVENT_TYPE_CHILD_WORKFLOW_EXECUTION_TERMINATED: Child Workflow execution has been terminated\n - EVENT_TYPE_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_INITIATED: Temporal Server will try to Signal the targeted Workflow\nContains the Signal name, as well as a Signal payload\n - EVENT_TYPE_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION_FAILED: Temporal Server cannot Signal the targeted Workflow\nUsually because the Workflow could not be found\n - EVENT_TYPE_EXTERNAL_WORKFLOW_EXECUTION_SIGNALED: Temporal Server has successfully Signaled the targeted Workflow\n - EVENT_TYPE_UPSERT_WORKFLOW_SEARCH_ATTRIBUTES: Workflow search attributes should be updated and synchronized with the visibility store\n - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ADMITTED: An update was admitted. Note that not all admitted updates result in this\nevent. See UpdateAdmittedEventOrigin for situations in which this event\nis created.\n - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED: An update was accepted (i.e. passed validation, perhaps because no validator was defined)\n - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_REJECTED: This event is never written to history.\n - EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_COMPLETED: An update completed\n - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED_EXTERNALLY: Some property or properties of the workflow as a whole have changed by non-workflow code.\nThe distinction of external vs. command-based modification is important so the SDK can\nmaintain determinism when using the command-based approach.\n - EVENT_TYPE_ACTIVITY_PROPERTIES_MODIFIED_EXTERNALLY: Some property or properties of an already-scheduled activity have changed by non-workflow code.\nThe distinction of external vs. command-based modification is important so the SDK can\nmaintain determinism when using the command-based approach.\n - EVENT_TYPE_WORKFLOW_PROPERTIES_MODIFIED: Workflow properties modified by user workflow code\n - EVENT_TYPE_NEXUS_OPERATION_SCHEDULED: A Nexus operation was scheduled using a ScheduleNexusOperation command.\n - EVENT_TYPE_NEXUS_OPERATION_STARTED: An asynchronous Nexus operation was started by a Nexus handler.\n - EVENT_TYPE_NEXUS_OPERATION_COMPLETED: A Nexus operation completed successfully.\n - EVENT_TYPE_NEXUS_OPERATION_FAILED: A Nexus operation failed.\n - EVENT_TYPE_NEXUS_OPERATION_CANCELED: A Nexus operation completed as canceled.\n - EVENT_TYPE_NEXUS_OPERATION_TIMED_OUT: A Nexus operation timed out.\n - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUESTED: A Nexus operation was requested to be canceled using a RequestCancelNexusOperation command.\n - EVENT_TYPE_WORKFLOW_EXECUTION_OPTIONS_UPDATED: Workflow execution options updated by user.\n - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_COMPLETED: A cancellation request for a Nexus operation was successfully delivered to the Nexus handler.\n - EVENT_TYPE_NEXUS_OPERATION_CANCEL_REQUEST_FAILED: A cancellation request for a Nexus operation resulted in an error.\n - EVENT_TYPE_WORKFLOW_EXECUTION_PAUSED: An event that indicates that the workflow execution has been paused.\n - EVENT_TYPE_WORKFLOW_EXECUTION_UNPAUSED: An event that indicates that the previously paused workflow execution has been unpaused.\n - EVENT_TYPE_WORKFLOW_EXECUTION_TIME_SKIPPING_TRANSITIONED: An event that indicates time skipping advanced time or was disabled automatically after a bound was reached.",
       "title": "Whenever this list of events is changed do change the function shouldBufferEvent in mutableStateBuilder.go to make sure to do the correct event ordering"
+    },
+    "v1Execution": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1ExecutionType"
+        },
+        "businessId": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        }
+      },
+      "description": "Identifies a specific execution within a namespace. This is used for standalone activities\nexecutions in batch jobs currently."
+    },
+    "v1ExecutionType": {
+      "type": "string",
+      "enum": [
+        "EXECUTION_TYPE_UNSPECIFIED",
+        "EXECUTION_TYPE_WORKFLOW",
+        "EXECUTION_TYPE_ACTIVITY"
+      ],
+      "default": "EXECUTION_TYPE_UNSPECIFIED",
+      "description": " - EXECUTION_TYPE_WORKFLOW: A workflow execution archetype.\n - EXECUTION_TYPE_ACTIVITY: An activity execution archetype. This is reserved for standalone activities."
     },
     "v1ExternalWorkflowExecutionCancelRequestedEventAttributes": {
       "type": "object",

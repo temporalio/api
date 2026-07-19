@@ -20011,7 +20011,7 @@
         "maxSkipCount": {
           "type": "integer",
           "format": "int32",
-          "description": "The maximum skip count allowed after time skipping is enabled. It is used to protect the current execution\nfrom unlimited retries when backoff is skipped. Every time the execution skips some time,\nthe skip count is incremented by one, and when it reaches max_skip_count, time skipping will be disabled.\n\nIf the field is not set, a large default value (e.g. 100) will be set by the server.\nThe default value can be changed through dynamic config, and can be overridden by this field if set."
+          "description": "The maximum skip count allowed after time skipping is enabled for an execution.\nIt protects the current execution from unlimited retries when backoff is skipped.\nEvery time the execution skips some time, the skip count is incremented by one,\nand when it reaches max_skip_count, time skipping is disabled.\nFor an execution with a chain of runs, the count is accumulated across all runs.\n\nIf the field is not set, a large default value (e.g. 100) will be set by the server.\nThe default value can be changed through dynamic config, and can be overridden by this field if set."
         }
       },
       "description": "The configuration for time skipping of an execution.\nWhen time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.\nOptions like fast_forward, disable_propagation, and max_skip_count are provided for granular\ncontrol of the execution's time skipping behavior. See each field's comment for a detailed explanation.\n\nAn example of workflows with time skipping:\nFor workflows, an execution is a chain of runs including retries, cron, and continue-as-new.\nIn-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations, etc.\nUser timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the\ntime point of the registered fast-forward when there is no in-flight work.\nEvery time time is skipped, the skip count is incremented by one, and a maximum skip count is allowed each time time skipping is enabled.\nFor child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,\nbut a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the\n\"enabled\" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the\nparent execution as its start time."
@@ -20056,15 +20056,20 @@
       "properties": {
         "initialSkippedDuration": {
           "type": "string",
-          "description": "The time skipped by the previous execution that started this workflow.\nIt can happen in child workflows and a chain of runs (CaN, cron, retry)."
+          "description": "The time skipped by the previous run. It is propagated both to executions started by the\ncurrent execution and through a chain of runs (CaN, cron, retry)."
         },
         "fastForwardTargetTime": {
           "type": "string",
           "format": "date-time",
-          "description": "If there is a fast-forward action set for the previous run in a chain of runs,\nthe target time should be propagated to the next run as well."
+          "description": "The fast-forward target time. It only propagates across a chain of runs within the same execution."
+        },
+        "initialSkipCount": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The initial skip count. It only propagates across a chain of runs within the same execution."
         }
       },
-      "description": "The time-skipping state that needs to be propagated from a parent workflow to a child workflow,\nor through a chain of runs."
+      "description": "The time-skipping state that needs to be propagated from one execution to another, or through a chain of runs\nwithin the same execution."
     },
     "v1TimeoutFailureInfo": {
       "type": "object",

@@ -17776,9 +17776,11 @@ components:
         maxSkipCount:
           type: integer
           description: |-
-            The maximum skip count allowed after time skipping is enabled. It is used to protect the current execution
-             from unlimited retries when backoff is skipped. Every time the execution skips some time,
-             the skip count is incremented by one, and when it reaches max_skip_count, time skipping will be disabled.
+            The maximum skip count allowed after time skipping is enabled for an execution.
+             It protects the current execution from unlimited retries when backoff is skipped.
+             Every time the execution skips some time, the skip count is incremented by one,
+             and when it reaches max_skip_count, time skipping is disabled.
+             For an execution with a chain of runs, the count is accumulated across all runs.
 
              If the field is not set, a large default value (e.g. 100) will be set by the server.
              The default value can be changed through dynamic config, and can be overridden by this field if set.
@@ -17837,17 +17839,19 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            The time skipped by the previous execution that started this workflow.
-             It can happen in child workflows and a chain of runs (CaN, cron, retry).
+            The time skipped by the previous run. It is propagated both to executions started by the
+             current execution and through a chain of runs (CaN, cron, retry).
         fastForwardTargetTime:
           type: string
-          description: |-
-            If there is a fast-forward action set for the previous run in a chain of runs,
-             the target time should be propagated to the next run as well.
+          description: The fast-forward target time. It only propagates across a chain of runs within the same execution.
           format: date-time
+        initialSkipCount:
+          type: integer
+          description: The initial skip count. It only propagates across a chain of runs within the same execution.
+          format: int32
       description: |-
-        The time-skipping state that needs to be propagated from a parent workflow to a child workflow,
-         or through a chain of runs.
+        The time-skipping state that needs to be propagated from one execution to another, or through a chain of runs
+         within the same execution.
     TimeoutFailureInfo:
       type: object
       properties:

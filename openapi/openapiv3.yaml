@@ -4572,6 +4572,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/time-skipping/poll:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollWorkflowExecutionTimeSkipping long-polls until the time-skipping state of a workflow
+         execution changes (its time-skipping config is updated or an active fast-forward completes),
+         then returns the reason and the current fast-forward info. It lets callers observe fast-forward
+         progress without busy-polling.
+      operationId: PollWorkflowExecutionTimeSkipping
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: workflowExecution.runId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollWorkflowExecutionTimeSkippingResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/update-options:
     post:
       tags:
@@ -9568,6 +9610,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/time-skipping/poll:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollWorkflowExecutionTimeSkipping long-polls until the time-skipping state of a workflow
+         execution changes (its time-skipping config is updated or an active fast-forward completes),
+         then returns the reason and the current fast-forward info. It lets callers observe fast-forward
+         progress without busy-polling.
+      operationId: PollWorkflowExecutionTimeSkipping
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: workflowExecution.runId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollWorkflowExecutionTimeSkippingResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/update-options:
     post:
       tags:
@@ -14396,6 +14480,20 @@ components:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: The failure if the operation completed unsuccessfully.
+    PollWorkflowExecutionTimeSkippingResponse:
+      type: object
+      properties:
+        reason:
+          enum:
+            - RETURN_REASON_UNSPECIFIED
+            - RETURN_REASON_TIMESKIPPING_CONFIG_UPDATED
+            - RETURN_REASON_FAST_FORWARD_COMPLETED
+          type: string
+          format: enum
+        fastForwardInfo:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingFastForwardInfo'
+          description: The current fast-forward on the execution, if any.
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -17701,6 +17799,37 @@ components:
          but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the
          "enabled" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the
          parent execution as its start time.
+    TimeSkippingFastForwardInfo:
+      type: object
+      properties:
+        createTime:
+          type: string
+          description: The virtual time at which the fast-forward was created.
+          format: date-time
+        targetTime:
+          type: string
+          description: The target virtual time at which the fast-forward completes.
+          format: date-time
+        hasCompleted:
+          type: boolean
+          description: True once `target_time` has been reached.
+      description: TimeSkippingFastForwardInfo describes the current time-skipping fast-forward on an execution.
+    TimeSkippingInfo:
+      type: object
+      properties:
+        currentTime:
+          type: string
+          description: |-
+            Current virtual time of the execution. If the execution hasn't skipped
+             any time yet, it will be the same as wall clock time.
+          format: date-time
+        isRunning:
+          type: boolean
+          description: |-
+            If the execution is actively trying to skip time automatically when there is a chance,
+             this field will be set to true. If time has stopped skipping either by fast-forward completion,
+             max skip allowed checking, or user configuration, it will be false.
+      description: Describes the current time-skipping state of a workflow execution.
     TimeSkippingStatePropagation:
       type: object
       properties:
@@ -19644,6 +19773,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionPauseInfo'
           description: Information about the workflow execution pause operation.
+        timeSkippingInfo:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingInfo'
+          description: |-
+            Information about time skipping of the workflow execution.
+             If the execution has never enabled time skipping, it will be nil.
       description: Holds all the extra information about workflow execution that is not part of Visibility.
     WorkflowExecutionFailedEventAttributes:
       type: object

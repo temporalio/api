@@ -3634,3 +3634,28 @@ message DeleteNexusOperationExecutionRequest {
 
 message DeleteNexusOperationExecutionResponse {
 }
+
+
+// A long-poll request that blocks until the time-skipping state of an execution changes, so callers
+// can observe fast-forward progress and time-skipping config updates without busy-polling.
+message PollWorkflowExecutionTimeSkippingRequest {
+    string namespace = 1;
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+}
+
+message PollWorkflowExecutionTimeSkippingResponse {
+    // Why the poll returned.
+    enum ReturnReason {
+        // The poll returned because its server-side timeout elapsed without any change. The caller
+        // may poll again.
+        RETURN_REASON_UNSPECIFIED = 0;
+        // The execution's time-skipping config was updated.
+        RETURN_REASON_TIMESKIPPING_CONFIG_UPDATED = 1;
+        // The active fast-forward reached its target time and completed.
+        RETURN_REASON_FAST_FORWARD_COMPLETED = 2;
+    }
+    ReturnReason reason = 1;
+
+    // The current fast-forward on the execution, if any.
+    temporal.api.common.v1.TimeSkippingFastForwardInfo fast_forward_info = 2;
+}

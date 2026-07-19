@@ -17660,34 +17660,43 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Optionally fast-forward the current workflow execution by this duration ahead of current workflow execution time.
-             After the fast-forward completes, time skipping is disabled, and this
-             action is recorded in the WorkflowExecutionTimeSkippingTransitionedEvent. It can be re-enabled by
-             setting `enabled` to true or setting `fast_forward` again via UpdateWorkflowExecutionOptions.
-             The current workflow execution is a chain of runs (retries, cron, continue-as-new);
-             child workflows are separate executions, so this fast_forward won't affect them.
+            Optionally fast-forward the current execution by this duration ahead of current workflow time.
+             After the fast-forward completes, time skipping is disabled. And it can be re-enabled by calling
+             an update API with the time-skipping opt-in.
 
-             For a given workflow execution, only one active fast-forward is allowed at a time.
-             If a new fast-forward is set via UpdateWorkflowExecutionOptions before the previous
+             For a given execution, only one active fast-forward is allowed at a time.
+             If a new fast-forward is set via an update call before the previous
              one completes, the new one will override the previous one.
-             If the fast-forward duration exceeds the remaining execution timeout, time will only
-             be fast-forwarded up to the end of the execution.
+             If the fast-forward duration exceeds the remaining execution timeout, time will not
+             pass beyond the end of the execution, and fast_forward won't have a chance to complete.
         disablePropagation:
           type: boolean
           description: |-
             By default, executions started by another execution (e.g. a child workflow of a parent workflow or
              a schedule with the timeskipping policy enabled), inherit the "enabled" flag and skip time when possible.
              This flag disables that inheritance.
-      description: |-
-        The configuration for time skipping of a workflow execution (a chain of runs including retries, cron, continue-as-new).
-         When time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.
-         In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,
-         and possibly other features added in the future.
-         User timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the
-         time point of the registered fast forward when there is no in-flight work.
-         When time is skipped, a WorkflowExecutionTimeSkippingTransitionedEvent will be
-         added to the workflow history to capture the state changes.
+        maxSkipCount:
+          type: integer
+          description: |-
+            The maximum skip count allowed after time skipping is enabled. It is used to protect the current execution
+             from unlimited retries when backoff is skipped. Every time the execution skips some time,
+             the skip count is incremented by one, and when it reaches max_skip_count, time skipping will be disabled.
 
+             If the field is not set, a large default value (e.g. 100) will be set by the server.
+             The default value can be changed through dynamic config, and can be overridden by this field if set.
+          format: int32
+      description: |-
+        The configuration for time skipping of an execution.
+         When time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.
+         Options like fast_forward, disable_propagation, and max_skip_count are provided for granular
+         control of the execution's time skipping behavior. See each field's comment for a detailed explanation.
+
+         An example of workflows with time skipping:
+         For workflows, an execution is a chain of runs including retries, cron, and continue-as-new.
+         In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations, etc.
+         User timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the
+         time point of the registered fast-forward when there is no in-flight work.
+         Every time time is skipped, the skip count is incremented by one, and a maximum skip count is allowed each time time skipping is enabled.
          For child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,
          but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the
          "enabled" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the

@@ -1151,11 +1151,16 @@ message ResetStickyTaskQueueResponse {
 }
 
 message ShutdownWorkerRequest {
+    message WorkerPollerTaskQueue {
+        string name = 1;
+        temporal.api.enums.v1.TaskQueueType type = 2;
+    }
+
     string namespace = 1;
     // sticky_task_queue may not always be populated. We want to ensure all workers
     // send a shutdown request to update worker state for heartbeating, as well
     // as cancel pending poll calls early, instead of waiting for timeouts.
-    string sticky_task_queue = 2;
+    string sticky_task_queue = 2 [deprecated = true];
     string identity = 3;
     string reason = 4;
     temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat = 5;
@@ -1166,10 +1171,16 @@ message ShutdownWorkerRequest {
     // Task queue name the worker is polling on. This allows server to cancel
     // all outstanding poll RPC calls from SDK. This avoids a race condition that
     // can lead to tasks being lost.
-    string task_queue = 7;
+    string task_queue = 7 [deprecated = true];
     // Task queue types that help server cancel outstanding poll RPC
     // calls from SDK. This avoids a race condition that can lead to tasks being lost.
-    repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 8;
+    repeated temporal.api.enums.v1.TaskQueueType task_queue_types = 8 [deprecated = true];
+    // Task queues the worker is polling on. This allows server to cancel
+    // all outstanding poll RPC calls from SDK. This avoids a race condition that
+    // can lead to tasks being lost. Each entry identifies a specific task queue
+    // name and type pair, allowing the same task queue name to appear multiple
+    // times for workers polling more than one task queue type.
+    repeated WorkerPollerTaskQueue task_queues = 9;
 }
 
 message ShutdownWorkerResponse {

@@ -3644,18 +3644,21 @@ message PollWorkflowExecutionTimeSkippingRequest {
 }
 
 message PollWorkflowExecutionTimeSkippingResponse {
-    // Why the poll returned.
-    enum ReturnReason {
-        // The poll returned because its server-side timeout elapsed without any change. The caller
-        // may poll again.
-        RETURN_REASON_UNSPECIFIED = 0;
-        // The execution's time-skipping config was updated.
-        RETURN_REASON_TIMESKIPPING_CONFIG_UPDATED = 1;
-        // The active fast-forward reached its target time and completed.
-        RETURN_REASON_FAST_FORWARD_COMPLETED = 2;
+    enum Result {
+        // The poll timed out server-side before any time-skipping state change occurred to fast forward.
+        // The caller may poll again.
+        RESULT_UNSPECIFIED = 0;
+        // The execution's time-skipping config changed while the poll was waiting.
+        RESULT_TIMESKIPPING_CONFIG_UPDATED = 1;
+        // The fast-forward that was active when the poll started reached its target time and completed.
+        RESULT_FAST_FORWARD_COMPLETED = 2;
+        // No fast-forward was in progress when the poll started, so there was nothing to wait for.
+        RESULT_NO_PENDING_FAST_FORWARD = 3;
     }
-    ReturnReason reason = 1;
+    // The result of this poll.
+    Result result = 1;
 
-    // The current fast-forward on the execution, if any.
+    // The execution's most recent fast-forward, whether it is still pending or already completed.
+    // Unset only if the execution has never had a fast-forward.
     temporal.api.common.v1.TimeSkippingFastForwardInfo fast_forward_info = 2;
 }

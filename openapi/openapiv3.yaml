@@ -10746,6 +10746,8 @@ components:
           $ref: '#/components/schemas/Callback_Nexus'
         internal:
           $ref: '#/components/schemas/Callback_Internal'
+        worker:
+          $ref: '#/components/schemas/Callback_Worker'
         links:
           type: array
           items:
@@ -10822,6 +10824,42 @@ components:
           additionalProperties:
             type: string
           description: Header to attach to callback request.
+    Callback_Worker:
+      type: object
+      properties:
+        taskqueueName:
+          type: string
+          description: |-
+            Nexus task queue the Temporal worker is listening on.
+
+             NOTE: This is not a temporal.api.taskqueue.v1.TaskQueue to avoid a circular dependency.
+        service:
+          type: string
+          description: Target Nexus service, e.g. "temporal.api.notificationservice.v1.NotificationService".
+        operation:
+          type: string
+          description: Target operation, e.g. "OnComplete".
+        sourceContext:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Arbitrary user-supplied data from the source operation's callsite. (As applicable, not all operations
+             support attaching context data.)
+
+             There is a relatively small maximum size the source context can be, e.g. 32KiB.
+      description: |-
+        Worker callbacks are requests to invoke a specific shape of Nexus operation on a Temporal worker.
+         The specified Nexus operation must have the following:
+         - Input:  temporal.api.notificationservice.v1.OnCompleteRequest
+         - Output: temporal.api.notificationservice.v1.OnCompleteResponse
+
+         The targeted Nexus service must be registered within the same namespace as the source operation
+         the callback is attached to. (While Nexus allows for cross-namespace operations, worker callbacks
+         are purely "caller-side".)
+
+         Worker callbacks are only supported for certain types of operations, e.g. standalone Nexus operations.
+         Attempting to attach a Worker callback for an unsupported operation will result in an INVALID_ARGUMENT
+         error from the server.
     CanceledFailureInfo:
       type: object
       properties:
@@ -17055,6 +17093,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/UserMetadata'
           description: Metadata for use by user interfaces to display the fixed as-of-start summary and details of the operation.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: Completion callbacks to be invoked once the Nexus operation reaches a terminal state.
     StartNexusOperationExecutionResponse:
       type: object
       properties:

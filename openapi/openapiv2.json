@@ -4463,6 +4463,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "fastForwardId",
+            "description": "Required. Identifies the fast-forward whose completion the caller wants to wait for.\nMust match the `fast_forward_id` set in the execution's TimeSkippingConfig.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -10040,6 +10047,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "fastForwardId",
+            "description": "Required. Identifies the fast-forward whose completion the caller wants to wait for.\nMust match the `fast_forward_id` set in the execution's TimeSkippingConfig.",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -11149,12 +11163,14 @@
       "type": "string",
       "enum": [
         "RESULT_UNSPECIFIED",
-        "RESULT_TIMESKIPPING_CONFIG_UPDATED",
+        "RESULT_POLL_TIMEOUT",
         "RESULT_FAST_FORWARD_COMPLETED",
-        "RESULT_NO_PENDING_FAST_FORWARD"
+        "RESULT_FAST_FORWARD_NOT_FOUND",
+        "RESULT_FAST_FORWARD_OVERRIDDEN",
+        "RESULT_WORKFLOW_END_BEFORE_FAST_FORWARD_COMPLETION"
       ],
       "default": "RESULT_UNSPECIFIED",
-      "description": " - RESULT_UNSPECIFIED: The poll timed out server-side before any time-skipping state change occurred to fast forward.\nThe caller may poll again.\n - RESULT_TIMESKIPPING_CONFIG_UPDATED: The execution's time-skipping config changed while the poll was waiting.\n - RESULT_FAST_FORWARD_COMPLETED: The fast-forward that was active when the poll started reached its target time and completed.\n - RESULT_NO_PENDING_FAST_FORWARD: No fast-forward was in progress when the poll started, so there was nothing to wait for."
+      "description": " - RESULT_UNSPECIFIED: Never returned; guards against an unset result.\n - RESULT_POLL_TIMEOUT: The poll timed out server-side before the fast-forward completed. The caller may poll again.\n - RESULT_FAST_FORWARD_COMPLETED: The fast-forward identified by the request's `fast_forward_id` reached its target time and completed.\n - RESULT_FAST_FORWARD_NOT_FOUND: The request's `fast_forward_id` does not match the execution's current `fast_forward_id`.\nThe API returns immediately with this result, and `fast_forward_info` carries the execution's\ncurrent fast-forward info.\n - RESULT_FAST_FORWARD_OVERRIDDEN: The request's `fast_forward_id` matched the execution's current `fast_forward_id`, but while\nwaiting for it to complete the fast-forward was overridden by another call that changed the\nTimeSkippingConfig.\n - RESULT_WORKFLOW_END_BEFORE_FAST_FORWARD_COMPLETION: The request's `fast_forward_id` matched the execution's current `fast_forward_id`,\nbut the workflow execution (the whole chain of runs) has completed before fast forward has a chance to complete."
     },
     "PostResetOperationSignalWorkflow": {
       "type": "object",
@@ -18077,7 +18093,7 @@
         },
         "fastForwardInfo": {
           "$ref": "#/definitions/v1TimeSkippingFastForwardInfo",
-          "description": "The execution's most recent fast-forward, whether it is still pending or already completed.\nUnset only if the execution has never had a fast-forward."
+          "description": "The execution's most recent fast forward. Unset if time skipping was enabled without a fast-forward."
         }
       }
     },
@@ -20006,6 +20022,10 @@
           "type": "string",
           "description": "Optionally fast-forward the current execution by this duration ahead of current workflow time.\nAfter the fast-forward completes, time skipping is disabled. And it can be re-enabled by calling\nan update API with the time-skipping opt-in.\n\nFor a given execution, only one active fast-forward is allowed at a time.\nIf a new fast-forward is set via an update call before the previous\none completes, the new one will override the previous one.\nIf the fast-forward duration exceeds the remaining execution timeout, time will not\npass beyond the end of the execution, and fast_forward won't have a chance to complete."
         },
+        "fastForwardId": {
+          "type": "string",
+          "description": "A client-supplied ID that must be set together with `fast_forward`. It is used to poll for\nfast-forward completion via PollWorkflowExecutionTimeSkipping.\nThe server performs no idempotency check on this ID; the client is responsible for managing it."
+        },
         "disablePropagation": {
           "type": "boolean",
           "description": "By default, executions started by another execution (e.g. a child workflow of a parent workflow or\na schedule with the timeskipping policy enabled), inherit the \"enabled\" flag and skip time when possible.\nThis flag disables that inheritance."
@@ -20034,6 +20054,10 @@
         "hasCompleted": {
           "type": "boolean",
           "description": "True once `target_time` has been reached."
+        },
+        "fastForwardId": {
+          "type": "string",
+          "description": "The client-supplied ID set alongside `fast_forward` when this fast-forward was created."
         }
       },
       "description": "TimeSkippingFastForwardInfo describes the current time-skipping fast-forward on an execution."
@@ -20049,6 +20073,10 @@
         "isRunning": {
           "type": "boolean",
           "description": "If the execution is actively trying to skip time automatically when there is a chance,\nthis field will be set to true. If time has stopped skipping either by fast-forward completion,\nmax skip allowed checking, or user configuration, it will be false."
+        },
+        "fastForwardInfo": {
+          "$ref": "#/definitions/v1TimeSkippingFastForwardInfo",
+          "description": "The execution's current fast-forward, if any. Unset if time skipping is enabled without a fast-forward."
         }
       },
       "description": "Describes the current time-skipping state of a workflow execution."

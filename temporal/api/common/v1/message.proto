@@ -433,6 +433,11 @@ message TimeSkippingConfig {
     // pass beyond the end of the execution, and fast_forward won't have a chance to complete.
     google.protobuf.Duration fast_forward = 2;
 
+    // A client-supplied ID that must be set together with `fast_forward`. It is used to poll for
+    // fast-forward completion via PollWorkflowExecutionTimeSkipping.
+    // The server performs no idempotency check on this ID; the client is responsible for managing it.
+    string fast_forward_id = 5;
+
     // By default, executions started by another execution (e.g. a child workflow of a parent workflow or
     // a schedule with the timeskipping policy enabled), inherit the "enabled" flag and skip time when possible.
     // This flag disables that inheritance.
@@ -478,6 +483,9 @@ message TimeSkippingInfo {
     // this field will be set to true. If time has stopped skipping either by fast-forward completion,
     // max skip allowed checking, or user configuration, it will be false.
     bool is_running = 2;
+
+    // The execution's current fast-forward, if any. Unset if time skipping is enabled without a fast-forward.
+    TimeSkippingFastForwardInfo fast_forward_info = 3;
 }
 
 
@@ -489,4 +497,6 @@ message TimeSkippingFastForwardInfo {
     google.protobuf.Timestamp target_time = 2;
     // True once `target_time` has been reached.
     bool has_completed = 3;
+    // The client-supplied ID set alongside `fast_forward` when this fast-forward was created.
+    string fast_forward_id = 4;
 }

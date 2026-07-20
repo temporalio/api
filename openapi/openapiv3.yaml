@@ -4601,6 +4601,13 @@ paths:
           in: query
           schema:
             type: string
+        - name: fastForwardId
+          in: query
+          description: |-
+            Required. Identifies the fast-forward whose completion the caller wants to wait for.
+             Must match the `fast_forward_id` set in the execution's TimeSkippingConfig.
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -9639,6 +9646,13 @@ paths:
           in: query
           schema:
             type: string
+        - name: fastForwardId
+          in: query
+          description: |-
+            Required. Identifies the fast-forward whose completion the caller wants to wait for.
+             Must match the `fast_forward_id` set in the execution's TimeSkippingConfig.
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -14486,18 +14500,18 @@ components:
         result:
           enum:
             - RESULT_UNSPECIFIED
-            - RESULT_TIMESKIPPING_CONFIG_UPDATED
+            - RESULT_POLL_TIMEOUT
             - RESULT_FAST_FORWARD_COMPLETED
-            - RESULT_NO_PENDING_FAST_FORWARD
+            - RESULT_FAST_FORWARD_NOT_FOUND
+            - RESULT_FAST_FORWARD_OVERRIDDEN
+            - RESULT_WORKFLOW_END_BEFORE_FAST_FORWARD_COMPLETION
           type: string
           description: The result of this poll.
           format: enum
         fastForwardInfo:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingFastForwardInfo'
-          description: |-
-            The execution's most recent fast-forward, whether it is still pending or already completed.
-             Unset only if the execution has never had a fast-forward.
+          description: The execution's most recent fast forward. Unset if time skipping was enabled without a fast-forward.
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -17771,6 +17785,12 @@ components:
              one completes, the new one will override the previous one.
              If the fast-forward duration exceeds the remaining execution timeout, time will not
              pass beyond the end of the execution, and fast_forward won't have a chance to complete.
+        fastForwardId:
+          type: string
+          description: |-
+            A client-supplied ID that must be set together with `fast_forward`. It is used to poll for
+             fast-forward completion via PollWorkflowExecutionTimeSkipping.
+             The server performs no idempotency check on this ID; the client is responsible for managing it.
         disablePropagation:
           type: boolean
           description: |-
@@ -17822,6 +17842,9 @@ components:
         hasCompleted:
           type: boolean
           description: True once `target_time` has been reached.
+        fastForwardId:
+          type: string
+          description: The client-supplied ID set alongside `fast_forward` when this fast-forward was created.
       description: TimeSkippingFastForwardInfo describes the current time-skipping fast-forward on an execution.
     TimeSkippingInfo:
       type: object
@@ -17838,6 +17861,10 @@ components:
             If the execution is actively trying to skip time automatically when there is a chance,
              this field will be set to true. If time has stopped skipping either by fast-forward completion,
              max skip allowed checking, or user configuration, it will be false.
+        fastForwardInfo:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingFastForwardInfo'
+          description: The execution's current fast-forward, if any. Unset if time skipping is enabled without a fast-forward.
       description: Describes the current time-skipping state of a workflow execution.
     TimeSkippingStatePropagation:
       type: object

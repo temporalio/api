@@ -3641,27 +3641,35 @@ message DeleteNexusOperationExecutionResponse {
 message PollWorkflowExecutionTimeSkippingRequest {
     string namespace = 1;
     temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+    // Required. Identifies the fast-forward whose completion the caller wants to wait for.
+    // Must match the `fast_forward_id` set in the execution's TimeSkippingConfig.
+    string fast_forward_id = 3;
 }
 
 message PollWorkflowExecutionTimeSkippingResponse {
     enum Result {
-        // The poll timed out server-side before any time-skipping state change occurred to fast forward.
-        // The caller may poll again.
+        // Never returned; guards against an unset result.
         RESULT_UNSPECIFIED = 0;
-        // The execution's time-skipping config changed while the poll was waiting.
-        RESULT_TIMESKIPPING_CONFIG_UPDATED = 1;
-        // The fast-forward that was active when the poll started reached its target time and completed.
+        // The poll timed out server-side before the fast-forward completed. The caller may poll again.
+        RESULT_POLL_TIMEOUT = 1;
+        // The fast-forward identified by the request's `fast_forward_id` reached its target time and completed.
         RESULT_FAST_FORWARD_COMPLETED = 2;
-        // No fast-forward was in progress when the poll started, so there was nothing to wait for.
-        RESULT_NO_PENDING_FAST_FORWARD = 3;
-        // The workflow has ended, where "workflow" refers to the whole chain of runs (so a
-        // continue-as-new does not count as ended) and "ended" means it reached a terminal status.
-        RESULT_WORKFLOW_ENDED = 4;
+        // The request's `fast_forward_id` does not match the execution's current `fast_forward_id`.
+        // The API returns immediately with this result, and `fast_forward_info` carries the execution's
+        // current fast-forward info.
+        RESULT_FAST_FORWARD_NOT_FOUND = 3;
+        // The request's `fast_forward_id` matched the execution's current `fast_forward_id`, but while
+        // waiting for it to complete the fast-forward was overridden by another call that changed the
+        // TimeSkippingConfig.
+        RESULT_FAST_FORWARD_OVERRIDDEN = 4;
+        // The request's `fast_forward_id` matched the execution's current `fast_forward_id`,
+        // but the workflow execution (the whole chain of runs) has completed before fast forward has a chance to complete.
+        RESULT_WORKFLOW_END_BEFORE_FAST_FORWARD_COMPLETION = 5;
     }
+
     // The result of this poll.
     Result result = 1;
 
-    // The execution's most recent fast-forward, whether it is still pending or already completed.
-    // Unset only if the execution has never had a fast-forward.
+    // The execution's most recent fast forward. Unset if time skipping was enabled without a fast-forward.
     temporal.api.common.v1.TimeSkippingFastForwardInfo fast_forward_info = 2;
 }

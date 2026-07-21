@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "temporal/api/workflowservice/v1/request_response.proto",
+    "title": "temporal/api/workflowservice/v1/message.proto",
     "version": "version not set"
   },
   "tags": [
@@ -14414,6 +14414,89 @@
       },
       "description": "Callback to attach to various events in the system, e.g. workflow run completion."
     },
+    "v1CallbackExecutionInfo": {
+      "type": "object",
+      "properties": {
+        "callbackId": {
+          "type": "string",
+          "description": "Identifier of the callback's execution. Unique within the containing namespace."
+        },
+        "runId": {
+          "type": "string",
+          "description": "Run ID of the callback execution."
+        },
+        "callback": {
+          "$ref": "#/definitions/v1Callback",
+          "description": "The Callback being described."
+        },
+        "state": {
+          "$ref": "#/definitions/v1CallbackState",
+          "description": "The detailed state of the callback."
+        },
+        "stateReason": {
+          "type": "string",
+          "description": "Human friendly context describing the state, if applicable.\ne.g. if the state is BLOCKED, provides an explanation why."
+        },
+        "outcome": {
+          "$ref": "#/definitions/v1CallbackExecutionOutcome",
+          "description": "The outcome of the callback's execution, as applicable."
+        },
+        "attempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The number of attempts made to deliver/execute callback.\n\nThis number is approximate. There could be more attempts if the server crashes before recording the attempt's completion, or fewer\nif the callback was terminated or timed out after the counter has been incremented and before an attempt could be made."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "title": "The time when the callback was created. (But not necessarily scheduled.)"
+        },
+        "closeTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time when the callback transitioned to a terminal state."
+        },
+        "lastAttemptCompleteTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the last attempt completed."
+        },
+        "lastAttemptFailure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "The last attempt's failure, if any."
+        },
+        "nextAttemptScheduleTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time when the next attempt is scheduled (only set when state is BACKING_OFF)."
+        },
+        "scheduleToCloseTimeout": {
+          "type": "string",
+          "description": "Schedule-to-close timeout for this callback."
+        },
+        "stateTransitionCount": {
+          "type": "string",
+          "format": "int64",
+          "description": "Incremented each time the callback's state is mutated in persistence."
+        }
+      },
+      "description": "Information about a callback's execution."
+    },
+    "v1CallbackExecutionOutcome": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "object",
+          "properties": {},
+          "title": "The callback completed successfully. (Which may include delivering a \"failed\" result successfully.)"
+        },
+        "failure": {
+          "$ref": "#/definitions/v1Failure",
+          "description": "The failure if the callback was not able to complete successfully. e.g. timed out, received an\nunretriable error, etc."
+        }
+      },
+      "description": "The outcome of a callback's execution, either success or a failure."
+    },
     "v1CallbackState": {
       "type": "string",
       "enum": [
@@ -14426,12 +14509,12 @@
         "CALLBACK_STATE_BLOCKED"
       ],
       "default": "CALLBACK_STATE_UNSPECIFIED",
-      "description": "State of a callback.\n\n - CALLBACK_STATE_UNSPECIFIED: Default value, unspecified state.\n - CALLBACK_STATE_STANDBY: Callback is standing by, waiting to be triggered.\n - CALLBACK_STATE_SCHEDULED: Callback is in the queue waiting to be executed or is currently executing.\n - CALLBACK_STATE_BACKING_OFF: Callback has failed with a retryable error and is backing off before the next attempt.\n - CALLBACK_STATE_FAILED: Callback has failed.\n - CALLBACK_STATE_SUCCEEDED: Callback has succeeded.\n - CALLBACK_STATE_BLOCKED: Callback is blocked (eg: by circuit breaker)."
+      "description": "State of a callback.\n\n - CALLBACK_STATE_UNSPECIFIED: Default value, unspecified state.\n - CALLBACK_STATE_STANDBY: Callback is standing by, waiting to be triggered.\n - CALLBACK_STATE_SCHEDULED: Callback is in the queue waiting to be executed or is currently executing.\n - CALLBACK_STATE_BACKING_OFF: Callback has failed with a retryable error and is backing off before the next attempt.\n - CALLBACK_STATE_FAILED: Callback has failed.\n - CALLBACK_STATE_SUCCEEDED: Callback has succeeded.\n - CALLBACK_STATE_BLOCKED: Callback is blocked, e.g. by circuit breaker."
     },
     "v1CallbackWorker": {
       "type": "object",
       "properties": {
-        "taskqueueName": {
+        "taskQueueName": {
           "type": "string",
           "description": "Nexus task queue the Temporal worker is listening on.\n\nNOTE: This is not a temporal.api.taskqueue.v1.TaskQueue to avoid a circular dependency."
         },
@@ -15375,6 +15458,14 @@
           "type": "string",
           "format": "byte",
           "description": "Token for follow-on long-poll requests. Absent only if the operation is complete."
+        },
+        "completionCallbacks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1CallbackExecutionInfo"
+          },
+          "description": "Completion callbacks to be invoked once the Nexus operation reaches a terminal state.\nThey will remain in the CALLBACK_STATE_STANDBY state until the Nexus operation is finished."
         }
       }
     },

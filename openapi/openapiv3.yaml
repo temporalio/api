@@ -10746,6 +10746,8 @@ components:
           $ref: '#/components/schemas/Callback_Nexus'
         internal:
           $ref: '#/components/schemas/Callback_Internal'
+        worker:
+          $ref: '#/components/schemas/Callback_Worker'
         links:
           type: array
           items:
@@ -10754,6 +10756,89 @@ components:
             Links associated with the callback. It can be used to link to underlying resources of the
              callback.
       description: Callback to attach to various events in the system, e.g. workflow run completion.
+    CallbackExecutionInfo:
+      type: object
+      properties:
+        callbackId:
+          type: string
+          description: Identifier of the callback's execution. Unique within the containing namespace.
+        runId:
+          type: string
+          description: Run ID of the callback execution.
+        callback:
+          allOf:
+            - $ref: '#/components/schemas/Callback'
+          description: The Callback being described.
+        state:
+          enum:
+            - CALLBACK_STATE_UNSPECIFIED
+            - CALLBACK_STATE_STANDBY
+            - CALLBACK_STATE_SCHEDULED
+            - CALLBACK_STATE_BACKING_OFF
+            - CALLBACK_STATE_FAILED
+            - CALLBACK_STATE_SUCCEEDED
+            - CALLBACK_STATE_BLOCKED
+          type: string
+          description: The detailed state of the callback.
+          format: enum
+        stateReason:
+          type: string
+          description: |-
+            Human friendly context describing the state, if applicable.
+             e.g. if the state is BLOCKED, provides an explanation why.
+        outcome:
+          allOf:
+            - $ref: '#/components/schemas/CallbackExecutionOutcome'
+          description: The outcome of the callback's execution, as applicable.
+        attempt:
+          type: integer
+          description: |-
+            The number of attempts made to deliver/execute callback.
+
+             This number is approximate. There could be more attempts if the server crashes before recording the attempt's completion, or fewer
+             if the callback was terminated or timed out after the counter has been incremented and before an attempt could be made.
+          format: int32
+        createTime:
+          type: string
+          description: The time when the callback was created. (But not necessarily scheduled.)
+          format: date-time
+        closeTime:
+          type: string
+          description: Time when the callback transitioned to a terminal state.
+          format: date-time
+        lastAttemptCompleteTime:
+          type: string
+          description: The time when the last attempt completed.
+          format: date-time
+        lastAttemptFailure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: The last attempt's failure, if any.
+        nextAttemptScheduleTime:
+          type: string
+          description: The time when the next attempt is scheduled (only set when state is BACKING_OFF).
+          format: date-time
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Schedule-to-close timeout for this callback.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        stateTransitionCount:
+          type: string
+          description: Incremented each time the callback's state is mutated in persistence.
+      description: Information about a callback's execution.
+    CallbackExecutionOutcome:
+      type: object
+      properties:
+        failure:
+          allOf:
+            - $ref: '#/components/schemas/Failure'
+          description: |-
+            The failure if the callback was not able to complete successfully. e.g. timed out, received an
+             unretriable error, etc.
+      description: The outcome of a callback's execution, either success or a failure.
     CallbackInfo:
       type: object
       properties:
@@ -10822,6 +10907,42 @@ components:
           additionalProperties:
             type: string
           description: Header to attach to callback request.
+    Callback_Worker:
+      type: object
+      properties:
+        taskQueueName:
+          type: string
+          description: |-
+            Nexus task queue the Temporal worker is listening on.
+
+             NOTE: This is not a temporal.api.taskqueue.v1.TaskQueue to avoid a circular dependency.
+        service:
+          type: string
+          description: Target Nexus service, e.g. "temporal.api.notificationservice.v1.NotificationService".
+        operation:
+          type: string
+          description: Target operation, e.g. "OnComplete".
+        sourceContext:
+          allOf:
+            - $ref: '#/components/schemas/Payload'
+          description: |-
+            Arbitrary user-supplied data from the source operation's callsite. (As applicable, not all operations
+             support attaching context data.)
+
+             There is a relatively small maximum size the source context can be, e.g. 32KiB.
+      description: |-
+        Worker callbacks are requests to invoke a specific shape of Nexus operation on a Temporal worker.
+         The specified Nexus operation must have the following:
+         - Input:  temporal.api.notificationservice.v1.OnCompleteRequest
+         - Output: temporal.api.notificationservice.v1.OnCompleteResponse
+
+         The targeted Nexus service must be registered within the same namespace as the source operation
+         the callback is attached to. (While Nexus allows for cross-namespace operations, worker callbacks
+         are purely "caller-side".)
+
+         Worker callbacks are only supported for certain types of operations, e.g. standalone Nexus operations.
+         Attempting to attach a Worker callback for an unsupported operation will result in an INVALID_ARGUMENT
+         error from the server.
     CanceledFailureInfo:
       type: object
       properties:
@@ -11806,6 +11927,13 @@ components:
           type: string
           description: Token for follow-on long-poll requests. Absent only if the operation is complete.
           format: bytes
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CallbackExecutionInfo'
+          description: |-
+            Completion callbacks to be invoked once the Nexus operation reaches a terminal state.
+             They will remain in the CALLBACK_STATE_STANDBY state until the Nexus operation is finished.
     DescribeScheduleResponse:
       type: object
       properties:
@@ -17058,6 +17186,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/UserMetadata'
           description: Metadata for use by user interfaces to display the fixed as-of-start summary and details of the operation.
+        completionCallbacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Callback'
+          description: Completion callbacks to be invoked once the Nexus operation reaches a terminal state.
     StartNexusOperationExecutionResponse:
       type: object
       properties:

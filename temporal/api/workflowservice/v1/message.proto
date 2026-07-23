@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package temporal.api.workflowservice.v1;
+
+option go_package = "go.temporal.io/api/workflowservice/v1;workflowservice";
+option java_package = "io.temporal.api.workflowservice.v1";
+option java_multiple_files = true;
+option java_outer_classname = "MessageProto";
+option ruby_package = "Temporalio::Api::WorkflowService::V1";
+option csharp_namespace = "Temporalio.Api.WorkflowService.V1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+import "temporal/api/common/v1/message.proto";
+import "temporal/api/enums/v1/common.proto";
+import "temporal/api/failure/v1/message.proto";
+
+// The outcome of a callback's execution, either success or a failure.
+message CallbackExecutionOutcome {
+    oneof value {
+        // The callback completed successfully. (Which may include delivering a "failed" result successfully.)
+        google.protobuf.Empty success = 1;
+        // The failure if the callback was not able to complete successfully. e.g. timed out, received an
+        // unretriable error, etc.
+        temporal.api.failure.v1.Failure failure = 2;
+    }
+}
+
+// Information about a callback's execution.
+message CallbackExecutionInfo {
+    // Identifier of the callback's execution. Unique within the containing namespace.
+    string callback_id = 1;
+    // Run ID of the callback execution.
+    string run_id = 2;
+
+    // The Callback being described.
+    temporal.api.common.v1.Callback callback = 3;
+    // The detailed state of the callback.
+    temporal.api.enums.v1.CallbackState state = 4;
+    // Human friendly context describing the state, if applicable.
+    // e.g. if the state is BLOCKED, provides an explanation why.
+    string state_reason = 5;
+
+    // The outcome of the callback's execution, as applicable.
+    CallbackExecutionOutcome outcome = 6;
+
+    // The number of attempts made to deliver/execute callback.
+    //
+    // This number is approximate. There could be more attempts if the server crashes before recording the attempt's completion, or fewer
+    // if the callback was terminated or timed out after the counter has been incremented and before an attempt could be made.
+    int32 attempt = 7;
+
+    // The time when the callback was created. (But not necessarily scheduled.)
+    google.protobuf.Timestamp create_time = 8;
+    // Time when the callback transitioned to a terminal state.
+    google.protobuf.Timestamp close_time = 9;
+
+    // The time when the last attempt completed.
+    google.protobuf.Timestamp last_attempt_complete_time = 10;
+    // The last attempt's failure, if any.
+    temporal.api.failure.v1.Failure last_attempt_failure = 11;
+    // The time when the next attempt is scheduled (only set when state is BACKING_OFF).
+    google.protobuf.Timestamp next_attempt_schedule_time = 12;
+
+    // Schedule-to-close timeout for this callback.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 13;
+
+    // Incremented each time the callback's state is mutated in persistence.
+    int64 state_transition_count = 14;
+}

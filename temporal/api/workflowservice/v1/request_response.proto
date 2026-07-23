@@ -2448,6 +2448,9 @@ message UpdateWorkflowExecutionOptionsResponse {
 
     // The Workflow Execution time when the options were updated. When time skipping is
     // enabled, this is the workflow's virtual time rather than wall-clock time.
+    //
+    // This timestamp cannot be used for time-skipping fast-forward info verification,
+    // use `fast_forward_id` instead.
     google.protobuf.Timestamp update_time = 2;
 }
 
@@ -3633,4 +3636,38 @@ message DeleteNexusOperationExecutionRequest {
 }
 
 message DeleteNexusOperationExecutionResponse {
+}
+
+
+// A long-poll request that blocks until the time-skipping state of an execution changes, so callers
+// can observe fast-forward progress and time-skipping config updates without busy-polling.
+message PollWorkflowExecutionTimeSkippingRequest {
+    string namespace = 1;
+    temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+    // Required. Identifies the fast-forward whose completion the caller wants to wait for.
+    // Must match the `fast_forward_id` set in the execution's TimeSkippingConfig.
+    string fast_forward_id = 3;
+}
+
+message PollWorkflowExecutionTimeSkippingResponse {
+    enum Result {
+        // Never returned; guards against an unset result.
+        RESULT_UNSPECIFIED = 0;
+        // The poll timed out server-side before the fast-forward completed. The caller may poll again.
+        RESULT_POLL_TIMEOUT = 1;
+        // The fast-forward identified by the request's `fast_forward_id` reached its target time and completed.
+        RESULT_FAST_FORWARD_COMPLETED = 2;
+        // The request's `fast_forward_id` does not match the execution's current `fast_forward_id`.
+        RESULT_FAST_FORWARD_ID_MISMATCH = 3;
+        // The request's `fast_forward_id` matched the execution's current `fast_forward_id`,
+        // but the workflow execution (the entire chain of runs) completed before the fast-forward
+        // had a chance to complete.
+        RESULT_WORKFLOW_ENDED_BEFORE_FAST_FORWARD_COMPLETION = 5;
+    }
+
+    // The result of this poll.
+    Result result = 1;
+
+    // The execution's most recent fast forward. Unset if time skipping was enabled without a fast-forward.
+    temporal.api.common.v1.TimeSkippingFastForwardInfo fast_forward_info = 2;
 }

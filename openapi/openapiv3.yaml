@@ -4572,6 +4572,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/time-skipping/poll:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollWorkflowExecutionTimeSkipping long-polls until the time-skipping state of a workflow
+         execution changes (its time-skipping config is updated or an active fast-forward completes),
+         then returns the reason and the current fast-forward info. It lets callers observe fast-forward
+         progress without busy-polling.
+      operationId: PollWorkflowExecutionTimeSkipping
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: fastForwardId
+          in: query
+          description: |-
+            Required. Identifies the fast-forward whose completion the caller wants to wait for.
+             Must match the `fast_forward_id` set in the execution's TimeSkippingConfig.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollWorkflowExecutionTimeSkippingResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/update-options:
     post:
       tags:
@@ -9568,6 +9617,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/time-skipping/poll:
+    get:
+      tags:
+        - WorkflowService
+      description: |-
+        PollWorkflowExecutionTimeSkipping long-polls until the time-skipping state of a workflow
+         execution changes (its time-skipping config is updated or an active fast-forward completes),
+         then returns the reason and the current fast-forward info. It lets callers observe fast-forward
+         progress without busy-polling.
+      operationId: PollWorkflowExecutionTimeSkipping
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflow_execution.workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: workflowExecution.workflowId
+          in: query
+          schema:
+            type: string
+        - name: workflowExecution.runId
+          in: query
+          schema:
+            type: string
+        - name: fastForwardId
+          in: query
+          description: |-
+            Required. Identifies the fast-forward whose completion the caller wants to wait for.
+             Must match the `fast_forward_id` set in the execution's TimeSkippingConfig.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollWorkflowExecutionTimeSkippingResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/update-options:
     post:
       tags:
@@ -14396,6 +14494,23 @@ components:
           allOf:
             - $ref: '#/components/schemas/Failure'
           description: The failure if the operation completed unsuccessfully.
+    PollWorkflowExecutionTimeSkippingResponse:
+      type: object
+      properties:
+        result:
+          enum:
+            - RESULT_UNSPECIFIED
+            - RESULT_POLL_TIMEOUT
+            - RESULT_FAST_FORWARD_COMPLETED
+            - RESULT_FAST_FORWARD_ID_MISMATCH
+            - RESULT_WORKFLOW_ENDED_BEFORE_FAST_FORWARD_COMPLETION
+          type: string
+          description: The result of this poll.
+          format: enum
+        fastForwardInfo:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingFastForwardInfo'
+          description: The execution's most recent fast forward. Unset if time skipping was enabled without a fast-forward.
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -17660,38 +17775,102 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Optionally fast-forward the current workflow execution by this duration ahead of current workflow execution time.
-             After the fast-forward completes, time skipping is disabled, and this
-             action is recorded in the WorkflowExecutionTimeSkippingTransitionedEvent. It can be re-enabled by
-             setting `enabled` to true or setting `fast_forward` again via UpdateWorkflowExecutionOptions.
-             The current workflow execution is a chain of runs (retries, cron, continue-as-new);
-             child workflows are separate executions, so this fast_forward won't affect them.
+            Optionally fast-forward the current execution by this duration ahead of current workflow time.
+             After the fast-forward completes, time skipping is disabled. And it can be re-enabled by calling
+             an update API with the time-skipping opt-in.
 
-             For a given workflow execution, only one active fast-forward is allowed at a time.
-             If a new fast-forward is set via UpdateWorkflowExecutionOptions before the previous
+             For a given execution, only one active fast-forward is allowed at a time.
+             If a new fast-forward is set via an update call before the previous
              one completes, the new one will override the previous one.
-             If the fast-forward duration exceeds the remaining execution timeout, time will only
-             be fast-forwarded up to the end of the execution.
+             If the fast-forward duration exceeds the remaining execution timeout, time will not
+             pass beyond the end of the execution, and fast_forward won't have a chance to complete.
+        fastForwardId:
+          type: string
+          description: |-
+            A client-supplied ID that must be set together with `fast_forward`. It is used to poll for
+             fast-forward completion via PollWorkflowExecutionTimeSkipping.
+             The server performs no idempotency check on this ID; the client is responsible for managing it.
         disablePropagation:
           type: boolean
           description: |-
             By default, executions started by another execution (e.g. a child workflow of a parent workflow or
              a schedule with the timeskipping policy enabled), inherit the "enabled" flag and skip time when possible.
              This flag disables that inheritance.
-      description: |-
-        The configuration for time skipping of a workflow execution (a chain of runs including retries, cron, continue-as-new).
-         When time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.
-         In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations,
-         and possibly other features added in the future.
-         User timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the
-         time point of the registered fast forward when there is no in-flight work.
-         When time is skipped, a WorkflowExecutionTimeSkippingTransitionedEvent will be
-         added to the workflow history to capture the state changes.
+        maxSessionSkipCount:
+          type: integer
+          description: |-
+            The maximum number of skips allowed within a single time-skipping session, where a session
+             runs from when time skipping is enabled until it is disabled. It protects the execution from
+             unlimited retries when backoff is skipped.
+             Every time the execution skips time, the skip count is incremented by one, and when it reaches
+             max_skip_per_session, time skipping is disabled.
+             For an execution with a chain of runs (retry, cron, continue-as-new), the count is accumulated
+             across all runs within the same session. The count resets to 0 at the start of each new session,
+             i.e. each time this config is updated to re-enable time skipping.
 
+             If this field is not set, the server applies a large default value (e.g. 100). The default can
+             be changed through dynamic config, and is overridden by this field when set.
+          format: int32
+      description: |-
+        The configuration for time skipping of an execution.
+         When time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.
+         Options like fast_forward, disable_propagation, and max_skip_per_session are provided for granular
+         control of the execution's time skipping behavior. See each field's comment for a detailed explanation.
+
+         An example of workflows with time skipping:
+         For workflows, an execution is a chain of runs including retries, cron, and continue-as-new.
+         In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations, etc.
+         User timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the
+         time point of the registered fast-forward when there is no in-flight work.
+         Every time time is skipped, the skip count is incremented by one; max_skip_per_session bounds the number of skips allowed within a single time-skipping session.
          For child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,
          but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the
          "enabled" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the
          parent execution as its start time.
+    TimeSkippingFastForwardInfo:
+      type: object
+      properties:
+        fastForwardDuration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: The client-supplied `fast_forward` duration.
+        fastForwardId:
+          type: string
+          description: The client-supplied ID set alongside `fast_forward` duration.
+        targetTime:
+          type: string
+          description: The target virtual time at which the fast-forward completes.
+          format: date-time
+        hasCompleted:
+          type: boolean
+          description: True once `target_time` has been reached.
+      description: TimeSkippingFastForwardInfo describes the current time-skipping fast-forward on an execution.
+    TimeSkippingInfo:
+      type: object
+      properties:
+        currentTime:
+          type: string
+          description: |-
+            Current virtual time of the execution. If the execution hasn't skipped
+             any time yet, it will be the same as wall clock time.
+          format: date-time
+        isRunning:
+          type: boolean
+          description: |-
+            If the execution is actively trying to skip time automatically when there is a chance,
+             this field will be set to true. If time has stopped skipping either by fast-forward completion,
+             max skip allowed checking, or user configuration, it will be false.
+        fastForwardInfo:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingFastForwardInfo'
+          description: The execution's current fast-forward, if any. Unset if time skipping is enabled without a fast-forward.
+        maxSessionSkipCount:
+          type: integer
+          format: int32
+        currentSessionSkipCount:
+          type: integer
+          format: int32
+      description: Describes the current time-skipping state of a workflow execution.
     TimeSkippingStatePropagation:
       type: object
       properties:
@@ -17699,17 +17878,19 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            The time skipped by the previous execution that started this workflow.
-             It can happen in child workflows and a chain of runs (CaN, cron, retry).
+            The time skipped by the previous run. It is propagated both to executions started by the
+             current execution and through a chain of runs (CaN, cron, retry).
         fastForwardTargetTime:
           type: string
-          description: |-
-            If there is a fast-forward action set for the previous run in a chain of runs,
-             the target time should be propagated to the next run as well.
+          description: The fast-forward target time. It only propagates across a chain of runs within the same execution.
           format: date-time
+        initialSkipCount:
+          type: integer
+          description: The initial skip count. It only propagates across a chain of runs within the same execution.
+          format: int32
       description: |-
-        The time-skipping state that needs to be propagated from a parent workflow to a child workflow,
-         or through a chain of runs.
+        The time-skipping state that needs to be propagated from one execution to another, or through a chain of runs
+         within the same execution.
     TimeoutFailureInfo:
       type: object
       properties:
@@ -18379,6 +18560,9 @@ components:
           description: |-
             The Workflow Execution time when the options were updated. When time skipping is
              enabled, this is the workflow's virtual time rather than wall-clock time.
+
+             This timestamp cannot be used for time-skipping fast-forward info verification,
+             use `fast_forward_id` instead.
           format: date-time
     UpdateWorkflowExecutionRequest:
       type: object
@@ -19635,6 +19819,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecutionPauseInfo'
           description: Information about the workflow execution pause operation.
+        timeSkippingInfo:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingInfo'
+          description: |-
+            Information about time skipping of the workflow execution.
+             If the execution has never enabled time skipping, it will be nil.
       description: Holds all the extra information about workflow execution that is not part of Visibility.
     WorkflowExecutionFailedEventAttributes:
       type: object

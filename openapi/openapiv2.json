@@ -20029,7 +20029,7 @@
           "type": "boolean",
           "description": "By default, executions started by another execution (e.g. a child workflow of a parent workflow or\na schedule with the timeskipping policy enabled), inherit the \"enabled\" flag and skip time when possible.\nThis flag disables that inheritance."
         },
-        "maxSkipPerSession": {
+        "maxSessionSkipCount": {
           "type": "integer",
           "format": "int32",
           "description": "The maximum number of skips allowed within a single time-skipping session, where a session\nruns from when time skipping is enabled until it is disabled. It protects the execution from\nunlimited retries when backoff is skipped.\nEvery time the execution skips time, the skip count is incremented by one, and when it reaches\nmax_skip_per_session, time skipping is disabled.\nFor an execution with a chain of runs (retry, cron, continue-as-new), the count is accumulated\nacross all runs within the same session. The count resets to 0 at the start of each new session,\ni.e. each time this config is updated to re-enable time skipping.\n\nIf this field is not set, the server applies a large default value (e.g. 100). The default can\nbe changed through dynamic config, and is overridden by this field when set."
@@ -20072,13 +20072,17 @@
           "type": "boolean",
           "description": "If the execution is actively trying to skip time automatically when there is a chance,\nthis field will be set to true. If time has stopped skipping either by fast-forward completion,\nmax skip allowed checking, or user configuration, it will be false."
         },
-        "stopReason": {
-          "$ref": "#/definitions/v1TimeSkippingStopReason",
-          "description": "Why time skipping has stopped. Set only when `is_running` is false; `UNSPECIFIED` while it is running."
-        },
         "fastForwardInfo": {
           "$ref": "#/definitions/v1TimeSkippingFastForwardInfo",
           "description": "The execution's current fast-forward, if any. Unset if time skipping is enabled without a fast-forward."
+        },
+        "maxSessionSkipCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "currentSessionSkipCount": {
+          "type": "integer",
+          "format": "int32"
         }
       },
       "description": "Describes the current time-skipping state of a workflow execution."
@@ -20102,17 +20106,6 @@
         }
       },
       "description": "The time-skipping state that needs to be propagated from one execution to another, or through a chain of runs\nwithin the same execution."
-    },
-    "v1TimeSkippingStopReason": {
-      "type": "string",
-      "enum": [
-        "TIME_SKIPPING_STOP_REASON_UNSPECIFIED",
-        "TIME_SKIPPING_STOP_REASON_USER_DISABLED",
-        "TIME_SKIPPING_STOP_REASON_FAST_FORWARD_COMPLETED",
-        "TIME_SKIPPING_STOP_REASON_MAX_SKIP_PER_SESSION_REACHED"
-      ],
-      "default": "TIME_SKIPPING_STOP_REASON_UNSPECIFIED",
-      "description": "Why time skipping has stopped on an execution.\n\n - TIME_SKIPPING_STOP_REASON_UNSPECIFIED: Unspecified. Set when time skipping is actively running (`is_running` is true), so no reason applies.\n - TIME_SKIPPING_STOP_REASON_USER_DISABLED: Time skipping is disabled by user configuration.\n - TIME_SKIPPING_STOP_REASON_FAST_FORWARD_COMPLETED: The current fast-forward reached its target time and completed.\n - TIME_SKIPPING_STOP_REASON_MAX_SKIP_PER_SESSION_REACHED: The maximum amount of time skipping allowed per session was reached."
     },
     "v1TimeoutFailureInfo": {
       "type": "object",

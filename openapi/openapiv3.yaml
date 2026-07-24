@@ -9790,12 +9790,13 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Time from the last attempt failure to the next activity retry.
-             If the activity is currently running, this represents the next retry interval in case the attempt fails.
-             If activity is currently backing off between attempt, this represents the current retry interval.
-             If there is no next retry allowed, this field will be null.
-             This interval is typically calculated from the specified retry policy, but may be modified if an activity fails
-             with a retryable application failure specifying a retry delay.
+            The retry interval for a currently pending retry: the amount of time between the last attempt
+             failure and when the next attempt will become available to worker poll requests. Set only
+             during retry backoff, i.e. when an activity is currently waiting for a retry, and the next
+             activity task has not yet become available to worker poll requests. Null at all other times,
+             including when paused and during start delay. This is calculated from the active retry policy,
+             but can be overridden by an activity attempt that fails with a retryable application failure
+             specifying a next_retry_delay.
         lastAttemptCompleteTime:
           type: string
           description: The time when the last activity attempt completed. If activity has not been completed yet, it will be null.
@@ -9803,8 +9804,8 @@ components:
         nextAttemptScheduleTime:
           type: string
           description: |-
-            The time when the next activity attempt will be scheduled.
-             If activity is currently scheduled or started, this field will be null.
+            The time at which the next activity attempt will become available to worker poll requests.
+             Set only during start delay, and retry backoff. Null when paused.
           format: date-time
         lastDeploymentVersion:
           allOf:
@@ -14156,10 +14157,12 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            The time activity will wait until the next retry.
-             If activity is currently running it will be next retry interval if activity failed.
-             If activity is currently waiting it will be current retry interval.
-             If there will be no retry it will be null.
+            The retry interval for a currently pending retry: the amount of time between the last attempt
+             failure and when the next attempt will become available to worker poll requests. Set only
+             during retry backoff, i.e. when an activity is currently waiting for a retry, and the next
+             activity task has not yet become available to worker poll requests. Null at all other times
+             including when paused. This is calculated from the active retry policy, but can be overridden by
+             an activity attempt that fails with a retryable application failure specifying a next_retry_delay.
         lastAttemptCompleteTime:
           type: string
           description: The time when the last activity attempt was completed. If activity has not been completed yet then it will be null.
@@ -14167,8 +14170,8 @@ components:
         nextAttemptScheduleTime:
           type: string
           description: |-
-            Next time when activity will be scheduled.
-             If activity is currently scheduled or started it will be null.
+            The time at which the next activity attempt will become available to worker poll requests.
+             Set only during retry backoff. Null when paused.
           format: date-time
         paused:
           type: boolean

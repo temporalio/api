@@ -307,17 +307,19 @@ message PendingActivityInfo {
     // This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
     temporal.api.common.v1.WorkerVersionStamp last_worker_version_stamp = 15 [deprecated = true];
 
-    // The time activity will wait until the next retry.
-    // If activity is currently running it will be next retry interval if activity failed.
-    // If activity is currently waiting it will be current retry interval.
-    // If there will be no retry it will be null.
+    // The retry interval for a currently pending retry: the amount of time between the last attempt
+    // failure and when the next attempt will become available to worker poll requests. Set only
+    // during retry backoff, i.e. when an activity is currently waiting for a retry, and the next
+    // activity task has not yet become available to worker poll requests. Null at all other times
+    // including when paused. This is calculated from the active retry policy, but can be overridden by
+    // an activity attempt that fails with a retryable application failure specifying a next_retry_delay.
     google.protobuf.Duration current_retry_interval = 16;
 
     // The time when the last activity attempt was completed. If activity has not been completed yet then it will be null.
     google.protobuf.Timestamp last_attempt_complete_time = 17;
 
-    // Next time when activity will be scheduled.
-    // If activity is currently scheduled or started it will be null.
+    // The time at which the next activity attempt will become available to worker poll requests.
+    // Set only during retry backoff. Null when paused.
     google.protobuf.Timestamp next_attempt_schedule_time = 18;
 
     // Indicates if activity is paused.

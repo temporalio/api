@@ -12352,6 +12352,26 @@ components:
           $ref: '#/components/schemas/NexusOperationFailureInfo'
         nexusHandlerFailureInfo:
           $ref: '#/components/schemas/NexusHandlerFailureInfo'
+    FastForwardConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          description: |-
+            A client-supplied ID, required field, set alongside `duration`. It is used to poll for
+             fast-forward completion via PollWorkflowExecutionTimeSkipping.
+             The server performs no idempotency check on this ID; the client is responsible for managing it.
+        duration:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Fast-forward the current execution by this duration ahead of the current workflow time; required field.
+             Once the fast-forward completes, no further time is skipped. Time skipping can be resumed either
+             by updating the TimeSkippingConfig with a new FastForwardConfig, or by clearing the FastForwardConfig
+             to skip through to the end of the execution.
+
+             If this duration exceeds the remaining execution timeout, time will not pass beyond the end
+             of the execution, and the fast-forward won't have a chance to complete.
     FetchWorkerConfigRequest:
       type: object
       properties:
@@ -17771,25 +17791,10 @@ components:
         enabled:
           type: boolean
           description: Enables or disables time skipping for this workflow execution.
-        fastForward:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: |-
-            Optionally fast-forward the current execution by this duration ahead of current workflow time.
-             After the fast-forward completes, time skipping is disabled. And it can be re-enabled by calling
-             an update API with the time-skipping opt-in.
-
-             For a given execution, only one active fast-forward is allowed at a time.
-             If a new fast-forward is set via an update call before the previous
-             one completes, the new one will override the previous one.
-             If the fast-forward duration exceeds the remaining execution timeout, time will not
-             pass beyond the end of the execution, and fast_forward won't have a chance to complete.
-        fastForwardId:
-          type: string
-          description: |-
-            A client-supplied ID that must be set together with `fast_forward`. It is used to poll for
-             fast-forward completion via PollWorkflowExecutionTimeSkipping.
-             The server performs no idempotency check on this ID; the client is responsible for managing it.
+        fastForwardConfig:
+          allOf:
+            - $ref: '#/components/schemas/FastForwardConfig'
+          description: An optional opt-in to control time-skipping behavior through fast-forward; see its definition for details.
         disablePropagation:
           type: boolean
           description: |-

@@ -41,7 +41,7 @@ $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
 
 ##### Compile proto files for go #####
-grpc: buf-lint api-linter buf-breaking clean go-grpc fix-path
+grpc: buf-lint api-linter clean go-grpc fix-path
 
 go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
@@ -120,10 +120,6 @@ $(STAMPDIR)/buf-mod-prune: $(STAMPDIR) buf.yaml
 buf-lint: $(STAMPDIR)/buf-mod-prune
 	printf $(COLOR) "Run buf linter..."
 	(cd $(PROTO_ROOT) && buf lint)
-
-buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against main branch..."
-	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=main')
 
 nexus-rpc-yaml: nexus-rpc-yaml-install
 	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."

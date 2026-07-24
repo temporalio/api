@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "temporal/api/workflowservice/v1/message.proto",
+    "title": "temporal/api/workflowservice/v1/request_response.proto",
     "version": "version not set"
   },
   "tags": [
@@ -10757,6 +10757,20 @@
         }
       }
     },
+    "CallbackNexusOperationCompletion": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
     "ComputeStatusProviderValidationStatus": {
       "type": "object",
       "properties": {
@@ -11276,7 +11290,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Callback"
+            "$ref": "#/definitions/commonV1Callback"
           },
           "description": "Completion callbacks attached to the running workflow update."
         }
@@ -12302,7 +12316,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Callback"
+            "$ref": "#/definitions/commonV1Callback"
           },
           "description": "Callbacks to be called by the server when this activity reaches a terminal state.\nCallback addresses must be whitelisted in the server's dynamic configuration."
         },
@@ -12460,7 +12474,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Callback"
+            "$ref": "#/definitions/commonV1Callback"
           },
           "description": "Completion callbacks to be invoked once the Nexus operation reaches a terminal state."
         }
@@ -12543,7 +12557,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Callback"
+            "$ref": "#/definitions/commonV1Callback"
           },
           "description": "Callbacks to be called by the server when this workflow reaches a terminal state.\nIf the workflow continues-as-new, these callbacks will be carried over to the new execution.\nCallback addresses must be whitelisted in the server's dynamic configuration."
         },
@@ -13087,7 +13101,7 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "$ref": "#/definitions/v1Callback"
+                "$ref": "#/definitions/commonV1Callback"
               },
               "description": "Callbacks to be called by the server when this update reaches a terminal state."
             },
@@ -13187,7 +13201,7 @@
       "type": "object",
       "properties": {
         "callback": {
-          "$ref": "#/definitions/v1Callback",
+          "$ref": "#/definitions/commonV1Callback",
           "description": "Information on how this callback should be invoked (e.g. its URL and type)."
         },
         "registrationTime": {
@@ -13247,7 +13261,7 @@
       "type": "object",
       "properties": {
         "callback": {
-          "$ref": "#/definitions/v1Callback",
+          "$ref": "#/definitions/commonV1Callback",
           "description": "Information on how this callback should be invoked (e.g. its URL and type)."
         },
         "trigger": {
@@ -13316,6 +13330,29 @@
         }
       },
       "description": "When StartWorkflowExecution uses the conflict policy WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING and\nthere is already an existing running workflow, OnConflictOptions defines actions to be taken on\nthe existing running workflow. In this case, it will create a WorkflowExecutionOptionsUpdatedEvent\nhistory event in the running workflow with the changes requested in this object."
+    },
+    "commonV1Callback": {
+      "type": "object",
+      "properties": {
+        "nexus": {
+          "$ref": "#/definitions/CallbackNexus"
+        },
+        "internal": {
+          "$ref": "#/definitions/CallbackInternal"
+        },
+        "worker": {
+          "$ref": "#/definitions/v1CallbackWorker"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Link"
+          },
+          "description": "Links associated with the callback. It can be used to link to underlying resources of the\ncallback."
+        }
+      },
+      "description": "Callback to attach to various events in the system, e.g. workflow run completion."
     },
     "protobufAny": {
       "type": "object",
@@ -14391,29 +14428,6 @@
       },
       "description": "CalendarSpec describes an event specification relative to the calendar,\nsimilar to a traditional cron specification, but with labeled fields. Each\nfield can be one of:\n  *: matches always\n  x: matches when the field equals x\n  x/y : matches when the field equals x+n*y where n is an integer\n  x-z: matches when the field is between x and z inclusive\n  w,x,y,...: matches when the field is one of the listed values\nEach x, y, z, ... is either a decimal integer, or a month or day of week name\nor abbreviation (in the appropriate fields).\nA timestamp matches if all fields match.\nNote that fields have different default values, for convenience.\nNote that the special case that some cron implementations have for treating\nday_of_month and day_of_week as \"or\" instead of \"and\" when both are set is\nnot implemented.\nday_of_week can accept 0 or 7 as Sunday\nCalendarSpec gets compiled into StructuredCalendarSpec, which is what will be\nreturned if you describe the schedule."
     },
-    "v1Callback": {
-      "type": "object",
-      "properties": {
-        "nexus": {
-          "$ref": "#/definitions/CallbackNexus"
-        },
-        "internal": {
-          "$ref": "#/definitions/CallbackInternal"
-        },
-        "worker": {
-          "$ref": "#/definitions/v1CallbackWorker"
-        },
-        "links": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1Link"
-          },
-          "description": "Links associated with the callback. It can be used to link to underlying resources of the\ncallback."
-        }
-      },
-      "description": "Callback to attach to various events in the system, e.g. workflow run completion."
-    },
     "v1CallbackExecutionInfo": {
       "type": "object",
       "properties": {
@@ -14421,66 +14435,13 @@
           "type": "string",
           "description": "Identifier of the callback's execution. Unique within the containing namespace."
         },
-        "runId": {
-          "type": "string",
-          "description": "Run ID of the callback execution."
-        },
-        "callback": {
-          "$ref": "#/definitions/v1Callback",
-          "description": "The Callback being described."
-        },
-        "state": {
-          "$ref": "#/definitions/v1CallbackState",
-          "description": "The detailed state of the callback."
-        },
-        "stateReason": {
-          "type": "string",
-          "description": "Human friendly context describing the state, if applicable.\ne.g. if the state is BLOCKED, provides an explanation why."
+        "info": {
+          "$ref": "#/definitions/apiCallbackV1CallbackInfo"
         },
         "outcome": {
-          "$ref": "#/definitions/v1CallbackExecutionOutcome",
-          "description": "The outcome of the callback's execution, as applicable."
-        },
-        "attempt": {
-          "type": "integer",
-          "format": "int32",
-          "description": "The number of attempts made to deliver/execute callback.\n\nThis number is approximate. There could be more attempts if the server crashes before recording the attempt's completion, or fewer\nif the callback was terminated or timed out after the counter has been incremented and before an attempt could be made."
-        },
-        "createTime": {
-          "type": "string",
-          "format": "date-time",
-          "title": "The time when the callback was created. (But not necessarily scheduled.)"
-        },
-        "closeTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Time when the callback transitioned to a terminal state."
-        },
-        "lastAttemptCompleteTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the last attempt completed."
-        },
-        "lastAttemptFailure": {
-          "$ref": "#/definitions/v1Failure",
-          "description": "The last attempt's failure, if any."
-        },
-        "nextAttemptScheduleTime": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The time when the next attempt is scheduled (only set when state is BACKING_OFF)."
-        },
-        "scheduleToCloseTimeout": {
-          "type": "string",
-          "description": "Schedule-to-close timeout for this callback."
-        },
-        "stateTransitionCount": {
-          "type": "string",
-          "format": "int64",
-          "description": "Incremented each time the callback's state is mutated in persistence."
+          "$ref": "#/definitions/v1CallbackExecutionOutcome"
         }
-      },
-      "description": "Information about a callback's execution."
+      }
     },
     "v1CallbackExecutionOutcome": {
       "type": "object",
@@ -14494,8 +14455,7 @@
           "$ref": "#/definitions/v1Failure",
           "description": "The failure if the callback was not able to complete successfully. e.g. timed out, received an\nunretriable error, etc."
         }
-      },
-      "description": "The outcome of a callback's execution, either success or a failure."
+      }
     },
     "v1CallbackState": {
       "type": "string",
@@ -14520,11 +14480,11 @@
         },
         "service": {
           "type": "string",
-          "description": "Target Nexus service, e.g. \"temporal.api.notificationservice.v1.NotificationService\"."
+          "description": "Target Nexus service, e.g. \"HTTPAdaptor\"."
         },
         "operation": {
           "type": "string",
-          "description": "Target operation, e.g. \"OnComplete\"."
+          "description": "Target operation, e.g. \"DeliverAsWebhook\"."
         },
         "sourceContext": {
           "$ref": "#/definitions/v1Payload",
@@ -16553,9 +16513,24 @@
         },
         "workflow": {
           "$ref": "#/definitions/LinkWorkflow"
+        },
+        "callback": {
+          "$ref": "#/definitions/v1LinkCallback"
         }
       },
       "description": "Link can be associated with history events. It might contain information about an external entity\nrelated to the history event. For example, workflow A makes a Nexus call that starts workflow B:\nin this case, a history event in workflow A could contain a Link to the workflow started event in\nworkflow B, and vice-versa."
+    },
+    "v1LinkCallback": {
+      "type": "object",
+      "properties": {
+        "callbackId": {
+          "type": "string"
+        },
+        "nexusOperationCompletion": {
+          "$ref": "#/definitions/CallbackNexusOperationCompletion"
+        }
+      },
+      "description": "A link to a callback or completion handler for an operation. e.g. not a link to a standalone Nexus operation,\nbut the callback that was executed once that operation finished."
     },
     "v1ListActivityExecutionsResponse": {
       "type": "object",
@@ -18536,7 +18511,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Callback"
+            "$ref": "#/definitions/commonV1Callback"
           },
           "description": "Callbacks to be called by the server when this update reaches a terminal state."
         },
@@ -21376,7 +21351,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Callback"
+            "$ref": "#/definitions/commonV1Callback"
           },
           "description": "Completion callbacks attached to the running workflow execution."
         },
@@ -21592,7 +21567,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Callback"
+            "$ref": "#/definitions/commonV1Callback"
           },
           "description": "Completion callbacks attached when this workflow was started."
         },

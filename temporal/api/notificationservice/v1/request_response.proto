@@ -14,27 +14,12 @@ import "temporal/api/failure/v1/message.proto";
 
 // OnCompleteRequest is the request type to the NotificationService's OnComplete operation,
 // allowing for defining completion handlers for arbitrary asynchronous operations.
+//
+// Information about the source operation will be available in the form of a commonpb.Link,
+// which will be available separately from this OnCompleteRequest. e.g. a link to the source
+// standalone Nexus operation would be found in the nexuspb.StartOperationRequest parameter
+// sent to the worker callback. (In addition to this OnCompleteRequest.)
 message OnCompleteRequest {
-
-    // The source Nexus operation that the OnComplete invocation is reporting.
-    message NexusOperation {
-        // The Nexus endpoint.
-        string endpoint = 1;
-        // The Nexus service.
-        string service = 2;
-        // The Nexus operation.
-        string operation = 3;
-
-        // The token the operation produced. (If it was an asynchronous Nexus operation.)
-        string operation_token = 4;
-    }
-
-    // The source asynchronous operation.
-    message SourceOperation {
-        oneof variant {
-            NexusOperation nexus_operation = 1;
-        }
-    }
 
     // The outcome of the source operation.
     message Outcome {
@@ -45,12 +30,10 @@ message OnCompleteRequest {
             temporal.api.failure.v1.Failure failure = 2;
         }
     }
-
-    SourceOperation source_operation = 1;
-    Outcome outcome = 2;
+    Outcome outcome = 1;
 
     // User-supplied data which was added to the source invocation. (As applicable.)
-    temporal.api.common.v1.Payload source_context = 3;
+    temporal.api.common.v1.Payload source_context = 2;
 }
 
 // OnCompleteResponse is the return type of the OnComplete operation.

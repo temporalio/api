@@ -10764,73 +10764,10 @@ components:
         callbackId:
           type: string
           description: Identifier of the callback's execution. Unique within the containing namespace.
-        runId:
-          type: string
-          description: Run ID of the callback execution.
-        callback:
-          allOf:
-            - $ref: '#/components/schemas/Callback'
-          description: The Callback being described.
-        state:
-          enum:
-            - CALLBACK_STATE_UNSPECIFIED
-            - CALLBACK_STATE_STANDBY
-            - CALLBACK_STATE_SCHEDULED
-            - CALLBACK_STATE_BACKING_OFF
-            - CALLBACK_STATE_FAILED
-            - CALLBACK_STATE_SUCCEEDED
-            - CALLBACK_STATE_BLOCKED
-          type: string
-          description: The detailed state of the callback.
-          format: enum
-        stateReason:
-          type: string
-          description: |-
-            Human friendly context describing the state, if applicable.
-             e.g. if the state is BLOCKED, provides an explanation why.
+        info:
+          $ref: '#/components/schemas/CallbackInfo'
         outcome:
-          allOf:
-            - $ref: '#/components/schemas/CallbackExecutionOutcome'
-          description: The outcome of the callback's execution, as applicable.
-        attempt:
-          type: integer
-          description: |-
-            The number of attempts made to deliver/execute callback.
-
-             This number is approximate. There could be more attempts if the server crashes before recording the attempt's completion, or fewer
-             if the callback was terminated or timed out after the counter has been incremented and before an attempt could be made.
-          format: int32
-        createTime:
-          type: string
-          description: The time when the callback was created. (But not necessarily scheduled.)
-          format: date-time
-        closeTime:
-          type: string
-          description: Time when the callback transitioned to a terminal state.
-          format: date-time
-        lastAttemptCompleteTime:
-          type: string
-          description: The time when the last attempt completed.
-          format: date-time
-        lastAttemptFailure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: The last attempt's failure, if any.
-        nextAttemptScheduleTime:
-          type: string
-          description: The time when the next attempt is scheduled (only set when state is BACKING_OFF).
-          format: date-time
-        scheduleToCloseTimeout:
-          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
-          type: string
-          description: |-
-            Schedule-to-close timeout for this callback.
-             (-- api-linter: core::0140::prepositions=disabled
-                 aip.dev/not-precedent: "to" is used to indicate interval. --)
-        stateTransitionCount:
-          type: string
-          description: Incremented each time the callback's state is mutated in persistence.
-      description: Information about a callback's execution.
+          $ref: '#/components/schemas/CallbackExecutionOutcome'
     CallbackExecutionOutcome:
       type: object
       properties:
@@ -10840,7 +10777,6 @@ components:
           description: |-
             The failure if the callback was not able to complete successfully. e.g. timed out, received an
              unretriable error, etc.
-      description: The outcome of a callback's execution, either success or a failure.
     CallbackInfo:
       type: object
       properties:
@@ -10909,6 +10845,15 @@ components:
           additionalProperties:
             type: string
           description: Header to attach to callback request.
+    Callback_NexusOperationCompletion:
+      type: object
+      properties:
+        operationId:
+          type: string
+        runId:
+          type: string
+        requestId:
+          type: string
     Callback_Worker:
       type: object
       properties:
@@ -10920,10 +10865,10 @@ components:
              NOTE: This is not a temporal.api.taskqueue.v1.TaskQueue to avoid a circular dependency.
         service:
           type: string
-          description: Target Nexus service, e.g. "temporal.api.notificationservice.v1.NotificationService".
+          description: Target Nexus service, e.g. "HTTPAdaptor".
         operation:
           type: string
-          description: Target operation, e.g. "OnComplete".
+          description: Target operation, e.g. "DeliverAsWebhook".
         sourceContext:
           allOf:
             - $ref: '#/components/schemas/Payload'
@@ -12969,6 +12914,8 @@ components:
           $ref: '#/components/schemas/Link_NexusOperation'
         workflow:
           $ref: '#/components/schemas/Link_Workflow'
+        callback:
+          $ref: '#/components/schemas/Link_Callback'
       description: |-
         Link can be associated with history events. It might contain information about an external entity
          related to the history event. For example, workflow A makes a Nexus call that starts workflow B:
@@ -12993,6 +12940,16 @@ components:
         A link to a built-in batch job.
          Batch jobs can be used to perform operations on a set of workflows (e.g. terminate, signal, cancel, etc).
          This link can be put on workflow history events generated by actions taken by a batch job.
+    Link_Callback:
+      type: object
+      properties:
+        callbackId:
+          type: string
+        nexusOperationCompletion:
+          $ref: '#/components/schemas/Callback_NexusOperationCompletion'
+      description: |-
+        A link to a callback or completion handler for an operation. e.g. not a link to a standalone Nexus operation,
+         but the callback that was executed once that operation finished.
     Link_NexusOperation:
       type: object
       properties:

@@ -14517,20 +14517,19 @@ components:
     PollWorkflowExecutionTimeSkippingResponse:
       type: object
       properties:
-        result:
+        fastForwardPollingResult:
           enum:
-            - RESULT_UNSPECIFIED
-            - RESULT_POLL_TIMEOUT
-            - RESULT_FAST_FORWARD_COMPLETED
-            - RESULT_FAST_FORWARD_ID_MISMATCH
-            - RESULT_WORKFLOW_ENDED_BEFORE_FAST_FORWARD_COMPLETION
+            - FAST_FORWARD_COMPLETION_POLLING_RESULT_UNSPECIFIED
+            - FAST_FORWARD_COMPLETION_POLLING_RESULT_POLL_TIMEOUT
+            - FAST_FORWARD_COMPLETION_POLLING_RESULT_FAST_FORWARD_COMPLETED
+            - FAST_FORWARD_COMPLETION_POLLING_RESULT_FAST_FORWARD_ID_MISMATCH
+            - FAST_FORWARD_COMPLETION_POLLING_RESULT_EXECUTION_ENDED_BEFORE_FAST_FORWARD_COMPLETION
+            - FAST_FORWARD_COMPLETION_POLLING_RESULT_TIME_SKIPPING_DISABLED_BEFORE_FAST_FORWARD_COMPLETION
           type: string
-          description: The result of this poll.
+          description: The outcome of the poll for the fast-forward identified by the request's `fast_forward_id`.
           format: enum
         fastForwardInfo:
-          allOf:
-            - $ref: '#/components/schemas/TimeSkippingFastForwardInfo'
-          description: The execution's most recent fast forward. Unset if time skipping was enabled without a fast-forward.
+          $ref: '#/components/schemas/TimeSkippingFastForwardInfo'
     PollWorkflowTaskQueueResponse:
       type: object
       properties:
@@ -17808,7 +17807,7 @@ components:
              situations like unlimited retries when backoff is skipped.
 
              Every time the execution skips time, the skip count is incremented by one, and when it reaches
-             max_skip_per_session, time skipping stops.
+             max_session_skip_count, time skipping stops.
              For an execution with a chain of runs (retry, cron, continue-as-new), the count is accumulated
              across all runs within the same session. The count resets to 0 at the start of each new session,
              i.e. each time this config is updated to re-enable time skipping.
@@ -17819,7 +17818,7 @@ components:
       description: |-
         The configuration for time skipping of an execution.
          When time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.
-         Options like fast_forward, disable_propagation, and max_skip_per_session are provided for granular
+         Options like fast_forward, disable_propagation, and max_session_skip_count are provided for granular
          control of the execution's time skipping behavior. See each field's comment for a detailed explanation.
 
          An example of workflows with time skipping:
@@ -17827,7 +17826,7 @@ components:
          In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations, etc.
          User timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the
          time point of the registered fast-forward when there is no in-flight work.
-         Every time time is skipped, the skip count is incremented by one; max_skip_per_session bounds the number of skips allowed within a single time-skipping session.
+         Every time time is skipped, the skip count is incremented by one; max_session_skip_count bounds the number of skips allowed within a single time-skipping session.
          For child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,
          but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the
          "enabled" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the
@@ -17859,21 +17858,26 @@ components:
             Current virtual time of the execution. If the execution hasn't skipped
              any time yet, it will be the same as wall clock time.
           format: date-time
-        isRunning:
-          type: boolean
+        effectiveConfig:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingConfig'
           description: |-
-            If the execution is actively trying to skip time automatically when there is a chance,
-             this field will be set to true. If time has stopped skipping either by fast-forward completion,
-             max skip allowed checking, or user configuration, it will be false.
+            The current effective time-skipping config, which can differ from the config the user last set:
+             internally-defaulted fields are populated, and `enabled` reflects whether the execution is still
+             skipping time. The server sets `effective_config.enabled` to false once time skipping stops — e.g.
+             when `max_session_skip_count` is reached or the fast-forward completes — even if the user last set
+             it to true. When `effective_config.enabled` is true, the execution is still actively looking for
+             chances to skip time.
         fastForwardInfo:
           allOf:
             - $ref: '#/components/schemas/TimeSkippingFastForwardInfo'
           description: The execution's current fast-forward, if any. Unset if time skipping is enabled without a fast-forward.
-        maxSessionSkipCount:
-          type: integer
-          format: int32
         currentSessionSkipCount:
           type: integer
+          description: |-
+            The number of skips accumulated in the current session. A session starts each time the config is
+             set or updated to re-enable time skipping, so this resets to 0 then and is bounded by
+             `max_session_skip_count`.
           format: int32
       description: Describes the current time-skipping state of a workflow execution.
     TimeSkippingStatePropagation:
@@ -20396,7 +20400,7 @@ components:
         disabledAfterFastForward:
           type: boolean
           description: |-
-            When true, time skipping has been disabled automatically due to a call to fast_forward completing.
+            When true, time skipping has been stopped automatically due to a call to fast_forward completing.
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "after" is used to indicate temporal ordering. --)
         wallClockTime:
@@ -20405,7 +20409,7 @@ components:
           format: date-time
       description: |-
         Attributes for an event indicating that time skipping state changed for a workflow execution,
-         either time was advanced or time skipping was disabled automatically due to the fast_forward completing.
+         either time was advanced or time skipping was stopped automatically due to the fast_forward completing.
          The worker_may_ignore field in HistoryEvent should always be set true for this event.
     WorkflowExecutionTimedOutEventAttributes:
       type: object

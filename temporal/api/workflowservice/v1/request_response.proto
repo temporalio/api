@@ -19,6 +19,7 @@ import "temporal/api/enums/v1/reset.proto";
 import "temporal/api/enums/v1/task_queue.proto";
 import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/update.proto";
+import "temporal/api/enums/v1/time_skipping.proto";
 import "temporal/api/enums/v1/activity.proto";
 import "temporal/api/enums/v1/nexus.proto";
 import "temporal/api/activity/v1/message.proto";
@@ -3638,40 +3639,20 @@ message DeleteNexusOperationExecutionRequest {
 message DeleteNexusOperationExecutionResponse {
 }
 
-
-// A long-poll request that blocks until the time-skipping state of an execution changes, so callers
-// can observe fast-forward progress and time-skipping config updates without busy-polling.
+// A long-poll request that blocks according to a time-skipping waiting policy on the workflow
+// execution. Currently the only supported policy is waiting for completion of the fast-forward
+// identified by `fast_forward_id`; the poll also returns once anything else settles that outcome
+// (e.g. the execution ends or time skipping is disabled).
 message PollWorkflowExecutionTimeSkippingRequest {
-    string namespace = 1;
-    temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
-
-    // Required. Identifies the fast-forward whose completion the caller wants to wait for.
-    // Must match the `fast_forward_id` set in the execution's TimeSkippingConfig.
-    string fast_forward_id = 3;
+  string namespace = 1;
+  temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+  // Required. Identifies the fast-forward whose completion the caller wants to wait for.
+  // Must match the `fast_forward_id` set in the execution's TimeSkippingConfig.
+  string fast_forward_id = 3;
 }
 
 message PollWorkflowExecutionTimeSkippingResponse {
-    FastForwardCompletionPollingResult result = 1;
-    temporal.api.common.v1.TimeSkippingFastForwardInfo fast_forward_info = 2;
-    // The result of polling and waiting for fast-forward completion.
-    // RESULT_POLL_TIMEOUT and RESULT_FAST_FORWARD_COMPLETED are the normal poll outcomes; the remaining
-    // values indicate potential improper usage of fast-forward on the client side.
-    enum FastForwardCompletionPollingResult {
-        // Never returned; guards against an unset result.
-        RESULT_UNSPECIFIED = 0;
-        // The poll timed out server-side before the fast-forward completed. The caller may poll again.
-        RESULT_POLL_TIMEOUT = 1;
-        // The fast-forward identified by the request's `fast_forward_id` reached its target time and completed.
-        RESULT_FAST_FORWARD_COMPLETED = 2;
-        // The request's `fast_forward_id` does not match the execution's current `fast_forward_id`.
-        RESULT_FAST_FORWARD_ID_MISMATCH = 3;
-        // The request's `fast_forward_id` matched the execution's current `fast_forward_id`,
-        // but the workflow execution (the entire chain of runs) completed before the fast-forward
-        // had a chance to complete.
-        RESULT_EXECUTION_ENDED_BEFORE_FAST_FORWARD_COMPLETION = 5;
-        // The request's `fast_forward_id` matched the execution's current `fast_forward_id`,
-        // but time skipping was disabled (e.g. `max_session_skip_count` was reached) before the
-        // fast-forward could complete.
-        RESULT_TIME_SKIPPING_DISABLED_BEFORE_FAST_FORWARD_COMPLETION = 6;
-    }
+  // The outcome of the poll for the fast-forward identified by the request's `fast_forward_id`.
+  temporal.api.enums.v1.FastForwardCompletionPollingResult fast_forward_polling_result = 1;
+  temporal.api.common.v1.TimeSkippingFastForwardInfo fast_forward_info = 2;
 }

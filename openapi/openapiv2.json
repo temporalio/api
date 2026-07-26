@@ -4429,7 +4429,6 @@
     },
     "/api/v1/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/time-skipping/poll": {
       "get": {
-        "summary": "PollWorkflowExecutionTimeSkipping long-polls until the time-skipping state of a workflow\nexecution changes (its time-skipping config is updated or an active fast-forward completes),\nthen returns the reason and the current fast-forward info. It lets callers observe fast-forward\nprogress without busy-polling.",
         "operationId": "PollWorkflowExecutionTimeSkipping2",
         "responses": {
           "200": {
@@ -10013,7 +10012,6 @@
     },
     "/namespaces/{namespace}/workflows/{workflowExecution.workflowId}/time-skipping/poll": {
       "get": {
-        "summary": "PollWorkflowExecutionTimeSkipping long-polls until the time-skipping state of a workflow\nexecution changes (its time-skipping config is updated or an active fast-forward completes),\nthen returns the reason and the current fast-forward info. It lets callers observe fast-forward\nprogress without busy-polling.",
         "operationId": "PollWorkflowExecutionTimeSkipping",
         "responses": {
           "200": {
@@ -15932,19 +15930,6 @@
         }
       }
     },
-    "v1FastForwardCompletionPollingResult": {
-      "type": "string",
-      "enum": [
-        "FAST_FORWARD_COMPLETION_POLLING_RESULT_UNSPECIFIED",
-        "FAST_FORWARD_COMPLETION_POLLING_RESULT_POLL_TIMEOUT",
-        "FAST_FORWARD_COMPLETION_POLLING_RESULT_FAST_FORWARD_COMPLETED",
-        "FAST_FORWARD_COMPLETION_POLLING_RESULT_FAST_FORWARD_ID_MISMATCH",
-        "FAST_FORWARD_COMPLETION_POLLING_RESULT_EXECUTION_ENDED_BEFORE_FAST_FORWARD_COMPLETION",
-        "FAST_FORWARD_COMPLETION_POLLING_RESULT_TIME_SKIPPING_DISABLED_BEFORE_FAST_FORWARD_COMPLETION"
-      ],
-      "default": "FAST_FORWARD_COMPLETION_POLLING_RESULT_UNSPECIFIED",
-      "description": "FastForwardCompletionPollingResult is the result of polling and waiting for a fast-forward to complete\non a time-skipping execution.\nFAST_FORWARD_COMPLETION_POLLING_RESULT_POLL_TIMEOUT and FAST_FORWARD_COMPLETION_POLLING_RESULT_FAST_FORWARD_COMPLETED\nare the normal poll outcomes; the remaining values indicate potential improper usage of fast-forward on the client side.\n\n - FAST_FORWARD_COMPLETION_POLLING_RESULT_UNSPECIFIED: Never returned; guards against an unset result.\n - FAST_FORWARD_COMPLETION_POLLING_RESULT_POLL_TIMEOUT: The poll timed out server-side before the fast-forward completed. The caller may poll again.\n - FAST_FORWARD_COMPLETION_POLLING_RESULT_FAST_FORWARD_COMPLETED: The fast-forward identified by the request's `fast_forward_id` reached its target time and completed.\n - FAST_FORWARD_COMPLETION_POLLING_RESULT_FAST_FORWARD_ID_MISMATCH: The request's `fast_forward_id` does not match the execution's current `fast_forward_id`.\n - FAST_FORWARD_COMPLETION_POLLING_RESULT_EXECUTION_ENDED_BEFORE_FAST_FORWARD_COMPLETION: The request's `fast_forward_id` matched the execution's current `fast_forward_id`,\nbut the execution (the entire chain of runs) completed before the fast-forward\nhad a chance to complete.\n - FAST_FORWARD_COMPLETION_POLLING_RESULT_TIME_SKIPPING_DISABLED_BEFORE_FAST_FORWARD_COMPLETION: The request's `fast_forward_id` matched the execution's current `fast_forward_id`,\nbut time skipping was disabled (e.g. `max_session_skip_count` was reached) before the\nfast-forward could complete."
-    },
     "v1FastForwardConfig": {
       "type": "object",
       "properties": {
@@ -15954,9 +15939,22 @@
         },
         "duration": {
           "type": "string",
-          "description": "Fast-forward the current execution by this duration ahead of the current workflow time; required field.\nOnce the fast-forward completes, no further time is skipped. Time skipping can be resumed either\nby updating the TimeSkippingConfig with a new FastForwardConfig, or by clearing the FastForwardConfig\nto skip through to the end of the execution.\n\nIf this duration exceeds the remaining execution timeout, time will not pass beyond the end\nof the execution, and the fast-forward won't have a chance to complete."
+          "description": "Fast-forward the current execution by this duration ahead of the current execution time; required field.\nThe duration yields a target time (current execution time + duration), surfaced as `target_time` in\nTimeSkippingFastForwardInfo. Once virtual time reaches that target, the fast-forward completes, time\nskipping is disabled, and no further time is skipped. Time skipping can be resumed either\nby updating the TimeSkippingConfig with a new FastForwardConfig, or by clearing the FastForwardConfig\nto skip through to the end of the execution.\n\nIf this duration exceeds the remaining execution timeout, time will not pass beyond the end\nof the execution, and the fast-forward won't have a chance to complete."
         }
       }
+    },
+    "v1FastForwardPollingResult": {
+      "type": "string",
+      "enum": [
+        "FAST_FORWARD_POLLING_RESULT_UNSPECIFIED",
+        "FAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT",
+        "FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED",
+        "FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_ID_MISMATCH",
+        "FAST_FORWARD_POLLING_RESULT_EXECUTION_ENDED_BEFORE_FAST_FORWARD_COMPLETION",
+        "FAST_FORWARD_POLLING_RESULT_TIME_SKIPPING_DISABLED_BEFORE_FAST_FORWARD_COMPLETION"
+      ],
+      "default": "FAST_FORWARD_POLLING_RESULT_UNSPECIFIED",
+      "description": "FastForwardPollingResult is the result of polling and waiting for a fast-forward to complete\non a time-skipping execution.\nFAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT and FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED\nare the normal poll outcomes; the remaining values indicate potential improper usage of fast-forward on the client side.\n\n - FAST_FORWARD_POLLING_RESULT_UNSPECIFIED: Never returned; guards against an unset result.\n - FAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT: The poll timed out server-side before the fast-forward completed. The caller may poll again.\n - FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED: The fast-forward identified by the request's `fast_forward_id` reached its target time and completed.\n - FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_ID_MISMATCH: The request's `fast_forward_id` does not match the execution's current `fast_forward_id`.\n - FAST_FORWARD_POLLING_RESULT_EXECUTION_ENDED_BEFORE_FAST_FORWARD_COMPLETION: The request's `fast_forward_id` matched the execution's current `fast_forward_id`,\nbut the execution (the entire chain of runs) completed before the fast-forward\nhad a chance to complete.\n - FAST_FORWARD_POLLING_RESULT_TIME_SKIPPING_DISABLED_BEFORE_FAST_FORWARD_COMPLETION: The request's `fast_forward_id` matched the execution's current `fast_forward_id`,\nbut time skipping was disabled (e.g. `max_session_skip_count` was reached) before the\nfast-forward could complete."
     },
     "v1FetchWorkerConfigResponse": {
       "type": "object",
@@ -18101,7 +18099,7 @@
       "type": "object",
       "properties": {
         "fastForwardPollingResult": {
-          "$ref": "#/definitions/v1FastForwardCompletionPollingResult",
+          "$ref": "#/definitions/v1FastForwardPollingResult",
           "description": "The outcome of the poll for the fast-forward identified by the request's `fast_forward_id`."
         },
         "fastForwardInfo": {
@@ -20036,15 +20034,15 @@
         },
         "disablePropagation": {
           "type": "boolean",
-          "description": "By default, executions started by another execution (e.g. a child workflow of a parent workflow or\na schedule with the timeskipping policy enabled), inherit the \"enabled\" flag and skip time when possible.\nThis flag disables that inheritance."
+          "description": "By default, executions started by another execution (e.g. a child workflow of a parent workflow or\na schedule with the time-skipping policy enabled) inherit the \"enabled\" flag and skip time when possible.\nThis flag disables that inheritance."
         },
         "maxSessionSkipCount": {
           "type": "integer",
           "format": "int32",
-          "description": "The maximum number of skips allowed every time this field is updated. It protects the execution from\nsituations like unlimited retries when backoff is skipped.\n\nEvery time the execution skips time, the skip count is incremented by one, and when it reaches\nmax_session_skip_count, time skipping stops.\nFor an execution with a chain of runs (retry, cron, continue-as-new), the count is accumulated\nacross all runs within the same session. The count resets to 0 at the start of each new session,\ni.e. each time this config is updated to re-enable time skipping.\n\nIf this field is not set, the server applies a large default value (e.g. 100). The default can\nbe changed through dynamic config, and is overridden by this field when set."
+          "description": "The maximum number of skips allowed every time this field is updated. It protects the execution from\nsituations like unlimited retries when backoff is skipped.\n\nEvery time the execution skips time, the skip count is incremented by one, and when it reaches\nmax_session_skip_count, time skipping stops. Whenever this config field is updated, the accumulated\nskip count is cleared, marking the start of a new session.\nFor an execution with a chain of runs (retry, cron, continue-as-new), the count is accumulated\nacross all runs within the same session.\n\nIf this field is not set, the server applies a large default value (e.g. 100). The default can\nbe changed through dynamic config, and is overridden by this field when set."
         }
       },
-      "description": "The configuration for time skipping of an execution.\nWhen time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.\nOptions like fast_forward, disable_propagation, and max_session_skip_count are provided for granular\ncontrol of the execution's time skipping behavior. See each field's comment for a detailed explanation.\n\nAn example of workflows with time skipping:\nFor workflows, an execution is a chain of runs including retries, cron, and continue-as-new.\nIn-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations, etc.\nUser timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the\ntime point of the registered fast-forward when there is no in-flight work.\nEvery time time is skipped, the skip count is incremented by one; max_session_skip_count bounds the number of skips allowed within a single time-skipping session.\nFor child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,\nbut a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the\n\"enabled\" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the\nparent execution as its start time."
+      "description": "The configuration for time skipping of an execution.\nWhen time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.\nOptions like fast_forward, disable_propagation, and max_session_skip_count are provided for granular\ncontrol of the execution's time skipping behavior. See each field's comment for a detailed explanation.\n\nAn example of workflows with time skipping:\nFor workflows, an execution is a chain of runs including retries, cron, and continue-as-new.\nIn-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations, etc.\nUser timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the\ntime point of the registered fast-forward when there is no in-flight work.\nWhenever time is skipped, the skip count is incremented by one; max_session_skip_count bounds the number of skips allowed within a single time-skipping session.\nFor child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,\nbut a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the\n\"enabled\" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the\nparent execution as its start time."
     },
     "v1TimeSkippingFastForwardInfo": {
       "type": "object",
@@ -20079,7 +20077,7 @@
         },
         "effectiveConfig": {
           "$ref": "#/definitions/v1TimeSkippingConfig",
-          "description": "The current effective time-skipping config, which can differ from the config the user last set:\ninternally-defaulted fields are populated, and `enabled` reflects whether the execution is still\nskipping time. The server sets `effective_config.enabled` to false once time skipping stops — e.g.\nwhen `max_session_skip_count` is reached or the fast-forward completes — even if the user last set\nit to true. When `effective_config.enabled` is true, the execution is still actively looking for\nchances to skip time."
+          "description": "The current effective time-skipping config, which can differ from the config the user last set:\ninternally-defaulted fields are populated, and `enabled` reflects whether the execution is still\nskipping time — e.g. it is set to false once `max_session_skip_count` is reached, the fast-forward\ncompletes, or a client call disables time skipping."
         },
         "fastForwardInfo": {
           "$ref": "#/definitions/v1TimeSkippingFastForwardInfo",
@@ -20088,7 +20086,7 @@
         "currentSessionSkipCount": {
           "type": "integer",
           "format": "int32",
-          "description": "The number of skips accumulated in the current session. A session starts each time the config is\nset or updated to re-enable time skipping, so this resets to 0 then and is bounded by\n`max_session_skip_count`."
+          "description": "The number of skips accumulated in the current session, bounded by `max_session_skip_count`.\nA new session begins — and this resets to 0 — each time `max_session_skip_count` is updated."
         }
       },
       "description": "Describes the current time-skipping state of a workflow execution."
@@ -20412,7 +20410,7 @@
         "updateTime": {
           "type": "string",
           "format": "date-time",
-          "description": "The Workflow Execution time when the options were updated. When time skipping is\nenabled, this is the workflow's virtual time rather than wall-clock time.\n\nThis timestamp cannot be used for time-skipping fast-forward info verification,\nuse `fast_forward_id` instead."
+          "description": "The Workflow Execution time when the options were updated. When time skipping is\nenabled, this is the workflow's virtual time rather than wall-clock time.\n\nThis timestamp cannot be used for time-skipping fast-forward verification,\nuse `fast_forward_id` in `PollWorkflowExecutionTimeSkippingRequest` instead."
         }
       }
     },
@@ -21766,7 +21764,7 @@
           "description": "The wall-clock time when the time-skipping state changed event was generated."
         }
       },
-      "description": "Attributes for an event indicating that time skipping state changed for a workflow execution,\neither time was advanced or time skipping was stopped automatically due to the fast_forward completing.\nThe worker_may_ignore field in HistoryEvent should always be set true for this event."
+      "description": "Attributes for an event indicating that time skipping state changed for a workflow execution:\neither time was advanced, or time skipping was stopped automatically due to the fast_forward completing.\nThe worker_may_ignore field in HistoryEvent should always be set true for this event."
     },
     "v1WorkflowExecutionTimedOutEventAttributes": {
       "type": "object",

@@ -405,7 +405,7 @@ message OnConflictOptions {
 
 // The configuration for time skipping of an execution.
 // When time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.
-// Options like fast_forward, disable_propagation, and max_skip_per_session are provided for granular
+// Options like fast_forward, disable_propagation, and max_session_skip_count are provided for granular
 // control of the execution's time skipping behavior. See each field's comment for a detailed explanation.
 //
 // An example of workflows with time skipping:
@@ -413,7 +413,7 @@ message OnConflictOptions {
 // In-flight work includes activities, child workflows, Nexus operations, signal/cancel external workflow operations, etc.
 // User timers are not classified as in-flight work and will be skipped over; the virtual clock may also skip to the
 // time point of the registered fast-forward when there is no in-flight work.
-// Every time time is skipped, the skip count is incremented by one; max_skip_per_session bounds the number of skips allowed within a single time-skipping session.
+// Every time time is skipped, the skip count is incremented by one; max_session_skip_count bounds the number of skips allowed within a single time-skipping session.
 // For child workflows, by default, if the parent execution is skipping time, the child execution will also skip time,
 // but a parent's fast_forward won't affect its child's execution. A flag is provided to disable propagation of the
 // "enabled" flag to child workflows; regardless of that flag, a child workflow inherits the virtual time from the
@@ -435,7 +435,7 @@ message TimeSkippingConfig {
     // situations like unlimited retries when backoff is skipped.
     //
     // Every time the execution skips time, the skip count is incremented by one, and when it reaches
-    // max_skip_per_session, time skipping stops.
+    // max_session_skip_count, time skipping stops.
     // For an execution with a chain of runs (retry, cron, continue-as-new), the count is accumulated
     // across all runs within the same session. The count resets to 0 at the start of each new session,
     // i.e. each time this config is updated to re-enable time skipping.
@@ -484,9 +484,11 @@ message TimeSkippingInfo {
     google.protobuf.Timestamp current_time = 1;
 
     // The current effective time-skipping config, which can differ from the config the user last set:
-    // internally-defaulted fields are populated, and `enabled` may be flipped by the server based on the
-    // max_session_skip_count limit and fast-forward config.
-    // When `effective_config.enabled` is true, the execution is still actively looking for chances to skip time.
+    // internally-defaulted fields are populated, and `enabled` reflects whether the execution is still
+    // skipping time. The server sets `effective_config.enabled` to false once time skipping stops — e.g.
+    // when `max_session_skip_count` is reached or the fast-forward completes — even if the user last set
+    // it to true. When `effective_config.enabled` is true, the execution is still actively looking for
+    // chances to skip time.
     TimeSkippingConfig effective_config = 2;
 
     // The execution's current fast-forward, if any. Unset if time skipping is enabled without a fast-forward.

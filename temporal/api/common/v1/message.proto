@@ -483,17 +483,18 @@ message TimeSkippingInfo {
     // any time yet, it will be the same as wall clock time.
     google.protobuf.Timestamp current_time = 1;
 
-    // The current effective config of time skipping, which can be different from last user set config
-    // with interally populated fields with default value and `enabled` flipped by internally decision
-    // based on max_skip and fast-forward config.
-    // If `effective_config.enabled` is true, the current execution still actively tries to find a chance to skip time
-    // when possible.
+    // The current effective time-skipping config, which can differ from the config the user last set:
+    // internally-defaulted fields are populated, and `enabled` may be flipped by the server based on the
+    // max_session_skip_count limit and fast-forward config.
+    // When `effective_config.enabled` is true, the execution is still actively looking for chances to skip time.
     TimeSkippingConfig effective_config = 2;
 
     // The execution's current fast-forward, if any. Unset if time skipping is enabled without a fast-forward.
     TimeSkippingFastForwardInfo fast_forward_info = 4;
 
-    // The accumulated skip counts since max_skip is set.
+    // The number of skips accumulated in the current session. A session starts each time the config is
+    // set or updated to re-enable time skipping, so this resets to 0 then and is bounded by
+    // `max_session_skip_count`.
     int32 current_session_skip_count = 6;
 }
 

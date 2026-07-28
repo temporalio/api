@@ -12335,6 +12335,10 @@
         "startDelay": {
           "type": "string",
           "description": "Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts."
+        },
+        "propagatedNexusSerializationContext": {
+          "$ref": "#/definitions/v1PropagatedNexusSerializationContext",
+          "description": "Serialization context propagated from the Nexus caller that started this activity."
         }
       }
     },
@@ -12584,6 +12588,10 @@
         "timeSkippingConfig": {
           "$ref": "#/definitions/v1TimeSkippingConfig",
           "description": "Time-skipping configuration. If not set, time skipping is disabled."
+        },
+        "propagatedNexusSerializationContext": {
+          "$ref": "#/definitions/v1PropagatedNexusSerializationContext",
+          "description": "Serialization context propagated from the Nexus caller that started this workflow."
         }
       }
     },
@@ -13104,6 +13112,10 @@
                 "$ref": "#/definitions/apiCommonV1Link"
               },
               "description": "Links to be associated with this update."
+            },
+            "propagatedNexusSerializationContext": {
+              "$ref": "#/definitions/v1PropagatedNexusSerializationContext",
+              "description": "Serialization context propagated from the Nexus caller that started this update."
             }
           },
           "description": "The request information that will be delivered all the way down to the\nWorkflow Execution."
@@ -13518,6 +13530,10 @@
           "type": "string",
           "format": "date-time",
           "description": "The time at which the first activity task is made available for dispatch, computed as\n`schedule_time + start_delay`. Same as `schedule_time` if `start_delay` is not set."
+        },
+        "propagatedNexusSerializationContext": {
+          "$ref": "#/definitions/v1PropagatedNexusSerializationContext",
+          "description": "Serialization context propagated from the Nexus caller that started this activity."
         }
       },
       "description": "Information about a standalone activity."
@@ -18066,6 +18082,10 @@
         "pollerGroupsInfo": {
           "$ref": "#/definitions/v1PollerGroupsInfo",
           "description": "The weighted, versioned list of poller groups IDs that client should use for future polls to\nthis task queue. Client should ignore this if it has already applied a snapshot with a\nversion greater than or equal to `poller_groups_info.version`. Client is expected to:\n  1. Maintain minimum number of pollers no less than the number of groups.\n  2. Try to assign the next poll to a group without any pending polls,\n  3. If every group has some pending polls, assign the next poll to a group randomly\n    according to the weights."
+        },
+        "propagatedNexusSerializationContext": {
+          "$ref": "#/definitions/v1PropagatedNexusSerializationContext",
+          "description": "Serialization context propagated from the Nexus caller that started this workflow."
         }
       }
     },
@@ -18180,6 +18200,22 @@
         }
       },
       "description": "Priority contains metadata that controls relative ordering of task processing\nwhen tasks are backed up in a queue. Initially, Priority will be used in\nmatching (workflow and activity) task queues. Later it may be used in history\ntask queues and in rate limiting decisions.\n\nPriority is attached to workflows and activities. By default, activities\ninherit Priority from the workflow that created them, but may override fields\nwhen an activity is started or modified.\n\nDespite being named \"Priority\", this message also contains fields that\ncontrol \"fairness\" mechanisms.\n\nFor all fields, the field not present or equal to zero/empty string means to\ninherit the value from the calling workflow, or if there is no calling\nworkflow, then use the default value.\n\nFor all fields other than fairness_key, the zero value isn't meaningful so\nthere's no confusion between inherit/default and a meaningful value. For\nfairness_key, the empty string will be interpreted as \"inherit\". This means\nthat if a workflow has a non-empty fairness key, you can't override the\nfairness key of its activity to the empty string.\n\nThe overall semantics of Priority are:\n1. First, consider \"priority\": higher priority (lower number) goes first.\n2. Then, consider fairness: try to dispatch tasks for different fairness keys\n   in proportion to their weight.\n\nApplications may use any subset of mechanisms that are useful to them and\nleave the other fields to use default values.\n\nNot all queues in the system may support the \"full\" semantics of all priority\nfields. (Currently only support in matching task queues is planned.)"
+    },
+    "v1PropagatedNexusSerializationContext": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string"
+        },
+        "service": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string",
+          "description": "If more context is needed, this message can be extended with additional fields."
+        }
+      },
+      "description": "PropagatedNexusSerializationContext represents the context of the Nexus caller that started this entity.\nIf multiple Nexus callers attempt to attach to the same entity the server will verify that\neach field matches, if any field does not match then the request will be rejected."
     },
     "v1QueryRejectCondition": {
       "type": "string",
@@ -18421,6 +18457,10 @@
             "$ref": "#/definitions/v1Link"
           },
           "description": "Links to be associated with this update."
+        },
+        "propagatedNexusSerializationContext": {
+          "$ref": "#/definitions/v1PropagatedNexusSerializationContext",
+          "description": "Serialization context propagated from the Nexus caller that started this update."
         }
       },
       "description": "The client request that triggers a Workflow Update."
@@ -21086,6 +21126,10 @@
         "pauseInfo": {
           "$ref": "#/definitions/v1WorkflowExecutionPauseInfo",
           "description": "Information about the workflow execution pause operation."
+        },
+        "propagatedNexusSerializationContext": {
+          "$ref": "#/definitions/v1PropagatedNexusSerializationContext",
+          "description": "Serialization context propagated from the Nexus caller that started this workflow."
         }
       },
       "description": "Holds all the extra information about workflow execution that is not part of Visibility."

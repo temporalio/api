@@ -13,7 +13,8 @@ option csharp_namespace = "Temporalio.Api.Enums.V1";
 // FastForwardPollingResult is the result of polling and waiting for a fast-forward to complete
 // on a time-skipping execution.
 // FAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT and FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED
-// are the normal poll outcomes; the remaining values indicate potential improper usage of fast-forward on the client side.
+// are the normal poll outcomes; FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_FAILED means the
+// fast-forward can no longer complete.
 enum FastForwardPollingResult {
     // Never returned; guards against an unset result.
     FAST_FORWARD_POLLING_RESULT_UNSPECIFIED = 0;
@@ -21,19 +22,10 @@ enum FastForwardPollingResult {
     FAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT = 1;
     // The fast-forward identified by the request's `fast_forward_id` reached its target time and completed.
     FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED = 2;
-    // The request's `fast_forward_id` does not match the execution's current `fast_forward_id`.
-    FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_ID_MISMATCH = 3;
-    // The request's `fast_forward_id` matched the execution's current `fast_forward_id`,
-    // but the execution (the entire chain of runs) completed before the fast-forward
-    // had a chance to complete.
-    FAST_FORWARD_POLLING_RESULT_EXECUTION_ENDED_BEFORE_FAST_FORWARD_COMPLETION = 5;
-    // The request's `fast_forward_id` matched the execution's current `fast_forward_id`,
-    // but time skipping was disabled (e.g. `max_session_skip_count` was reached) before the
-    // fast-forward could complete.
-    FAST_FORWARD_POLLING_RESULT_TIME_SKIPPING_DISABLED_BEFORE_FAST_FORWARD_COMPLETION = 6;
-    // The user reset the fast-forward while the poll was in flight, i.e. updated the
-    // TimeSkippingConfig with a new FastForwardConfig reusing the same `fast_forward_id`.
-    // The caller decides whether to poll again for the new fast-forward or treat this as a
-    // client-side bug.
-    FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_RESET_BY_USER = 7;
+    // The fast-forward can no longer complete, which usually indicates improper usage of
+    // fast-forward on the client side. Possible reasons: the `fast_forward_id` does not match
+    // the execution's current fast-forward, the execution ended before the fast-forward
+    // completed, the fast-forward config was updated while the poll was in flight, etc.
+    // See `failed_reason` in the response for the specific cause.
+    FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_FAILED = 3;
 }

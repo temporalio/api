@@ -15949,13 +15949,10 @@
         "FAST_FORWARD_POLLING_RESULT_UNSPECIFIED",
         "FAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT",
         "FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED",
-        "FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_ID_MISMATCH",
-        "FAST_FORWARD_POLLING_RESULT_EXECUTION_ENDED_BEFORE_FAST_FORWARD_COMPLETION",
-        "FAST_FORWARD_POLLING_RESULT_TIME_SKIPPING_DISABLED_BEFORE_FAST_FORWARD_COMPLETION",
-        "FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_RESET_BY_USER"
+        "FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_FAILED"
       ],
       "default": "FAST_FORWARD_POLLING_RESULT_UNSPECIFIED",
-      "description": "FastForwardPollingResult is the result of polling and waiting for a fast-forward to complete\non a time-skipping execution.\nFAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT and FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED\nare the normal poll outcomes; the remaining values indicate potential improper usage of fast-forward on the client side.\n\n - FAST_FORWARD_POLLING_RESULT_UNSPECIFIED: Never returned; guards against an unset result.\n - FAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT: The poll timed out server-side before the fast-forward completed. The caller may poll again.\n - FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED: The fast-forward identified by the request's `fast_forward_id` reached its target time and completed.\n - FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_ID_MISMATCH: The request's `fast_forward_id` does not match the execution's current `fast_forward_id`.\n - FAST_FORWARD_POLLING_RESULT_EXECUTION_ENDED_BEFORE_FAST_FORWARD_COMPLETION: The request's `fast_forward_id` matched the execution's current `fast_forward_id`,\nbut the execution (the entire chain of runs) completed before the fast-forward\nhad a chance to complete.\n - FAST_FORWARD_POLLING_RESULT_TIME_SKIPPING_DISABLED_BEFORE_FAST_FORWARD_COMPLETION: The request's `fast_forward_id` matched the execution's current `fast_forward_id`,\nbut time skipping was disabled (e.g. `max_session_skip_count` was reached) before the\nfast-forward could complete.\n - FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_RESET_BY_USER: The user reset the fast-forward while the poll was in flight, i.e. updated the\nTimeSkippingConfig with a new FastForwardConfig reusing the same `fast_forward_id`.\nThe caller decides whether to poll again for the new fast-forward or treat this as a\nclient-side bug."
+      "description": "FastForwardPollingResult is the result of polling and waiting for a fast-forward to complete\non a time-skipping execution.\nFAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT and FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED\nare the normal poll outcomes; FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_FAILED means the\nfast-forward can no longer complete.\n\n - FAST_FORWARD_POLLING_RESULT_UNSPECIFIED: Never returned; guards against an unset result.\n - FAST_FORWARD_POLLING_RESULT_POLL_TIMEOUT: The poll timed out server-side before the fast-forward completed. The caller may poll again.\n - FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_COMPLETED: The fast-forward identified by the request's `fast_forward_id` reached its target time and completed.\n - FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_FAILED: The fast-forward can no longer complete, which usually indicates improper usage of\nfast-forward on the client side. Possible reasons: the `fast_forward_id` does not match\nthe execution's current fast-forward, the execution ended before the fast-forward\ncompleted, the fast-forward config was updated while the poll was in flight, etc.\nSee `failed_reason` in the response for the specific cause."
     },
     "v1FetchWorkerConfigResponse": {
       "type": "object",
@@ -18103,8 +18100,13 @@
           "$ref": "#/definitions/v1FastForwardPollingResult",
           "description": "The outcome of the poll for the fast-forward identified by the request's `fast_forward_id`."
         },
+        "failedReason": {
+          "type": "string",
+          "description": "Set only when the result is FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_FAILED; explains why\nthe fast-forward can no longer complete."
+        },
         "fastForwardInfo": {
-          "$ref": "#/definitions/v1TimeSkippingFastForwardInfo"
+          "$ref": "#/definitions/v1TimeSkippingFastForwardInfo",
+          "description": "The execution's current fast-forward, if any."
         }
       }
     },

@@ -10946,6 +10946,102 @@
       },
       "description": "Target a worker polling on a Nexus task queue in a specific namespace."
     },
+    "EnvironmentInfoArchitecture": {
+      "type": "string",
+      "enum": [
+        "ARCHITECTURE_UNSPECIFIED",
+        "ARCHITECTURE_AMD64",
+        "ARCHITECTURE_ARM64"
+      ],
+      "default": "ARCHITECTURE_UNSPECIFIED"
+    },
+    "EnvironmentInfoHostingEnvironment": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/HostingEnvironmentHostingEnvironmentType",
+          "description": "The type of hosting environment."
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the hosting environment, if obtainable."
+        }
+      }
+    },
+    "EnvironmentInfoLinuxPlatform": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "The Linux kernel or distribution version, if obtainable."
+        },
+        "architecture": {
+          "$ref": "#/definitions/EnvironmentInfoArchitecture",
+          "description": "The architecture of the worker process."
+        },
+        "libc": {
+          "$ref": "#/definitions/LinuxPlatformLibc",
+          "description": "The libc used by the worker process."
+        }
+      }
+    },
+    "EnvironmentInfoMacOSPlatform": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "The macOS version, if obtainable."
+        },
+        "architecture": {
+          "$ref": "#/definitions/EnvironmentInfoArchitecture",
+          "description": "The architecture of the worker process."
+        }
+      }
+    },
+    "EnvironmentInfoPlatform": {
+      "type": "object",
+      "properties": {
+        "linux": {
+          "$ref": "#/definitions/EnvironmentInfoLinuxPlatform"
+        },
+        "macos": {
+          "$ref": "#/definitions/EnvironmentInfoMacOSPlatform"
+        },
+        "windows": {
+          "$ref": "#/definitions/EnvironmentInfoWindowsPlatform"
+        }
+      }
+    },
+    "EnvironmentInfoRuntime": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/RuntimeRuntimeType",
+          "description": "The type of the runtime."
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the runtime, if obtainable."
+        }
+      }
+    },
+    "EnvironmentInfoWindowsPlatform": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "The Windows version, if obtainable."
+        },
+        "architecture": {
+          "$ref": "#/definitions/EnvironmentInfoArchitecture",
+          "description": "The architecture of the worker process."
+        },
+        "crt": {
+          "$ref": "#/definitions/WindowsPlatformCrt",
+          "description": "The C runtime used by the worker process, if obtainable."
+        }
+      }
+    },
     "EventGroupMarkerInboundEvent": {
       "type": "object",
       "properties": {
@@ -10964,6 +11060,23 @@
         }
       },
       "description": "The identifier of an inbound Update (request.meta.update_id)\nwhose handler triggered implicit creation of this group Marker.\n\nUsed in place of `inbound_event_id` for Updates because the event ID of the\nUpdateAccepted history event is not known until the Workflow Task is\ncompleted and recorded by the server, which may be too late."
+    },
+    "HostingEnvironmentHostingEnvironmentType": {
+      "type": "string",
+      "enum": [
+        "HOSTING_ENVIRONMENT_TYPE_UNSPECIFIED",
+        "HOSTING_ENVIRONMENT_TYPE_DOCKER",
+        "HOSTING_ENVIRONMENT_TYPE_K8S",
+        "HOSTING_ENVIRONMENT_TYPE_AWS_LAMBDA",
+        "HOSTING_ENVIRONMENT_TYPE_AWS_ECS",
+        "HOSTING_ENVIRONMENT_TYPE_GOOGLE_CLOUD_RUN",
+        "HOSTING_ENVIRONMENT_TYPE_GOOGLE_APP_ENGINE",
+        "HOSTING_ENVIRONMENT_TYPE_AZURE_APP_SERVICE",
+        "HOSTING_ENVIRONMENT_TYPE_AZURE_FUNCTIONS",
+        "HOSTING_ENVIRONMENT_TYPE_AZURE_CONTAINER_APPS"
+      ],
+      "default": "HOSTING_ENVIRONMENT_TYPE_UNSPECIFIED",
+      "description": "What kind of hosting environment we're running in. This list is about what can actually be\ndetected reliably and is unrelated to what SDKs can actually run in.\n\n - HOSTING_ENVIRONMENT_TYPE_UNSPECIFIED: Should never actually be set, exists to follow convention of having a default.\nSDKs should just leave `hosting_environments` empty if none can be determined.\n - HOSTING_ENVIRONMENT_TYPE_DOCKER: Should always be in the list if we're running inside a docker container\n - HOSTING_ENVIRONMENT_TYPE_K8S: Should always be in the list if we're running inside any k8s environment\n - HOSTING_ENVIRONMENT_TYPE_AWS_LAMBDA: Detect via `AWS_LAMBDA_FUNCTION_NAME`\n - HOSTING_ENVIRONMENT_TYPE_AWS_ECS: Detect via `ECS_CONTAINER_METADATA_URI_V4` or `ECS_CONTAINER_METADATA_URI`\n - HOSTING_ENVIRONMENT_TYPE_GOOGLE_CLOUD_RUN: Detect via `K_SERVICE`\n - HOSTING_ENVIRONMENT_TYPE_GOOGLE_APP_ENGINE: Detect via `GAE_SERVICE`\n - HOSTING_ENVIRONMENT_TYPE_AZURE_APP_SERVICE: Detect via `WEBSITE_SITE_NAME`\n - HOSTING_ENVIRONMENT_TYPE_AZURE_FUNCTIONS: Detect via `FUNCTIONS_EXTENSION_VERSION`\n - HOSTING_ENVIRONMENT_TYPE_AZURE_CONTAINER_APPS: Detect via `CONTAINER_APP_NAME`"
     },
     "LinkActivity": {
       "type": "object",
@@ -11042,6 +11155,15 @@
         }
       }
     },
+    "LinuxPlatformLibc": {
+      "type": "string",
+      "enum": [
+        "LIBC_UNSPECIFIED",
+        "LIBC_GLIBC",
+        "LIBC_MUSL"
+      ],
+      "default": "LIBC_UNSPECIFIED"
+    },
     "ListWorkerDeploymentsResponseWorkerDeploymentSummary": {
       "type": "object",
       "properties": {
@@ -11082,6 +11204,11 @@
           "type": "string",
           "format": "int64",
           "description": "Maximum total memo size in bytes per workflow execution."
+        },
+        "workflowTaskCompletionSizeLimitError": {
+          "type": "string",
+          "format": "int64",
+          "description": "Maximum total size in bytes of a single RespondWorkflowTaskCompleted request.\nRequests exceeding this fail the workflow task with\nWORKFLOW_TASK_FAILED_CAUSE_REQUEST_TOO_LARGE. 0 means no explicit limit."
         }
       }
     },
@@ -11197,6 +11324,24 @@
       },
       "description": "UpdateWorkflowOptions represents updating workflow execution options after a workflow reset.\nKeep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest."
     },
+    "RuntimeRuntimeType": {
+      "type": "string",
+      "enum": [
+        "RUNTIME_TYPE_UNSPECIFIED",
+        "RUNTIME_TYPE_JVM",
+        "RUNTIME_TYPE_CPYTHON",
+        "RUNTIME_TYPE_NODE",
+        "RUNTIME_TYPE_BUN",
+        "RUNTIME_TYPE_CRUBY",
+        "RUNTIME_TYPE_GO",
+        "RUNTIME_TYPE_DOTNET_FRAMEWORK",
+        "RUNTIME_TYPE_DOTNET_CORE",
+        "RUNTIME_TYPE_NATIVE",
+        "RUNTIME_TYPE_ROADRUNNER"
+      ],
+      "default": "RUNTIME_TYPE_UNSPECIFIED",
+      "description": " - RUNTIME_TYPE_UNSPECIFIED: Should never actually be set, exists to follow convention of having a default.\nSDKs should just leave `runtimes` empty if none can be determined."
+    },
     "UpdateTaskQueueConfigRequestRateLimitUpdate": {
       "type": "object",
       "properties": {
@@ -11241,6 +11386,17 @@
       ],
       "default": "PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED",
       "description": " - PINNED_OVERRIDE_BEHAVIOR_UNSPECIFIED: Unspecified.\n - PINNED_OVERRIDE_BEHAVIOR_PINNED: Override workflow behavior to be Pinned."
+    },
+    "WindowsPlatformCrt": {
+      "type": "string",
+      "enum": [
+        "CRT_UNSPECIFIED",
+        "CRT_UCRT",
+        "CRT_MSVCRT",
+        "CRT_MINGW",
+        "CRT_CYGWIN"
+      ],
+      "default": "CRT_UNSPECIFIED"
     },
     "WorkerConfigAutoscalingPollerBehavior": {
       "type": "object",
@@ -15697,6 +15853,31 @@
       },
       "description": "Target to route requests to."
     },
+    "v1EnvironmentInfo": {
+      "type": "object",
+      "properties": {
+        "runtimes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/EnvironmentInfoRuntime"
+          },
+          "description": "The runtime(s) the SDK is operating in."
+        },
+        "hostingEnvironments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/EnvironmentInfoHostingEnvironment"
+          },
+          "description": "The hosting environment(s) the SDK is operating in. Repeated to allow for layering (ex: Docker inside k8s)."
+        },
+        "platform": {
+          "$ref": "#/definitions/EnvironmentInfoPlatform",
+          "description": "The platform the SDK is operating on."
+        }
+      }
+    },
     "v1EventGroupMarker": {
       "type": "object",
       "properties": {
@@ -18347,6 +18528,10 @@
         },
         "queryRejected": {
           "$ref": "#/definitions/v1QueryRejected"
+        },
+        "link": {
+          "$ref": "#/definitions/v1Link",
+          "description": "Holds the link to the Workflow execution that processed the Query."
         }
       }
     },
@@ -20869,6 +21054,10 @@
             "$ref": "#/definitions/v1StorageDriverInfo"
           },
           "description": "Storage drivers in use by this SDK."
+        },
+        "environment": {
+          "$ref": "#/definitions/v1EnvironmentInfo",
+          "description": "Information about the environment this SDK is running in."
         }
       },
       "description": "Worker info message, contains information about the worker and its current state.\nAll information is provided by the worker itself."
@@ -22189,10 +22378,11 @@
         "WORKFLOW_TASK_FAILED_CAUSE_GRPC_MESSAGE_TOO_LARGE",
         "WORKFLOW_TASK_FAILED_CAUSE_PAYLOADS_TOO_LARGE",
         "WORKFLOW_TASK_FAILED_CAUSE_EXTERNAL_STORAGE_FAILURE",
-        "WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_PAUSE_REQUESTED_BEFORE_TASK_STARTED"
+        "WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_PAUSE_REQUESTED_BEFORE_TASK_STARTED",
+        "WORKFLOW_TASK_FAILED_CAUSE_REQUEST_TOO_LARGE"
       ],
       "default": "WORKFLOW_TASK_FAILED_CAUSE_UNSPECIFIED",
-      "description": "Workflow tasks can fail for various reasons. Note that some of these reasons can only originate\nfrom the server, and some of them can only originate from the SDK/worker.\n\n - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_COMMAND: Between starting and completing the workflow task (with a workflow completion command), some\nnew command (like a signal) was processed into workflow history. The outstanding task will be\nfailed with this reason, and a worker must pick up a new task.\n - WORKFLOW_TASK_FAILED_CAUSE_RESET_STICKY_TASK_QUEUE: The worker wishes to fail the task and have the next one be generated on a normal, not sticky\nqueue. Generally workers should prefer to use the explicit `ResetStickyTaskQueue` RPC call.\n - WORKFLOW_TASK_FAILED_CAUSE_NON_DETERMINISTIC_ERROR: The worker encountered a mismatch while replaying history between what was expected, and\nwhat the workflow code actually did.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_CHILD_WORKFLOWS_LIMIT_EXCEEDED: We send the below error codes to users when their requests would violate a size constraint\nof their workflow. We do this to ensure that the state of their workflow does not become too\nlarge because that can cause severe performance degradation. You can modify the thresholds for\neach of these errors within your dynamic config.\n\nSpawning a new child workflow would cause this workflow to exceed its limit of pending child\nworkflows.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_ACTIVITIES_LIMIT_EXCEEDED: Starting a new activity would cause this workflow to exceed its limit of pending activities\nthat we track.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_SIGNALS_LIMIT_EXCEEDED: A workflow has a buffer of signals that have not yet reached their destination. We return this\nerror when sending a new signal would exceed the capacity of this buffer.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_REQUEST_CANCEL_LIMIT_EXCEEDED: Similarly, we have a buffer of pending requests to cancel other workflows. We return this error\nwhen our capacity for pending cancel requests is already reached.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_UPDATE_WORKFLOW_EXECUTION_MESSAGE: Workflow execution update message (update.Acceptance, update.Rejection, or update.Response)\nhas wrong format, or missing required fields.\n - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_UPDATE: Similar to WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_COMMAND, but for updates.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_SCHEDULE_NEXUS_OPERATION_ATTRIBUTES: A workflow task completed with an invalid ScheduleNexusOperation command.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_NEXUS_OPERATIONS_LIMIT_EXCEEDED: A workflow task completed requesting to schedule a Nexus Operation exceeding the server configured limit.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_NEXUS_OPERATION_ATTRIBUTES: A workflow task completed with an invalid RequestCancelNexusOperation command.\n - WORKFLOW_TASK_FAILED_CAUSE_FEATURE_DISABLED: A workflow task completed requesting a feature that's disabled on the server (either system wide or - typically -\nfor the workflow's namespace).\nCheck the workflow task failure message for more information.\n - WORKFLOW_TASK_FAILED_CAUSE_GRPC_MESSAGE_TOO_LARGE: A workflow task failed because a grpc message was too large.\n - WORKFLOW_TASK_FAILED_CAUSE_PAYLOADS_TOO_LARGE: A workflow task failed because payloads were too large.\n - WORKFLOW_TASK_FAILED_CAUSE_EXTERNAL_STORAGE_FAILURE: A workflow task failed because an external storage operation failed.\nCheck the workflow task failure message for more information.\n - WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_PAUSE_REQUESTED_BEFORE_TASK_STARTED: A workflow task is failed because the workflow is paused before the task is started."
+      "description": "Workflow tasks can fail for various reasons. Note that some of these reasons can only originate\nfrom the server, and some of them can only originate from the SDK/worker.\n\n - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_COMMAND: Between starting and completing the workflow task (with a workflow completion command), some\nnew command (like a signal) was processed into workflow history. The outstanding task will be\nfailed with this reason, and a worker must pick up a new task.\n - WORKFLOW_TASK_FAILED_CAUSE_RESET_STICKY_TASK_QUEUE: The worker wishes to fail the task and have the next one be generated on a normal, not sticky\nqueue. Generally workers should prefer to use the explicit `ResetStickyTaskQueue` RPC call.\n - WORKFLOW_TASK_FAILED_CAUSE_NON_DETERMINISTIC_ERROR: The worker encountered a mismatch while replaying history between what was expected, and\nwhat the workflow code actually did.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_CHILD_WORKFLOWS_LIMIT_EXCEEDED: We send the below error codes to users when their requests would violate a size constraint\nof their workflow. We do this to ensure that the state of their workflow does not become too\nlarge because that can cause severe performance degradation. You can modify the thresholds for\neach of these errors within your dynamic config.\n\nSpawning a new child workflow would cause this workflow to exceed its limit of pending child\nworkflows.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_ACTIVITIES_LIMIT_EXCEEDED: Starting a new activity would cause this workflow to exceed its limit of pending activities\nthat we track.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_SIGNALS_LIMIT_EXCEEDED: A workflow has a buffer of signals that have not yet reached their destination. We return this\nerror when sending a new signal would exceed the capacity of this buffer.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_REQUEST_CANCEL_LIMIT_EXCEEDED: Similarly, we have a buffer of pending requests to cancel other workflows. We return this error\nwhen our capacity for pending cancel requests is already reached.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_UPDATE_WORKFLOW_EXECUTION_MESSAGE: Workflow execution update message (update.Acceptance, update.Rejection, or update.Response)\nhas wrong format, or missing required fields.\n - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_UPDATE: Similar to WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_COMMAND, but for updates.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_SCHEDULE_NEXUS_OPERATION_ATTRIBUTES: A workflow task completed with an invalid ScheduleNexusOperation command.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_NEXUS_OPERATIONS_LIMIT_EXCEEDED: A workflow task completed requesting to schedule a Nexus Operation exceeding the server configured limit.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_NEXUS_OPERATION_ATTRIBUTES: A workflow task completed with an invalid RequestCancelNexusOperation command.\n - WORKFLOW_TASK_FAILED_CAUSE_FEATURE_DISABLED: A workflow task completed requesting a feature that's disabled on the server (either system wide or - typically -\nfor the workflow's namespace).\nCheck the workflow task failure message for more information.\n - WORKFLOW_TASK_FAILED_CAUSE_GRPC_MESSAGE_TOO_LARGE: A workflow task failed because a grpc message was too large.\n - WORKFLOW_TASK_FAILED_CAUSE_PAYLOADS_TOO_LARGE: A workflow task failed because payloads were too large.\n - WORKFLOW_TASK_FAILED_CAUSE_EXTERNAL_STORAGE_FAILURE: A workflow task failed because an external storage operation failed.\nCheck the workflow task failure message for more information.\n - WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_PAUSE_REQUESTED_BEFORE_TASK_STARTED: A workflow task is failed because the workflow is paused before the task is started.\n - WORKFLOW_TASK_FAILED_CAUSE_REQUEST_TOO_LARGE: A workflow task failed because the request exceeded a size limit."
     },
     "v1WorkflowTaskFailedEventAttributes": {
       "type": "object",

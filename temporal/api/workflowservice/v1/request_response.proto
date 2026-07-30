@@ -19,6 +19,7 @@ import "temporal/api/enums/v1/reset.proto";
 import "temporal/api/enums/v1/task_queue.proto";
 import "temporal/api/enums/v1/deployment.proto";
 import "temporal/api/enums/v1/update.proto";
+import "temporal/api/enums/v1/time_skipping.proto";
 import "temporal/api/enums/v1/activity.proto";
 import "temporal/api/enums/v1/nexus.proto";
 import "temporal/api/activity/v1/message.proto";
@@ -2450,6 +2451,9 @@ message UpdateWorkflowExecutionOptionsResponse {
 
     // The Workflow Execution time when the options were updated. When time skipping is
     // enabled, this is the workflow's virtual time rather than wall-clock time.
+    //
+    // This timestamp cannot be used for time-skipping fast-forward verification,
+    // use `fast_forward_id` in `PollWorkflowExecutionTimeSkippingRequest` instead.
     google.protobuf.Timestamp update_time = 2;
 }
 
@@ -3635,4 +3639,26 @@ message DeleteNexusOperationExecutionRequest {
 }
 
 message DeleteNexusOperationExecutionResponse {
+}
+
+// A long-poll request that blocks according to a time-skipping waiting policy on the workflow
+// execution. Currently the only supported policy is waiting for completion of the fast-forward
+// identified by `fast_forward_id`; the poll also returns once anything else settles that outcome
+// (e.g. the execution ends or time skipping is disabled).
+message PollWorkflowExecutionTimeSkippingRequest {
+  string namespace = 1;
+  temporal.api.common.v1.WorkflowExecution workflow_execution = 2;
+  // Required. Identifies the fast-forward whose completion the caller wants to wait for.
+  // Must match the `fast_forward_id` set in the execution's TimeSkippingConfig.
+  string fast_forward_id = 3;
+}
+
+message PollWorkflowExecutionTimeSkippingResponse {
+  // The outcome of the poll for the fast-forward identified by the request's `fast_forward_id`.
+  temporal.api.enums.v1.FastForwardPollingResult fast_forward_polling_result = 1;
+  // Set only when the result is FAST_FORWARD_POLLING_RESULT_FAST_FORWARD_FAILED; explains why
+  // the fast-forward can no longer complete.
+  string failed_reason = 2;
+  // The execution's current fast-forward, if any.
+  temporal.api.common.v1.TimeSkippingFastForwardInfo fast_forward_info = 3;
 }

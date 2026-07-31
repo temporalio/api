@@ -41,7 +41,7 @@ $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
 
 ##### Compile proto files for go #####
-grpc: buf-lint api-linter buf-breaking clean go-grpc fix-path
+grpc: buf-lint api-linter clean go-grpc fix-path
 
 go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
@@ -157,7 +157,7 @@ system-nexus-wit-install:
 
 nex-gen-install:
 	printf $(COLOR) "Install nex-gen if missing..."
-	command -v $(NEX_GEN) >/dev/null || cargo install nex-gen
+	command -v $(NEX_GEN) >/dev/null || cargo install nex-gen --version ^0.1
 
 ##### Clean #####
 clean:

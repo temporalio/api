@@ -283,13 +283,13 @@ paths:
          If there are multiple pending activities of the provided type - all of them will be unpaused.
 
          If activity is not paused, this call will have no effect.
-         Dispatch delays keep running while an activity is paused, and unpause honors whatever remains of
-         them: an activity paused inside a retry backoff or a start_delay is scheduled when that delay
-         elapses, and immediately (* see 'jitter' flag) if it already has.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
          Once the activity is unpaused, all timeout timers will be regenerated.
 
          Flags:
          'jitter': the activity will be scheduled at a random time within the jitter duration.
+         'reset_attempts': the number of attempts will be reset.
+         'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID or type
          This API will be deprecated soon and replaced with a newer UnpauseActivityExecution that is better named and
@@ -873,9 +873,7 @@ paths:
          This API can be used to target a workflow activity or a standalone activity.
 
          If activity is not paused, this call will have no effect.
-         Dispatch delays keep running while an activity is paused, and unpause honors whatever remains of
-         them: an activity paused inside a retry backoff or a start_delay is scheduled when that delay
-         elapses, and immediately (* see 'jitter' flag) if it already has.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
          Once the activity is unpaused, all timeout timers will be regenerated.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID
@@ -4170,9 +4168,7 @@ paths:
          This API can be used to target a workflow activity or a standalone activity.
 
          If activity is not paused, this call will have no effect.
-         Dispatch delays keep running while an activity is paused, and unpause honors whatever remains of
-         them: an activity paused inside a retry backoff or a start_delay is scheduled when that delay
-         elapses, and immediately (* see 'jitter' flag) if it already has.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
          Once the activity is unpaused, all timeout timers will be regenerated.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID
@@ -5385,13 +5381,13 @@ paths:
          If there are multiple pending activities of the provided type - all of them will be unpaused.
 
          If activity is not paused, this call will have no effect.
-         Dispatch delays keep running while an activity is paused, and unpause honors whatever remains of
-         them: an activity paused inside a retry backoff or a start_delay is scheduled when that delay
-         elapses, and immediately (* see 'jitter' flag) if it already has.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
          Once the activity is unpaused, all timeout timers will be regenerated.
 
          Flags:
          'jitter': the activity will be scheduled at a random time within the jitter duration.
+         'reset_attempts': the number of attempts will be reset.
+         'reset_heartbeat': the activity heartbeat timer and heartbeats will be reset.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID or type
          This API will be deprecated soon and replaced with a newer UnpauseActivityExecution that is better named and
@@ -5975,9 +5971,7 @@ paths:
          This API can be used to target a workflow activity or a standalone activity.
 
          If activity is not paused, this call will have no effect.
-         Dispatch delays keep running while an activity is paused, and unpause honors whatever remains of
-         them: an activity paused inside a retry backoff or a start_delay is scheduled when that delay
-         elapses, and immediately (* see 'jitter' flag) if it already has.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
          Once the activity is unpaused, all timeout timers will be regenerated.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID
@@ -9214,9 +9208,7 @@ paths:
          This API can be used to target a workflow activity or a standalone activity.
 
          If activity is not paused, this call will have no effect.
-         Dispatch delays keep running while an activity is paused, and unpause honors whatever remains of
-         them: an activity paused inside a retry backoff or a start_delay is scheduled when that delay
-         elapses, and immediately (* see 'jitter' flag) if it already has.
+         If the activity was paused while waiting for retry, it will be scheduled immediately (* see 'jitter' flag).
          Once the activity is unpaused, all timeout timers will be regenerated.
 
          Returns a `NotFound` error if there is no pending activity with the provided ID
@@ -10680,6 +10672,12 @@ components:
           type: string
         matchAll:
           type: boolean
+        resetAttempts:
+          type: boolean
+          description: Setting this flag will also reset the number of attempts.
+        resetHeartbeat:
+          type: boolean
+          description: Setting this flag will also reset the heartbeat details.
         jitter:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
@@ -18227,6 +18225,12 @@ components:
         unpauseAll:
           type: boolean
           description: Unpause all running activities.
+        resetAttempts:
+          type: boolean
+          description: Providing this flag will also reset the number of attempts.
+        resetHeartbeat:
+          type: boolean
+          description: Providing this flag will also reset the heartbeat details.
         jitter:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string

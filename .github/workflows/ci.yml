@@ -26,3 +26,26 @@ jobs:
           fi
       - name: Check for OpenAPI path conflicts
         run: go run ./cmd/check-path-conflicts/main.go openapi/openapiv2.json
+
+  stable-api-generated:
+    name: Verify stable-api is generated
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        with:
+          go-version: '^1.25'
+      - name: Install buf
+        run: make buf-install
+      - name: Test generate-stable
+        run: make stable-api-test
+      - name: Regenerate temporal/api from temporal/api_next
+        run: make stable-api
+      - name: Fail if temporal/api is stale
+        run: |
+          if [[ -n $(git status --porcelain -- temporal/api) ]]; then
+            echo "temporal/api is out of date. Run 'make stable-api' and commit the result."
+            git status --porcelain -- temporal/api
+            git diff -- temporal/api
+            exit 1
+          fi

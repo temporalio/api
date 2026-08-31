@@ -4,6 +4,8 @@ $(VERBOSE).SILENT:
 ############################# Main targets #############################
 ci-build: install proto http-api-docs
 
+.PHONY: stable-api stable-api-test
+
 # Install dependencies.
 install: grpc-install api-linter-install buf-install
 
@@ -25,7 +27,9 @@ STAMPDIR := .stamp
 COLOR := "\e[1;36m%s\e[0m\n"
 
 PROTO_ROOT := .
-PROTO_FILES = $(shell find temporal -name "*.proto")
+# exclude api_next files for api-linter
+PROTO_FILES = $(shell find temporal -name "*.proto" -not -path "temporal/api_next/*")
+PROTO_FILES_NEXT = $(shell find temporal/api_next -name "*.proto")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 PROTO_OUT := .gen
 PROTO_IMPORTS = \
@@ -37,11 +41,23 @@ OAPI3_PATH := .components.schemas.Payload
 
 NEX_GEN ?= nex-gen
 
+STABLE_PATH := temporal/api
+
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
 
+stable-api:
+	rm -rf $(STABLE_PATH)
+	echo $(CURDIR)
+	go -C cmd/generate-stable-protos run . -root $(CURDIR) 
+	buf format -w --path $(STABLE_PATH)
+
+stable-api-test:
+	printf $(COLOR) "Run generate-stable tests..."
+	@cd cmd/generate-stable-protos/ && go test ./...
+
 ##### Compile proto files for go #####
-grpc: buf-lint api-linter buf-breaking clean go-grpc fix-path
+grpc: stable-api buf-lint api-linter buf-breaking clean go-grpc fix-path
 
 go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
@@ -50,6 +66,7 @@ go-grpc: clean $(PROTO_OUT)
 		--output=$(PROTO_OUT) \
 		--exclude=internal \
 		--exclude=proto/api/google \
+		--exclude=temporal/api_next \
 		-I $(PROTO_ROOT) \
 		-p go-grpc_out=$(PROTO_PATHS) \
 		-p grpc-gateway_out=allow_patch_feature=false,$(PROTO_PATHS) \
@@ -105,9 +122,13 @@ sync-nexus-annotations:
 	buf export buf.build/temporalio/nexus-annotations --output .
 
 ##### Linters #####
+API_LINTER_FMT = 'map(select(.problems != []) | . as $$file | .problems[] | {rule: .rule_doc_uri, location: "\($$file.file_path):\(.location.start_position.line_number)"}) | group_by(.rule) | .[] | .[0].rule + ":\n" + (map("\t" + .location) | join("\n"))'
+
 api-linter:
-	printf $(COLOR) "Run api-linter..."
-	@api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml --output-format json $(PROTO_FILES) | gojq -r 'map(select(.problems != []) | . as $$file | .problems[] | {rule: .rule_doc_uri, location: "\($$file.file_path):\(.location.start_position.line_number)"}) | group_by(.rule) | .[] | .[0].rule + ":\n" + (map("\t" + .location) | join("\n"))'
+	printf $(COLOR) "Run api-linter on temporal/api_next..."
+	@api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml --output-format json $(PROTO_FILES_NEXT) | gojq -r $(API_LINTER_FMT)
+	printf $(COLOR) "Run api-linter on temporal/api..."
+	@api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml --output-format json $(PROTO_FILES) | gojq -r $(API_LINTER_FMT)
 
 $(STAMPDIR):
 	mkdir $@
@@ -122,8 +143,10 @@ buf-lint: $(STAMPDIR)/buf-dep-prune
 	(cd $(PROTO_ROOT) && buf lint)
 
 buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against main branch..."
+	@printf $(COLOR) "Run buf breaking changes check for stable API against main branch..."
 	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=main')
+	@printf $(COLOR) "Run buf breaking changes check for api_next against main branch..."
+	@(cd $(PROTO_ROOT) && buf breaking --config buf.next.yaml --against 'https://github.com/temporalio/api.git#branch=main' --against-config buf.yaml)
 
 nexus-rpc-yaml: nexus-rpc-yaml-install
 	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."

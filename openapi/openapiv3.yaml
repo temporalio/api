@@ -11299,6 +11299,24 @@ components:
       description: |-
         ProviderValidationStatus represents the result of the most recent
          connectivity check between Temporal and a customer's compute provider.
+    ConcurrencyLimit:
+      type: object
+      properties:
+        concurrentTasks:
+          type: integer
+          description: |-
+            Maximum number of concurrent tasks that may be running at a time across the whole task
+             queue. Note that in situations like network partitions, the server's idea of what is
+             running on workers may be out of date, and this limit could be exceeded from the point
+             of view of workers.
+          format: int32
+    ConcurrencyLimitConfig:
+      type: object
+      properties:
+        concurrencyLimit:
+          $ref: '#/components/schemas/ConcurrencyLimit'
+        metadata:
+          $ref: '#/components/schemas/ConfigMetadata'
     ConfigMetadata:
       type: object
       properties:
@@ -17684,6 +17702,10 @@ components:
             type: number
             format: float
           description: If set, overrides the fairness weights for the corresponding fairness keys.
+        queueConcurrencyLimit:
+          allOf:
+            - $ref: '#/components/schemas/ConcurrencyLimitConfig'
+          description: Concurrency limit for the whole queue.
     TaskQueueReachability:
       type: object
       properties:
@@ -18568,16 +18590,33 @@ components:
             If set, removes any existing fairness weight overrides for each specified fairness key.
              Fairness weights for corresponding keys fall back to the values set during task creation (if any),
              or to the default weight of 1.0.
+        updateQueueConcurrencyLimit:
+          allOf:
+            - $ref: '#/components/schemas/UpdateTaskQueueConfigRequest_ConcurrencyLimitUpdate'
+          description: |-
+            Update queue-wide concurrency limit.
+             If not set, this configuration is unchanged.
+             If the `concurrency_limit` field in the `ConcurrencyLimitUpdate` is missing, remove the existing limit.
+    UpdateTaskQueueConfigRequest_ConcurrencyLimitUpdate:
+      type: object
+      properties:
+        concurrencyLimit:
+          allOf:
+            - $ref: '#/components/schemas/ConcurrencyLimit'
+          description: Limit to be updated
+        reason:
+          type: string
+          description: Reason why the limit was updated
     UpdateTaskQueueConfigRequest_RateLimitUpdate:
       type: object
       properties:
         rateLimit:
           allOf:
             - $ref: '#/components/schemas/RateLimit'
-          description: Rate Limit to be updated
+          description: Rate limit to be updated
         reason:
           type: string
-          description: Reason for why the rate limit was set.
+          description: Reason why the rate limit was updated
     UpdateTaskQueueConfigResponse:
       type: object
       properties:

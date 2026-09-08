@@ -11255,6 +11255,42 @@ components:
          on a TaskQueue that has no active pollers, a serverless worker lifecycle
          controller might need to invoke an AWS Lambda Function that itself ends up
          calling the SDK's worker.New() function.
+    ComputeProviderStatus:
+      type: object
+      properties:
+        type:
+          type: string
+          description: |-
+            The provider type, matching ComputeProvider.type. This is the value a
+             client sends back when configuring a scaling group, so it is the
+             provider's identity, not a display name.
+        enabled:
+          type: boolean
+          description: |-
+            Whether this Service will accept a ComputeConfig naming this provider.
+             Depends both on the build and on Service configuration, the same way the
+             per-capability booleans in GetSystemInfoResponse.Capabilities do.
+        releaseStage:
+          enum:
+            - COMPUTE_PROVIDER_RELEASE_STAGE_UNSPECIFIED
+            - COMPUTE_PROVIDER_RELEASE_STAGE_PRE_RELEASE
+            - COMPUTE_PROVIDER_RELEASE_STAGE_PUBLIC_PREVIEW
+            - COMPUTE_PROVIDER_RELEASE_STAGE_GENERALLY_AVAILABLE
+          type: string
+          description: |-
+            How far along its rollout the provider is. Lets a client label a
+             provider without shipping its own release-stage table, and lets the
+             label change without a client release.
+          format: enum
+      description: |-
+        ComputeProviderStatus describes one compute provider this Service knows
+         about, so a client can discover which providers exist and how to present
+         them without hardcoding a list of its own.
+
+         A Service reports a provider it recognizes even when that provider is
+         disabled, so a client can tell "this Service has never heard of AgentCore"
+         apart from "this Service knows AgentCore but it is turned off here", and say
+         so rather than silently omitting the option.
     ComputeScaler:
       type: object
       properties:
@@ -12588,6 +12624,21 @@ components:
           allOf:
             - $ref: '#/components/schemas/GetSystemInfoResponse_Capabilities'
           description: All capabilities the system supports.
+        computeProviders:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComputeProviderStatus'
+          description: |-
+            The compute providers this Service knows about, whether each is enabled
+             here, and how far along its rollout each one is.
+
+             This supersedes adding a boolean to Capabilities per compute provider.
+             A boolean answers only "is this one provider usable", so every new
+             provider costs a proto field, an api release, and a server release
+             before a client can even gate on it, and it carries no release stage,
+             leaving each client to hardcode its own. A repeated message lets a
+             Service add a provider without a proto change, and lets a provider move
+             from pre-release to generally available without a client release.
     GetSystemInfoResponse_Capabilities:
       type: object
       properties:
@@ -12648,6 +12699,13 @@ components:
             True if the server supports the Cloud Run compute provider for
              server-scaled deployments. Dependent on server version and the
              provider being enabled via server configuration.
+
+             Superseded by GetSystemInfoResponse.compute_providers, which reports
+             every provider and its release stage rather than one boolean per
+             provider. Retained for wire compatibility with clients that already
+             read it; a Service setting this should also report the equivalent
+             entry in compute_providers. No further per-provider booleans should
+             be added here.
       description: System capability details.
     GetWorkerBuildIdCompatibilityResponse:
       type: object

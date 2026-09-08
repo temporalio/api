@@ -15074,6 +15074,35 @@
       },
       "description": "ComputeProvider stores information used by a worker control plane controller\nto respond to worker lifecycle events. For example, when a Task is received\non a TaskQueue that has no active pollers, a serverless worker lifecycle\ncontroller might need to invoke an AWS Lambda Function that itself ends up\ncalling the SDK's worker.New() function."
     },
+    "v1ComputeProviderReleaseStage": {
+      "type": "string",
+      "enum": [
+        "COMPUTE_PROVIDER_RELEASE_STAGE_UNSPECIFIED",
+        "COMPUTE_PROVIDER_RELEASE_STAGE_PRE_RELEASE",
+        "COMPUTE_PROVIDER_RELEASE_STAGE_PUBLIC_PREVIEW",
+        "COMPUTE_PROVIDER_RELEASE_STAGE_GENERALLY_AVAILABLE"
+      ],
+      "default": "COMPUTE_PROVIDER_RELEASE_STAGE_UNSPECIFIED",
+      "description": "How far along its rollout a compute provider is. Clients use this to label a\nprovider in a picker, and to decide whether to offer it prominently, so the\nlabel follows the server rather than being hardcoded per client.\n\n - COMPUTE_PROVIDER_RELEASE_STAGE_UNSPECIFIED: Release stage is not specified. Clients should treat the provider as\nusable but unlabeled.\n - COMPUTE_PROVIDER_RELEASE_STAGE_PRE_RELEASE: The provider is implemented but not yet ready for general use. Expect\nbreaking changes. Clients should label it accordingly and may choose not\nto offer it by default.\n - COMPUTE_PROVIDER_RELEASE_STAGE_PUBLIC_PREVIEW: The provider is available to all users but still gathering feedback, and\nmay change in backwards-incompatible ways before becoming generally\navailable.\n - COMPUTE_PROVIDER_RELEASE_STAGE_GENERALLY_AVAILABLE: The provider is generally available and covered by compatibility\nguarantees."
+    },
+    "v1ComputeProviderStatus": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "The provider type, matching ComputeProvider.type. This is the value a\nclient sends back when configuring a scaling group, so it is the\nprovider's identity, not a display name."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this Service will accept a ComputeConfig naming this provider.\nDepends both on the build and on Service configuration, the same way the\nper-capability booleans in GetSystemInfoResponse.Capabilities do."
+        },
+        "releaseStage": {
+          "$ref": "#/definitions/v1ComputeProviderReleaseStage",
+          "description": "How far along its rollout the provider is. Lets a client label a\nprovider without shipping its own release-stage table, and lets the\nlabel change without a client release."
+        }
+      },
+      "description": "ComputeProviderStatus describes one compute provider this Service knows\nabout, so a client can discover which providers exist and how to present\nthem without hardcoding a list of its own.\n\nA Service reports a provider it recognizes even when that provider is\ndisabled, so a client can tell \"this Service has never heard of AgentCore\"\napart from \"this Service knows AgentCore but it is turned off here\", and say\nso rather than silently omitting the option."
+    },
     "v1ComputeScaler": {
       "type": "object",
       "properties": {
@@ -16270,6 +16299,14 @@
         "capabilities": {
           "$ref": "#/definitions/v1GetSystemInfoResponseCapabilities",
           "description": "All capabilities the system supports."
+        },
+        "computeProviders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ComputeProviderStatus"
+          },
+          "description": "The compute providers this Service knows about, whether each is enabled\nhere, and how far along its rollout each one is.\n\nThis supersedes adding a boolean to Capabilities per compute provider.\nA boolean answers only \"is this one provider usable\", so every new\nprovider costs a proto field, an api release, and a server release\nbefore a client can even gate on it, and it carries no release stage,\nleaving each client to hardcode its own. A repeated message lets a\nService add a provider without a proto change, and lets a provider move\nfrom pre-release to generally available without a client release."
         }
       }
     },
@@ -16326,7 +16363,7 @@
         },
         "serverScaledProviderCloudRun": {
           "type": "boolean",
-          "description": "True if the server supports the Cloud Run compute provider for\nserver-scaled deployments. Dependent on server version and the\nprovider being enabled via server configuration."
+          "description": "True if the server supports the Cloud Run compute provider for\nserver-scaled deployments. Dependent on server version and the\nprovider being enabled via server configuration.\n\nSuperseded by GetSystemInfoResponse.compute_providers, which reports\nevery provider and its release stage rather than one boolean per\nprovider. Retained for wire compatibility with clients that already\nread it; a Service setting this should also report the equivalent\nentry in compute_providers. No further per-provider booleans should\nbe added here."
         }
       },
       "description": "System capability details."

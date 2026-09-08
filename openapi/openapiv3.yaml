@@ -10885,12 +10885,6 @@ components:
           description: |-
             Server-generated request ID used as an idempotency token when invoking callbacks.
              It has no relation to caller-side request_id sent in operations like StartNexusOperationExecutionRequest.
-        failure:
-          allOf:
-            - $ref: '#/components/schemas/Failure'
-          description: |-
-            The failure if the callback was not able to complete successfully. e.g. timed out, received an
-             unretriable error, etc.
       description: Common callback information. Specific CallbackInfo messages should embed this and may include additional fields.
     Callback_Internal:
       type: object
@@ -13167,12 +13161,14 @@ components:
           type: string
         execution:
           $ref: '#/components/schemas/Execution'
-        componentId:
-          type: string
+        componentPath:
+          type: array
+          items:
+            type: string
           description: |-
-            In most cases, the Execution is sufficient to identify the callback's source. But for some types of execution,
-             a separate "component ID" is required. e.g. for completion callbacks attached to a workflow update. The
-             execution would be the workflow itself, with the component_id being the update ID of the update operation.
+            In most cases, the Execution is sufficient to identify the callback's source. But the callback could have
+             been attached some child component of that execution. e.g. a workflow update. The component path describes
+             the unique component as applicable, typically ending with a unique ID. e.g. ["Update", $workflowUpdateId ]
         requestId:
           type: string
           description: Server-generate request ID sent when the callback was dispatched.

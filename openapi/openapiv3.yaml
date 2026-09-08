@@ -12624,21 +12624,6 @@ components:
           allOf:
             - $ref: '#/components/schemas/GetSystemInfoResponse_Capabilities'
           description: All capabilities the system supports.
-        computeProviders:
-          type: array
-          items:
-            $ref: '#/components/schemas/ComputeProviderStatus'
-          description: |-
-            The compute providers this Service knows about, whether each is enabled
-             here, and how far along its rollout each one is.
-
-             This supersedes adding a boolean to Capabilities per compute provider.
-             A boolean answers only "is this one provider usable", so every new
-             provider costs a proto field, an api release, and a server release
-             before a client can even gate on it, and it carries no release stage,
-             leaving each client to hardcode its own. A repeated message lets a
-             Service add a provider without a proto change, and lets a provider move
-             from pre-release to generally available without a client release.
     GetSystemInfoResponse_Capabilities:
       type: object
       properties:
@@ -12700,12 +12685,12 @@ components:
              server-scaled deployments. Dependent on server version and the
              provider being enabled via server configuration.
 
-             Superseded by GetSystemInfoResponse.compute_providers, which reports
-             every provider and its release stage rather than one boolean per
-             provider. Retained for wire compatibility with clients that already
-             read it; a Service setting this should also report the equivalent
-             entry in compute_providers. No further per-provider booleans should
-             be added here.
+             Superseded by NamespaceInfo.compute_providers, which reports every
+             provider and its release stage per Namespace rather than one boolean
+             per provider for the whole Service. Retained for wire compatibility
+             with clients that already read it. No further per-provider booleans
+             should be added here: this response is served as a fixed payload in
+             some deployments, so it cannot express per-Namespace availability.
       description: System capability details.
     GetWorkerBuildIdCompatibilityResponse:
       type: object
@@ -13538,6 +13523,22 @@ components:
           allOf:
             - $ref: '#/components/schemas/NamespaceInfo_Limits'
           description: Namespace configured limits
+        computeProviders:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComputeProviderStatus'
+          description: |-
+            The compute providers available for server-scaled Worker Deployments in
+             this Namespace: which ones this Namespace can use, whether each is
+             currently enabled, and how far along its rollout each one is.
+
+             Namespace-scoped rather than Service-scoped for two reasons. Availability
+             genuinely varies per Namespace: a provider is tied to the cloud a
+             Namespace runs in, so an AWS Namespace and a GCP Namespace do not offer
+             the same set, and managed deployments gate providers per account.
+             GetSystemInfo cannot express either, and is served as a fixed payload
+             ahead of the Service in some deployments, so a per-provider boolean there
+             is not reachable as a real signal.
         supportsSchedules:
           type: boolean
           description: |-

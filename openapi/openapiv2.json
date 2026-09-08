@@ -16299,14 +16299,6 @@
         "capabilities": {
           "$ref": "#/definitions/v1GetSystemInfoResponseCapabilities",
           "description": "All capabilities the system supports."
-        },
-        "computeProviders": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1ComputeProviderStatus"
-          },
-          "description": "The compute providers this Service knows about, whether each is enabled\nhere, and how far along its rollout each one is.\n\nThis supersedes adding a boolean to Capabilities per compute provider.\nA boolean answers only \"is this one provider usable\", so every new\nprovider costs a proto field, an api release, and a server release\nbefore a client can even gate on it, and it carries no release stage,\nleaving each client to hardcode its own. A repeated message lets a\nService add a provider without a proto change, and lets a provider move\nfrom pre-release to generally available without a client release."
         }
       }
     },
@@ -16363,7 +16355,7 @@
         },
         "serverScaledProviderCloudRun": {
           "type": "boolean",
-          "description": "True if the server supports the Cloud Run compute provider for\nserver-scaled deployments. Dependent on server version and the\nprovider being enabled via server configuration.\n\nSuperseded by GetSystemInfoResponse.compute_providers, which reports\nevery provider and its release stage rather than one boolean per\nprovider. Retained for wire compatibility with clients that already\nread it; a Service setting this should also report the equivalent\nentry in compute_providers. No further per-provider booleans should\nbe added here."
+          "description": "True if the server supports the Cloud Run compute provider for\nserver-scaled deployments. Dependent on server version and the\nprovider being enabled via server configuration.\n\nSuperseded by NamespaceInfo.compute_providers, which reports every\nprovider and its release stage per Namespace rather than one boolean\nper provider for the whole Service. Retained for wire compatibility\nwith clients that already read it. No further per-provider booleans\nshould be added here: this response is served as a fixed payload in\nsome deployments, so it cannot express per-Namespace availability."
         }
       },
       "description": "System capability details."
@@ -17219,6 +17211,14 @@
         "limits": {
           "$ref": "#/definitions/NamespaceInfoLimits",
           "title": "Namespace configured limits"
+        },
+        "computeProviders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ComputeProviderStatus"
+          },
+          "description": "The compute providers available for server-scaled Worker Deployments in\nthis Namespace: which ones this Namespace can use, whether each is\ncurrently enabled, and how far along its rollout each one is.\n\nNamespace-scoped rather than Service-scoped for two reasons. Availability\ngenuinely varies per Namespace: a provider is tied to the cloud a\nNamespace runs in, so an AWS Namespace and a GCP Namespace do not offer\nthe same set, and managed deployments gate providers per account.\nGetSystemInfo cannot express either, and is served as a fixed payload\nahead of the Service in some deployments, so a per-provider boolean there\nis not reachable as a real signal."
         },
         "supportsSchedules": {
           "type": "boolean",

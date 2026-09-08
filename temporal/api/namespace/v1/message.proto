@@ -12,6 +12,7 @@ option csharp_namespace = "Temporalio.Api.Namespace.V1";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
+import "temporal/api/compute/v1/status.proto";
 import "temporal/api/enums/v1/namespace.proto";
 
 
@@ -82,6 +83,19 @@ message NamespaceInfo {
         // WORKFLOW_TASK_FAILED_CAUSE_REQUEST_TOO_LARGE. 0 means no explicit limit.
         int64 workflow_task_completion_size_limit_error = 3;
     }
+
+    // The compute providers available for server-scaled Worker Deployments in
+    // this Namespace: which ones this Namespace can use, whether each is
+    // currently enabled, and how far along its rollout each one is.
+    //
+    // Namespace-scoped rather than Service-scoped for two reasons. Availability
+    // genuinely varies per Namespace: a provider is tied to the cloud a
+    // Namespace runs in, so an AWS Namespace and a GCP Namespace do not offer
+    // the same set, and managed deployments gate providers per account.
+    // GetSystemInfo cannot express either, and is served as a fixed payload
+    // ahead of the Service in some deployments, so a per-provider boolean there
+    // is not reachable as a real signal.
+    repeated temporal.api.compute.v1.ComputeProviderStatus compute_providers = 9;
 
     // Whether scheduled workflows are supported on this namespace. This is only needed
     // temporarily while the feature is experimental, so we can give it a high tag.

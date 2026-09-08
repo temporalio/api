@@ -28,6 +28,7 @@ import "temporal/api/history/v1/message.proto";
 import "temporal/api/workflow/v1/message.proto";
 import "temporal/api/command/v1/message.proto";
 import "temporal/api/compute/v1/config.proto";
+import "temporal/api/compute/v1/status.proto";
 import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
 import "temporal/api/filter/v1/message.proto";
@@ -1340,6 +1341,18 @@ message GetSystemInfoResponse {
     // All capabilities the system supports.
     Capabilities capabilities = 2;
 
+    // The compute providers this Service knows about, whether each is enabled
+    // here, and how far along its rollout each one is.
+    //
+    // This supersedes adding a boolean to Capabilities per compute provider.
+    // A boolean answers only "is this one provider usable", so every new
+    // provider costs a proto field, an api release, and a server release
+    // before a client can even gate on it, and it carries no release stage,
+    // leaving each client to hardcode its own. A repeated message lets a
+    // Service add a provider without a proto change, and lets a provider move
+    // from pre-release to generally available without a client release.
+    repeated temporal.api.compute.v1.ComputeProviderStatus compute_providers = 3;
+
     // System capability details.
     message Capabilities {
         // True if signal and query headers are supported.
@@ -1392,6 +1405,13 @@ message GetSystemInfoResponse {
         // True if the server supports the Cloud Run compute provider for
         // server-scaled deployments. Dependent on server version and the
         // provider being enabled via server configuration.
+        //
+        // Superseded by GetSystemInfoResponse.compute_providers, which reports
+        // every provider and its release stage rather than one boolean per
+        // provider. Retained for wire compatibility with clients that already
+        // read it; a Service setting this should also report the equivalent
+        // entry in compute_providers. No further per-provider booleans should
+        // be added here.
         bool server_scaled_provider_cloud_run = 13;
 
     }

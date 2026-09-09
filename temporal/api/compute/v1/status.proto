@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package temporal.api.compute.v1;
+
+option go_package = "go.temporal.io/api/compute/v1;compute";
+option java_package = "io.temporal.api.compute.v1";
+option java_multiple_files = true;
+option java_outer_classname = "StatusProto";
+option ruby_package = "Temporalio::Api::Compute::V1";
+option csharp_namespace = "Temporalio.Api.Compute.V1";
+
+import "temporal/api/enums/v1/compute.proto";
+
+// ComputeProviderStatus describes one compute provider this Service knows
+// about, so a client can discover which providers exist and how to present
+// them without hardcoding a list of its own.
+//
+// This is typed where ComputeProvider.details is an opaque Payload, and the
+// difference is deliberate. Provider *config* is open-ended and genuinely
+// provider-specific: a Lambda ARN, a Cloud Run worker pool, and an AgentCore
+// endpoint ARN share no shape, which is why an earlier typed
+// ProviderDetailAWSLambda gave way to a Payload. Provider *status* is uniform.
+// Every provider has an identity, an enabled bit, and a release stage, and none
+// needs a field the others do not.
+//
+// A Service reports a provider it recognizes even when that provider is
+// disabled, so a client can tell "this Service has never heard of AgentCore"
+// apart from "this Service knows AgentCore but it is turned off here", and say
+// so rather than silently omitting the option.
+message ComputeProviderStatus {
+    // The provider type, matching ComputeProvider.type. This is the value a
+    // client sends back when configuring a scaling group, so it is the
+    // provider's identity, not a display name.
+    string type = 1;
+
+    // Whether this Service will accept a ComputeConfig naming this provider.
+    // Depends both on the build and on Service configuration, the same way the
+    // per-capability booleans in GetSystemInfoResponse.Capabilities do.
+    bool enabled = 2;
+
+    // How far along its rollout the provider is. Lets a client label a
+    // provider without shipping its own release-stage table, and lets the
+    // label change without a client release.
+    temporal.api.enums.v1.ComputeProviderReleaseStage release_stage = 3;
+}

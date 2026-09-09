@@ -11301,6 +11301,50 @@ components:
          on a TaskQueue that has no active pollers, a serverless worker lifecycle
          controller might need to invoke an AWS Lambda Function that itself ends up
          calling the SDK's worker.New() function.
+    ComputeProviderStatus:
+      type: object
+      properties:
+        type:
+          type: string
+          description: |-
+            The provider type, matching ComputeProvider.type. This is the value a
+             client sends back when configuring a scaling group, so it is the
+             provider's identity, not a display name.
+        enabled:
+          type: boolean
+          description: |-
+            Whether this Service will accept a ComputeConfig naming this provider.
+             Depends both on the build and on Service configuration, the same way the
+             per-capability booleans in GetSystemInfoResponse.Capabilities do.
+        releaseStage:
+          enum:
+            - COMPUTE_PROVIDER_RELEASE_STAGE_UNSPECIFIED
+            - COMPUTE_PROVIDER_RELEASE_STAGE_PRE_RELEASE
+            - COMPUTE_PROVIDER_RELEASE_STAGE_PUBLIC_PREVIEW
+            - COMPUTE_PROVIDER_RELEASE_STAGE_GENERALLY_AVAILABLE
+          type: string
+          description: |-
+            How far along its rollout the provider is. Lets a client label a
+             provider without shipping its own release-stage table, and lets the
+             label change without a client release.
+          format: enum
+      description: |-
+        ComputeProviderStatus describes one compute provider this Service knows
+         about, so a client can discover which providers exist and how to present
+         them without hardcoding a list of its own.
+
+         This is typed where ComputeProvider.details is an opaque Payload, and the
+         difference is deliberate. Provider *config* is open-ended and genuinely
+         provider-specific: a Lambda ARN, a Cloud Run worker pool, and an AgentCore
+         endpoint ARN share no shape, which is why an earlier typed
+         ProviderDetailAWSLambda gave way to a Payload. Provider *status* is uniform.
+         Every provider has an identity, an enabled bit, and a release stage, and none
+         needs a field the others do not.
+
+         A Service reports a provider it recognizes even when that provider is
+         disabled, so a client can tell "this Service has never heard of AgentCore"
+         apart from "this Service knows AgentCore but it is turned off here", and say
+         so rather than silently omitting the option.
     ComputeScaler:
       type: object
       properties:
@@ -12700,6 +12744,13 @@ components:
             True if the server supports the Cloud Run compute provider for
              server-scaled deployments. Dependent on server version and the
              provider being enabled via server configuration.
+
+             Superseded by NamespaceInfo.compute_providers, which reports every
+             provider and its release stage per Namespace rather than one boolean
+             per provider for the whole Service. Retained for wire compatibility
+             with clients that already read it. No further per-provider booleans
+             should be added here: this response is served as a fixed payload in
+             some deployments, so it cannot express per-Namespace availability.
       description: System capability details.
     GetWorkerBuildIdCompatibilityResponse:
       type: object
@@ -13555,6 +13606,22 @@ components:
           allOf:
             - $ref: '#/components/schemas/NamespaceInfo_Limits'
           description: Namespace configured limits
+        computeProviders:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComputeProviderStatus'
+          description: |-
+            The compute providers available for server-scaled Worker Deployments in
+             this Namespace: which ones this Namespace can use, whether each is
+             currently enabled, and how far along its rollout each one is.
+
+             Namespace-scoped rather than Service-scoped for two reasons. Availability
+             genuinely varies per Namespace: a provider is tied to the cloud a
+             Namespace runs in, so an AWS Namespace and a GCP Namespace do not offer
+             the same set, and managed deployments gate providers per account.
+             GetSystemInfo cannot express either, and is served as a fixed payload
+             ahead of the Service in some deployments, so a per-provider boolean there
+             is not reachable as a real signal.
         supportsSchedules:
           type: boolean
           description: |-

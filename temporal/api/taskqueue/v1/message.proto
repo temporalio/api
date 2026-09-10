@@ -33,6 +33,36 @@ message TaskQueueMetadata {
     google.protobuf.DoubleValue max_tasks_per_second = 1;
 }
 
+// Worker-reported state about the poller pool issuing this poll, used by the server to
+// distribute poller-scaling suggestions fairly across a fleet.
+//
+// Scaling suggestions ride on dispatched tasks, so a worker holding a large share of a
+// task queue's pollers receives them at a proportionally higher rate. That makes poller
+// growth proportional to current poller count, which preserves and amplifies any
+// imbalance between otherwise identical workers. Reporting these two values lets the
+// server withhold suggestions from a worker already above its share instead.
+//
+// The server can observe in-flight polls per worker on its own, but that undercounts a
+// worker whose pollers are busy dispatching rather than parked in a poll -- which is
+// exactly backwards, since the busiest worker then looks the most starved. Hence the
+// self-report.
+message PollerScalingInfo {
+    // The number of concurrent poll requests this worker is currently targeting for this
+    // task queue and task type -- the poller pool's own scaling target, not the count
+    // momentarily in flight. Fleet-wide for the pool, not per partition. 0 means unknown
+    // or not auto-scaling, and the server will not apply share-based fairness.
+    int32 poller_target = 1;
+
+    // The maximum number of tasks of this type the worker can execute concurrently,
+    // i.e. its total slot capacity, independent of how many are free right now. Used as
+    // a fairness weight so a worker with more capacity is permitted proportionally more
+    // pollers. Deliberately not "available slots": that falls as a worker gets busier,
+    // so weighting by it would starve the workers doing the most work.
+    //
+    // 0 means no well-defined limit; the server will treat the worker as unweighted.
+    int32 max_slots = 2;
+}
+
 message TaskQueueVersioningInfo {
     // Specifies which Deployment Version should receive new workflow executions and tasks of
     // existing unversioned or AutoUpgrade workflows.

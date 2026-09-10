@@ -123,8 +123,9 @@ message TaskQueueStats {
     // Note: the actual tasks delivered to the workers may significantly be higher than the numbers reported by
     // tasks_add_rate, because:
     // - Tasks can be sent to workers without going to the task queue. This is called Eager dispatch. Eager dispatch is
-    //   enable for activities by default in the latest SDKs.
-    // - Tasks going to Sticky queue are not accounted for. Note that, typically, only the first workflow task of each
+    //   enabled for activities by default in the latest SDKs. Eager dispatches are reported separately in
+    //   `eager_dispatch_rate`.
+    // - Tasks going to Sticky queues are not accounted for. Note that, typically, only the first workflow task of each
     //   workflow goes to a normal queue, and the rest workflow tasks go to the Sticky queue associated with a specific
     //   worker instance.
     float tasks_add_rate = 3;
@@ -138,8 +139,9 @@ message TaskQueueStats {
     // Note: the actual tasks delivered to the workers may significantly be higher than the numbers reported by
     // tasks_dispatch_rate, because:
     // - Tasks can be sent to workers without going to the task queue. This is called Eager dispatch. Eager dispatch is
-    //   enable for activities by default in the latest SDKs.
-    // - Tasks going to Sticky queue are not accounted for. Note that, typically, only the first workflow task of each
+    //   enabled for activities by default in the latest SDKs. Eager dispatches are reported separately in
+    //   `eager_dispatch_rate`.
+    // - Tasks going to Sticky queues are not accounted for. Note that, typically, only the first workflow task of each
     //   workflow goes to a normal queue, and the rest workflow tasks go to the Sticky queue associated with a specific
     //   worker instance.
     float tasks_dispatch_rate = 4;
@@ -149,6 +151,12 @@ message TaskQueueStats {
     // rate limit, not worker count. This field is useful for auto-scaling systems to avoid unnecessary
     // scale-up.
     bool rate_limiting_active = 5;
+
+    // The approximate tasks per second dispatched Eagerly, averaging the last 30 seconds.
+    // The Eager flow is latency-optimized and allows the tasks to be directly returned to the client scheduling them,
+    // rather than going through the Matching engine and be dispatched to a waiting poller. Eager dispatch is
+    // enabled for activities by default in the latest SDKs
+    float eager_dispatch_rate = 6;
 }
 
 // Deprecated. Use `InternalTaskQueueStatus`. This is kept until `DescribeTaskQueue` supports legacy behavior.

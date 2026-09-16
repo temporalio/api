@@ -337,9 +337,17 @@ message PollerScalingDecision {
   int32 poll_request_delta_suggestion = 1;
 }
 
-message RateLimit { 
+message RateLimit {
     // Zero is a valid rate limit.
     float requests_per_second = 1;
+}
+
+message ConcurrencyLimit {
+    // Maximum number of concurrent tasks that may be running at a time across the whole task
+    // queue. Note that in situations like network partitions, the server's idea of what is
+    // running on workers may be out of date, and this limit could be exceeded from the point
+    // of view of workers.
+    int32 concurrent_tasks = 1;
 }
 
 message ConfigMetadata {
@@ -349,13 +357,18 @@ message ConfigMetadata {
     // Identity of the last updater.
     // Set by the request's identity field.
     string update_identity = 2;
-    
+
     // Time of the last update.
     google.protobuf.Timestamp update_time = 3;
 }
 
-message RateLimitConfig { 
-    RateLimit rate_limit = 1;    
+message RateLimitConfig {
+    RateLimit rate_limit = 1;
+    ConfigMetadata metadata = 2;
+}
+
+message ConcurrencyLimitConfig {
+    ConcurrencyLimit concurrency_limit = 1;
     ConfigMetadata metadata = 2;
 }
 
@@ -366,4 +379,6 @@ message TaskQueueConfig {
     RateLimitConfig fairness_keys_rate_limit_default = 2;
     // If set, overrides the fairness weights for the corresponding fairness keys.
     map<string, float> fairness_weight_overrides = 3;
+    // Concurrency limit for the whole queue.
+    ConcurrencyLimitConfig queue_concurrency_limit = 4;
 }

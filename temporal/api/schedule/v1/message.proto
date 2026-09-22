@@ -128,7 +128,7 @@ message IntervalSpec {
 // ScheduleSpec, use UTC or include timezone_data.
 //
 // For input, you can provide zero or more of: structured_calendar, calendar,
-// cron_string, interval, and exclude_structured_calendar, and all of them will
+// cron_string, interval, rrule, and exclude_structured_calendar, and all of them will
 // be used (the schedule will take action at the union of all of their times,
 // minus the ones that match exclude_structured_calendar).
 //
@@ -203,6 +203,12 @@ message ScheduleSpec {
     // Also note that no actions are taken on leap-seconds (e.g. 23:59:60 UTC).
     string timezone_name = 10;
     bytes timezone_data = 11;
+    // RFC 5545 RRULE line bodies without the "RRULE:" prefix, e.g.
+    // "FREQ=DAILY;INTERVAL=1" or "FREQ=WEEKLY;BYDAY=MO,WE". DTSTART is taken from
+    // start_time if set, otherwise the Unix epoch in the schedule time zone. Times
+    // are interpreted in timezone_name when set, or UTC. Union with other fields:
+    // the next action time is the minimum over calendar, interval, and rrule sources.
+    repeated string rrule = 12;
 }
 
 message SchedulePolicies {

@@ -16348,14 +16348,6 @@ components:
           $ref: '#/components/schemas/SchedulePolicies'
         state:
           $ref: '#/components/schemas/ScheduleState'
-        timeSkippingConfig:
-          allOf:
-            - $ref: '#/components/schemas/TimeSkippingConfig'
-          description: |-
-            Time-skipping configuration for this schedule.
-             When enabled, the schedule advances its virtual time without waiting for
-             wall-clock time, causing scheduled actions to be triggered sooner.
-             This feature is intended for testing only.
     ScheduleAction:
       type: object
       properties:
@@ -16531,6 +16523,35 @@ components:
              notes field to the value of the string.
         unpause:
           type: string
+        timeSkippingConfig:
+          allOf:
+            - $ref: '#/components/schemas/TimeSkippingConfig'
+          description: |-
+            If set, updates the time-skipping configuration for this schedule according
+             to time_skipping_config_update_mask. Without a mask, replaces the entire
+             configuration. If unset, leaves the current configuration unchanged.
+             To disable time skipping while preserving the other settings, set this
+             field with enabled = false and use the mask path "enabled".
+             Can also be supplied in CreateScheduleRequest.initial_patch.
+             When enabled, the schedule advances its virtual time without waiting for
+             wall-clock time, causing scheduled actions to be triggered sooner.
+             This feature is intended for testing only.
+        timeSkippingConfigUpdateMask:
+          type: string
+          description: |-
+            Fields of time_skipping_config to update. Paths are relative to
+             TimeSkippingConfig, not SchedulePatch. Supported paths are "enabled",
+             "disable_propagation", "max_session_skip_count", and "fast_forward_config".
+             Fields not covered by the mask retain their current values. A masked
+             field is updated even if its supplied value is the protobuf default.
+             Masking fast_forward_config with an unset value clears the fast-forward;
+             otherwise, it replaces the entire fast-forward configuration. Individual
+             fast-forward sub-fields cannot be updated. If not masked, the current
+             fast-forward and its target time are preserved.
+             An unset or empty mask updates the entire time_skipping_config.
+             A nonempty mask requires time_skipping_config to be set.
+             Invalid or unsupported paths cause the request to be rejected.
+          format: field-mask
     SchedulePolicies:
       type: object
       properties:

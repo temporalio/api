@@ -325,13 +325,15 @@ message PollWorkflowTaskQueueRequest {
     reserved "worker_heartbeat";
 
     // EXPERIMENTAL. Subject to removal in the future.
-    // This flag is only applicable to sticky polls. In this mode, server will stop forwarding the sticky polls to the
-    // normal queue once the set number of tasks are dispatched from the normal queue to pollers of this particular
-    // sticky queue.
-    // The counter is persisted in server as part of sticky task queue metadata, so server crushes will not reset the
-    // counter.
+    // This flag is only applicable to sticky polls. In this mode, server will forward the workflow task sticky polls
+    // to the normal queue only once. The forwarding to normal queue will stop once a single task is dispatched from the
+    // normal queue to pollers of this particular sticky queue.
+    // Server persists the workflow ID of the first matched task in the sticky task queue's metadata. This will allow
+    // system to enforce single-workflow mode even when the server crashes, or a worker with stable identity restarts
+    // (when worker's sticky queue name remains the same after restart.)
+    // For activity sticky polls, this mode will disable forwarding to normal queue completely.
     // (-- api-linter: core::0140::prepositions=disabled
-    int32 max_sticky_to_normal_forwards = 11;
+    bool single_workflow_mode = 11;
 }
 
 message PollWorkflowTaskQueueResponse {
@@ -564,13 +566,15 @@ message PollActivityTaskQueueRequest {
     reserved "worker_heartbeat";
 
     // EXPERIMENTAL. Subject to removal in the future.
-    // This flag is only applicable to sticky polls. In this mode, server will stop forwarding the sticky polls to the
-    // normal queue once the set number of tasks are dispatched from the normal queue to pollers of this particular
-    // sticky queue.
-    // The counter is persisted in server as part of sticky task queue metadata, so server crushes will not reset the
-    // counter.
+    // This flag is only applicable to sticky polls. In this mode, server will forward the workflow task sticky polls
+    // to the normal queue only once. The forwarding to normal queue will stop once a single task is dispatched from the
+    // normal queue to pollers of this particular sticky queue.
+    // Server persists the workflow ID of the first matched task in the sticky task queue's metadata. This will allow
+    // system to enforce single-workflow mode even when the server crashes, or a worker with stable identity restarts
+    // (when worker's sticky queue name remains the same after restart.)
+    // For activity sticky polls, this mode will disable forwarding to normal queue completely.
     // (-- api-linter: core::0140::prepositions=disabled
-    int32 max_sticky_to_normal_forwards = 11;
+    bool single_workflow_mode = 11;
 }
 
 message PollActivityTaskQueueResponse {

@@ -465,6 +465,7 @@ message OnConflictOptions {
     bool attach_links = 3;
 }
 
+// Experimental.
 // The configuration for time skipping of an execution.
 // When time skipping is enabled, virtual time advances automatically whenever there is no in-flight work.
 // Options like fast_forward, disable_propagation, and max_session_skip_count are provided for granular
@@ -482,17 +483,21 @@ message OnConflictOptions {
 // parent execution as its start time.
 message TimeSkippingConfig {
     
+    // Experimental.
     // Enables or disables time skipping for this workflow execution.
     bool enabled = 1;
 
+    // Experimental.
     // An optional opt-in to control time-skipping behavior through fast-forward; see its definition for details.
     FastForwardConfig fast_forward_config = 2;
 
+    // Experimental.
     // By default, executions started by another execution (e.g. a child workflow of a parent workflow or
     // a schedule with the time-skipping policy enabled) inherit the "enabled" flag and skip time when possible.
     // This flag disables that inheritance.
     bool disable_propagation = 3;
 
+    // Experimental.
     // The maximum number of skips allowed every time this field is updated. It protects the execution from
     // situations like unlimited retries when backoff is skipped.
     //
@@ -507,12 +512,15 @@ message TimeSkippingConfig {
     int32 max_session_skip_count = 4;
 }
 
+// Experimental.
 message FastForwardConfig {
+    // Experimental.
     // A client-supplied ID, required field, set alongside `duration`. It is used to poll for
     // fast-forward completion via PollWorkflowExecutionTimeSkipping.
     // The server performs no idempotency check on this ID; the client is responsible for managing it.
     string id = 1;
 
+    // Experimental.
     // Fast-forward the current execution by this duration ahead of the current execution time; required field.
     // The duration yields a target time (current execution time + duration), surfaced as `target_time` in
     // TimeSkippingFastForwardInfo. Once virtual time reaches that target, the fast-forward completes, time
@@ -525,51 +533,65 @@ message FastForwardConfig {
     google.protobuf.Duration duration = 2;
 }
 
+// Experimental.
 // The time-skipping state that needs to be propagated from one execution to another, or through a chain of runs
 // within the same execution.
 message TimeSkippingStatePropagation {
 
+    // Experimental.
     // The time skipped by the previous run. It is propagated both to executions started by the
     // current execution and through a chain of runs (CaN, cron, retry).
     google.protobuf.Duration initial_skipped_duration = 1;
 
+    // Experimental.
     // The fast-forward target time. It only propagates across a chain of runs within the same execution.
     google.protobuf.Timestamp fast_forward_target_time = 2;
 
+    // Experimental.
     // The initial skip count. It only propagates across a chain of runs within the same execution.
     int32 initial_skip_count = 3;
 }
 
 
+// Experimental.
 // Describes the current time-skipping state of a workflow execution.
 message TimeSkippingInfo {
+    // Experimental.
     // Current virtual time of the execution. If the execution hasn't skipped
     // any time yet, it will be the same as wall clock time.
     google.protobuf.Timestamp current_time = 1;
 
+    // Experimental.
     // The current effective time-skipping config, which can differ from the config the user last set:
     // internally-defaulted fields are populated, and `enabled` reflects whether the execution is still
     // skipping time — e.g. it is set to false once `max_session_skip_count` is reached, the fast-forward
     // completes, or a client call disables time skipping.
     TimeSkippingConfig effective_config = 2;
 
+    // Experimental.
     // The execution's current fast-forward, if any. Unset if time skipping is enabled without a fast-forward.
     TimeSkippingFastForwardInfo fast_forward_info = 4;
 
+    // Experimental.
     // The number of skips accumulated in the current session, bounded by `max_session_skip_count`.
     // A new session begins — and this resets to 0 — each time `max_session_skip_count` is updated.
     int32 current_session_skip_count = 6;
 }
 
 
+// Experimental.
 // TimeSkippingFastForwardInfo describes the current time-skipping fast-forward on an execution.
 message TimeSkippingFastForwardInfo {
+    // Experimental.
     // The client-supplied `fast_forward` duration.
     google.protobuf.Duration fast_forward_duration = 1;
+    // Experimental.
     // The client-supplied ID set alongside `fast_forward` duration.
     string fast_forward_id = 2;
+    // Experimental.
     // The target virtual time at which the fast-forward completes.
     google.protobuf.Timestamp target_time = 3;
+    // Experimental.
     // True once `target_time` has been reached.
     bool has_completed = 4;
 }

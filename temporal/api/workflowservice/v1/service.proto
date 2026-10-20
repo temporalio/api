@@ -289,6 +289,29 @@ service WorkflowService {
         };
     }
 
+    // RespondActivityTaskHandoff durably records that the current activity delivery is awaiting
+    // external completion. Call after the external system durably accepts the submitted work.
+    //
+    // A successful response leaves the task token valid for heartbeats and completion. Repeating
+    // this call with the same valid token succeeds without changing the handoff time or deadlines.
+    // Fails with `NotFound` if the token is no longer valid. Does not support reporting by ID.
+    // A timeout or retry does not stop work already running in the external system; applications
+    // must make external submissions idempotent.
+    rpc RespondActivityTaskHandoff (RespondActivityTaskHandoffRequest) returns (RespondActivityTaskHandoffResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/activity-handoff"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/namespaces/{namespace}/activity-handoff"
+                body: "*"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "{resource_id}"
+        };
+    }
+
     // RespondActivityTaskCompleted is called by workers when they successfully complete an activity
     // task.
     //

@@ -606,6 +606,7 @@ message PollActivityTaskQueueResponse {
     // This is the retry policy the service uses which may be different from the one provided
     // (or not) during activity scheduling. The service can override the provided one if some
     // values are not specified or exceed configured system limits.
+    // See `ActivityOptions.retry_policy` for behavior with handoff options.
     temporal.api.common.v1.RetryPolicy retry_policy = 17;
     // Server-advised information the SDK may use to adjust its poller count.
     temporal.api.taskqueue.v1.PollerScalingDecision poller_scaling_decision = 18;
@@ -632,8 +633,9 @@ message PollActivityTaskQueueResponse {
     temporal.api.nexus.v1.PropagatedSerializationContext propagated_nexus_serialization_context = 23;
 
     // Handoff attempt within the current activity attempt. Starts at 1 when
-    // `PollActivityTaskQueueResponse.async_handoff_options` are added. Increments on handoff retries
-    // and resets to 1 on an activity retry or applied reset. Zero when options are absent.
+    // `PollActivityTaskQueueResponse.async_handoff_options` are configured at creation or added by update.
+    // Increments on handoff retries and resets to 1 on an activity retry or applied reset.
+    // Zero when options are absent.
     int32 handoff_attempt = 24;
 
     // Handoff options for this activity task.
@@ -704,7 +706,8 @@ message RespondActivityTaskHandoffRequest {
     string identity = 2;
     // The namespace containing the activity.
     string namespace = 3;
-    // Resource ID for routing.
+    // Resource ID for routing. Contains "workflow:{workflow_id}" for workflow activities or
+    // "activity:{activity_id}" for standalone activities.
     string resource_id = 4;
     // Worker deployment options configured on the worker. Must be set if the worker has
     // `WorkerDeploymentOptions` configured, regardless of whether versioning is enabled.
@@ -3294,6 +3297,7 @@ message StartActivityExecutionRequest {
     // `StartActivityExecutionRequest.async_handoff_options` is present.
     google.protobuf.Duration heartbeat_timeout = 10;
     // The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+    // See `ActivityOptions.retry_policy` for behavior with handoff options.
     temporal.api.common.v1.RetryPolicy retry_policy = 11;
 
     // Serialized arguments to the activity. These are passed as arguments to the activity function.

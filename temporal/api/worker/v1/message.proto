@@ -11,6 +11,7 @@ option csharp_namespace = "Temporalio.Api.Worker.V1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "temporal/api/common/v1/message.proto";
 import "temporal/api/deployment/v1/message.proto";
 import "temporal/api/enums/v1/common.proto";
 
@@ -323,7 +324,15 @@ message EnvironmentInfo {
 message WorkerCommand {
   oneof type {
     CancelActivityCommand cancel_activity = 1;
+    WorkflowHeartbeatNotificationCommand workflow_heartbeat_notification = 2;
   }
+}
+
+// Request an early heartbeat of the current Workflow Task.
+message WorkflowHeartbeatNotificationCommand {
+  // The token of the Workflow Task returned to the worker.
+  bytes task_token = 1;
+  temporal.api.common.v1.WorkflowExecution execution = 2;
 }
 
 // Cancel an activity if it is still running. Otherwise, do nothing.
@@ -335,7 +344,25 @@ message CancelActivityCommand {
 message WorkerCommandResult {
   oneof type {
     CancelActivityResult cancel_activity = 1;
+    WorkflowHeartbeatNotificationResult workflow_heartbeat_notification = 2;
   }
+}
+
+// Result of a WorkflowHeartbeatNotificationCommand.
+// A successful result acknowledges the notification, not completion of a Workflow Task heartbeat.
+message WorkflowHeartbeatNotificationResult {
+  enum Outcome {
+    OUTCOME_UNSPECIFIED = 0;
+    // The notification was accepted for the matching Workflow Task.
+    OUTCOME_ACCEPTED = 1;
+    // This notification is rejected because worker has no open Workflow Task.
+    OUTCOME_NO_WORKFLOW_TASK = 2;
+    // This notification is rejected because its token does not match the current Workflow Task.
+    OUTCOME_TASK_TOKEN_MISMATCH = 3;
+  }
+
+  // The SDK's result for this notification.
+  Outcome outcome = 1;
 }
 
 // Result of a CancelActivityCommand.

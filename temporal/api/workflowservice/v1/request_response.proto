@@ -229,6 +229,11 @@ message StartWorkflowExecutionRequest {
     // This field is intended for use by the Temporal server, for example when a schedule
     // starts a workflow, and is not intended to be set by external clients.
     temporal.api.common.v1.TimeSkippingStatePropagation time_skipping_state_propagation = 31;
+
+    // A dedicated per-worker Nexus task queue for control tasks sent to
+    // the worker processing the eager Workflow Task. Only used when eager execution is accepted.
+    // Setting this field indicates that the worker supports Workflow Task heartbeat notifications.
+    string worker_control_task_queue = 32;
 }
 
 message StartWorkflowExecutionResponse {
@@ -310,6 +315,13 @@ message PollWorkflowTaskQueueRequest {
     // A dedicated per-worker Nexus task queue on which the server sends control
     // tasks (e.g. activity cancellation) to this specific worker instance.
     string worker_control_task_queue = 9;
+    // SDK capabilities of the worker making this poll.
+    Capabilities capabilities = 11;
+
+    message Capabilities {
+        // Whether this worker can heartbeat a running Workflow Task on a worker command.
+        bool supports_workflow_heartbeat_notification = 1;
+    }
 
     // Deprecated. Use deployment_options instead.
     // Each worker process should provide an ID unique to the specific set of code it is running

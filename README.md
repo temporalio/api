@@ -8,6 +8,8 @@ Install as git submodule to the project.
 
 ## Contribution
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for field validation guidance.
+
 Make your change to the temporal/proto files, and run `make` to update the openapi definitions.
 Rust is also required because `make` installs and runs `nex-gen` when regenerating system Nexus WIT files.
 

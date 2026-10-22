@@ -27,6 +27,14 @@ message WorkerSessionOptions {
     // completion; later worker defaults must not alter an established workflow.
     // Session options explicitly set on the workflow may override this default.
     WorkflowSessionOptions default_workflow_session = 2;
+
+    // Future: replace the field above with this choice so default session
+    // configuration and default opt-out cannot be supplied together.
+    // Neither selected leaves workflows without a worker-provided session default.
+    // oneof workflow_session_default {
+    //     WorkflowSessionOptions default_workflow_session = 2;
+    //     google.protobuf.Empty no_workflow_session = 3;
+    // }
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.
@@ -46,11 +54,13 @@ message WorkflowSessionOptions {
     // destination choice also states whether it may change.
     // WorkflowSessionPlacement placement = 2;
 
-    // Future: allow a workflow to suppress inherited session defaults. Presence
-    // distinguishes an explicit choice from inheritance: true disables the session,
-    // false retains participation, and absence uses the enclosing default.
-    // Combining true with explicit session placement would be rejected.
-    // optional bool disabled = 3;
+    // Future: replace default_activity_session above with this choice. Keeping
+    // opt-out outside ActivitySessionOptions excludes contradictory configuration.
+    // Neither selected leaves the normal activity inheritance rules in effect.
+    // oneof activity_session_default {
+    //     ActivitySessionOptions default_activity_session = 1;
+    //     google.protobuf.Empty no_activity_session = 3;
+    // }
 }
 
 // EXPERIMENTAL. Selects membership, not creation of an independent activity session.
@@ -58,11 +68,9 @@ message ActivitySessionOptions {
     // Omitted placement uses the workflow's activity default.
     ActivitySessionPlacement placement = 1;
 
-    // Future: allow an activity to suppress inherited session defaults and use its
-    // scheduling command's ordinary task queue. True disables participation, false
-    // retains it, and absence uses the enclosing default.
-    // Combining true with explicit session placement would be rejected.
-    // optional bool disabled = 2;
+    // Future: explicit opt-out is an alternative to this entire options message
+    // at configuration inputs, not a field alongside session placement. See the
+    // scheduling-command sketch and the activity-default sketch above.
 }
 
 // EXPERIMENTAL. A supplied placement must select one target.
@@ -112,7 +120,7 @@ message ActivitySessionPlacement {
 // workflow after completion. This requires durable binding and reuse state;
 // stable_identity alone does not enforce it.
 //
-// Until disabled is implemented, workflows and activities cannot opt out of
+// Until opt-out alternatives are implemented, workflows and activities cannot opt out of
 // inherited session defaults. Ordinary routing remains the default outside sessions.
 //
 // Replacement authority and fencing, timeout/fallback interactions, and the

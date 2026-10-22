@@ -232,7 +232,12 @@ message StartWorkflowExecutionRequest {
     // Future: callers could declare session requirements before the first workflow
     // task so the server can honor initial-placement constraints. The immediate
     // proposal instead establishes sessions on first successful task completion.
-    // temporal.api.session.v1.WorkflowSessionOptions workflow_session_options = 32;
+    // Neither selected would leave defaults in control; explicit opt-out would
+    // prevent a session-capable worker from enabling a session through defaults.
+    // oneof workflow_session {
+    //     temporal.api.session.v1.WorkflowSessionOptions workflow_session_options = 32;
+    //     google.protobuf.Empty no_workflow_session = 33;
+    // }
 }
 
 message StartWorkflowExecutionResponse {
@@ -481,6 +486,15 @@ message RespondWorkflowTaskCompletedRequest {
     // May only be used when the namespace capability workflow_task_completion_pagination is true.
     bool intermediate_page = 22;
 
+    // Future opt-out shape, replacing workflow_session_options below:
+    // oneof workflow_session {
+    //     temporal.api.session.v1.WorkflowSessionOptions workflow_session_options = 23;
+    //     google.protobuf.Empty no_workflow_session = 24;
+    // }
+    // Explicit configuration and opt-out cannot coexist. The SDK resolves defaults
+    // before completion; history and poll responses retain effective state rather
+    // than a default-suppression instruction.
+    //
     // Establishes effective session configuration on the first successful
     // workflow-task completion. Later completions must not change the session
     // using a new worker's defaults. Session establishment and activity commands

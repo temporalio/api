@@ -228,6 +228,11 @@ message StartWorkflowExecutionRequest {
     // This field is intended for use by the Temporal server, for example when a schedule
     // starts a workflow, and is not intended to be set by external clients.
     temporal.api.common.v1.TimeSkippingStatePropagation time_skipping_state_propagation = 31;
+
+    // Future: callers could declare session requirements before the first workflow
+    // task so the server can honor initial-placement constraints. The immediate
+    // proposal instead establishes sessions on first successful task completion.
+    // temporal.api.session.v1.WorkflowSessionOptions workflow_session_options = 32;
 }
 
 message StartWorkflowExecutionResponse {
@@ -401,6 +406,11 @@ message PollWorkflowTaskQueueResponse {
     //   3. If every group has some pending polls, assign the next poll to a group randomly
     //     according to the weights.
     temporal.api.taskqueue.v1.PollerGroupsInfo poller_groups_info = 19;
+
+    // Established workflow session configuration, returned so the SDK can apply
+    // recorded activity defaults without reinterpreting this worker's defaults.
+    // Absent before establishment or for an ordinary workflow.
+    temporal.api.session.v1.WorkflowSessionOptions workflow_session_options = 20;
 }
 
 message RespondWorkflowTaskCompletedRequest {
@@ -470,6 +480,14 @@ message RespondWorkflowTaskCompletedRequest {
     // `page_number` tells the server how many intermediate pages (0..page_number-1) preceded it.
     // May only be used when the namespace capability workflow_task_completion_pagination is true.
     bool intermediate_page = 22;
+
+    // Establishes effective session configuration on the first successful
+    // workflow-task completion. Later completions must not change the session
+    // using a new worker's defaults. Session establishment and activity commands
+    // in this completion must be validated and committed atomically.
+    // Absence on the first completion establishes ordinary execution; a later
+    // completion must not enable a session by applying a different worker default.
+    temporal.api.session.v1.WorkflowSessionOptions workflow_session_options = 23;
 
     // SDK capability details.
     message Capabilities {

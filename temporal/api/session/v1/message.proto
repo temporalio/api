@@ -9,36 +9,80 @@ option java_outer_classname = "MessageProto";
 option ruby_package = "Temporalio::Api::Session::V1";
 option csharp_namespace = "Temporalio.Api.Session.V1";
 
+import "google/protobuf/empty.proto";
+
 // EXPERIMENTAL. Subject to redesign or removal.
-// Configures a worker's polling for sessions that keep workflow and activity
-// tasks on a stable worker destination. Activities opt into session routing
-// through ActivitySessionOptions on their scheduling commands.
+// Presence in SDK configuration enables session-serving capability.
+// Polls advertise the worker's destination; resolved workflow configuration is
+// established separately through workflow-task completion.
 message WorkerSessionOptions {
-    oneof isolation {
-        SingleSessionOptions single_session = 1;
-    }
+    // Sticky destination name to reuse across worker restarts. When omitted in
+    // SDK configuration, the SDK generates a name for this worker instance.
+    // This names the destination; workflow/activity options select its members.
+    // When supplied, the SDK must use this value as its sticky task queue name.
+    string stable_identity = 1;
+
+    // SDK default for workflows without explicit session configuration.
+    // The SDK sends resolved options on the first successful workflow-task
+    // completion; later worker defaults must not alter an established workflow.
+    WorkflowSessionOptions default_workflow_session = 2;
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// Dedicates a sticky destination to the first workflow matched to it.
-// Workflow sticky polls may be forwarded to the normal queue until the first
-// workflow task is dispatched. The server persists that workflow ID and does
-// not forward subsequent polls, including after workflow completion.
-// Activity sticky polls are never forwarded to the normal queue.
-message SingleSessionOptions {
-    // Stable sticky task queue name, shared by workflow and activity polls.
-    // Reuse this value across worker restarts within the same session, but not
-    // across concurrently running workers. This is distinct from worker identity.
-    // The SDK must also set the polled sticky task queue's name to this value.
-    string stable_identity = 1;
+// Presence when establishing a workflow enables its session. Establishment occurs
+// on the first successful workflow-task completion in this proposal.
+message WorkflowSessionOptions {
+    // Default session configuration for activities in this workflow.
+    // Explicit activity placement overrides this default. When no default is
+    // selected, activities join the workflow's session if one exists; otherwise
+    // they use ordinary activity task-queue routing.
+    ActivitySessionOptions default_activity_session = 1;
+
+    // Future: initial placement requires start-time declaration so the server can
+    // select a destination before the first workflow task. Completion-time
+    // configuration cannot retroactively constrain that initial placement.
+    // WorkflowPlacement placement = 2;
+
+    // Future: a common session policy could constrain replacement destinations.
+    // Members joining an existing session inherit that policy rather than
+    // independently relocating. Waiting durations should retain defined sticky
+    // timeout semantics, not introduce an unspecified worker-availability timer.
+    // SessionPolicy policy = 3;
 }
 
+// EXPERIMENTAL. Selects membership, not creation of an independent activity session.
 message ActivitySessionOptions {
-    oneof session {
-        // Execute this activity as part of its workflow's session.
-        // Currently routes to the workflow's sticky task queue when true.
-        bool use_workflow_session = 1;
+    // Omitted placement uses the workflow's activity default.
+    ActivityPlacement placement = 1;
+}
 
-        // later session_id, etc
+// EXPERIMENTAL. A supplied placement must select one target.
+message ActivityPlacement {
+    oneof target {
+        // Join the workflow's session. Scheduling fails if the effective workflow
+        // configuration does not establish a session, including in the same
+        // workflow-task completion.
+        google.protobuf.Empty workflow_session = 1;
+
+        // Ordinary routing through the scheduling command's existing task_queue.
+        // This does not require execution on a different worker.
+        google.protobuf.Empty task_queue = 2;
     }
 }
+
+// Future concepts, not protocol definitions:
+//
+// Session admission would limit admitted groups independently of task slots.
+// Whether the server needs admission credits or a handshake must be decided
+// before exposing worker-local slot configuration as a public protocol.
+//
+// Destination reuse would distinguish reusable capacity from lifetime dedication.
+// AgentCore's target is one session per destination lifetime, including across
+// process restarts, with no unrelated work or automatic admission of another
+// workflow after completion. This requires durable binding and reuse state;
+// stable_identity alone does not enforce it.
+//
+// Placement would select a logical destination, not a worker process. Replacement
+// policy would determine whether the group may move elsewhere. The authority and
+// fencing of replacement processes, timeout/fallback interactions, and the
+// single-bootstrap mechanism remain open design work in this draft.

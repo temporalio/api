@@ -12,69 +12,115 @@ option csharp_namespace = "Temporalio.Api.Session.V1";
 import "google/protobuf/empty.proto";
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// Presence in SDK configuration enables session-serving capability.
-// Polls advertise the worker's destination; resolved workflow configuration is
+// Presence in worker configuration enables session-serving capability.
+// Polls advertise the worker's destination; effective workflow configuration is
 // established separately through workflow-task completion.
 message WorkerSessionOptions {
-    // Sticky destination name to reuse across worker restarts. When omitted in
-    // SDK configuration, the SDK generates a name for this worker instance.
-    // This names the destination; workflow/activity options select its members.
-    // When supplied, the SDK must use this value as its sticky task queue name.
+    // Optional sticky destination name reused across worker restarts. Empty means
+    // no stable identity is advertised. When supplied, the SDK uses it as the
+    // sticky task queue name. This does not itself require workflows or activities
+    // to be placed there.
     string stable_identity = 1;
 
-    // SDK default for workflows without explicit session configuration.
-    // The SDK sends resolved options on the first successful workflow-task
+    // Default session options for workflows that run on this worker.
+    // The SDK sends effective options on the first successful workflow-task
     // completion; later worker defaults must not alter an established workflow.
+    // Session options explicitly set on the workflow may override this default.
     WorkflowSessionOptions default_workflow_session = 2;
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// Presence when establishing a workflow enables its session. Establishment occurs
-// on the first successful workflow-task completion in this proposal.
+// Presence when establishing a workflow enables its session. In this proposal,
+// establishment currently occurs on the first successful workflow-task completion.
 message WorkflowSessionOptions {
     // Default session configuration for activities in this workflow.
-    // Explicit activity placement overrides this default. When no default is
-    // selected, activities join the workflow's session if one exists; otherwise
-    // they use ordinary activity task-queue routing.
+    // Explicit session placement set on an activity overrides this default.
+    // With neither an explicit activity placement nor a workflow activity default,
+    // activities join the workflow's session if one exists; otherwise they use
+    // ordinary activity task-queue routing.
     ActivitySessionOptions default_activity_session = 1;
 
-    // Future: initial placement requires start-time declaration so the server can
-    // select a destination before the first workflow task. Completion-time
-    // configuration cannot retroactively constrain that initial placement.
-    // WorkflowPlacement placement = 2;
+    // Future: completion-time configuration can select a destination for subsequent
+    // tasks. Start-time configuration would additionally allow the first workflow
+    // task to be placed there. Selection and binding are kept together so a
+    // destination choice also states whether it may change.
+    // WorkflowSessionPlacement placement = 2;
 
-    // Future: a common session policy could constrain replacement destinations.
-    // Members joining an existing session inherit that policy rather than
-    // independently relocating. Waiting durations should retain defined sticky
-    // timeout semantics, not introduce an unspecified worker-availability timer.
-    // SessionPolicy policy = 3;
+    // Future: allow a workflow to suppress inherited session defaults. Presence
+    // distinguishes an explicit choice from inheritance: true disables the session,
+    // false retains participation, and absence uses the enclosing default.
+    // Combining true with explicit session placement would be rejected.
+    // optional bool disabled = 3;
 }
 
 // EXPERIMENTAL. Selects membership, not creation of an independent activity session.
 message ActivitySessionOptions {
     // Omitted placement uses the workflow's activity default.
-    ActivityPlacement placement = 1;
+    ActivitySessionPlacement placement = 1;
+
+    // Future: allow an activity to suppress inherited session defaults and use its
+    // scheduling command's ordinary task queue. True disables participation, false
+    // retains it, and absence uses the enclosing default.
+    // Combining true with explicit session placement would be rejected.
+    // optional bool disabled = 2;
 }
 
 // EXPERIMENTAL. A supplied placement must select one target.
-message ActivityPlacement {
+message ActivitySessionPlacement {
     oneof target {
         // Join the workflow's session. Scheduling fails if the effective workflow
         // configuration does not establish a session, including in the same
-        // workflow-task completion.
+        // workflow-task completion. Destination and binding are inherited together.
         google.protobuf.Empty workflow_session = 1;
 
-        // Ordinary routing through the scheduling command's existing task_queue.
-        // This does not require execution on a different worker.
-        google.protobuf.Empty task_queue = 2;
+        // Future: select a named destination directly, without implying membership
+        // in the workflow's session. Binding for this choice remains to be defined.
+        // string stable_identity = 2;
     }
 }
 
-// Future concepts, not protocol definitions:
+// Future sketches, not active protocol definitions or committed field numbers:
+//
+// Workflows select a destination; activities can instead join their workflow's
+// session. Separate placement messages keep that relative activity choice out
+// of workflow placement. Fixed binding refers to a destination, not a process:
+// a replacement process serving the same identity may resume the session.
+//
+// message WorkflowSessionPlacement {
+//     oneof destination {
+//         google.protobuf.Empty establishing_destination = 1;
+//         string stable_identity = 2;
+//     }
+//     SessionBindingV1 binding = 3;
+// }
+//
+// Provisional policy vocabulary. Structured policy messages may replace this
+// shape if the choices need different configuration. AFFINITY permits relocation
+// under defined fallback rules; FIXED_DESTINATION prohibits a different destination.
+// The default and timeout/reset behavior still require agreement; this does not
+// introduce a new worker-availability timer or imply destination dedication.
+//
+// enum SessionBindingV1 {
+//     SESSION_BINDING_V1_UNSPECIFIED = 0;
+//     SESSION_BINDING_V1_AFFINITY = 1;
+//     SESSION_BINDING_V1_FIXED_DESTINATION = 2;
+// }
 //
 // Session admission would limit admitted groups independently of task slots.
-// Whether the server needs admission credits or a handshake must be decided
-// before exposing worker-local slot configuration as a public protocol.
+// Capacity configuration should remain SDK-local unless a server requirement is
+// identified. This sketch describes worker configuration, not a proposed wire field.
+//
+// message WorkerSessionAdmission {
+//     uint32 max_concurrent_sessions = 1; // Positive when configured.
+//     bool allow_non_session_work = 2;
+//     DestinationReuse reuse = 3;
+// }
+//
+// enum DestinationReuse {
+//     DESTINATION_REUSE_UNSPECIFIED = 0;
+//     DESTINATION_REUSE_AFTER_SESSION_END = 1;
+//     DESTINATION_REUSE_NEVER = 2;
+// }
 //
 // Destination reuse would distinguish reusable capacity from lifetime dedication.
 // AgentCore's target is one session per destination lifetime, including across
@@ -82,7 +128,9 @@ message ActivityPlacement {
 // workflow after completion. This requires durable binding and reuse state;
 // stable_identity alone does not enforce it.
 //
-// Placement would select a logical destination, not a worker process. Replacement
-// policy would determine whether the group may move elsewhere. The authority and
-// fencing of replacement processes, timeout/fallback interactions, and the
-// single-bootstrap mechanism remain open design work in this draft.
+// Until disabled is implemented, workflows and activities cannot opt out of
+// inherited session defaults. Ordinary routing remains the default outside sessions.
+//
+// Replacement authority and fencing, timeout/fallback interactions, and the
+// server-visible dedication selector and single-bootstrap mechanism remain open
+// design work in this draft.

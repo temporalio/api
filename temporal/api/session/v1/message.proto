@@ -9,36 +9,45 @@ option java_outer_classname = "MessageProto";
 option ruby_package = "Temporalio::Api::Session::V1";
 option csharp_namespace = "Temporalio.Api.Session.V1";
 
+import "google/protobuf/empty.proto";
+
 // EXPERIMENTAL. Subject to redesign or removal.
-// Configures a worker's polling for sessions that keep workflow and activity
-// tasks on a stable worker destination. Activities opt into session routing
-// through ActivitySessionOptions on their scheduling commands.
+// Sent on workflow and activity polls. Presence means this worker can serve
+// sessions, where the current implementation of sessions = sticky activities.
 message WorkerSessionOptions {
-    oneof isolation {
+    // Admission control, if unset the worker accepts an arbitrary number of
+    // sessions (bounded by session slots in the future)
+    oneof admission {
+        // The expectation is that this is set for the AgentCore use case.
+        // SDK-side, if this is specified, the worker *only* sticky polls.
         SingleSessionOptions single_session = 1;
     }
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// Dedicates a sticky destination to the first workflow matched to it.
-// Workflow sticky polls may be forwarded to the normal queue until the first
-// workflow task is dispatched. The server persists that workflow ID and does
-// not forward subsequent polls, including after workflow completion.
-// Activity sticky polls are never forwarded to the normal queue.
+// Serve exactly one workflow for the worker's lifetime, including across
+// process restarts with the same stable_identity. The server binds the worker
+// to the first workflow task it hands out, and dispatches no other work here,
+// even after that workflow completes.
 message SingleSessionOptions {
-    // Stable sticky task queue name, shared by workflow and activity polls.
-    // Reuse this value across worker restarts within the same session, but not
-    // across concurrently running workers. This is distinct from worker identity.
-    // The SDK must also set the polled sticky task queue's name to this value.
+    // Identity the binding is stored under. Reuse it across restarts of the
+    // same session, not across concurrently running workers.
+    //
+    // Note: this effectively acts as a configurable sticky queue.
+    // Note: we are currently unsure how this will evolve. May be deprecated as
+    // the session model develops.
     string stable_identity = 1;
 }
 
+// EXPERIMENTAL. Subject to redesign or removal.
+// Resolved activity placement. Unset = normal task-queue routing.
+// workflow_session requires the activity's task queue to be the workflow's,
+// and the workflow's worker to serve sessions.
 message ActivitySessionOptions {
-    oneof session {
-        // Execute this activity as part of its workflow's session.
-        // Currently routes to the workflow's sticky task queue when true.
-        bool use_workflow_session = 1;
+    oneof placement {
+        // Run on the workflow's current worker (its sticky queue).
+        google.protobuf.Empty workflow_session = 1;
 
-        // later session_id, etc
+        // Future: string stable_identity = 2; (target a named worker)
     }
 }

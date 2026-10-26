@@ -1053,6 +1053,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/namespaces/{namespace}/activity-handoff:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RespondActivityTaskHandoff durably records that the current activity delivery is awaiting
+         external completion. Call after the external system durably accepts the submitted work.
+
+         A successful response leaves the task token valid for heartbeats and completion. Repeating
+         this call with the same valid token succeeds without changing the handoff time or deadlines.
+         Fails with `NotFound` if the token is no longer valid. Does not support reporting by ID.
+         A timeout or retry does not stop work already running in the external system; applications
+         must make external submissions idempotent.
+      operationId: RespondActivityTaskHandoff
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace containing the activity.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespondActivityTaskHandoffRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespondActivityTaskHandoffResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /api/v1/namespaces/{namespace}/activity-heartbeat:
     post:
       tags:
@@ -6138,6 +6178,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /namespaces/{namespace}/activity-handoff:
+    post:
+      tags:
+        - WorkflowService
+      description: |-
+        RespondActivityTaskHandoff durably records that the current activity delivery is awaiting
+         external completion. Call after the external system durably accepts the submitted work.
+
+         A successful response leaves the task token valid for heartbeats and completion. Repeating
+         this call with the same valid token succeeds without changing the handoff time or deadlines.
+         Fails with `NotFound` if the token is no longer valid. Does not support reporting by ID.
+         A timeout or retry does not stop work already running in the external system; applications
+         must make external submissions idempotent.
+      operationId: RespondActivityTaskHandoff
+      parameters:
+        - name: namespace
+          in: path
+          description: The namespace containing the activity.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespondActivityTaskHandoffRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespondActivityTaskHandoffResponse'
+        default:
+          description: Default error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
   /namespaces/{namespace}/activity-heartbeat:
     post:
       tags:
@@ -9763,6 +9843,7 @@ components:
             - PENDING_ACTIVITY_STATE_CANCEL_REQUESTED
             - PENDING_ACTIVITY_STATE_PAUSED
             - PENDING_ACTIVITY_STATE_PAUSE_REQUESTED
+            - PENDING_ACTIVITY_STATE_AWAITING_COMPLETION
           type: string
           description: More detailed breakdown of ACTIVITY_EXECUTION_STATUS_RUNNING.
           format: enum
@@ -9799,11 +9880,15 @@ components:
         heartbeatTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Maximum permitted time between successful worker heartbeats.
+          description: |-
+            Maximum permitted time between successful worker heartbeats.
+             See `ActivityOptions.heartbeat_timeout` for behavior with handoff options.
         retryPolicy:
           allOf:
             - $ref: '#/components/schemas/RetryPolicy'
-          description: The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+          description: |-
+            The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+             See `ActivityOptions.retry_policy` for behavior with handoff options.
         heartbeatDetails:
           allOf:
             - $ref: '#/components/schemas/Payloads'
@@ -9816,11 +9901,13 @@ components:
           format: date-time
         lastStartedTime:
           type: string
-          description: Time the last attempt was started.
+          description: Time the most recent activity task started.
           format: date-time
         attempt:
           type: integer
-          description: The attempt this activity is currently on. Incremented each time a new attempt is scheduled.
+          description: |-
+            The attempt this activity is currently on. Activity retries increment this count;
+             handoff retries increment `ActivityExecutionInfo.handoff_attempt` instead.
           format: int32
         executionDuration:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
@@ -9952,6 +10039,31 @@ components:
           allOf:
             - $ref: '#/components/schemas/ResolvedPrincipal'
           description: Authenticated principal of the worker that most recently interacted with this activity execution.
+        handoffAttempt:
+          type: integer
+          description: |-
+            Handoff attempt within the current activity attempt. Starts at 1 when
+             `ActivityExecutionInfo.async_handoff_options` are configured at creation or added by update.
+             Increments on handoff retries and resets to 1 on an activity retry or applied reset.
+             Zero when options are absent.
+          format: int32
+        asyncHandoffTime:
+          type: string
+          description: |-
+            Most recent durably recorded handoff time. Retained through retry backoff, waiting for the
+             next worker pickup, and terminal closure. Cleared when a reset is applied or the next delivery
+             starts on a worker.
+          format: date-time
+        awaitingCompletion:
+          type: boolean
+          description: |-
+            True while the current delivery awaits external completion, independent of
+             `ActivityExecutionInfo.run_state`. Cleared when the delivery ends or is reset;
+             pending pause, cancel, or reset requests do not clear it.
+        asyncHandoffOptions:
+          allOf:
+            - $ref: '#/components/schemas/AsyncHandoffOptions'
+          description: Server-normalized and defaulted handoff options, if configured.
       description: Information about a standalone activity.
     ActivityExecutionListInfo:
       type: object
@@ -10080,7 +10192,8 @@ components:
           type: string
           description: |-
             Indicates how long the caller is willing to wait for an activity completion. Limits how long
-             retries will be attempted. Either this or `start_to_close_timeout` must be specified.
+             retries will be attempted. Either this or `start_to_close_timeout` must be specified,
+             unless `ActivityOptions.async_handoff_options` provides both phase timeouts.
 
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
@@ -10100,19 +10213,30 @@ components:
           type: string
           description: |-
             Maximum time an activity is allowed to execute after being picked up by a worker. This
-             timeout is always retryable. Either this or `schedule_to_close_timeout` must be
-             specified.
+             timeout is always retryable. Either this or `schedule_to_close_timeout` must be specified,
+             unless `ActivityOptions.async_handoff_options` provides both phase timeouts.
+             When `ActivityOptions.async_handoff_options` is present, the start-to-close timeout runs from
+             the first worker pickup of the activity attempt across both phases, handoff retries, backoff, and
+             queue waits.
 
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
         heartbeatTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Maximum permitted time between successful worker heartbeats.
+          description: |-
+            Maximum permitted time between successful worker heartbeats.
+             When `ActivityOptions.async_handoff_options` is present, the activity heartbeat timeout
+             applies after handoff, starting at accepted handoff.
+             Before handoff, use `AsyncHandoffOptions.heartbeat_timeout`.
         retryPolicy:
           allOf:
             - $ref: '#/components/schemas/RetryPolicy'
-          description: The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+          description: |-
+            The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+             When `ActivityOptions.async_handoff_options` is present, this policy handles post-handoff failures
+             and timeouts, plus start-to-close timeouts in either phase. Other pre-handoff failures use
+             `AsyncHandoffOptions.retry_policy`.
         priority:
           allOf:
             - $ref: '#/components/schemas/Priority'
@@ -10126,6 +10250,10 @@ components:
             Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
              When updated, the time is added to the original `schedule_time`, not to the current time.
              If the resulting time is in the past, the task is made available for dispatch immediately.
+        asyncHandoffOptions:
+          allOf:
+            - $ref: '#/components/schemas/AsyncHandoffOptions'
+          description: Two-phase timeout and retry settings.
     ActivityPropertiesModifiedExternallyEventAttributes:
       type: object
       properties:
@@ -10421,6 +10549,62 @@ components:
             - APPLICATION_ERROR_CATEGORY_BENIGN
           type: string
           format: enum
+    AsyncHandoffOptions:
+      type: object
+      properties:
+        startToHandoffTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Maximum time from the current worker pickup until the server durably accepts handoff. Unset
+             or zero disables this timeout. On timeout, the server retries according to
+             `AsyncHandoffOptions.retry_policy`.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" identifies the endpoints of the timeout. --)
+        handoffToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Maximum time from the server durably accepting handoff until the current activity attempt
+             closes. Unset or zero disables this timeout. On timeout, the server retries according to
+             `ActivityOptions.retry_policy`.
+
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" identifies the endpoints of the timeout. --)
+        heartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Maximum time between recorded heartbeats before accepted handoff, initially measured from
+             worker pickup. Unset or zero disables it; `ActivityOptions.heartbeat_timeout` is not inherited
+             and applies only after handoff.
+        retryPolicy:
+          allOf:
+            - $ref: '#/components/schemas/RetryPolicy'
+          description: |-
+            Retry policy for failures and heartbeat or start-to-handoff timeouts before accepted handoff.
+             Retries increment `ActivityExecutionInfo.handoff_attempt` without incrementing
+             `ActivityExecutionInfo.attempt`. Exhausting this policy does not fall back to
+             `ActivityOptions.retry_policy`. If omitted, uses the namespace's default activity retry
+             policy, independently of `ActivityOptions.retry_policy`.
+             To change `RetryPolicy.non_retryable_error_types`, replace
+             `async_handoff_options.retry_policy` as a whole in the update mask.
+      description: |-
+        Timeout and retry options for activity handoff and external completion. The completion phase
+         begins when the server durably accepts `RespondActivityTaskHandoff`.
+
+         Presence, including an empty message, enables two-phase timeouts and retries. Absence preserves
+         existing timeout, retry, and attempt-counting behavior even when handoff is reported.
+         Either `ActivityOptions.start_to_close_timeout` or `ActivityOptions.schedule_to_close_timeout`
+         must be positive; otherwise, both phase timeouts below must be positive so neither phase can
+         wait indefinitely. The earliest applicable deadline wins. `ActivityOptions.start_to_close_timeout`
+         is enforced only when explicitly positive. Only the current phase timeout is active.
+
+         Positive phase timeouts are capped by positive `ActivityOptions.start_to_close_timeout` and
+         `ActivityOptions.schedule_to_close_timeout` bounds. Positive heartbeat timeouts are capped by
+         their phase timeout and those positive bounds. The server stores and returns normalized values.
+         Increasing a bound does not restore a capped value unless that value is also updated.
     BackfillRequest:
       type: object
       properties:
@@ -13684,6 +13868,12 @@ components:
         standaloneActivityOperatorCommands:
           type: boolean
           description: True if the namespace supports standalone activity operator commands.
+        standaloneActivityAsyncHandoff:
+          type: boolean
+          description: True if workers can report standalone activity handoff through `RespondActivityTaskHandoff`.
+        workflowActivityAsyncHandoff:
+          type: boolean
+          description: True if workers can report workflow activity handoff through `RespondActivityTaskHandoff`.
       description: Namespace capability details. Should contain what features are enabled in a namespace.
     NamespaceInfo_Limits:
       type: object
@@ -14494,6 +14684,7 @@ components:
             - PENDING_ACTIVITY_STATE_CANCEL_REQUESTED
             - PENDING_ACTIVITY_STATE_PAUSED
             - PENDING_ACTIVITY_STATE_PAUSE_REQUESTED
+            - PENDING_ACTIVITY_STATE_AWAITING_COMPLETION
           type: string
           format: enum
         heartbeatDetails:
@@ -14812,11 +15003,13 @@ components:
           format: date-time
         startedTime:
           type: string
-          description: When was this task started (this attempt)
+          description: Time this activity task started.
           format: date-time
         attempt:
           type: integer
-          description: Starting at 1, the number of attempts to perform this activity
+          description: |-
+            Starting at 1, the number of attempts to perform this activity
+             Handoff retries increment `PollActivityTaskQueueResponse.handoff_attempt` instead.
           format: int32
         scheduleToCloseTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
@@ -14830,14 +15023,17 @@ components:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
           description: |-
-            Current attempt start -> final result reported timeout
+            Configured start-to-close timeout for the activity attempt.
 
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
         heartbeatTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Window within which the activity must report a heartbeat, or be timed out.
+          description: |-
+            Window within which the activity must report a heartbeat, or be timed out.
+             When `PollActivityTaskQueueResponse.async_handoff_options` is present, workers use
+             `AsyncHandoffOptions.heartbeat_timeout` before handoff.
         retryPolicy:
           allOf:
             - $ref: '#/components/schemas/RetryPolicy'
@@ -14845,6 +15041,7 @@ components:
             This is the retry policy the service uses which may be different from the one provided
              (or not) during activity scheduling. The service can override the provided one if some
              values are not specified or exceed configured system limits.
+             See `ActivityOptions.retry_policy` for behavior with handoff options.
         pollerScalingDecision:
           allOf:
             - $ref: '#/components/schemas/PollerScalingDecision'
@@ -14882,6 +15079,18 @@ components:
           allOf:
             - $ref: '#/components/schemas/PropagatedSerializationContext'
           description: Serialization context propagated from the Nexus caller that started this activity.
+        handoffAttempt:
+          type: integer
+          description: |-
+            Handoff attempt within the current activity attempt. Starts at 1 when
+             `PollActivityTaskQueueResponse.async_handoff_options` are configured at creation or added by update.
+             Increments on handoff retries and resets to 1 on an activity retry or applied reset.
+             Zero when options are absent.
+          format: int32
+        asyncHandoffOptions:
+          allOf:
+            - $ref: '#/components/schemas/AsyncHandoffOptions'
+          description: Handoff options for this activity task.
     PollNexusOperationExecutionResponse:
       type: object
       properties:
@@ -16301,6 +16510,34 @@ components:
           description: |-
             Server validation failures could include
              last_heartbeat_details payload is too large, request failure is too large
+    RespondActivityTaskHandoffRequest:
+      type: object
+      properties:
+        taskToken:
+          type: string
+          description: The task token as received in `PollActivityTaskQueueResponse`.
+          format: bytes
+        identity:
+          type: string
+          description: The identity of the worker reporting handoff.
+        namespace:
+          type: string
+          description: The namespace containing the activity.
+        resourceId:
+          type: string
+          description: |-
+            Resource ID for routing. Contains "workflow:{workflow_id}" for workflow activities or
+             "activity:{activity_id}" for standalone activities.
+        deploymentOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkerDeploymentOptions'
+          description: |-
+            Worker deployment options configured on the worker. Must be set if the worker has
+             `WorkerDeploymentOptions` configured, regardless of whether versioning is enabled.
+      description: Reports handoff of the current activity task for external completion.
+    RespondActivityTaskHandoffResponse:
+      type: object
+      properties: {}
     RetryPolicy:
       type: object
       properties:
@@ -17291,7 +17528,8 @@ components:
           type: string
           description: |-
             Indicates how long the caller is willing to wait for an activity completion. Limits how long
-             retries will be attempted. Either this or `start_to_close_timeout` must be specified.
+             retries will be attempted. Either this or `start_to_close_timeout` must be specified,
+             unless `StartActivityExecutionRequest.async_handoff_options` provides both phase timeouts.
 
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
@@ -17310,19 +17548,25 @@ components:
           type: string
           description: |-
             Maximum time an activity is allowed to execute after being picked up by a worker. This
-             timeout is always retryable. Either this or `schedule_to_close_timeout` must be
-             specified.
+             timeout is always retryable. Either this or `schedule_to_close_timeout` must be specified,
+             unless `StartActivityExecutionRequest.async_handoff_options` provides both phase timeouts. See
+             `ActivityOptions.start_to_close_timeout`.
 
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
         heartbeatTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Maximum permitted time between successful worker heartbeats.
+          description: |-
+            Maximum permitted time between successful worker heartbeats.
+             See `ActivityOptions.heartbeat_timeout` for behavior when
+             `StartActivityExecutionRequest.async_handoff_options` is present.
         retryPolicy:
           allOf:
             - $ref: '#/components/schemas/RetryPolicy'
-          description: The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+          description: |-
+            The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+             See `ActivityOptions.retry_policy` for behavior with handoff options.
         input:
           allOf:
             - $ref: '#/components/schemas/Payloads'
@@ -17397,6 +17641,10 @@ components:
              being dispatched through a task queue. If set to true, the caller is expected to have a
              worker available and capable of processing the task. The returned task will be marked as
              started. The server may ignore this request.
+        asyncHandoffOptions:
+          allOf:
+            - $ref: '#/components/schemas/AsyncHandoffOptions'
+          description: Two-phase timeout and retry settings.
     StartActivityExecutionResponse:
       type: object
       properties:
@@ -18494,6 +18742,8 @@ components:
             - TIMEOUT_TYPE_SCHEDULE_TO_START
             - TIMEOUT_TYPE_SCHEDULE_TO_CLOSE
             - TIMEOUT_TYPE_HEARTBEAT
+            - TIMEOUT_TYPE_START_TO_HANDOFF
+            - TIMEOUT_TYPE_HANDOFF_TO_CLOSE
           type: string
           format: enum
         lastHeartbeatDetails:
@@ -21681,6 +21931,8 @@ components:
             - TIMEOUT_TYPE_SCHEDULE_TO_START
             - TIMEOUT_TYPE_SCHEDULE_TO_CLOSE
             - TIMEOUT_TYPE_HEARTBEAT
+            - TIMEOUT_TYPE_START_TO_HANDOFF
+            - TIMEOUT_TYPE_HANDOFF_TO_CLOSE
           type: string
           format: enum
     WorkflowType:

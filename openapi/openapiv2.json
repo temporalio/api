@@ -1139,6 +1139,47 @@
         ]
       }
     },
+    "/api/v1/namespaces/{namespace}/activity-handoff": {
+      "post": {
+        "summary": "RespondActivityTaskHandoff durably records that the current activity delivery is awaiting\nexternal completion. Call after the external system durably accepts the submitted work.",
+        "description": "A successful response leaves the task token valid for heartbeats and completion. Repeating\nthis call with the same valid token succeeds without changing the handoff time or deadlines.\nFails with `NotFound` if the token is no longer valid. Does not support reporting by ID.\nA timeout or retry does not stop work already running in the external system; applications\nmust make external submissions idempotent.",
+        "operationId": "RespondActivityTaskHandoff2",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RespondActivityTaskHandoffResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace containing the activity.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceRespondActivityTaskHandoffBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/api/v1/namespaces/{namespace}/activity-heartbeat": {
       "post": {
         "summary": "RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.",
@@ -6794,6 +6835,47 @@
         ]
       }
     },
+    "/namespaces/{namespace}/activity-handoff": {
+      "post": {
+        "summary": "RespondActivityTaskHandoff durably records that the current activity delivery is awaiting\nexternal completion. Call after the external system durably accepts the submitted work.",
+        "description": "A successful response leaves the task token valid for heartbeats and completion. Repeating\nthis call with the same valid token succeeds without changing the handoff time or deadlines.\nFails with `NotFound` if the token is no longer valid. Does not support reporting by ID.\nA timeout or retry does not stop work already running in the external system; applications\nmust make external submissions idempotent.",
+        "operationId": "RespondActivityTaskHandoff",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RespondActivityTaskHandoffResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace containing the activity.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceRespondActivityTaskHandoffBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
     "/namespaces/{namespace}/activity-heartbeat": {
       "post": {
         "summary": "RecordActivityTaskHeartbeat is optionally called by workers while they execute activities.",
@@ -12296,6 +12378,29 @@
         }
       }
     },
+    "WorkflowServiceRespondActivityTaskHandoffBody": {
+      "type": "object",
+      "properties": {
+        "taskToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "The task token as received in `PollActivityTaskQueueResponse`."
+        },
+        "identity": {
+          "type": "string",
+          "description": "The identity of the worker reporting handoff."
+        },
+        "resourceId": {
+          "type": "string",
+          "description": "Resource ID for routing. Contains \"workflow:{workflow_id}\" for workflow activities or\n\"activity:{activity_id}\" for standalone activities."
+        },
+        "deploymentOptions": {
+          "$ref": "#/definitions/v1WorkerDeploymentOptions",
+          "description": "Worker deployment options configured on the worker. Must be set if the worker has\n`WorkerDeploymentOptions` configured, regardless of whether versioning is enabled."
+        }
+      },
+      "description": "Reports handoff of the current activity task for external completion."
+    },
     "WorkflowServiceSetCurrentDeploymentBody": {
       "type": "object",
       "properties": {
@@ -12571,7 +12676,7 @@
         },
         "scheduleToCloseTimeout": {
           "type": "string",
-          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted. Either this or `start_to_close_timeout` must be specified.\n"
+          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted. Either this or `start_to_close_timeout` must be specified,\nunless `StartActivityExecutionRequest.async_handoff_options` provides both phase timeouts.\n"
         },
         "scheduleToStartTimeout": {
           "type": "string",
@@ -12579,15 +12684,15 @@
         },
         "startToCloseTimeout": {
           "type": "string",
-          "description": "Maximum time an activity is allowed to execute after being picked up by a worker. This\ntimeout is always retryable. Either this or `schedule_to_close_timeout` must be\nspecified.\n"
+          "description": "Maximum time an activity is allowed to execute after being picked up by a worker. This\ntimeout is always retryable. Either this or `schedule_to_close_timeout` must be specified,\nunless `StartActivityExecutionRequest.async_handoff_options` provides both phase timeouts. See\n`ActivityOptions.start_to_close_timeout`.\n"
         },
         "heartbeatTimeout": {
           "type": "string",
-          "description": "Maximum permitted time between successful worker heartbeats."
+          "description": "Maximum permitted time between successful worker heartbeats.\nSee `ActivityOptions.heartbeat_timeout` for behavior when\n`StartActivityExecutionRequest.async_handoff_options` is present."
         },
         "retryPolicy": {
           "$ref": "#/definitions/v1RetryPolicy",
-          "description": "The retry policy for the activity. Will never exceed `schedule_to_close_timeout`."
+          "description": "The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.\nSee `ActivityOptions.retry_policy` for behavior with handoff options."
         },
         "input": {
           "$ref": "#/definitions/v1Payloads",
@@ -12648,6 +12753,10 @@
         "requestEagerExecution": {
           "type": "boolean",
           "description": "Request that the first activity task be returned directly in the start response instead of\nbeing dispatched through a task queue. If set to true, the caller is expected to have a\nworker available and capable of processing the task. The returned task will be marked as\nstarted. The server may ignore this request."
+        },
+        "asyncHandoffOptions": {
+          "$ref": "#/definitions/v1AsyncHandoffOptions",
+          "description": "Two-phase timeout and retry settings."
         }
       }
     },
@@ -13808,11 +13917,11 @@
         },
         "heartbeatTimeout": {
           "type": "string",
-          "description": "Maximum permitted time between successful worker heartbeats."
+          "description": "Maximum permitted time between successful worker heartbeats.\nSee `ActivityOptions.heartbeat_timeout` for behavior with handoff options."
         },
         "retryPolicy": {
           "$ref": "#/definitions/v1RetryPolicy",
-          "description": "The retry policy for the activity. Will never exceed `schedule_to_close_timeout`."
+          "description": "The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.\nSee `ActivityOptions.retry_policy` for behavior with handoff options."
         },
         "heartbeatDetails": {
           "$ref": "#/definitions/v1Payloads",
@@ -13826,12 +13935,12 @@
         "lastStartedTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Time the last attempt was started."
+          "description": "Time the most recent activity task started."
         },
         "attempt": {
           "type": "integer",
           "format": "int32",
-          "description": "The attempt this activity is currently on. Incremented each time a new attempt is scheduled."
+          "description": "The attempt this activity is currently on. Activity retries increment this count;\nhandoff retries increment `ActivityExecutionInfo.handoff_attempt` instead."
         },
         "executionDuration": {
           "type": "string",
@@ -13954,6 +14063,24 @@
         "lastWorkerPrincipal": {
           "$ref": "#/definitions/v1ResolvedPrincipal",
           "description": "Authenticated principal of the worker that most recently interacted with this activity execution."
+        },
+        "handoffAttempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Handoff attempt within the current activity attempt. Starts at 1 when\n`ActivityExecutionInfo.async_handoff_options` are configured at creation or added by update.\nIncrements on handoff retries and resets to 1 on an activity retry or applied reset.\nZero when options are absent."
+        },
+        "asyncHandoffTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Most recent durably recorded handoff time. Retained through retry backoff, waiting for the\nnext worker pickup, and terminal closure. Cleared when a reset is applied or the next delivery\nstarts on a worker."
+        },
+        "awaitingCompletion": {
+          "type": "boolean",
+          "description": "True while the current delivery awaits external completion, independent of\n`ActivityExecutionInfo.run_state`. Cleared when the delivery ends or is reset;\npending pause, cancel, or reset requests do not clear it."
+        },
+        "asyncHandoffOptions": {
+          "$ref": "#/definitions/v1AsyncHandoffOptions",
+          "description": "Server-normalized and defaulted handoff options, if configured."
         }
       },
       "description": "Information about a standalone activity."
@@ -14104,7 +14231,7 @@
         },
         "scheduleToCloseTimeout": {
           "type": "string",
-          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted. Either this or `start_to_close_timeout` must be specified.\n"
+          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted. Either this or `start_to_close_timeout` must be specified,\nunless `ActivityOptions.async_handoff_options` provides both phase timeouts.\n"
         },
         "scheduleToStartTimeout": {
           "type": "string",
@@ -14112,15 +14239,15 @@
         },
         "startToCloseTimeout": {
           "type": "string",
-          "description": "Maximum time an activity is allowed to execute after being picked up by a worker. This\ntimeout is always retryable. Either this or `schedule_to_close_timeout` must be\nspecified.\n"
+          "description": "Maximum time an activity is allowed to execute after being picked up by a worker. This\ntimeout is always retryable. Either this or `schedule_to_close_timeout` must be specified,\nunless `ActivityOptions.async_handoff_options` provides both phase timeouts.\nWhen `ActivityOptions.async_handoff_options` is present, the start-to-close timeout runs from\nthe first worker pickup of the activity attempt across both phases, handoff retries, backoff, and\nqueue waits.\n"
         },
         "heartbeatTimeout": {
           "type": "string",
-          "description": "Maximum permitted time between successful worker heartbeats."
+          "description": "Maximum permitted time between successful worker heartbeats.\nWhen `ActivityOptions.async_handoff_options` is present, the activity heartbeat timeout\napplies after handoff, starting at accepted handoff.\nBefore handoff, use `AsyncHandoffOptions.heartbeat_timeout`."
         },
         "retryPolicy": {
           "$ref": "#/definitions/v1RetryPolicy",
-          "description": "The retry policy for the activity. Will never exceed `schedule_to_close_timeout`."
+          "description": "The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.\nWhen `ActivityOptions.async_handoff_options` is present, this policy handles post-handoff failures\nand timeouts, plus start-to-close timeouts in either phase. Other pre-handoff failures use\n`AsyncHandoffOptions.retry_policy`."
         },
         "priority": {
           "$ref": "#/definitions/v1Priority",
@@ -14129,6 +14256,10 @@
         "startDelay": {
           "type": "string",
           "description": "Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.\nWhen updated, the time is added to the original `schedule_time`, not to the current time.\nIf the resulting time is in the past, the task is made available for dispatch immediately."
+        },
+        "asyncHandoffOptions": {
+          "$ref": "#/definitions/v1AsyncHandoffOptions",
+          "description": "Two-phase timeout and retry settings."
         }
       }
     },
@@ -14436,6 +14567,28 @@
         "ARCHIVAL_STATE_ENABLED"
       ],
       "default": "ARCHIVAL_STATE_UNSPECIFIED"
+    },
+    "v1AsyncHandoffOptions": {
+      "type": "object",
+      "properties": {
+        "startToHandoffTimeout": {
+          "type": "string",
+          "description": "Maximum time from the current worker pickup until the server durably accepts handoff. Unset\nor zero disables this timeout. On timeout, the server retries according to\n`AsyncHandoffOptions.retry_policy`.\n"
+        },
+        "handoffToCloseTimeout": {
+          "type": "string",
+          "description": "Maximum time from the server durably accepting handoff until the current activity attempt\ncloses. Unset or zero disables this timeout. On timeout, the server retries according to\n`ActivityOptions.retry_policy`.\n"
+        },
+        "heartbeatTimeout": {
+          "type": "string",
+          "description": "Maximum time between recorded heartbeats before accepted handoff, initially measured from\nworker pickup. Unset or zero disables it; `ActivityOptions.heartbeat_timeout` is not inherited\nand applies only after handoff."
+        },
+        "retryPolicy": {
+          "$ref": "#/definitions/v1RetryPolicy",
+          "description": "Retry policy for failures and heartbeat or start-to-handoff timeouts before accepted handoff.\nRetries increment `ActivityExecutionInfo.handoff_attempt` without incrementing\n`ActivityExecutionInfo.attempt`. Exhausting this policy does not fall back to\n`ActivityOptions.retry_policy`. If omitted, uses the namespace's default activity retry\npolicy, independently of `ActivityOptions.retry_policy`.\nTo change `RetryPolicy.non_retryable_error_types`, replace\n`async_handoff_options.retry_policy` as a whole in the update mask."
+        }
+      },
+      "description": "Timeout and retry options for activity handoff and external completion. The completion phase\nbegins when the server durably accepts `RespondActivityTaskHandoff`.\n\nPresence, including an empty message, enables two-phase timeouts and retries. Absence preserves\nexisting timeout, retry, and attempt-counting behavior even when handoff is reported.\nEither `ActivityOptions.start_to_close_timeout` or `ActivityOptions.schedule_to_close_timeout`\nmust be positive; otherwise, both phase timeouts below must be positive so neither phase can\nwait indefinitely. The earliest applicable deadline wins. `ActivityOptions.start_to_close_timeout`\nis enforced only when explicitly positive. Only the current phase timeout is active.\n\nPositive phase timeouts are capped by positive `ActivityOptions.start_to_close_timeout` and\n`ActivityOptions.schedule_to_close_timeout` bounds. Positive heartbeat timeouts are capped by\ntheir phase timeout and those positive bounds. The server stores and returns normalized values.\nIncreasing a bound does not restore a capped value unless that value is also updated."
     },
     "v1BackfillRequest": {
       "type": "object",
@@ -17459,6 +17612,14 @@
         "standaloneActivityOperatorCommands": {
           "type": "boolean",
           "description": "True if the namespace supports standalone activity operator commands."
+        },
+        "standaloneActivityAsyncHandoff": {
+          "type": "boolean",
+          "description": "True if workers can report standalone activity handoff through `RespondActivityTaskHandoff`."
+        },
+        "workflowActivityAsyncHandoff": {
+          "type": "boolean",
+          "description": "True if workers can report workflow activity handoff through `RespondActivityTaskHandoff`."
         }
       },
       "description": "Namespace capability details. Should contain what features are enabled in a namespace."
@@ -18313,10 +18474,11 @@
         "PENDING_ACTIVITY_STATE_STARTED",
         "PENDING_ACTIVITY_STATE_CANCEL_REQUESTED",
         "PENDING_ACTIVITY_STATE_PAUSED",
-        "PENDING_ACTIVITY_STATE_PAUSE_REQUESTED"
+        "PENDING_ACTIVITY_STATE_PAUSE_REQUESTED",
+        "PENDING_ACTIVITY_STATE_AWAITING_COMPLETION"
       ],
       "default": "PENDING_ACTIVITY_STATE_UNSPECIFIED",
-      "title": "- PENDING_ACTIVITY_STATE_PAUSED: PAUSED means activity is paused on the server, and is not running in the worker\n - PENDING_ACTIVITY_STATE_PAUSE_REQUESTED: PAUSE_REQUESTED means activity is currently running on the worker, but paused on the server"
+      "description": " - PENDING_ACTIVITY_STATE_PAUSED: PAUSED means activity is paused on the server, and is not running in the worker\n - PENDING_ACTIVITY_STATE_PAUSE_REQUESTED: PAUSE_REQUESTED means activity is currently running on the worker, but paused on the server\n - PENDING_ACTIVITY_STATE_AWAITING_COMPLETION: The server has recorded async handoff and is waiting for external completion."
     },
     "v1PendingChildExecutionInfo": {
       "type": "object",
@@ -18544,12 +18706,12 @@
         "startedTime": {
           "type": "string",
           "format": "date-time",
-          "title": "When was this task started (this attempt)"
+          "description": "Time this activity task started."
         },
         "attempt": {
           "type": "integer",
           "format": "int32",
-          "title": "Starting at 1, the number of attempts to perform this activity"
+          "description": "Starting at 1, the number of attempts to perform this activity\nHandoff retries increment `PollActivityTaskQueueResponse.handoff_attempt` instead."
         },
         "scheduleToCloseTimeout": {
           "type": "string",
@@ -18557,15 +18719,15 @@
         },
         "startToCloseTimeout": {
           "type": "string",
-          "title": "Current attempt start -> final result reported timeout"
+          "description": "Configured start-to-close timeout for the activity attempt.\n"
         },
         "heartbeatTimeout": {
           "type": "string",
-          "description": "Window within which the activity must report a heartbeat, or be timed out."
+          "description": "Window within which the activity must report a heartbeat, or be timed out.\nWhen `PollActivityTaskQueueResponse.async_handoff_options` is present, workers use\n`AsyncHandoffOptions.heartbeat_timeout` before handoff."
         },
         "retryPolicy": {
           "$ref": "#/definitions/v1RetryPolicy",
-          "description": "This is the retry policy the service uses which may be different from the one provided\n(or not) during activity scheduling. The service can override the provided one if some\nvalues are not specified or exceed configured system limits."
+          "description": "This is the retry policy the service uses which may be different from the one provided\n(or not) during activity scheduling. The service can override the provided one if some\nvalues are not specified or exceed configured system limits.\nSee `ActivityOptions.retry_policy` for behavior with handoff options."
         },
         "pollerScalingDecision": {
           "$ref": "#/definitions/v1PollerScalingDecision",
@@ -18594,6 +18756,15 @@
         "propagatedNexusSerializationContext": {
           "$ref": "#/definitions/v1PropagatedSerializationContext",
           "description": "Serialization context propagated from the Nexus caller that started this activity."
+        },
+        "handoffAttempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Handoff attempt within the current activity attempt. Starts at 1 when\n`PollActivityTaskQueueResponse.async_handoff_options` are configured at creation or added by update.\nIncrements on handoff retries and resets to 1 on an activity retry or applied reset.\nZero when options are absent."
+        },
+        "asyncHandoffOptions": {
+          "$ref": "#/definitions/v1AsyncHandoffOptions",
+          "description": "Handoff options for this activity task."
         }
       }
     },
@@ -19408,6 +19579,9 @@
           "title": "Server validation failures could include\nlast_heartbeat_details payload is too large, request failure is too large"
         }
       }
+    },
+    "v1RespondActivityTaskHandoffResponse": {
+      "type": "object"
     },
     "v1RetryPolicy": {
       "type": "object",
@@ -20715,9 +20889,12 @@
         "TIMEOUT_TYPE_START_TO_CLOSE",
         "TIMEOUT_TYPE_SCHEDULE_TO_START",
         "TIMEOUT_TYPE_SCHEDULE_TO_CLOSE",
-        "TIMEOUT_TYPE_HEARTBEAT"
+        "TIMEOUT_TYPE_HEARTBEAT",
+        "TIMEOUT_TYPE_START_TO_HANDOFF",
+        "TIMEOUT_TYPE_HANDOFF_TO_CLOSE"
       ],
-      "default": "TIMEOUT_TYPE_UNSPECIFIED"
+      "default": "TIMEOUT_TYPE_UNSPECIFIED",
+      "description": " - TIMEOUT_TYPE_START_TO_HANDOFF: The worker-owned handoff phase exceeded its configured timeout before accepted handoff.\n - TIMEOUT_TYPE_HANDOFF_TO_CLOSE: The external-completion phase exceeded its configured timeout after accepted handoff."
     },
     "v1TimerCanceledEventAttributes": {
       "type": "object",

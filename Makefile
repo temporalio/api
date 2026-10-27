@@ -118,8 +118,8 @@ resource-id-lint: resource-id-lint-install
 		$(PROTO_FILES)
 
 resource-id-lint-install:
-	printf $(COLOR) "Build and install protoc-gen-resource-id-lint..."
-	@cd cmd/protoc-gen-resource-id-lint && go install .
+	printf $(COLOR) "Test, build and install protoc-gen-resource-id-lint..."
+	@cd cmd/protoc-gen-resource-id-lint && go test . && go install .
 
 $(STAMPDIR):
 	mkdir $@

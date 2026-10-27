@@ -13,25 +13,28 @@ import "google/protobuf/empty.proto";
 
 // EXPERIMENTAL. Subject to redesign or removal.
 // Sent on workflow and activity polls. Presence means this worker can serve
-// sessions, where the current implementation of sessions = sticky activities.
+// sessions. Currently, the only supported Session type is Workflow Session
+// (aka Workflow-as-Session). A Workflow Session can receive both workflow
+// tasks and activity tasks of an execution.
 message WorkerSessionOptions {
     // Admission control, if unset the worker accepts an arbitrary number of
     // sessions (bounded by session slots in the future)
     oneof admission {
-        // The expectation is that this is set for the AgentCore use case.
-        // SDK-side, if this is specified, the worker *only* sticky polls.
+        // If specified, the worker only polls for work belonging to its session.
         SingleSessionOptions single_session = 1;
     }
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// Serve exactly one workflow for the worker's lifetime, including across
+// Serve exactly one session for the worker's lifetime, including across
 // process restarts with the same stable_identity. The server binds the worker
-// to the first workflow task it hands out, and dispatches no other work here,
-// even after that workflow completes.
+// to the first session that needs a worker, and dispatches no other work here,
+// even after that session completes.
 message SingleSessionOptions {
     // Identity the binding is stored under. Reuse it across restarts of the
-    // same session, not across concurrently running workers.
+    // same session, not across concurrently running workers. If multiple
+    // workers poll with the same stable_identity concurrently, the server
+    // treats them as pollers of a single worker and process affinity is lost.
     //
     // Note: this effectively acts as a configurable sticky queue.
     // Note: we are currently unsure how this will evolve. May be deprecated as
@@ -41,13 +44,13 @@ message SingleSessionOptions {
 
 // EXPERIMENTAL. Subject to redesign or removal.
 // Resolved activity placement. Unset = normal task-queue routing.
-// workflow_session requires the activity's task queue to be the workflow's,
-// and the workflow's worker to serve sessions.
 message ActivitySessionOptions {
     oneof placement {
-        // Run on the workflow's current worker (its sticky queue).
+        // Run in the workflow's current session (on its sticky queue).
+        // Currently requires the activity's task queue to be the workflow's,
+        // and the workflow's worker to serve sessions.
         google.protobuf.Empty workflow_session = 1;
 
-        // Future: string stable_identity = 2; (target a named worker)
+        // Future: references to other types of sessions.
     }
 }

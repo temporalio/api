@@ -68,7 +68,8 @@ message AppendRecordsRequest {
     temporal.api.stream.v1.StreamRef stream = 2;
     // Required outside a Workflow. In a Workflow the transport sets it.
     temporal.api.stream.v1.Producer producer = 3;
-    // The batch number in this epoch. With the Producer and epoch it is the dedupe key.
+    // The batch number in this epoch. With the Producer and epoch it is the dedupe key. Zero takes
+    // the next number of the epoch. Such a batch has no dedupe, so a retry writes it again.
     int64 sequence = 4;
     repeated temporal.api.stream.v1.AppendRecord records = 5;
     // The run's last completed Workflow Task (started_event_id 0 before the first) and its failed
@@ -98,15 +99,17 @@ message CloseStreamRequest {
     temporal.api.stream.v1.StreamRef stream = 2;
     temporal.api.stream.v1.Producer producer = 3;
     temporal.api.common.v1.Payload result = 4;
+    // The close status comes from it. No failure is COMPLETED. A failure is CANCELED when it has
+    // canceled_failure_info, or when it is an Activity, child Workflow or Nexus Operation failure
+    // whose cause has canceled_failure_info. Any other failure is FAILED.
     temporal.api.failure.v1.Failure failure = 5;
     // Only the server reads these. They are the run's task facts, as on the append.
     temporal.api.stream.v1.WorkflowTaskEpoch previous_completed_task = 6;
     repeated int64 failed_tasks = 7;
     // Only the server reads it. The previous run on a retry run's close, to withdraw its Records.
     string withdraw_run = 8;
-    // Empty is COMPLETED with no failure, CANCELED with a failure that has canceled_failure_info,
-    // and FAILED with any other failure.
-    temporal.api.enums.v1.StreamCloseStatus status = 9;
+    reserved 9;
+    reserved "status";
     // Only the server reads it. It checks the token as on the append.
     bytes task_token = 10;
 }

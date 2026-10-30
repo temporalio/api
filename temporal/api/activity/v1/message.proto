@@ -18,6 +18,7 @@ import "temporal/api/enums/v1/activity.proto";
 import "temporal/api/callback/v1/message.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/failure/v1/message.proto";
+import "temporal/api/nexus/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/sdk/v1/user_metadata.proto";
 
@@ -29,6 +30,10 @@ message ActivityExecutionOutcome {
         // The failure if the activity completed unsuccessfully.
         temporal.api.failure.v1.Failure failure = 2;
     }
+
+    // The retry state associated with an unsuccessful activity execution.
+    // This field is only meaningful when `failure` is set.
+    temporal.api.enums.v1.RetryState retry_state = 3;
 }
 
 message ActivityOptions {
@@ -63,6 +68,11 @@ message ActivityOptions {
     // Priority metadata. If this message is not present, or any fields are not
     // present, they inherit the values from the workflow.
     temporal.api.common.v1.Priority priority = 7;
+
+    // Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
+    // When updated, the time is added to the original `schedule_time`, not to the current time.
+    // If the resulting time is in the past, the task is made available for dispatch immediately.
+    google.protobuf.Duration start_delay = 8;
 }
 
 // Information about a standalone activity.
@@ -107,6 +117,7 @@ message ActivityExecutionInfo {
     temporal.api.common.v1.RetryPolicy retry_policy = 11;
 
     // Details provided in the last recorded activity heartbeat.
+    // DescribeActivityExecution does not set this field unless include_heartbeat_details was true in the request.
     temporal.api.common.v1.Payloads heartbeat_details = 12;
     // Time the last heartbeat was recorded.
     google.protobuf.Timestamp last_heartbeat_time = 13;
@@ -118,12 +129,14 @@ message ActivityExecutionInfo {
     google.protobuf.Duration execution_duration = 16;
     // Time the activity was originally scheduled via a StartActivityExecution request.
     google.protobuf.Timestamp schedule_time = 17;
-    // Scheduled time + schedule to close timeout.
+    // The time at which the activity's Schedule-to-Close timeout expires.
+    // Calculated as `schedule_time` + `start_delay` + `schedule_to_close_timeout`.
     google.protobuf.Timestamp expiration_time = 18;
     // Time when the activity transitioned to a closed state.
     google.protobuf.Timestamp close_time = 19;
 
     // Failure details from the last failed attempt.
+    // DescribeActivityExecution does not set this field unless include_last_failure was true in the request.
     temporal.api.failure.v1.Failure last_failure = 20;
     string last_worker_identity = 21;
 
@@ -168,6 +181,43 @@ message ActivityExecutionInfo {
 
     // Total number of heartbeats recorded across all attempts of this activity, including retries.
     int64 total_heartbeat_count = 34;
+
+    // The name of the SDK of the worker that most recently picked up an attempt of this activity.
+    // Overwritten on each new attempt. Empty if unknown.
+    string sdk_name = 35;
+
+    // The version of the SDK of the worker that most recently picked up an attempt of this activity.
+    // Overwritten on each new attempt. Empty if unknown.
+    string sdk_version = 36;
+
+    // Time to wait before making the first activity task available for dispatch. This delay is not applied to retry attempts.
+    google.protobuf.Duration start_delay = 37;
+
+    // The time at which the first activity task is made available for dispatch, computed as
+    // `schedule_time + start_delay`. Same as `schedule_time` if `start_delay` is not set.
+    google.protobuf.Timestamp execution_time = 38;
+
+    // Serialization context propagated from the Nexus caller that started this activity.
+    temporal.api.nexus.v1.PropagatedSerializationContext propagated_nexus_serialization_context = 39;
+
+    // Indicates whether eager execution was requested for this activity and accepted by the server
+    // for its first task.
+    bool eager_execution_accepted = 40;
+
+    // Authenticated principal by which this activity execution was started.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "by" identifies the authenticated actor. --)
+    temporal.api.common.v1.ResolvedPrincipal started_by_principal = 41;
+
+    // Authenticated principal by which this activity execution was closed.
+    //
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "by" identifies the authenticated actor. --)
+    temporal.api.common.v1.ResolvedPrincipal closed_by_principal = 42;
+
+    // Authenticated principal of the worker that most recently interacted with this activity execution.
+    temporal.api.common.v1.ResolvedPrincipal last_worker_principal = 43;
 }
 
 // Limited activity information returned in the list response.
@@ -201,6 +251,9 @@ message ActivityExecutionListInfo {
     // The difference between close time and scheduled time.
     // This field is only populated if the activity is closed.
     google.protobuf.Duration execution_duration = 11;
+    // The time at which the first activity task is made available for dispatch, computed as
+    // `schedule_time + start_delay`. Same as `schedule_time` if `start_delay` is not set.
+    google.protobuf.Timestamp execution_time = 12;
 }
 
 // CallbackInfo contains the state of an attached activity callback.

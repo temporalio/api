@@ -8,7 +8,7 @@ ci-build: install proto http-api-docs
 install: grpc-install api-linter-install buf-install
 
 # Run all linters and compile proto files.
-proto: grpc http-api-docs
+proto: grpc http-api-docs nexus-rpc-yaml system-nexus-wit
 ########################################################################
 
 ##### Variables ######
@@ -17,7 +17,9 @@ GOPATH := $(shell go env GOPATH)
 endif
 
 GOBIN := $(if $(shell go env GOBIN),$(shell go env GOBIN),$(GOPATH)/bin)
-PATH := $(GOBIN):$(PATH)
+CARGO_HOME ?= $(HOME)/.cargo
+CARGO_BIN := $(CARGO_HOME)/bin
+PATH := $(GOBIN):$(CARGO_BIN):$(PATH)
 STAMPDIR := .stamp
 
 COLOR := "\e[1;36m%s\e[0m\n"
@@ -33,11 +35,13 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
+NEX_GEN ?= nexgen
+
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
 
 ##### Compile proto files for go #####
-grpc: buf-lint api-linter buf-breaking clean go-grpc fix-path
+grpc: buf-lint api-linter resource-id-lint buf-breaking clean go-grpc fix-path
 
 go-grpc: clean $(PROTO_OUT)
 	printf $(COLOR) "Compile for go-gRPC..."
@@ -76,7 +80,7 @@ http-api-docs:
 ##### Plugins & tools #####
 grpc-install:
 	@printf $(COLOR) "Install/update protoc and plugins..."
-	@go install go.temporal.io/api/cmd/protogen@master
+	@go install go.temporal.io/api/cmd/protogen@main
 	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	@go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
@@ -93,28 +97,88 @@ api-linter-install:
 
 buf-install:
 	printf $(COLOR) "Install/update buf..."
-	go install github.com/bufbuild/buf/cmd/buf@v1.27.0
+	go install github.com/bufbuild/buf/cmd/buf@v1.49.0
+
+##### Sync external proto dependencies #####
+sync-nexus-annotations:
+	printf $(COLOR) "Sync nexusannotations from buf.build/temporalio/nexus-annotations..."
+	buf export buf.build/temporalio/nexus-annotations --output .
 
 ##### Linters #####
 api-linter:
 	printf $(COLOR) "Run api-linter..."
 	@api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml --output-format json $(PROTO_FILES) | gojq -r 'map(select(.problems != []) | . as $$file | .problems[] | {rule: .rule_doc_uri, location: "\($$file.file_path):\(.location.start_position.line_number)"}) | group_by(.rule) | .[] | .[0].rule + ":\n" + (map("\t" + .location) | join("\n"))'
 
+# Every RPC needs a temporal-resource-id request_header annotation for routing, or an entry in
+# cmd/protoc-gen-resource-id-lint/exemptions.go.
+resource-id-lint: resource-id-lint-install
+	printf $(COLOR) "Check temporal-resource-id annotations..."
+	protoc $(PROTO_IMPORTS) \
+		--resource-id-lint_out=. \
+		$(PROTO_FILES)
+
+resource-id-lint-install:
+	printf $(COLOR) "Test, build and install protoc-gen-resource-id-lint..."
+	@cd cmd/protoc-gen-resource-id-lint && go test . && go install .
+
 $(STAMPDIR):
 	mkdir $@
 
-$(STAMPDIR)/buf-mod-prune: $(STAMPDIR) buf.yaml
+$(STAMPDIR)/buf-dep-prune: $(STAMPDIR) buf.yaml
 	printf $(COLOR) "Pruning buf module"
-	buf mod prune
+	buf dep prune
 	touch $@
 
-buf-lint: $(STAMPDIR)/buf-mod-prune
+buf-lint: $(STAMPDIR)/buf-dep-prune
 	printf $(COLOR) "Run buf linter..."
 	(cd $(PROTO_ROOT) && buf lint)
 
 buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against master branch..."	
-	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=master')
+	@printf $(COLOR) "Run buf breaking changes check against main branch..."
+	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=main')
+
+nexus-rpc-yaml: nexus-rpc-yaml-install
+	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."
+	mkdir -p nexus
+	protoc -I $(PROTO_ROOT) \
+		--nexus-rpc-yaml_opt=nexus-rpc_langs_out=nexus/temporal-proto-models-nexusrpc.yaml \
+		--nexus-rpc-yaml_opt=python_package_prefix=temporalio.api \
+		--nexus-rpc-yaml_opt=typescript_package_prefix=@temporalio/api \
+		--nexus-rpc-yaml_opt=include_operation_tags=exposed \
+		--nexus-rpc-yaml_out=. \
+		temporal/api/workflowservice/v1/* \
+		temporal/api/operatorservice/v1/*
+
+nexus-rpc-yaml-install:
+	printf $(COLOR) "Build and install protoc-gen-nexus-rpc-yaml..."
+	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
+
+##### Compile system Nexus WIT files #####
+system-nexus-wit: system-nexus-wit-install nex-gen-install
+	printf $(COLOR) "Generate system Nexus WIT..."
+	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	protoc -I $(PROTO_ROOT) --include_imports \
+		--descriptor_set_out="$$tmp/system.bin" \
+		--system-nexus-wit_opt=output=nexus/workflow-service.wit \
+		--system-nexus-wit_opt=nex_gen=$(NEX_GEN) \
+		--system-nexus-wit_opt=linked_input=nexus/deps \
+		--system-nexus-wit_out=. \
+		temporal/api/workflowservice/v1/service.proto \
+		temporal/api/notificationservice/v1/request_response.proto && \
+	$(NEX_GEN) add-message \
+		--descriptors "$$tmp/system.bin" \
+		--file temporal/api/notificationservice/v1/request_response.proto \
+		--input nexus/notification-service.wit \
+		--input nexus/deps \
+		--output nexus/notification-service.wit
+
+system-nexus-wit-install:
+	printf $(COLOR) "Build and install protoc-gen-system-nexus-wit..."
+	@cd cmd/protoc-gen-system-nexus-wit && go install .
+
+nex-gen-install:
+	printf $(COLOR) "Install nexgen if missing..."
+	command -v $(NEX_GEN) >/dev/null || cargo install nexgen --version ^0.2 --features advanced
 
 ##### Clean #####
 clean:

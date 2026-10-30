@@ -143,6 +143,12 @@ message TaskQueueStats {
     //   workflow goes to a normal queue, and the rest workflow tasks go to the Sticky queue associated with a specific
     //   worker instance.
     float tasks_dispatch_rate = 4;
+
+    // Whether rate limiting blocked any dispatches within the recent observation window (approximately
+    // 30 seconds). When true, adding more workers will not increase throughput — the bottleneck is the
+    // rate limit, not worker count. This field is useful for auto-scaling systems to avoid unnecessary
+    // scale-up.
+    bool rate_limiting_active = 5;
 }
 
 // Deprecated. Use `InternalTaskQueueStatus`. This is kept until `DescribeTaskQueue` supports legacy behavior.
@@ -308,6 +314,17 @@ message PollerGroupInfo {
   float weight = 2;
 }
 
+// A versioned snapshot of the poller groups the client should use for future polls to a task
+// queue. The version is monotonically increasing so that a client can ignore a snapshot that is
+// older than the one it has already applied.
+message PollerGroupsInfo {
+  // Monotonically increasing version of this snapshot. A client should ignore any snapshot whose
+  // version is not greater than the one it last applied.
+  int64 version = 1;
+  // The weighted list of poller groups the client should use for future polls to this task queue.
+  repeated PollerGroupInfo poller_groups = 2;
+}
+
 // Attached to task responses to give hints to the SDK about how it may adjust its number of
 // pollers.
 message PollerScalingDecision {
@@ -320,9 +337,19 @@ message PollerScalingDecision {
   int32 poll_request_delta_suggestion = 1;
 }
 
-message RateLimit { 
+message RateLimit {
     // Zero is a valid rate limit.
     float requests_per_second = 1;
+}
+
+message ConcurrencyLimit {
+    // Maximum number of concurrent tasks that may be running at a time across the scope of the
+    // limit. e.g. in TaskQueueConfig, the scope is the whole task queue.
+    //
+    // Note that in situations like network partitions, the server's idea of what is running on
+    // workers may be out of date, and this limit could be exceeded from the point of view of
+    // workers.
+    int32 concurrent_tasks = 1;
 }
 
 message ConfigMetadata {
@@ -332,21 +359,28 @@ message ConfigMetadata {
     // Identity of the last updater.
     // Set by the request's identity field.
     string update_identity = 2;
-    
+
     // Time of the last update.
     google.protobuf.Timestamp update_time = 3;
 }
 
-message RateLimitConfig { 
-    RateLimit rate_limit = 1;    
+message RateLimitConfig {
+    RateLimit rate_limit = 1;
+    ConfigMetadata metadata = 2;
+}
+
+message ConcurrencyLimitConfig {
+    ConcurrencyLimit concurrency_limit = 1;
     ConfigMetadata metadata = 2;
 }
 
 message TaskQueueConfig {
-    // Unless modified, this is the system-defined rate limit.
+    // Rate limit for the whole queue.
     RateLimitConfig queue_rate_limit = 1;
     // If set, each individual fairness key will be limited to this rate, scaled by the weight of the fairness key.
     RateLimitConfig fairness_keys_rate_limit_default = 2;
     // If set, overrides the fairness weights for the corresponding fairness keys.
     map<string, float> fairness_weight_overrides = 3;
+    // Concurrency limit for the whole queue.
+    ConcurrencyLimitConfig queue_concurrency_limit = 4;
 }

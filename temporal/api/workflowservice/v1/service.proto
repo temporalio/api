@@ -10,9 +10,10 @@ option ruby_package = "Temporalio::Api::WorkflowService::V1";
 option csharp_namespace = "Temporalio.Api.WorkflowService.V1";
 
 
-import "temporal/api/workflowservice/v1/request_response.proto";
 import "google/api/annotations.proto";
+import "nexusannotations/v1/options.proto";
 import "temporal/api/protometa/v1/annotations.proto";
+import "temporal/api/workflowservice/v1/request_response.proto";
 
 // WorkflowService API defines how Temporal SDKs and other clients interact with the Temporal server
 // to create and interact with workflows and activities.
@@ -495,6 +496,8 @@ service WorkflowService {
     // (-- api-linter: core::0136::prepositions=disabled
     //     aip.dev/not-precedent: "With" is used to indicate combined operation. --)
     rpc SignalWithStartWorkflowExecution (SignalWithStartWorkflowExecutionRequest) returns (SignalWithStartWorkflowExecutionResponse) {
+        option (nexusannotations.v1.operation).tags = "exposed";
+
         option (google.api.http) = {
             post: "/namespaces/{namespace}/workflows/{workflow_id}/signal-with-start/{signal_name}"
             body: "*"
@@ -857,6 +860,7 @@ service WorkflowService {
     }
 
     // Deprecated. Use `UpdateWorkerVersioningRules`.
+    // Will be removed in server version v1.32.0.
     //
     // Allows users to specify sets of worker build id versions on a per task queue basis. Versions
     // are ordered, and may be either compatible with some extant version, or a new incompatible
@@ -873,9 +877,15 @@ service WorkflowService {
     //
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: We do yet expose versioning API to HTTP. --)
-    rpc UpdateWorkerBuildIdCompatibility (UpdateWorkerBuildIdCompatibilityRequest) returns (UpdateWorkerBuildIdCompatibilityResponse) {}
+    rpc UpdateWorkerBuildIdCompatibility (UpdateWorkerBuildIdCompatibilityRequest) returns (UpdateWorkerBuildIdCompatibilityResponse) {
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "taskqueue:{task_queue}"
+        };
+    }
 
     // Deprecated. Use `GetWorkerVersioningRules`.
+    // Will be removed in server version v1.32.0.
     // Fetches the worker build id versioning sets for a task queue.
     rpc GetWorkerBuildIdCompatibility (GetWorkerBuildIdCompatibilityRequest) returns (GetWorkerBuildIdCompatibilityResponse) {
         option (google.api.http) = {
@@ -883,6 +893,10 @@ service WorkflowService {
             additional_bindings {
                 get: "/api/v1/namespaces/{namespace}/task-queues/{task_queue}/worker-build-id-compatibility"
             }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "taskqueue:{task_queue}"
         };
     }
 
@@ -907,13 +921,18 @@ service WorkflowService {
     // the target Build ID of a redirect rule is able to process event histories made by the source
     // Build ID by using [Patching](https://docs.temporal.io/workflows#patching) or other means.
     //
-    // WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+    // Will be removed in server version v1.32.0.
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: We do yet expose versioning API to HTTP. --)
-    rpc UpdateWorkerVersioningRules (UpdateWorkerVersioningRulesRequest) returns (UpdateWorkerVersioningRulesResponse) {}
+    rpc UpdateWorkerVersioningRules (UpdateWorkerVersioningRulesRequest) returns (UpdateWorkerVersioningRulesResponse) {
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "taskqueue:{task_queue}"
+        };
+    }
 
     // Fetches the Build ID assignment and redirect rules for a Task Queue.
-    // WARNING: Worker Versioning is not yet stable and the API and behavior may change incompatibly.
+    // Will be removed in server version v1.32.0.
     rpc GetWorkerVersioningRules (GetWorkerVersioningRulesRequest) returns (GetWorkerVersioningRulesResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/task-queues/{task_queue}/worker-versioning-rules"
@@ -921,9 +940,14 @@ service WorkflowService {
                 get: "/api/v1/namespaces/{namespace}/task-queues/{task_queue}/worker-versioning-rules"
             }
         };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "taskqueue:{task_queue}"
+        };
     }
 
     // Deprecated. Use `DescribeTaskQueue`.
+    // Will be removed in server version v1.32.0.
     //
     // Fetches task reachability to determine whether a worker may be retired.
     // The request may specify task queues to query for or let the server fetch all task queues mapped to the given
@@ -947,7 +971,6 @@ service WorkflowService {
     }
 
     // Describes a worker deployment.
-    // Experimental. This API might significantly change or be removed in a future release.
     // Deprecated. Replaced with `DescribeWorkerDeploymentVersion`.
     rpc DescribeDeployment (DescribeDeploymentRequest) returns (DescribeDeploymentResponse) {
         option (google.api.http) = {
@@ -959,7 +982,6 @@ service WorkflowService {
     }
 
     // Describes a worker deployment version.
-    // Experimental. This API might significantly change or be removed in a future release.
     rpc DescribeWorkerDeploymentVersion (DescribeWorkerDeploymentVersionRequest) returns (DescribeWorkerDeploymentVersionResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/worker-deployment-versions/{deployment_version.deployment_name}/{deployment_version.build_id}"
@@ -975,7 +997,6 @@ service WorkflowService {
 
     // Lists worker deployments in the namespace. Optionally can filter based on deployment series
     // name.
-    // Experimental. This API might significantly change or be removed in a future release.
     // Deprecated. Replaced with `ListWorkerDeployments`.
     rpc ListDeployments (ListDeploymentsRequest) returns (ListDeploymentsResponse) {
         option (google.api.http) = {
@@ -992,7 +1013,6 @@ service WorkflowService {
     // Calculating reachability is relatively expensive. Therefore, server might return a recently
     // cached value. In such a case, the `last_update_time` will inform you about the actual
     // reachability calculation time.
-    // Experimental. This API might significantly change or be removed in a future release.
     // Deprecated. Replaced with `DrainageInfo` returned by `DescribeWorkerDeploymentVersion`.
     rpc GetDeploymentReachability (GetDeploymentReachabilityRequest) returns (GetDeploymentReachabilityResponse) {
         option (google.api.http) = {
@@ -1004,7 +1024,6 @@ service WorkflowService {
     }
 
     // Returns the current deployment (and its info) for a given deployment series.
-    // Experimental. This API might significantly change or be removed in a future release.
     // Deprecated. Replaced by `current_version` returned by `DescribeWorkerDeployment`.
     rpc GetCurrentDeployment (GetCurrentDeploymentRequest) returns (GetCurrentDeploymentResponse) {
         option (google.api.http) = {
@@ -1017,7 +1036,6 @@ service WorkflowService {
 
     // Sets a deployment as the current deployment for its deployment series. Can optionally update
     // the metadata of the deployment as well.
-    // Experimental. This API might significantly change or be removed in a future release.
     // Deprecated. Replaced by `SetWorkerDeploymentCurrentVersion`.
     rpc SetCurrentDeployment (SetCurrentDeploymentRequest) returns (SetCurrentDeploymentResponse) {
         option (google.api.http) = {
@@ -1032,7 +1050,6 @@ service WorkflowService {
 
     // Set/unset the Current Version of a Worker Deployment. Automatically unsets the Ramping
     // Version if it is the Version being set as Current.
-    // Experimental. This API might significantly change or be removed in a future release.
     rpc SetWorkerDeploymentCurrentVersion (SetWorkerDeploymentCurrentVersionRequest) returns (SetWorkerDeploymentCurrentVersionResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/worker-deployments/{deployment_name}/set-current-version"
@@ -1049,7 +1066,6 @@ service WorkflowService {
     }
 
     // Describes a Worker Deployment.
-    // Experimental. This API might significantly change or be removed in a future release.
     rpc DescribeWorkerDeployment (DescribeWorkerDeploymentRequest) returns (DescribeWorkerDeploymentResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/worker-deployments/{deployment_name}"
@@ -1065,7 +1081,6 @@ service WorkflowService {
 
     // Deletes records of (an old) Deployment. A deployment can only be deleted if
     // it has no Version in it.
-    // Experimental. This API might significantly change or be removed in a future release.
     rpc DeleteWorkerDeployment (DeleteWorkerDeploymentRequest) returns (DeleteWorkerDeploymentResponse) {
         option (google.api.http) = {
             delete: "/namespaces/{namespace}/worker-deployments/{deployment_name}"
@@ -1086,7 +1101,6 @@ service WorkflowService {
     //  - It has no active pollers (none of the task queues in the Version have pollers)
     //  - It is not draining (see WorkerDeploymentVersionInfo.drainage_info). This condition
     //    can be skipped by passing `skip-drainage=true`.
-    // Experimental. This API might significantly change or be removed in a future release.
     rpc DeleteWorkerDeploymentVersion (DeleteWorkerDeploymentVersionRequest) returns (DeleteWorkerDeploymentVersionResponse) {
         option (google.api.http) = {
             delete: "/namespaces/{namespace}/worker-deployment-versions/{deployment_version.deployment_name}/{deployment_version.build_id}"
@@ -1102,7 +1116,6 @@ service WorkflowService {
 
     // Set/unset the Ramping Version of a Worker Deployment and its ramp percentage. Can be used for
     // gradual ramp to unversioned workers too.
-    // Experimental. This API might significantly change or be removed in a future release.
     rpc SetWorkerDeploymentRampingVersion (SetWorkerDeploymentRampingVersionRequest) returns (SetWorkerDeploymentRampingVersionResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/worker-deployments/{deployment_name}/set-ramping-version"
@@ -1119,7 +1132,6 @@ service WorkflowService {
     }
 
     // Lists all Worker Deployments that are tracked in the Namespace.
-    // Experimental. This API might significantly change or be removed in a future release.
     rpc ListWorkerDeployments (ListWorkerDeploymentsRequest) returns (ListWorkerDeploymentsResponse) {
         option (google.api.http) = {
             get: "/namespaces/{namespace}/worker-deployments"
@@ -1142,6 +1154,10 @@ service WorkflowService {
                 body: "*"
             }
         };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "deployment:{deployment_name}"
+        };
     }
 
     // Creates a new Worker Deployment Version.
@@ -1157,6 +1173,10 @@ service WorkflowService {
                 body: "*"
             }
         };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "deployment:{deployment_version.deployment_name}"
+        };
     }
 
     // Updates the compute config attached to a Worker Deployment Version.
@@ -1169,6 +1189,10 @@ service WorkflowService {
                 post: "/api/v1/namespaces/{namespace}/worker-deployment-versions/{deployment_version.deployment_name}/{deployment_version.build_id}/update-compute-config"
                 body: "*"
             }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "deployment:{deployment_version.deployment_name}"
         };
     }
 
@@ -1183,10 +1207,13 @@ service WorkflowService {
                 body: "*"
             }
         };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "deployment:{deployment_version.deployment_name}"
+        };
     }
 
     // Updates the user-given metadata attached to a Worker Deployment Version.
-    // Experimental. This API might significantly change or be removed in a future release.
     rpc UpdateWorkerDeploymentVersionMetadata (UpdateWorkerDeploymentVersionMetadataRequest) returns (UpdateWorkerDeploymentVersionMetadataResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/worker-deployment-versions/{deployment_version.deployment_name}/{deployment_version.build_id}/update-metadata"
@@ -1559,6 +1586,16 @@ service WorkflowService {
         };
     }
 
+    // CountWorkers counts the number of workers in a specific namespace.
+    rpc CountWorkers (CountWorkersRequest) returns (CountWorkersResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/worker-count"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/worker-count"
+            }
+        };
+    }
+
     // Updates task queue configuration.
     // For the overall queue rate limit: the rate limit set by this api overrides the worker-set rate limit,
     // which uncouples the rate limit from the worker lifecycle.
@@ -1701,6 +1738,10 @@ service WorkflowService {
                 body: "*"
             }
         };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "nexus-operation:{operation_id}"
+        };
     }
 
     // DescribeActivityExecution returns information about an activity execution.
@@ -1733,6 +1774,10 @@ service WorkflowService {
                 get: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}"
             }
         };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "nexus-operation:{operation_id}"
+        };
     }
 
     // PollActivityExecution long-polls for an activity execution to complete and returns the
@@ -1758,6 +1803,10 @@ service WorkflowService {
             additional_bindings {
                 get: "/api/v1/namespaces/{namespace}/nexus-operations/{operation_id}/poll"
             }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "nexus-operation:{operation_id}"
         };
     }
 
@@ -1836,6 +1885,10 @@ service WorkflowService {
                 body: "*"
             }
         };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "nexus-operation:{operation_id}"
+        };
     }
 
     // TerminateActivityExecution terminates an existing activity execution immediately.
@@ -1864,7 +1917,12 @@ service WorkflowService {
     //
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: Activity deletion not exposed to HTTP, users should use cancel or terminate. --)
-    rpc DeleteActivityExecution (DeleteActivityExecutionRequest) returns (DeleteActivityExecutionResponse) {}
+    rpc DeleteActivityExecution (DeleteActivityExecutionRequest) returns (DeleteActivityExecutionResponse) {
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "activity:{activity_id}"
+        };
+    }
 
     // PauseActivityExecution pauses the execution of an activity specified by its ID.
     // This API can be used to target a workflow activity or a standalone activity
@@ -2014,6 +2072,10 @@ service WorkflowService {
                 body: "*"
             }
         };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "nexus-operation:{operation_id}"
+        };
     }
 
     // DeleteNexusOperationExecution asynchronously deletes a specific Nexus operation run (when
@@ -2022,5 +2084,26 @@ service WorkflowService {
     //
     // (-- api-linter: core::0127::http-annotation=disabled
     //     aip.dev/not-precedent: Nexus operation deletion not exposed to HTTP, users should use cancel or terminate. --)
-    rpc DeleteNexusOperationExecution (DeleteNexusOperationExecutionRequest) returns (DeleteNexusOperationExecutionResponse) {}
+    rpc DeleteNexusOperationExecution (DeleteNexusOperationExecutionRequest) returns (DeleteNexusOperationExecutionResponse) {
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "nexus-operation:{operation_id}"
+        };
+    }
+
+    // PollWorkflowExecutionTimeSkipping waits for a fast-forward outcome for a workflow execution.
+    //
+    // Experimental. Might change in the future.
+    rpc PollWorkflowExecutionTimeSkipping (PollWorkflowExecutionTimeSkippingRequest) returns (PollWorkflowExecutionTimeSkippingResponse) {
+        option (google.api.http) = {
+            get: "/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/time-skipping/poll"
+            additional_bindings {
+                get: "/api/v1/namespaces/{namespace}/workflows/{workflow_execution.workflow_id}/time-skipping/poll"
+            }
+        };
+        option (temporal.api.protometa.v1.request_header) = {
+            header: "temporal-resource-id"
+            value: "workflow:{workflow_execution.workflow_id}"
+        };
+    }
 }

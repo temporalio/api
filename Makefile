@@ -35,7 +35,11 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
-NEX_GEN ?= nexgen
+# The Stream WIT uses nexgen directives that no release has yet. Pin the fork commit that has them
+# until a release does.
+NEX_GEN_REV := 526cf81c44620b6e85d2256e19604885300ed6fd
+NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
+NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
@@ -142,6 +146,7 @@ nexus-rpc-yaml-install:
 	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Compile system Nexus WIT files #####
+# No Stream operation returns StreamErrorDetails, so add-message selects it by name.
 system-nexus-wit: system-nexus-wit-install nex-gen-install
 	printf $(COLOR) "Generate system Nexus WIT..."
 	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
@@ -152,21 +157,32 @@ system-nexus-wit: system-nexus-wit-install nex-gen-install
 		--system-nexus-wit_opt=linked_input=nexus/deps \
 		--system-nexus-wit_out=. \
 		temporal/api/workflowservice/v1/service.proto \
-		temporal/api/notificationservice/v1/request_response.proto && \
+		temporal/api/notificationservice/v1/request_response.proto \
+		temporal/api/streamservice/v1/request_response.proto && \
 	$(NEX_GEN) add-message \
 		--descriptors "$$tmp/system.bin" \
 		--file temporal/api/notificationservice/v1/request_response.proto \
 		--input nexus/notification-service.wit \
 		--input nexus/deps \
-		--output nexus/notification-service.wit
+		--output nexus/notification-service.wit && \
+	$(NEX_GEN) add-message \
+		--descriptors "$$tmp/system.bin" \
+		--file temporal/api/streamservice/v1/request_response.proto \
+		--message temporal.api.stream.v1.StreamErrorDetails \
+		--input nexus/stream-service.wit \
+		--input nexus/deps \
+		--output nexus/stream-service.wit
 
 system-nexus-wit-install:
 	printf $(COLOR) "Build and install protoc-gen-system-nexus-wit..."
 	@cd cmd/protoc-gen-system-nexus-wit && go install .
 
+# The git CLI follows a local URL rewrite to SSH, which cargo's own git client can't authenticate.
 nex-gen-install:
 	printf $(COLOR) "Install nexgen if missing..."
-	command -v $(NEX_GEN) >/dev/null || cargo install nexgen --version ^0.2 --features advanced
+	command -v $(NEX_GEN) >/dev/null || CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install \
+		--git https://github.com/moetemp/nexgen --rev $(NEX_GEN_REV) --locked --features advanced \
+		--root $(NEX_GEN_ROOT) nexgen
 
 ##### Clean #####
 clean:

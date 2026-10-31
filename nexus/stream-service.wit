@@ -32,11 +32,11 @@ interface stream-service {
   // A Stream that a Workflow creates has the id <workflow id>:<first run id>:<name>. Each part is
   // percent-encoded. So a caller that knows the first run id can build the id with no call.
   /// @nexus.doc "Identifies one Stream. The id is opaque to callers."
-  /// @nexus.proto "temporal.api.stream.v1.StreamRef"
-  record stream-ref {
+  /// @nexus.proto "temporal.api.stream.v1.StreamHandle"
+  record stream-handle {
     /// @nexus.doc "The Stream id, 1 to 4096 bytes."
     id: string,
-    /// @nexus.doc "The owning Workflow run chain or Standalone Activity. Empty on a client ref."
+    /// @nexus.doc "The owning Workflow run chain or Standalone Activity. Empty for a client."
     owner: option<execution>,
     /// @nexus.doc "Registered backend name, empty for the default. The Store never reads it."
     backend: option<string>,
@@ -213,9 +213,9 @@ interface stream-service {
     ///   dotnet="StreamWorkflowContext.Owner()"
     /// @nexus.api-omit target="client"
     owner: option<producer>,
-    /// @nexus.doc "The ref, whose id is stream-id. A create with an owner needs the ref's owner."
+    /// @nexus.doc "The handle, whose id is stream-id. With an owner, it needs the handle's owner."
     /// @nexus.flatten-in-api fields="backend" fill="id=stream-id"
-    %ref: option<stream-ref>,
+    handle: option<stream-handle>,
     // Native only. The SDK Stores don't read it.
     /// @nexus.omit
     close-with-run: placeholder,
@@ -240,7 +240,7 @@ interface stream-service {
   ///   "Append. FAILED_PRECONDITION if closed, fenced or format too new. NOT_FOUND if absent."
   /// @nexus.proto "temporal.api.streamservice.v1.AppendRecordsRequest"
   record append-records-request {
-    %ref: stream-ref,
+    handle: stream-handle,
     records: list<append-record>,
     /// @nexus.doc "Local Activity only. The run's failed or timed out Workflow Tasks."
     /// @nexus.api-omit target="workflow"
@@ -291,7 +291,7 @@ interface stream-service {
   /// @nexus.doc "Close a Stream. Readers drain what is left, then end. Later appends are refused."
   /// @nexus.proto "temporal.api.streamservice.v1.CloseStreamRequest"
   record close-stream-request {
-    %ref: stream-ref,
+    handle: stream-handle,
     // Native only. The SDK Stores don't read it.
     /// @nexus.omit
     failed-tasks: placeholder,
@@ -331,7 +331,7 @@ interface stream-service {
   /// @nexus.doc "Read Records from an offset."
   /// @nexus.proto "temporal.api.streamservice.v1.ReadRecordsRequest"
   record read-records-request {
-    %ref: stream-ref,
+    handle: stream-handle,
     /// @nexus.doc "Start offset. Empty uses start. OUT_OF_RANGE past the newest offset + 1."
     from-offset: option<s64>,
     /// @nexus.doc "Where to start when from-offset is empty. Unspecified is the beginning."
@@ -374,7 +374,7 @@ interface stream-service {
 
   /// @nexus.proto "temporal.api.streamservice.v1.DescribeStreamRequest"
   record describe-stream-request {
-    %ref: stream-ref,
+    handle: stream-handle,
     /// @nexus.omit
     namespace: placeholder,
   }
@@ -387,16 +387,16 @@ interface stream-service {
     retention: option<duration>,
   }
 
-  // A handle never changes, since offsets are values that its methods return. Only a create's
-  // response sets created, so a handle built from a ref has none.
-  /// @nexus.doc "A handle on one Stream. Build it from a stream-ref, or get it from a create."
+  // A stream never changes, since offsets are values that its methods return. Only a create's
+  // response sets created, so a stream built from a handle has none.
+  /// @nexus.doc "One Stream. Build it from a stream-handle, or get it from a create."
   /// @nexus.type-parameter "body-t"
   /// @nexus.definition python="temporalio.common.StreamDefinition"
   ///   typescript="StreamDefinition" typescript-import="@temporalio/common"
   ///   dotnet="Temporalio.Common.StreamDefinition"
-  /// @nexus.flatten-in-api param="ref" fields="id backend" keep=true
+  /// @nexus.flatten-in-api param="handle" fields="id backend" keep=true
   resource %stream {
-    constructor(%ref: stream-ref, created: option<bool>);
+    constructor(handle: stream-handle, created: option<bool>);
 
     /// @nexus.doc "Publish values, and return the offset of the last one."
     /// @nexus.operation "append-records"

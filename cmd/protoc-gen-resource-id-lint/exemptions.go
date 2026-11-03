@@ -46,10 +46,13 @@ var exemptions = map[string]struct{}{
 	"WorkflowService.GetCurrentDeployment":      {},
 	"WorkflowService.SetCurrentDeployment":      {},
 
-	"OperatorService.AddSearchAttributes":    {},
-	"OperatorService.RemoveSearchAttributes": {},
-	"OperatorService.ListSearchAttributes":   {},
-	"OperatorService.DeleteNamespace":        {},
+	"OperatorService.AddSearchAttributes":      {},
+	"OperatorService.RemoveSearchAttributes":   {},
+	"OperatorService.ListSearchAttributes":     {},
+	"OperatorService.DeleteNamespace":          {},
+	"OperatorService.SoftDeleteNamespace":      {},
+	"OperatorService.RestoreNamespace":         {},
+	"OperatorService.DescribeNamespaceRestore": {},
 
 	"OperatorService.AddOrUpdateRemoteCluster": {},
 	"OperatorService.RemoveRemoteCluster":      {},

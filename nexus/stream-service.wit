@@ -14,8 +14,6 @@ world system {
 interface stream-service {
   use nexus:temporal-types/model@1.0.0.{
     duration,
-    failure,
-    payload,
     placeholder,
   };
 
@@ -150,18 +148,6 @@ interface stream-service {
     run-id: option<string>,
   }
 
-  /// How a Stream closed. Only the owner's end on the server terminates or times out.
-  /// @nexus.proto "temporal.api.enums.v1.StreamCloseStatus"
-  enum stream-close-status {
-    /// @nexus.fallback
-    stream-close-status-unspecified,
-    stream-close-status-completed,
-    stream-close-status-failed,
-    stream-close-status-canceled,
-    stream-close-status-terminated,
-    stream-close-status-timed-out,
-  }
-
   /// @nexus.doc "One Record that a Producer appended."
   /// @nexus.proto "temporal.api.stream.v1.StreamData"
   record stream-data {
@@ -170,24 +156,12 @@ interface stream-service {
     producer: option<producer>,
   }
 
-  /// @nexus.doc "The close of a Stream. A read gives it last."
-  /// @nexus.proto "temporal.api.stream.v1.StreamClose"
-  record stream-close {
-    /// @nexus.doc "The Producer that closed the Stream."
-    producer: option<producer>,
-    %result: option<payload>,
-    failure: option<failure>,
-    /// @nexus.doc "Set together with the result or the failure."
-    status: option<stream-close-status>,
-  }
-
   // The read builds a Superseded item from a flagged batch.
-  /// @nexus.doc "A read item: a Record, a Superseded item or the close."
+  /// @nexus.doc "A read item: a Record or a Superseded item. A close writes no item."
   /// @nexus.proto "temporal.api.stream.v1.StreamRecord.item"
   variant stream-item {
     data(stream-data),
     superseded(stream-superseded),
-    close(stream-close),
   }
 
   // An offset is ordered and unique in one Stream, and sparse. Offsets have gaps, so they don't
@@ -310,6 +284,7 @@ interface stream-service {
     last-offset: option<s64>,
   }
 
+  // A close carries no value, so code that has a last value publishes it first.
   /// @nexus.doc "Close a Stream. Readers drain what is left, then end. Later appends are refused."
   /// @nexus.proto "temporal.api.streamservice.v1.CloseStreamRequest"
   record close-stream-request {
@@ -322,11 +297,6 @@ interface stream-service {
     /// @nexus.source targets="client" python="client_producer()" typescript="clientProducer()"
     ///   dotnet="StreamActivityContext.Producer()"
     producer: option<producer>,
-    %result: option<payload>,
-    // Each SDK gives a canceled Activity, child Workflow or Nexus Operation as a failure of that
-    // call whose cause is the cancel. So such a failure also cancels.
-    /// @nexus.doc "Empty completes the Stream. A cancel failure cancels it. Any other fails it."
-    failure: option<failure>,
     // Native only. The SDK Stores don't read it.
     /// @nexus.omit
     previous-completed-task: placeholder,
@@ -387,7 +357,7 @@ interface stream-service {
     records: list<stream-record>,
     /// @nexus.doc "The from-offset of the next read, which is the newest offset read + 1."
     next-offset: option<s64>,
-    /// @nexus.doc "True after the close Record. No later read gives a Record."
+    /// @nexus.doc "True when the Stream is closed and this read gave its last item."
     done: option<bool>,
     // Native only. The SDK Stores never set it.
     /// @nexus.omit
@@ -404,7 +374,7 @@ interface stream-service {
   /// @nexus.proto "temporal.api.streamservice.v1.DescribeStreamResponse"
   record describe-stream-response {
     status: option<stream-status>,
-    /// @nexus.doc "The newest offset, of a Record, a Superseded item or the close. Empty for none."
+    /// @nexus.doc "The newest offset, of a Record or a Superseded item. Empty for none."
     last-offset: option<s64>,
     retention: option<duration>,
   }
@@ -425,8 +395,8 @@ interface stream-service {
 
     /// @nexus.doc "Close the Stream. Readers drain what is left, then end."
     /// @nexus.operation "close-stream"
-    /// @nexus.close failure="failure"
-    close: func(%result: option<payload>, failure: option<failure>);
+    /// @nexus.close
+    close: func();
 
     /// @nexus.doc "Read one page of Records. The poll iterator reads them all."
     /// @nexus.operation "read-records"
@@ -502,12 +472,13 @@ interface stream-service {
     stream-error-reason-too-large,
     stream-error-reason-invalid,
     /// @nexus.error retryable=true
-    stream-error-reason-storage,
+    stream-error-reason-storage-unavailable,
     stream-error-reason-unknown-writer,
     /// @nexus.error
     stream-error-reason-unsupported,
     /// @nexus.error
     stream-error-reason-already-exists,
+    stream-error-reason-storage-corrupt,
   }
 
   /// @nexus.doc "The details of a failed Stream call."

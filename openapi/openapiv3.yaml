@@ -10204,7 +10204,8 @@ components:
             Limits time an activity task can stay in a task queue before a worker picks it up. This
              timeout is always non retryable, as all a retry would achieve is to put it back into the same
              queue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not
-             specified.
+             specified. With `async_handoff_options` set, defaults to a positive
+             `schedule_to_close_timeout`, otherwise remains disabled.
 
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
@@ -10386,7 +10387,8 @@ components:
           type: string
           description: |-
             Indicates how long the caller is willing to wait for an activity completion. Limits how long
-             retries will be attempted. Either this or `start_to_close_timeout` must be specified.
+             retries will be attempted. Either this or `start_to_close_timeout` must be specified,
+             unless `async_handoff_options` provides both phase timeouts.
 
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
@@ -10397,7 +10399,8 @@ components:
             Limits time an activity task can stay in a task queue before a worker picks it up. This
              timeout is always non retryable, as all a retry would achieve is to put it back into the same
              queue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not
-             specified.
+             specified. With `async_handoff_options` set, defaults to a positive
+             `schedule_to_close_timeout`, otherwise remains disabled.
 
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
@@ -10407,14 +10410,17 @@ components:
           description: |-
             Maximum time an activity is allowed to execute after being picked up by a worker. This
              timeout is always retryable. Either this or `schedule_to_close_timeout` must be
-             specified.
+             specified, unless `async_handoff_options` provides both phase timeouts. With handoff
+             options set, see `ActivityOptions.start_to_close_timeout` for timing.
 
              (-- api-linter: core::0140::prepositions=disabled
                  aip.dev/not-precedent: "to" is used to indicate interval. --)
         heartbeatTimeout:
           pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
           type: string
-          description: Maximum permitted time between successful worker heartbeats.
+          description: |-
+            Maximum permitted time between successful worker heartbeats. With `async_handoff_options`
+             set, applies after handoff; before handoff, use `AsyncHandoffOptions.heartbeat_timeout`.
         workflowTaskCompletedEventId:
           type: string
           description: The `WORKFLOW_TASK_COMPLETED` event which this command was reported with
@@ -10423,8 +10429,9 @@ components:
             - $ref: '#/components/schemas/RetryPolicy'
           description: |-
             Activities are assigned a default retry policy controlled by the service's dynamic
-             configuration. Retries will happen up to `schedule_to_close_timeout`. To disable retries set
-             retry_policy.maximum_attempts to 1.
+             configuration. Retries will happen up to `schedule_to_close_timeout`. To disable retries under
+             this policy, set retry_policy.maximum_attempts to 1.
+             With `async_handoff_options` set, see `ActivityOptions.retry_policy` for applicability.
         useWorkflowBuildId:
           type: boolean
           description: |-
@@ -10437,6 +10444,10 @@ components:
           description: |-
             Priority metadata. If this message is not present, or any fields are not
              present, they inherit the values from the workflow.
+        asyncHandoffOptions:
+          allOf:
+            - $ref: '#/components/schemas/AsyncHandoffOptions'
+          description: Handoff timeout and retry settings.
     ActivityTaskStartedEventAttributes:
       type: object
       properties:
@@ -14796,6 +14807,24 @@ components:
           allOf:
             - $ref: '#/components/schemas/ActivityOptions'
           description: Current activity options. May be different from the one used to start the activity.
+        handoffAttempt:
+          type: integer
+          description: |-
+            Handoff attempt within the activity attempt. Starts at 1 when handoff options are
+             configured, increments on handoff retries, and resets to 1 on an activity retry or applied
+             reset. Zero when handoff options are absent.
+          format: int32
+        asyncHandoffTime:
+          type: string
+          description: Most recent durably accepted handoff time. Cleared at the next worker pickup or applied reset.
+          format: date-time
+        awaitingCompletion:
+          type: boolean
+          description: True while waiting for external completion. Pending pause, cancel, or reset requests do not clear it.
+        asyncHandoffOptions:
+          allOf:
+            - $ref: '#/components/schemas/AsyncHandoffOptions'
+          description: Server-normalized and defaulted handoff options.
     PendingActivityInfo_PauseInfo:
       type: object
       properties:

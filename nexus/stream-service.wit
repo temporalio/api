@@ -28,8 +28,8 @@ interface stream-service {
   }
 
   /// @nexus.doc "Identifies one Stream. The id is opaque to callers."
-  /// @nexus.proto "temporal.api.stream.v1.StreamHandle"
-  record stream-handle {
+  /// @nexus.proto "temporal.api.stream.v1.StreamRef"
+  record stream-ref {
     /// @nexus.doc "The Stream id, 1 to 4096 bytes."
     id: string,
     /// @nexus.doc "The run chain or Standalone Activity of a bound Stream. Empty if standalone."
@@ -179,11 +179,11 @@ interface stream-service {
   ///   "Create a Stream. If it exists, fail, or with use-existing get the open one."
   /// @nexus.proto "temporal.api.streamservice.v1.CreateStreamRequest"
   record create-stream-request {
-    // Its field name isn't handle, so the created stream takes its handle from the response, which
+    // Its field name isn't ref, so the created stream takes its ref from the response, which
     // carries the owner.
-    /// @nexus.doc "The handle of the Stream to create. Its id is the Stream id."
+    /// @nexus.doc "The ref of the Stream to create. Its id is the Stream id."
     /// @nexus.flatten-in-api fields="id backend"
-    stream-handle: stream-handle,
+    stream-ref: stream-ref,
     /// @nexus.doc "The age after which a Record is dropped. Empty is the Store default."
     retention: option<duration>,
     // A wrong run would silently withdraw real Records, so it is never a parameter. The helper
@@ -236,7 +236,7 @@ interface stream-service {
   ///   "Append one batch. The Store keeps a resent batch once, by Producer, epoch and sequence."
   /// @nexus.proto "temporal.api.streamservice.v1.AppendRecordsRequest"
   record append-records-request {
-    handle: stream-handle,
+    ref: stream-ref,
     records: list<append-record>,
     /// @nexus.doc "Local Activity only. The run's failed or timed out Workflow Tasks."
     /// @nexus.api-omit targets="workflow"
@@ -288,7 +288,7 @@ interface stream-service {
   /// @nexus.doc "Close a Stream. Readers drain what is left, then end. Later appends are refused."
   /// @nexus.proto "temporal.api.streamservice.v1.CloseStreamRequest"
   record close-stream-request {
-    handle: stream-handle,
+    ref: stream-ref,
     // Native only. The SDK Stores don't read it.
     /// @nexus.omit
     failed-tasks: placeholder,
@@ -323,7 +323,7 @@ interface stream-service {
   /// @nexus.doc "Read Records from an offset."
   /// @nexus.proto "temporal.api.streamservice.v1.ReadRecordsRequest"
   record read-records-request {
-    handle: stream-handle,
+    ref: stream-ref,
     /// @nexus.doc "Start offset. Empty uses start. An offset past the newest one + 1 fails."
     from-offset: option<s64>,
     /// @nexus.doc "Where to start when from-offset is empty. Unspecified is the beginning."
@@ -366,7 +366,7 @@ interface stream-service {
 
   /// @nexus.proto "temporal.api.streamservice.v1.DescribeStreamRequest"
   record describe-stream-request {
-    handle: stream-handle,
+    ref: stream-ref,
     /// @nexus.omit
     namespace: placeholder,
   }
@@ -380,12 +380,12 @@ interface stream-service {
   }
 
   // A stream never changes, since offsets are values that its methods return. Only a create's
-  // response sets created, so a stream built from a handle has none.
-  /// @nexus.doc "One Stream. Build it from a stream-handle, or get it from a create."
+  // response sets created, so a stream built from a ref has none.
+  /// @nexus.doc "One Stream. Build it from a stream-ref, or get it from a create."
   /// @nexus.type-parameter "body-t"
-  /// @nexus.flatten-in-api param="handle" fields="id backend" keep=true
+  /// @nexus.flatten-in-api param="ref" fields="id backend" keep=true
   resource %stream {
-    constructor(handle: stream-handle, created: option<bool>);
+    constructor(ref: stream-ref, created: option<bool>);
 
     /// @nexus.doc "Publish values, and return the offset of the last one."
     /// @nexus.operation "append-records"

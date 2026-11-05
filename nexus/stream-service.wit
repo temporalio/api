@@ -19,7 +19,7 @@ interface stream-service {
     placeholder,
   };
 
-  /// @nexus.doc "The value type of a Stream's Records. A Stream definition sets it."
+  /// @nexus.doc "The value type of a Stream's Records. A call's type argument sets it."
   /// @nexus.type-parameter
   type body-t = placeholder;
 
@@ -29,14 +29,12 @@ interface stream-service {
     nanos: option<s32>,
   }
 
-  // A Stream that a Workflow creates has the id <workflow id>:<first run id>:<name>. Each part is
-  // percent-encoded. So a caller that knows the first run id can build the id with no call.
   /// @nexus.doc "Identifies one Stream. The id is opaque to callers."
   /// @nexus.proto "temporal.api.stream.v1.StreamHandle"
   record stream-handle {
     /// @nexus.doc "The Stream id, 1 to 4096 bytes."
     id: string,
-    /// @nexus.doc "The owning Workflow run chain or Standalone Activity. Empty for a client."
+    /// @nexus.doc "The run chain or Standalone Activity of a bound Stream. Empty if standalone."
     owner: option<execution>,
     /// @nexus.doc "Registered backend name, empty for the default. The Store never reads it."
     backend: option<string>,
@@ -192,14 +190,11 @@ interface stream-service {
   }
 
   /// @nexus.doc
-  ///   "Create a Stream, or get the open one. A closed, expired or another owner's Stream fails."
+  ///   "Create a Stream. If it exists, fail, or with use-existing get the open one."
   /// @nexus.proto "temporal.api.streamservice.v1.CreateStreamRequest"
   record create-stream-request {
     /// @nexus.doc "The Stream id. Required, and never empty."
     /// @nexus.name python="id" typescript="id" dotnet="Id"
-    /// @nexus.source targets="workflow" python="workflow_stream_id(definition)"
-    ///   typescript="workflowStreamId(definition)"
-    ///   dotnet="StreamWorkflowContext.StreamId(definition)"
     stream-id: string,
     /// @nexus.doc "The age after which a Record is dropped. Empty is the Store default."
     retention: option<duration>,
@@ -211,16 +206,20 @@ interface stream-service {
     /// @nexus.source targets="client" python="withdraw_run()" typescript="withdrawRun()"
     ///   dotnet="StreamWorkflowContext.WithdrawRun()"
     withdraw-run: option<string>,
-    /// @nexus.doc "The Workflow run that owns the Stream. The Workflow transport sets it."
-    /// @nexus.source targets="workflow" python="workflow_owner()" typescript="workflowOwner()"
-    ///   dotnet="StreamWorkflowContext.Owner()"
-    /// @nexus.api-omit targets="client"
-    owner: option<producer>,
-    /// @nexus.doc "The handle, whose id is stream-id. With an owner, it needs the handle's owner."
+    // A bound Stream's owner. An SDK creates only standalone Streams for now.
+    /// @nexus.omit
+    owner: placeholder,
+    /// @nexus.doc "The handle, whose id is stream-id."
     /// @nexus.flatten-in-api fields="backend" fill="id=stream-id"
-    /// @nexus.source field="owner" targets="workflow" python="workflow_handle_owner()"
-    ///   typescript="workflowHandleOwner()" dotnet="StreamWorkflowContext.HandleOwner()"
     stream-handle: option<stream-handle>,
+    /// @nexus.doc "What the create does when the Stream exists. Unspecified is fail."
+    id-conflict-policy: option<stream-id-conflict-policy>,
+    // A retry of the create that made the Stream sends the same id, so it doesn't fail as a
+    // conflict. In a Workflow the helper gives a deterministic id.
+    /// @nexus.doc "Unique for each create call, and the same on its retries."
+    /// @nexus.source python="request_id()" typescript="requestId()"
+    ///   dotnet="StreamWorkflowContext.RequestId()"
+    request-id: option<string>,
     // Native only. The SDK Stores don't read it.
     /// @nexus.omit
     close-with-run: placeholder,
@@ -229,6 +228,14 @@ interface stream-service {
     // Native only. The SDK Stores don't read it.
     /// @nexus.omit
     task-token: placeholder,
+  }
+
+  /// @nexus.doc "What a create does when its Stream exists. Unspecified is fail."
+  /// @nexus.proto "temporal.api.enums.v1.StreamIdConflictPolicy"
+  enum stream-id-conflict-policy {
+    stream-id-conflict-policy-unspecified,
+    stream-id-conflict-policy-fail,
+    stream-id-conflict-policy-use-existing,
   }
 
   /// @nexus.proto "temporal.api.enums.v1.StreamStatus"
@@ -397,9 +404,6 @@ interface stream-service {
   // response sets created, so a stream built from a handle has none.
   /// @nexus.doc "One Stream. Build it from a stream-handle, or get it from a create."
   /// @nexus.type-parameter "body-t"
-  /// @nexus.definition python="temporalio.common.StreamDefinition"
-  ///   typescript="StreamDefinition" typescript-import="@temporalio/common"
-  ///   dotnet="Temporalio.Common.StreamDefinition"
   /// @nexus.flatten-in-api param="handle" fields="id backend" keep=true
   resource %stream {
     constructor(handle: stream-handle, created: option<bool>);
@@ -431,7 +435,7 @@ interface stream-service {
     describe: func() -> describe-stream-response;
   }
 
-  // created is false when the Stream existed, whatever its Retention.
+  // With use-existing, created is false when the Stream existed, whatever its Retention.
   /// @nexus.proto "temporal.api.streamservice.v1.CreateStreamResponse"
   type create-stream-result = own<%stream>;
 
@@ -493,6 +497,8 @@ interface stream-service {
     stream-error-reason-unknown-writer,
     /// @nexus.error
     stream-error-reason-unsupported,
+    /// @nexus.error
+    stream-error-reason-already-exists,
   }
 
   /// @nexus.doc "The details of a failed Stream call."

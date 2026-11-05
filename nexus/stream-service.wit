@@ -59,54 +59,65 @@ interface stream-service {
     run-id: option<string>,
   }
 
-  /// @nexus.proto "temporal.api.enums.v1.StreamProducerKind"
-  enum stream-producer-kind {
-    /// @nexus.fallback
-    stream-producer-kind-unspecified,
-    stream-producer-kind-workflow,
-    stream-producer-kind-local-activity,
-    stream-producer-kind-activity,
-    stream-producer-kind-client,
-    stream-producer-kind-standalone-activity,
-  }
-
-  // Epochs compare field by field, in the order of the fields. A field that a kind does not use is
-  // empty and compares as zero. A timestamp compares seconds, then nanos. A Workflow epoch has
-  // task-started-event-id, task-attempt and task-started-time. A Local Activity epoch has the same
-  // three of the dispatching Workflow Task, then attempt. An Activity epoch has
-  // attempt-scheduled-time, then attempt. A client epoch has attempt.
-  /// @nexus.doc "The ordered attempt of a Producer. A higher epoch supersedes a lower one."
-  /// @nexus.proto "temporal.api.stream.v1.ProducerEpoch"
-  record producer-epoch {
-    /// @nexus.doc "The started event id of the Workflow Task."
-    task-started-event-id: option<s64>,
-    /// @nexus.doc "The attempt of the Workflow Task."
-    task-attempt: option<s32>,
-    /// @nexus.doc "When the Workflow Task attempt started. It tells a reused started id apart."
-    task-started-time: option<timestamp>,
-    /// @nexus.doc "When the server scheduled this Activity attempt. A reset makes it later."
-    attempt-scheduled-time: option<timestamp>,
-    /// @nexus.doc "The Activity, Local Activity or client attempt."
-    attempt: option<s32>,
-  }
-
-  /// @nexus.doc "The Producer of a batch."
-  /// @nexus.proto "temporal.api.stream.v1.Producer"
-  record producer {
-    /// @nexus.doc "Stable across attempts. The proposal gives the form per kind."
-    id: string,
-    kind: option<stream-producer-kind>,
-    epoch: option<producer-epoch>,
-    /// @nexus.doc "The run of the Producer, so nobody parses the id. Empty for a client."
-    run-id: option<string>,
-  }
-
   /// @nexus.doc "A Workflow Task attempt of the run."
   /// @nexus.proto "temporal.api.stream.v1.WorkflowTaskEpoch"
   record workflow-task-epoch {
     started-event-id: option<s64>,
     attempt: option<s32>,
+    /// @nexus.doc "When the Workflow Task attempt started. It tells a reused started id apart."
     started-time: option<timestamp>,
+  }
+
+  /// @nexus.doc "A Local Activity attempt. Its Workflow Task orders it first."
+  /// @nexus.proto "temporal.api.stream.v1.LocalActivityEpoch"
+  record local-activity-epoch {
+    /// @nexus.doc "The Workflow Task attempt that dispatched the Local Activity."
+    task: option<workflow-task-epoch>,
+    /// @nexus.doc "The Local Activity's own attempt in that Workflow Task."
+    attempt: option<s32>,
+  }
+
+  /// @nexus.doc "An Activity or Standalone Activity attempt."
+  /// @nexus.proto "temporal.api.stream.v1.ActivityEpoch"
+  record activity-epoch {
+    /// @nexus.doc "When the server scheduled this attempt. A reset makes it later."
+    attempt-scheduled-time: option<timestamp>,
+    attempt: option<s32>,
+  }
+
+  /// @nexus.doc "A client attempt, which the client picks."
+  /// @nexus.proto "temporal.api.stream.v1.ClientEpoch"
+  record client-epoch {
+    attempt: option<s32>,
+  }
+
+  // The case is the kind of the Producer, so a kind sets only its own fields.
+  /// @nexus.doc "The epoch of each kind of Producer."
+  /// @nexus.proto "temporal.api.stream.v1.ProducerEpoch.kind"
+  variant producer-epoch-kind {
+    workflow(workflow-task-epoch),
+    local-activity(local-activity-epoch),
+    activity(activity-epoch),
+    standalone-activity(activity-epoch),
+    client(client-epoch),
+  }
+
+  /// @nexus.doc "The ordered attempt of a Producer. A higher epoch supersedes a lower one."
+  /// @nexus.proto "temporal.api.stream.v1.ProducerEpoch"
+  record producer-epoch {
+    // A newer server can send a kind that this SDK doesn't know. Then the kind is empty.
+    kind: option<producer-epoch-kind>,
+  }
+
+  /// @nexus.doc "The Producer of a batch."
+  /// @nexus.proto "temporal.api.stream.v1.Producer"
+  record producer {
+    /// @nexus.doc "Stable across attempts, such as wf:<run id> for a Workflow run."
+    id: string,
+    /// @nexus.doc "Required. Its case gives the kind of the Producer."
+    epoch: option<producer-epoch>,
+    /// @nexus.doc "The run of the Producer, so nobody parses the id. Empty for a client."
+    run-id: option<string>,
   }
 
   /// @nexus.doc "One Record to append."
@@ -117,18 +128,19 @@ interface stream-service {
     body: body-t,
   }
 
-  // An Activity or Local Activity item withdraws the Records of its Producer with a lower epoch. A
-  // Workflow item, with this task t in epoch and the previous completed task c, withdraws the
-  // Records of the run and of its Local Activities whose task-started-event-id is in failed-tasks
-  // or strictly between c and t. It also withdraws those at the started event id of c or of t with
-  // a lower epoch than c or t. No task in that range can have completed.
+  // A Local Activity, Activity or Standalone Activity item withdraws the Records of its Producer
+  // with a lower epoch. A Workflow item, with its task t and the previous completed task c,
+  // withdraws the Records of the run and of its Local Activities whose Workflow Task is in
+  // failed-tasks or strictly between c and t. It also withdraws those at the started event id of c
+  // or of t with a lower epoch than c or t. No task in that range can have completed. A client item
+  // withdraws nothing.
   /// @nexus.doc "Which earlier Records a Superseded item withdraws."
   /// @nexus.proto "temporal.api.stream.v1.StreamSuperseded"
   record stream-superseded {
     producer-id: string,
     /// @nexus.doc "Workflow only. Started event ids of failed or timed out Workflow Tasks."
     failed-tasks: list<s64>,
-    producer-kind: option<stream-producer-kind>,
+    /// @nexus.doc "The withdrawing Producer's epoch, whose case picks the rule."
     epoch: option<producer-epoch>,
     /// @nexus.doc "Workflow only. The previous completed Workflow Task of the run."
     previous-completed-task: option<workflow-task-epoch>,

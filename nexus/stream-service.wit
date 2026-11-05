@@ -126,26 +126,30 @@ interface stream-service {
     body: body-t,
   }
 
-  // A Local Activity, Activity or Standalone Activity item withdraws the Records of its Producer
-  // with a lower epoch. A Workflow item, with its task t and the previous completed task c,
+  // A Local Activity, Activity or Standalone Activity write withdraws the Records of its Producer
+  // with a lower epoch. A Workflow write, with its task t and the previous completed task c,
   // withdraws the Records of the run and of its Local Activities whose Workflow Task is in
   // failed-tasks or strictly between c and t. It also withdraws those at the started event id of c
-  // or of t with a lower epoch than c or t. No task in that range can have completed. A client item
-  // withdraws nothing.
+  // or of t with a lower epoch than c or t. No task in that range can have completed. A client
+  // write withdraws nothing.
+  /// @nexus.doc "The Producer of a write, and which earlier Records the write withdraws."
+  /// @nexus.proto "temporal.api.stream.v1.StreamWriter"
+  record stream-writer {
+    /// @nexus.doc "Required on a write. Its epoch's case picks the withdrawal rule."
+    producer: option<producer>,
+    /// @nexus.doc "Workflow and Local Activity only. The run's last completed Workflow Task."
+    previous-completed-task: option<workflow-task-epoch>,
+    /// @nexus.doc "Workflow and Local Activity only. The run's failed or timed out Workflow Tasks."
+    failed-tasks: list<s64>,
+    /// @nexus.doc "Retry run only. The previous run, all of whose Records are withdrawn."
+    withdraw-run: option<string>,
+  }
+
   /// @nexus.doc "Which earlier Records a Superseded item withdraws."
   /// @nexus.proto "temporal.api.stream.v1.StreamSuperseded"
   record stream-superseded {
-    producer-id: string,
-    /// @nexus.doc "Workflow only. Started event ids of failed or timed out Workflow Tasks."
-    failed-tasks: list<s64>,
-    /// @nexus.doc "The withdrawing Producer's epoch, whose case picks the rule."
-    epoch: option<producer-epoch>,
-    /// @nexus.doc "Workflow only. The previous completed Workflow Task of the run."
-    previous-completed-task: option<workflow-task-epoch>,
-    /// @nexus.doc "Workflow retry only. The previous run, all of whose Records are withdrawn."
-    withdraw-run: option<string>,
-    /// @nexus.doc "The withdrawing Producer's run, so no Reader parses ids. Empty for a client."
-    run-id: option<string>,
+    /// @nexus.doc "The writer that withdraws. Its epoch is empty when only withdraw-run applies."
+    writer: option<stream-writer>,
   }
 
   /// @nexus.doc "One Record that a Producer appended."
@@ -238,37 +242,19 @@ interface stream-service {
   record append-records-request {
     ref: stream-ref,
     records: list<append-record>,
-    /// @nexus.doc "Local Activity only. The run's failed or timed out Workflow Tasks."
-    /// @nexus.api-omit targets="workflow"
-    /// @nexus.source targets="client" python="local_activity_failed_tasks()"
-    ///   typescript="localActivityFailedTasks()"
-    ///   dotnet="StreamActivityContext.LocalActivityFailedTasks()"
-    failed-tasks: list<s64>,
+    // A wrong run or task would silently withdraw real Records, so the writer is never a
+    // parameter. The helper of each context fills only the fields that apply where it runs.
     /// @nexus.doc "Required outside a Workflow. In a Workflow the transport sets it."
-    /// @nexus.source targets="workflow" python="workflow_producer()"
-    ///   typescript="workflowProducer()" dotnet="StreamWorkflowContext.Producer()"
-    /// @nexus.source targets="client" python="client_producer()" typescript="clientProducer()"
-    ///   dotnet="StreamActivityContext.Producer()"
-    producer: option<producer>,
+    /// @nexus.source targets="workflow" python="workflow_writer()"
+    ///   typescript="workflowWriter()" dotnet="StreamWorkflowContext.Writer()"
+    /// @nexus.source targets="client" python="client_writer()" typescript="clientWriter()"
+    ///   dotnet="StreamActivityContext.Writer()"
+    writer: option<stream-writer>,
     // A call with no writer state, such as publish, sends no sequence. The Store then numbers the
     // batch, so nothing dedupes it.
     /// @nexus.doc
     ///   "The batch number in this epoch. Empty takes the next one, and a retry writes it again."
     sequence: option<s64>,
-    /// @nexus.doc "Local Activity only. The run's last completed Workflow Task."
-    /// @nexus.api-omit targets="workflow"
-    /// @nexus.source targets="client" python="local_activity_previous_completed_task()"
-    ///   typescript="localActivityPreviousCompletedTask()"
-    ///   dotnet="StreamActivityContext.LocalActivityPreviousCompletedTask()"
-    previous-completed-task: option<workflow-task-epoch>,
-    // A wrong run would silently withdraw real Records, so it is never a parameter. The helper
-    // gives the previous run in a retry run's Workflow, and nothing elsewhere.
-    /// @nexus.doc "Retry run only. The previous run, whose Records this withdraws."
-    /// @nexus.source targets="workflow" python="withdraw_run()" typescript="withdrawRun()"
-    ///   dotnet="StreamWorkflowContext.WithdrawRun()"
-    /// @nexus.source targets="client" python="withdraw_run()" typescript="withdrawRun()"
-    ///   dotnet="StreamWorkflowContext.WithdrawRun()"
-    withdraw-run: option<string>,
     /// @nexus.omit
     namespace: placeholder,
     // Native only. The SDK Stores don't read them.
@@ -289,22 +275,15 @@ interface stream-service {
   /// @nexus.proto "temporal.api.streamservice.v1.CloseStreamRequest"
   record close-stream-request {
     ref: stream-ref,
-    // Native only. The SDK Stores don't read it.
-    /// @nexus.omit
-    failed-tasks: placeholder,
-    /// @nexus.source targets="workflow" python="workflow_producer()"
-    ///   typescript="workflowProducer()" dotnet="StreamWorkflowContext.Producer()"
-    /// @nexus.source targets="client" python="client_producer()" typescript="clientProducer()"
-    ///   dotnet="StreamActivityContext.Producer()"
-    producer: option<producer>,
-    // Native only. The SDK Stores don't read it.
-    /// @nexus.omit
-    previous-completed-task: placeholder,
+    // The SDK Stores read only the Producer. The server also reads the withdrawal fields.
+    /// @nexus.source targets="workflow" python="workflow_writer()"
+    ///   typescript="workflowWriter()" dotnet="StreamWorkflowContext.Writer()"
+    /// @nexus.source targets="client" python="client_writer()" typescript="clientWriter()"
+    ///   dotnet="StreamActivityContext.Writer()"
+    writer: option<stream-writer>,
     /// @nexus.omit
     namespace: placeholder,
-    // Native only. The SDK Stores don't read them.
-    /// @nexus.omit
-    withdraw-run: placeholder,
+    // Native only. The SDK Stores don't read it.
     /// @nexus.omit
     task-token: placeholder,
   }

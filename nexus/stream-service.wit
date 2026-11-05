@@ -193,9 +193,11 @@ interface stream-service {
   ///   "Create a Stream. If it exists, fail, or with use-existing get the open one."
   /// @nexus.proto "temporal.api.streamservice.v1.CreateStreamRequest"
   record create-stream-request {
-    /// @nexus.doc "The Stream id. Required, and never empty."
-    /// @nexus.name python="id" typescript="id" dotnet="Id"
-    stream-id: string,
+    // Not named handle, so the created stream takes its handle from the response, which carries
+    // the owner.
+    /// @nexus.doc "The handle of the Stream to create. Its id names the Stream."
+    /// @nexus.flatten-in-api fields="id backend"
+    stream-handle: stream-handle,
     /// @nexus.doc "The age after which a Record is dropped. Empty is the Store default."
     retention: option<duration>,
     // A wrong run would silently withdraw real Records, so it is never a parameter. The helper
@@ -209,9 +211,6 @@ interface stream-service {
     // A bound Stream's owner. An SDK creates only standalone Streams for now.
     /// @nexus.omit
     owner: placeholder,
-    /// @nexus.doc "The handle, whose id is stream-id."
-    /// @nexus.flatten-in-api fields="backend" fill="id=stream-id"
-    stream-handle: option<stream-handle>,
     /// @nexus.doc "What the create does when the Stream exists. Unspecified is fail."
     id-conflict-policy: option<stream-id-conflict-policy>,
     // A retry of the create that made the Stream sends the same id, so it doesn't fail as a
@@ -247,10 +246,8 @@ interface stream-service {
     stream-status-expired,
   }
 
-  // The meta key of each Stream has a format version v. Lua refuses a write to a Stream with a
-  // higher v with FAILED_PRECONDITION and the detail stream_format_too_new.
   /// @nexus.doc
-  ///   "Append. FAILED_PRECONDITION if closed, fenced or format too new. NOT_FOUND if absent."
+  ///   "Append one batch. The Store keeps a resent batch once, by Producer, epoch and sequence."
   /// @nexus.proto "temporal.api.streamservice.v1.AppendRecordsRequest"
   record append-records-request {
     handle: stream-handle,
@@ -345,7 +342,7 @@ interface stream-service {
   /// @nexus.proto "temporal.api.streamservice.v1.ReadRecordsRequest"
   record read-records-request {
     handle: stream-handle,
-    /// @nexus.doc "Start offset. Empty uses start. OUT_OF_RANGE past the newest offset + 1."
+    /// @nexus.doc "Start offset. Empty uses start. An offset past the newest one + 1 fails."
     from-offset: option<s64>,
     /// @nexus.doc "Where to start when from-offset is empty. Unspecified is the beginning."
     start: option<stream-read-start>,
@@ -481,14 +478,14 @@ interface stream-service {
     stream-error-reason-closed,
     /// @nexus.error
     stream-error-reason-fenced,
-    stream-error-reason-sequence,
+    stream-error-reason-sequence-too-low,
     /// @nexus.error
     stream-error-reason-seq-divergent,
     /// @nexus.error
     stream-error-reason-not-owner,
     stream-error-reason-format-too-new,
     /// @nexus.error
-    stream-error-reason-offset,
+    stream-error-reason-offset-too-high,
     /// @nexus.error
     stream-error-reason-too-large,
     stream-error-reason-invalid,

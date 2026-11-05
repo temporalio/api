@@ -14252,7 +14252,7 @@
         },
         "scheduleToStartTimeout": {
           "type": "string",
-          "description": "Limits time an activity task can stay in a task queue before a worker picks it up. This\ntimeout is always non retryable, as all a retry would achieve is to put it back into the same\nqueue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not\nspecified.\n"
+          "description": "Limits time an activity task can stay in a task queue before a worker picks it up. This\ntimeout is always non retryable, as all a retry would achieve is to put it back into the same\nqueue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not\nspecified. With `async_handoff_options` set, defaults to a positive\n`schedule_to_close_timeout`, otherwise remains disabled.\n"
         },
         "startToCloseTimeout": {
           "type": "string",
@@ -14434,19 +14434,19 @@
         },
         "scheduleToCloseTimeout": {
           "type": "string",
-          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted. Either this or `start_to_close_timeout` must be specified.\n"
+          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted. Either this or `start_to_close_timeout` must be specified,\nunless `async_handoff_options` provides both phase timeouts.\n"
         },
         "scheduleToStartTimeout": {
           "type": "string",
-          "description": "Limits time an activity task can stay in a task queue before a worker picks it up. This\ntimeout is always non retryable, as all a retry would achieve is to put it back into the same\nqueue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not\nspecified.\n"
+          "description": "Limits time an activity task can stay in a task queue before a worker picks it up. This\ntimeout is always non retryable, as all a retry would achieve is to put it back into the same\nqueue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not\nspecified. With `async_handoff_options` set, defaults to a positive\n`schedule_to_close_timeout`, otherwise remains disabled.\n"
         },
         "startToCloseTimeout": {
           "type": "string",
-          "description": "Maximum time an activity is allowed to execute after being picked up by a worker. This\ntimeout is always retryable. Either this or `schedule_to_close_timeout` must be\nspecified.\n"
+          "description": "Maximum time an activity is allowed to execute after being picked up by a worker. This\ntimeout is always retryable. Either this or `schedule_to_close_timeout` must be\nspecified, unless `async_handoff_options` provides both phase timeouts. With handoff\noptions set, see `ActivityOptions.start_to_close_timeout` for timing.\n"
         },
         "heartbeatTimeout": {
           "type": "string",
-          "description": "Maximum permitted time between successful worker heartbeats."
+          "description": "Maximum permitted time between successful worker heartbeats. With `async_handoff_options`\nset, applies after handoff; before handoff, use `AsyncHandoffOptions.heartbeat_timeout`."
         },
         "workflowTaskCompletedEventId": {
           "type": "string",
@@ -14455,7 +14455,7 @@
         },
         "retryPolicy": {
           "$ref": "#/definitions/v1RetryPolicy",
-          "description": "Activities are assigned a default retry policy controlled by the service's dynamic\nconfiguration. Retries will happen up to `schedule_to_close_timeout`. To disable retries set\nretry_policy.maximum_attempts to 1."
+          "description": "Activities are assigned a default retry policy controlled by the service's dynamic\nconfiguration. Retries will happen up to `schedule_to_close_timeout`. To disable retries under\nthis policy, set retry_policy.maximum_attempts to 1.\nWith `async_handoff_options` set, see `ActivityOptions.retry_policy` for applicability."
         },
         "useWorkflowBuildId": {
           "type": "boolean",
@@ -14464,6 +14464,10 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "description": "Priority metadata. If this message is not present, or any fields are not\npresent, they inherit the values from the workflow."
+        },
+        "asyncHandoffOptions": {
+          "$ref": "#/definitions/v1AsyncHandoffOptions",
+          "description": "Handoff timeout and retry settings."
         }
       }
     },
@@ -18503,6 +18507,24 @@
         "activityOptions": {
           "$ref": "#/definitions/v1ActivityOptions",
           "description": "Current activity options. May be different from the one used to start the activity."
+        },
+        "handoffAttempt": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Handoff attempt within the activity attempt. Starts at 1 when handoff options are\nconfigured, increments on handoff retries, and resets to 1 on an activity retry or applied\nreset. Zero when handoff options are absent."
+        },
+        "asyncHandoffTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Most recent durably accepted handoff time. Cleared at the next worker pickup or applied reset."
+        },
+        "awaitingCompletion": {
+          "type": "boolean",
+          "description": "True while waiting for external completion. Pending pause, cancel, or reset requests do not clear it."
+        },
+        "asyncHandoffOptions": {
+          "$ref": "#/definitions/v1AsyncHandoffOptions",
+          "description": "Server-normalized and defaulted handoff options."
         }
       }
     },

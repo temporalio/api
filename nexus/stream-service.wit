@@ -120,7 +120,7 @@ interface stream-service {
 
   /// @nexus.doc "One Record to append."
   /// @nexus.proto "temporal.api.stream.v1.AppendRecord"
-  /// @nexus.unwrap
+  /// @nexus.flatten-in-api
   record append-record {
     /// @nexus.doc "The value."
     body: body-t,
@@ -186,7 +186,7 @@ interface stream-service {
     // Its field name isn't ref, so the created stream takes its ref from the response, which
     // carries the owner.
     /// @nexus.doc "The ref of the Stream to create. Its id is the Stream id."
-    /// @nexus.flatten-in-api fields="id backend"
+    /// @nexus.flatten-in-api
     stream-ref: stream-ref,
     /// @nexus.doc "The age after which a Record is dropped. Empty is the Store default."
     retention: option<duration>,
@@ -361,14 +361,13 @@ interface stream-service {
   // A stream never changes, since offsets are values that its methods return. Only a create's
   // response sets created, so a stream built from a ref has none.
   /// @nexus.doc "One Stream. Build it from a stream-ref, or get it from a create."
-  /// @nexus.flatten-in-api param="ref" fields="id backend" keep=true
+  /// @nexus.flatten-in-api param="ref"
   resource %stream {
     constructor(ref: stream-ref, created: option<bool>);
 
     /// @nexus.doc "Publish values, and return the offset of the last one."
     /// @nexus.operation "append-records"
-    /// @nexus.varargs name="values"
-    /// @nexus.result-field "last-offset"
+    /// @nexus.varargs "records"
     publish: func(records: list<append-record>) -> append-records-response;
 
     /// @nexus.doc "Close the Stream. Readers drain what is left, then end."
@@ -400,6 +399,7 @@ interface stream-service {
   create-stream: func(request: create-stream-request) -> create-stream-result;
 
   /// @nexus.doc "Append one batch. Workflow code makes the call from a Local Activity."
+  /// @nexus.output-transform python-type="int" python="_support.last_offset(result)"
   /// @nexus.operation name="AppendRecords"
   append-records: func(request: append-records-request) -> append-records-response;
 
@@ -418,50 +418,4 @@ interface stream-service {
 
   /// @nexus.operation name="DescribeStream"
   describe-stream: func(request: describe-stream-request) -> describe-stream-response;
-
-  // No operation returns these. A failed call has one in its details. Each SDK raises the class
-  // of its reason, or the base class for a reason with no class.
-  /// Why a Stream call failed. Each reason has one gRPC status code.
-  /// @nexus.proto "temporal.api.enums.v1.StreamErrorReason"
-  /// @nexus.error details="stream-error-details" field="reason" name="stream-error"
-  ///   python-extends="temporalio.exceptions.ApplicationError"
-  ///   typescript-extends="ApplicationFailure" typescript-extends-import="@temporalio/common"
-  ///   dotnet-extends="Temporalio.Exceptions.ApplicationFailureException"
-  enum stream-error-reason {
-    /// @nexus.fallback
-    stream-error-reason-unspecified,
-    /// @nexus.error
-    stream-error-reason-not-found,
-    /// @nexus.error
-    stream-error-reason-expired,
-    /// @nexus.error
-    stream-error-reason-closed,
-    /// @nexus.error
-    stream-error-reason-fenced,
-    stream-error-reason-sequence-too-low,
-    /// @nexus.error
-    stream-error-reason-seq-divergent,
-    /// @nexus.error
-    stream-error-reason-not-owner,
-    stream-error-reason-format-too-new,
-    /// @nexus.error
-    stream-error-reason-offset-too-high,
-    /// @nexus.error
-    stream-error-reason-too-large,
-    stream-error-reason-invalid,
-    /// @nexus.error retryable=true
-    stream-error-reason-storage-unavailable,
-    stream-error-reason-unknown-writer,
-    /// @nexus.error
-    stream-error-reason-unsupported,
-    /// @nexus.error
-    stream-error-reason-already-exists,
-    stream-error-reason-storage-corrupt,
-  }
-
-  /// @nexus.doc "The details of a failed Stream call."
-  /// @nexus.proto "temporal.api.stream.v1.StreamErrorDetails"
-  record stream-error-details {
-    reason: option<stream-error-reason>,
-  }
 }

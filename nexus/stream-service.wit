@@ -250,7 +250,7 @@ interface stream-service {
     /// @nexus.source targets="client" python="client_writer()" typescript="clientWriter()"
     ///   dotnet="StreamActivityContext.Writer()"
     writer: option<stream-writer>,
-    // A call with no writer state, such as publish, sends no sequence. The Store then numbers the
+    // A call with no writer state, such as append, sends no sequence. The Store then numbers the
     // batch, so nothing dedupes it.
     /// @nexus.doc
     ///   "The batch number in this epoch. Empty takes the next one, and a retry writes it again."
@@ -270,7 +270,7 @@ interface stream-service {
     last-offset: option<s64>,
   }
 
-  // A close carries no value, so code that has a last value publishes it first.
+  // A close carries no value, so code that has a last value appends it first.
   /// @nexus.doc "Close a Stream. Readers drain what is left, then end. Later appends are refused."
   /// @nexus.proto "temporal.api.streamservice.v1.CloseStreamRequest"
   record close-stream-request {
@@ -365,10 +365,10 @@ interface stream-service {
   resource %stream {
     constructor(ref: stream-ref, created: option<bool>);
 
-    /// @nexus.doc "Publish values, and return the offset of the last one."
+    /// @nexus.doc "Append values, and return the offset of the last one."
     /// @nexus.operation "append-records"
     /// @nexus.varargs "records"
-    publish: func(records: list<append-record>) -> append-records-response;
+    append: func(records: list<append-record>) -> append-records-response;
 
     /// @nexus.doc "Close the Stream. Readers drain what is left, then end."
     /// @nexus.operation "close-stream"

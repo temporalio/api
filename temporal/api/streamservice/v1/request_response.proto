@@ -28,7 +28,7 @@ message CreateStreamRequest {
     string namespace = 1;
     // The ref of the Stream to create. Its id is the Stream id, and is never empty.
     temporal.api.stream.v1.StreamRef stream_ref = 2;
-    // The age after which a Record is dropped. Empty is the Store default.
+    // How long the Stream stays readable after its close. Empty is the Store default.
     google.protobuf.Duration retention = 3;
     // Only read by the server, for a Stream bound to a Standalone Activity. The server checks that
     // the token is the Activity's current attempt, so a caller can't bind a Stream to a Standalone
@@ -97,12 +97,12 @@ message CloseStreamResponse {
 message ReadRecordsRequest {
     string namespace = 1;
     temporal.api.stream.v1.StreamRef ref = 2;
-    // Start at this offset. Zero uses start. It fails with OFFSET_TOO_HIGH if it is past the newest
-    // offset + 1.
+    // Read after this offset. Empty uses start. It fails with OFFSET_TOO_HIGH if it is past the
+    // newest offset.
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "from" and "to" mark the ends of a range of offsets. --)
     bytes from_offset = 3;
-    // Where to start when from_offset is zero. Unspecified is the beginning.
+    // Where to start when from_offset is empty. Unspecified is the beginning.
     temporal.api.enums.v1.StreamReadStart start = 4;
     // The most Records in one page. Zero is 1000.
     int32 max_records = 5;
@@ -113,12 +113,12 @@ message ReadRecordsRequest {
     // At most 60 s.
     google.protobuf.Duration create_wait = 7;
     // The exclusive end of the read. The read scans no entry at or after it, so a replay reads the
-    // same range. Zero means no end. Only the server serves it, and a Store refuses it.
+    // same range. Empty means no end. Only the server serves it, and a Store refuses it.
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "from" and "to" mark the ends of a range of offsets. --)
     bytes to_offset = 8;
     // Park as a normal read, then answer with no Records and next_offset = from_offset, when a
-    // Record at or after from_offset exists, when the Stream closes (done), or when wait ends. Its
+    // Record after from_offset exists, when the Stream closes (done), or when wait ends. Its
     // wait may be days, since a parked read adds nothing to History while it waits. Only the
     // server serves it, and a Store refuses it.
     bool wake_only = 9;
@@ -133,14 +133,15 @@ message ReadRecordsRequest {
     // the server.
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: The floor is the lowest from_offset of the run's reads. --)
-    int64 floor_from = 12;
+    bytes floor_from = 12;
 }
 
 // Experimental. Might change in the future.
 // One page of a read.
 message ReadRecordsResponse {
     repeated temporal.api.stream.v1.StreamRecord records = 1;
-    // The from_offset of the next read, which is the newest offset read + 1.
+    // The from_offset of the next read, which is the offset of the newest Record read. An empty
+    // page gives the request's from_offset.
     bytes next_offset = 2;
     // True when the Stream is closed and this read gave its last item. A read of a closed Stream
     // with no item left answers at once.
@@ -161,7 +162,7 @@ message DescribeStreamRequest {
 // The state of a Stream.
 message DescribeStreamResponse {
     temporal.api.enums.v1.StreamStatus status = 1;
-    // The newest offset, of a Record. Zero when the Stream has none.
+    // The newest offset, of a Record. Empty when the Stream has none.
     bytes last_offset = 2;
     google.protobuf.Duration retention = 3;
 }

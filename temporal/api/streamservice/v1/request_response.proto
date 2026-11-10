@@ -120,7 +120,7 @@ message ReadRecordsRequest {
     bytes to_offset = 8;
     // Asks only for a wake-up, for a reader that must not get Records in this answer, such as a
     // Workflow whose Records stay out of History. The read waits as a normal read does. It then
-    // answers with no Records and next_offset = from_offset, when a Record after from_offset
+    // answers with no Records and last_offset = from_offset, when a Record after from_offset
     // exists, when the Stream closes (done), or when wait ends. The reader then gets the Records
     // with a normal read. The wait may be days, since a parked read adds nothing to History.
     // Only the server serves it, and a Store refuses it.
@@ -142,10 +142,11 @@ message ReadRecordsRequest {
 // One page of a read.
 message ReadRecordsResponse {
     repeated temporal.api.stream.v1.StreamRecord records = 1;
-    // The from_offset of the next read, which is the offset of the newest Record read. An empty
-    // page gives the request's from_offset, and that is empty when the request had none. So it
-    // is always known, and an empty value means that the next read starts as this one did.
-    bytes next_offset = 2;
+    // The last offset that this read covered, which is the offset of the newest Record of the
+    // page. The next read gives it as from_offset and starts after it. An empty page gives the
+    // request's from_offset, and that is empty when the request had none. So it is always
+    // known, and an empty value means that the next read starts as this one did.
+    bytes last_offset = 2;
     // True when the Stream is closed and this read gave its last item. The close item says the
     // same on a page that has it. An answer with no item needs this flag, which is a wake_only
     // read and a read after the close item. A read of a closed Stream with no item left answers

@@ -96,15 +96,15 @@ message CloseStreamResponse {
 message ReadRecordsRequest {
     string namespace = 1;
     temporal.api.stream.v1.StreamRef ref = 2;
-    // Read after this offset. Empty uses start. It fails with OFFSET_TOO_HIGH if it is past the
-    // newest offset. A read starts in one of three ways, after from_offset, at start, or with the
-    // newest last Records, and a request sets at most one of them. They are three fields and not
-    // a oneof, so that the Workflow API can leave out last, which a replay can't serve.
-    // (-- api-linter: core::0140::prepositions=disabled
-    //     aip.dev/not-precedent: "from" and "to" mark the ends of a range of offsets. --)
-    bytes from_offset = 3;
-    // Where to start when from_offset is empty. Unspecified is the beginning.
-    temporal.api.enums.v1.StreamReadStart start = 4;
+    // Where the read starts. Unset is the beginning of the Stream.
+    oneof position {
+        // Read after this offset. It fails with OFFSET_TOO_HIGH if it is past the newest offset.
+        // (-- api-linter: core::0140::prepositions=disabled
+        //     aip.dev/not-precedent: "from" and "to" mark the ends of a range of offsets. --)
+        bytes from_offset = 3;
+        // Start at the beginning or at the end of the Stream. Unspecified is the beginning.
+        temporal.api.enums.v1.StreamReadStart start = 4;
+    }
     // The most Records in one page. Zero is 1000.
     int32 max_records = 5;
     // How long the read waits for a new Record before it answers with an empty page. Empty answers
@@ -125,11 +125,8 @@ message ReadRecordsRequest {
     // with a normal read. The wait may be days, since a parked read adds nothing to History.
     // Only the server serves it, and a Store refuses it.
     bool wake_only = 9;
-    // Read the newest `last` Records, oldest first, such as for the first view of a chat. The
-    // read goes back from the newest Record, so it needs no count and no index of the Stream. It
-    // takes no from_offset and no start. Not with wake_only, and not in Workflow code, where
-    // replay needs a fixed range.
-    int32 last = 10;
+    reserved 10;
+    reserved "last";
     // The most Record bytes in one page, so a page fits the caller's limit, such as a History
     // marker. A larger Record still comes alone, so the read always moves on. Zero is no cap.
     int64 max_bytes = 11;

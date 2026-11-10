@@ -37,7 +37,7 @@ OAPI3_PATH := .components.schemas.Payload
 
 # The Stream WIT uses nexgen directives that no release has yet. Pin the fork commit that has them
 # until a release does.
-NEX_GEN_REV := f9578ddbd8dbc8a1a79320210d58d1b722cd542b
+NEX_GEN_REV := ad5f375ef920b2817df4b994a3603070cf62c2f6
 NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
 NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 

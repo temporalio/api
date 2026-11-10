@@ -19,21 +19,18 @@ import "temporal/api/stream/v1/message.proto";
 
 // Experimental. Might change in the future.
 // Creates the Stream. When the Stream exists, FAIL fails with ALREADY_EXISTS, and USE_EXISTING
-// gets it with created false and its own Retention. A retry of the create that made the Stream,
-// with the same request_id, gets created true. Each policy fails with CLOSED on a closed Stream
-// and EXPIRED on an expired one.
+// gets it with created false. A retry of the create that made the Stream, with the same
+// request_id, gets created true. Each policy fails with CLOSED on a closed Stream and EXPIRED on
+// an expired one. A create takes no Retention. The backend config holds it, as a namespace holds
+// the Retention of its Workflows.
 // (-- api-linter: core::0133=disabled
 //     aip.dev/not-precedent: The request identifies a Stream by namespace and ref. --)
 message CreateStreamRequest {
     string namespace = 1;
     // The ref of the Stream to create. Its id is the Stream id, and is never empty.
     temporal.api.stream.v1.StreamRef stream_ref = 2;
-    // How long the Stream stays readable after its close. Empty is the Store default.
-    google.protobuf.Duration retention = 3;
-    // Only read by the server, for a Stream bound to a Standalone Activity. The server checks that
-    // the token is the Activity's current attempt, so a caller can't bind a Stream to a Standalone
-    // Activity that it isn't.
-    bytes task_token = 7;
+    reserved 3, 7;
+    reserved "retention", "task_token";
     // What the create does when the Stream exists. Unspecified is FAIL.
     temporal.api.enums.v1.StreamIdConflictPolicy id_conflict_policy = 8;
     // Unique for each create call, and the same on its retries. The Store keeps the request_id of
@@ -44,7 +41,8 @@ message CreateStreamRequest {
 // Experimental. Might change in the future.
 // The Stream that a create made or got.
 message CreateStreamResponse {
-    // The ref of the Stream.
+    // The ref of the Stream, with the name of the backend that holds it, also when the request
+    // left the name empty. The caller passes this ref on as data.
     temporal.api.stream.v1.StreamRef ref = 1;
     // False when USE_EXISTING got a Stream that existed.
     bool created = 2;
@@ -62,8 +60,9 @@ message AppendRecordsRequest {
     // the next number of the epoch. Such a batch has no dedupe, so a retry writes it again.
     int64 sequence = 4;
     repeated temporal.api.stream.v1.AppendRecord records = 5;
-    // Only read by the server. The server checks the Producer against the Activity's current
-    // attempt, so nobody else writes as that Activity.
+    // Only read by the server, and opaque to every SDK and Store, which never parse it. It lets
+    // the server check that the caller is the task that the Producer names. It is an identity
+    // check, not a guard against a stale attempt, which the epoch fences.
     bytes task_token = 7;
 }
 
@@ -117,13 +116,17 @@ message ReadRecordsRequest {
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "from" and "to" mark the ends of a range of offsets. --)
     bytes to_offset = 8;
-    // Park as a normal read, then answer with no Records and next_offset = from_offset, when a
-    // Record after from_offset exists, when the Stream closes (done), or when wait ends. Its
-    // wait may be days, since a parked read adds nothing to History while it waits. Only the
-    // server serves it, and a Store refuses it.
+    // Asks only for a wake-up, for a reader that must not get Records in this answer, such as a
+    // Workflow whose Records stay out of History. The read waits as a normal read does. It then
+    // answers with no Records and next_offset = from_offset, when a Record after from_offset
+    // exists, when the Stream closes (done), or when wait ends. The reader then gets the Records
+    // with a normal read. The wait may be days, since a parked read adds nothing to History.
+    // Only the server serves it, and a Store refuses it.
     bool wake_only = 9;
-    // Read the newest `last` Records, oldest first. It needs no from_offset and no start. Not with
-    // wake_only, and not in Workflow code, where replay needs a fixed range.
+    // Read the newest `last` Records, oldest first, such as for the first view of a chat. The
+    // read goes back from the newest Record, so it needs no count and no index of the Stream. It
+    // takes no from_offset and no start. Not with wake_only, and not in Workflow code, where
+    // replay needs a fixed range.
     int32 last = 10;
     // The most Record bytes in one page, so a page fits the caller's limit, such as a History
     // marker. A larger Record still comes alone, so the read always moves on. Zero is no cap.
@@ -141,13 +144,19 @@ message ReadRecordsRequest {
 message ReadRecordsResponse {
     repeated temporal.api.stream.v1.StreamRecord records = 1;
     // The from_offset of the next read, which is the offset of the newest Record read. An empty
-    // page gives the request's from_offset.
+    // page gives the request's from_offset, and that is empty when the request had none. So it
+    // is always known, and an empty value means that the next read starts as this one did.
     bytes next_offset = 2;
-    // True when the Stream is closed and this read gave its last item. A read of a closed Stream
-    // with no item left answers at once.
+    // True when the Stream is closed and this read gave its last item. The close item says the
+    // same on a page that has it. An answer with no item needs this flag, which is a wake_only
+    // read and a read after the close item. A read of a closed Stream with no item left answers
+    // at once.
     bool done = 3;
-    // This reader's floor keeps more than half of the Stream's byte cap. The writer fails when the
-    // cap fills, and only the reader's continue-as-new frees it. Only set by the server.
+    // Tells a Workflow reader to continue as new. The server keeps every Record from the lowest
+    // offset that a run read, since a replay of the run reads them again. That floor moves only
+    // when the run ends. This flag is true when the Records that this reader's floor keeps are
+    // more than half of the Stream's byte cap. The writer fails when the cap fills, and only the
+    // reader's continue-as-new frees it. Only set by the server.
     bool continue_as_new_suggested = 4;
 }
 

@@ -35,7 +35,7 @@ interface stream-service {
   record stream-ref {
     /// @nexus.doc "The Stream id, 1 to 4096 bytes."
     id: string,
-    /// @nexus.doc "Registered backend name, empty for the default. The Store never reads it."
+    /// @nexus.doc "Registered backend name, empty for the default. Only an SDK reads it."
     backend: option<string>,
   }
 
@@ -71,22 +71,22 @@ interface stream-service {
     attempt: option<s32>,
   }
 
-  /// @nexus.doc "A Workflow run Producer. A higher epoch supersedes the run's orphaned Records."
+  /// @nexus.doc "A Workflow run Producer. A higher epoch fences the lower ones."
   /// @nexus.proto "temporal.api.stream.v1.WorkflowProducer"
   record workflow-producer {
-    /// @nexus.doc "The first execution run id of the run chain."
+    /// @nexus.doc "The run id of the Workflow run, not of its chain."
     run-id: option<string>,
     epoch: option<workflow-task-epoch>,
   }
 
-  /// @nexus.doc "A Local Activity Producer. A higher epoch supersedes the Producer's lower epochs."
+  /// @nexus.doc "A Local Activity Producer. A higher epoch fences the lower ones."
   /// @nexus.proto "temporal.api.stream.v1.LocalActivityProducer"
   record local-activity-producer {
     run-id: option<string>,
     epoch: option<local-activity-epoch>,
   }
 
-  /// @nexus.doc "An Activity Producer. A higher epoch supersedes the Producer's lower epochs."
+  /// @nexus.doc "An Activity Producer. A higher epoch fences the lower ones."
   /// @nexus.proto "temporal.api.stream.v1.ActivityProducer"
   record activity-producer {
     run-id: option<string>,
@@ -105,7 +105,7 @@ interface stream-service {
   variant producer-kind {
     workflow(workflow-producer),
     local-activity(local-activity-producer),
-    activity(activity-producer),
+    workflow-activity(activity-producer),
     standalone-activity(activity-producer),
     client(client-producer),
   }
@@ -151,7 +151,7 @@ interface stream-service {
     stream-close-status-closed,
   }
 
-  /// @nexus.doc "The close of a Stream. A read gives it last."
+  /// @nexus.doc "The close of a Stream, as a read item. A close stores no Record."
   /// @nexus.proto "temporal.api.stream.v1.StreamClose"
   record stream-close {
     /// @nexus.doc "The Producer that closed the Stream."
@@ -186,8 +186,6 @@ interface stream-service {
     /// @nexus.doc "The ref of the Stream to create. Its id is the Stream id."
     /// @nexus.flatten-in-api
     stream-ref: stream-ref,
-    /// @nexus.doc "How long the Stream stays readable after its close. Empty is the Store default."
-    retention: option<duration>,
     /// @nexus.doc "What the create does when the Stream exists. Unspecified is fail."
     id-conflict-policy: option<stream-id-conflict-policy>,
     // A retry of the create that made the Stream sends the same id, so it doesn't fail as a
@@ -198,9 +196,6 @@ interface stream-service {
     request-id: option<string>,
     /// @nexus.omit
     namespace: placeholder,
-    // Native only. The SDK Stores don't read it.
-    /// @nexus.omit
-    task-token: placeholder,
   }
 
   /// What a create does when its Stream exists. Unspecified is fail.

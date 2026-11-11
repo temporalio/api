@@ -137,6 +137,31 @@ message WorkerHeartbeat {
 
   // Information about the environment this SDK is running in.
   EnvironmentInfo environment = 25;
+
+  // Cumulative activity binding changes for RecordWorkerHeartbeatRequest's version range.
+  // Only sent through RecordWorkerHeartbeat, which acknowledges durable acceptance.
+  // Omitted from worker visibility responses.
+  WorkerActivityInfo activity_info = 26;
+}
+
+// Activity binding information reported by a worker for automatic activity rescheduling.
+message WorkerActivityInfo {
+  // An absent or empty delta leaves the worker's bindings unchanged.
+  ActivityBindingDelta delta = 1;
+}
+
+// Identifies a specific activity task attempt.
+message ActivityBinding {
+  bytes activity_task_token = 1;
+}
+
+// Cumulative binding changes since the heartbeat group's last acknowledged version.
+message ActivityBindingDelta {
+  repeated ActivityBinding added = 1;
+  // Retain removals until acknowledged, including removals of unacknowledged additions.
+  // If an attempt appears in both lists, removal takes precedence.
+  // Removing a binding does not complete, fail, or cancel the activity.
+  repeated ActivityBinding removed = 2;
 }
 
 // Detailed worker information.

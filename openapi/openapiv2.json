@@ -11913,6 +11913,20 @@
         "resourceId": {
           "type": "string",
           "description": "Resource ID for routing. Contains the worker grouping key."
+        },
+        "baseVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "Last durably acknowledged activity-state version for this worker group, initially zero.\nActivity binding reports require the namespace's automatic_activity_rescheduling capability."
+        },
+        "targetVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "Activity-state version covered by this report. Must be at least base_version.\nOne sender advances a single sequence across all workers in the group as bindings change.\nA new sender uses a new group identity; lease expiry alone does not reset the sequence.\nEach attempt includes cumulative changes from base_version through target_version,\nincluding changes retained after a timeout or lost response and any newer changes.\nThe server reconciles overlapping reports and prevents stale reports from undoing newer state.\nHeartbeats with no binding changes may reuse the current version."
+        },
+        "heartbeatTimeout": {
+          "type": "string",
+          "description": "Requested heartbeat timeout shared by all workers in the group.\nUnset or zero inherits the namespace default. Positive values request an override.\nNegative values disable durable worker liveness for this group."
         }
       }
     },
@@ -13785,6 +13799,37 @@
           }
         }
       }
+    },
+    "v1ActivityBinding": {
+      "type": "object",
+      "properties": {
+        "activityTaskToken": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "description": "Identifies a specific activity task attempt."
+    },
+    "v1ActivityBindingDelta": {
+      "type": "object",
+      "properties": {
+        "added": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ActivityBinding"
+          }
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ActivityBinding"
+          },
+          "description": "Retain removals until acknowledged, including removals of unacknowledged additions.\nIf an attempt appears in both lists, removal takes precedence.\nRemoving a binding does not complete, fail, or cancel the activity."
+        }
+      },
+      "description": "Cumulative binding changes since the heartbeat group's last acknowledged version."
     },
     "v1ActivityExecutionInfo": {
       "type": "object",
@@ -17497,6 +17542,10 @@
         "standaloneActivityOperatorCommands": {
           "type": "boolean",
           "description": "True if the namespace supports standalone activity operator commands."
+        },
+        "automaticActivityRescheduling": {
+          "type": "boolean",
+          "description": "True if RecordWorkerHeartbeat supports durable activity binding reports and\nautomatic rescheduling of activities when their worker's heartbeat lease expires."
         }
       },
       "description": "Namespace capability details. Should contain what features are enabled in a namespace."
@@ -19041,7 +19090,13 @@
       }
     },
     "v1RecordWorkerHeartbeatResponse": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/v1WorkerHeartbeatStatus",
+          "description": "ACCEPTED guarantees durable application of all binding changes through the originating\nrequest's target_version across the worker group. The SDK may discard retained changes\nthrough that version; changes after it remain pending. Receipt alone is not acceptance.\nWithout acceptance, retain changes, including removals, for the next cumulative report.\nOn an unspecified or unknown status, stop binding updates and report an unsupported\nresponse; metadata-only heartbeats may continue."
+        }
+      }
     },
     "v1RegisterNamespaceRequest": {
       "type": "object",
@@ -21217,6 +21272,16 @@
       },
       "description": "Specifies client's intent to wait for Update results."
     },
+    "v1WorkerActivityInfo": {
+      "type": "object",
+      "properties": {
+        "delta": {
+          "$ref": "#/definitions/v1ActivityBindingDelta",
+          "description": "An absent or empty delta leaves the worker's bindings unchanged."
+        }
+      },
+      "description": "Activity binding information reported by a worker for automatic activity rescheduling."
+    },
     "v1WorkerConfig": {
       "type": "object",
       "properties": {
@@ -21504,9 +21569,22 @@
         "environment": {
           "$ref": "#/definitions/v1EnvironmentInfo",
           "description": "Information about the environment this SDK is running in."
+        },
+        "activityInfo": {
+          "$ref": "#/definitions/v1WorkerActivityInfo",
+          "description": "Cumulative activity binding changes for RecordWorkerHeartbeatRequest's version range.\nOnly sent through RecordWorkerHeartbeat, which acknowledges durable acceptance.\nOmitted from worker visibility responses."
         }
       },
       "description": "Worker info message, contains information about the worker and its current state.\nAll information is provided by the worker itself."
+    },
+    "v1WorkerHeartbeatStatus": {
+      "type": "string",
+      "enum": [
+        "WORKER_HEARTBEAT_STATUS_UNSPECIFIED",
+        "WORKER_HEARTBEAT_STATUS_ACCEPTED"
+      ],
+      "default": "WORKER_HEARTBEAT_STATUS_UNSPECIFIED",
+      "description": "Result of durably recording a heartbeat group's activity binding report.\n\n - WORKER_HEARTBEAT_STATUS_ACCEPTED: All binding changes covered by the request's target_version are durable."
     },
     "v1WorkerHostInfo": {
       "type": "object",

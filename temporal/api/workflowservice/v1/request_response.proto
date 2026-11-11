@@ -3039,10 +3039,34 @@ message RecordWorkerHeartbeatRequest {
 
     // Resource ID for routing. Contains the worker grouping key.
     string resource_id = 4;
+
+    // Last durably acknowledged activity-state version for this worker group, initially zero.
+    // Activity binding reports require the namespace's automatic_activity_rescheduling capability.
+    int64 base_version = 5;
+
+    // Activity-state version covered by this report. Must be at least base_version.
+    // One sender advances a single sequence across all workers in the group as bindings change.
+    // A new sender uses a new group identity; lease expiry alone does not reset the sequence.
+    // Each attempt includes cumulative changes from base_version through target_version,
+    // including changes retained after a timeout or lost response and any newer changes.
+    // The server reconciles overlapping reports and prevents stale reports from undoing newer state.
+    // Heartbeats with no binding changes may reuse the current version.
+    int64 target_version = 6;
+
+    // Requested heartbeat timeout shared by all workers in the group.
+    // Unset or zero inherits the namespace default. Positive values request an override.
+    // Negative values disable durable worker liveness for this group.
+    google.protobuf.Duration heartbeat_timeout = 7;
 }
 
 message RecordWorkerHeartbeatResponse {
-
+    // ACCEPTED guarantees durable application of all binding changes through the originating
+    // request's target_version across the worker group. The SDK may discard retained changes
+    // through that version; changes after it remain pending. Receipt alone is not acceptance.
+    // Without acceptance, retain changes, including removals, for the next cumulative report.
+    // On an unspecified or unknown status, stop binding updates and report an unsupported
+    // response; metadata-only heartbeats may continue.
+    temporal.api.enums.v1.WorkerHeartbeatStatus status = 1;
 }
 
 message ListWorkersRequest {

@@ -68,13 +68,6 @@ interface stream-service {
     attempt: s32,
   }
 
-  /// @nexus.doc "A client attempt, which the client picks."
-  /// @nexus.proto "temporal.api.stream.v1.ClientEpoch"
-  record client-epoch {
-    /// @nexus.doc "1 or more."
-    attempt: s32,
-  }
-
   /// @nexus.doc "A Workflow run Producer."
   /// @nexus.proto "temporal.api.stream.v1.WorkflowProducer"
   record workflow-producer {
@@ -100,10 +93,9 @@ interface stream-service {
     epoch: activity-epoch,
   }
 
-  /// @nexus.doc "A client Producer."
+  /// @nexus.doc "A client Producer. It has no run and no epoch, so nothing fences it."
   /// @nexus.proto "temporal.api.stream.v1.ClientProducer"
   record client-producer {
-    epoch: client-epoch,
   }
 
   // The case is the kind of the Producer, so a kind sets only its own fields.
@@ -135,49 +127,18 @@ interface stream-service {
     body: body-t,
   }
 
-  /// @nexus.doc "One Record that a Producer appended."
-  /// @nexus.proto "temporal.api.stream.v1.StreamData"
-  record stream-data {
+  // An offset is ordered and unique in one Stream, and sparse. Offsets have gaps, so they don't
+  // count Records. A read gives its Stream, so the read checks the offset against that Stream.
+  // A read gives only Records. A close stores no Record, so the read response tells of it with
+  // done.
+  /// @nexus.doc "One Record that a Producer appended, as a read gives it."
+  /// @nexus.proto "temporal.api.stream.v1.StreamRecord"
+  record stream-record {
     /// @nexus.doc "The value."
     body: body-t,
     producer: option<producer>,
     /// @nexus.doc "The place of this Record in the Stream. Ordered and unique, with gaps."
     offset: list<u8>,
-  }
-
-  /// How a Stream closed. A Producer's close gives CLOSED. Native Streams add their own later.
-  /// @nexus.proto "temporal.api.enums.v1.StreamCloseStatus"
-  enum stream-close-status {
-    /// @nexus.fallback
-    stream-close-status-unspecified,
-    stream-close-status-closed,
-  }
-
-  /// @nexus.doc "The close of a Stream, as a read item. A close stores no Record."
-  /// @nexus.proto "temporal.api.stream.v1.StreamClose"
-  record stream-close {
-    /// @nexus.doc "The Producer that closed the Stream."
-    producer: option<producer>,
-    /// @nexus.doc "Why the Stream closed."
-    status: option<stream-close-status>,
-    /// @nexus.doc "Where the Stream ended."
-    offset: list<u8>,
-  }
-
-  /// @nexus.doc "A read item: a Record or the close."
-  /// @nexus.proto "temporal.api.stream.v1.StreamRecord.item"
-  variant stream-item {
-    data(stream-data),
-    close(stream-close),
-  }
-
-  // An offset is ordered and unique in one Stream, and sparse. Offsets have gaps, so they don't
-  // count Records. A read gives its Stream, so the read checks the offset against that Stream.
-  /// @nexus.doc "One item that a read gives. Each item carries its own offset."
-  /// @nexus.proto "temporal.api.stream.v1.StreamRecord"
-  record stream-record {
-    // A newer server can send an item kind that this SDK doesn't know. Then the item is empty.
-    item: option<stream-item>,
   }
 
   /// @nexus.doc
@@ -240,9 +201,6 @@ interface stream-service {
     // Native only. The SDK sets it, and the SDK Stores don't read it.
     /// @nexus.omit
     namespace: placeholder,
-    // Native only. The SDK Stores don't read it.
-    /// @nexus.omit
-    task-token: placeholder,
   }
 
   /// @nexus.proto "temporal.api.streamservice.v1.AppendRecordsResponse"
@@ -265,36 +223,20 @@ interface stream-service {
     // Native only. The SDK sets it, and the SDK Stores don't read it.
     /// @nexus.omit
     namespace: placeholder,
-    // Native only. The SDK Stores don't read it.
-    /// @nexus.omit
-    task-token: placeholder,
   }
 
   /// @nexus.proto "temporal.api.streamservice.v1.CloseStreamResponse"
   record close-stream-response {
   }
 
-  /// @nexus.proto "temporal.api.enums.v1.StreamReadStart"
-  enum stream-read-start {
-    stream-read-start-unspecified,
-    stream-read-start-beginning,
-    stream-read-start-end,
-  }
-
-  /// @nexus.doc "Where a read starts, after an offset, or at the beginning or the end."
-  /// @nexus.proto "temporal.api.streamservice.v1.ReadRecordsRequest.position"
-  variant read-position {
-    from-offset(list<u8>),
-    start(stream-read-start),
-  }
-
-  /// @nexus.doc "Read Records from a position."
+  /// @nexus.doc "Read Records after an offset."
   /// @nexus.proto "temporal.api.streamservice.v1.ReadRecordsRequest"
   record read-records-request {
     ref: stream-ref,
-    /// @nexus.doc "Where the read starts. Unset is the beginning. A too high offset fails."
-    position: option<read-position>,
-    /// @nexus.doc "About this many items per page, 1 to 1000."
+    // To read only new Records, a caller gets last-offset from a describe and reads after it.
+    /// @nexus.doc "Read after this offset. Empty is the beginning. A too high offset fails."
+    from-offset: option<list<u8>>,
+    /// @nexus.doc "About this many Records per page, 1 to 1000."
     max-records: option<s32>,
     /// @nexus.doc "How long to wait for a new Record before an empty answer. At most 60 s."
     wait: option<duration>,
@@ -303,13 +245,6 @@ interface stream-service {
     // Native only. The SDK sets it, and the SDK Stores don't read it.
     /// @nexus.omit
     namespace: placeholder,
-    // Native only. The SDK Stores refuse to-offset and wake-only.
-    /// @nexus.omit
-    to-offset: placeholder,
-    /// @nexus.omit
-    wake-only: placeholder,
-    /// @nexus.omit
-    floor-from: placeholder,
   }
 
   /// @nexus.proto "temporal.api.streamservice.v1.ReadRecordsResponse"
@@ -317,11 +252,8 @@ interface stream-service {
     records: list<stream-record>,
     /// @nexus.doc "The last offset that this read covered. The next read starts after it."
     last-offset: option<list<u8>>,
-    /// @nexus.doc "True when the Stream is closed and this read gave its last item."
+    /// @nexus.doc "True when the Stream is closed and this read gave its last Record."
     done: option<bool>,
-    // Native only. The SDK Stores never set it.
-    /// @nexus.omit
-    continue-as-new-suggested: placeholder,
   }
 
   /// @nexus.proto "temporal.api.streamservice.v1.DescribeStreamRequest"
@@ -337,7 +269,6 @@ interface stream-service {
     status: option<stream-status>,
     /// @nexus.doc "The newest offset, of a Record. Empty for none."
     last-offset: option<list<u8>>,
-    retention: option<duration>,
   }
 
   // A stream never changes, since offsets are values that its methods return. Only a create's
@@ -360,18 +291,18 @@ interface stream-service {
     /// @nexus.doc "Read one page of Records. The poll iterator reads them all."
     /// @nexus.operation "read-records"
     read: func(
-      position: option<read-position>,
+      from-offset: option<list<u8>>,
       max-records: option<s32>,
       wait: option<duration>,
       max-bytes: option<s64>,
     ) -> read-records-response;
 
-    /// @nexus.doc "Describe the Stream's status, newest offset and Retention."
+    /// @nexus.doc "Describe the Stream's status and newest offset."
     /// @nexus.operation "describe-stream"
     describe: func() -> describe-stream-response;
   }
 
-  // With use-existing, created is false when the Stream existed, whatever its Retention.
+  // With use-existing, created is false when the Stream existed.
   /// @nexus.proto "temporal.api.streamservice.v1.CreateStreamResponse"
   type create-stream-result = own<%stream>;
 

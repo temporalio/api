@@ -21,8 +21,11 @@ interface stream-service {
   /// @nexus.type-parameter
   type body-t = placeholder;
 
-  // An offset is an opaque, ordered position of a Record in one Stream. It is proto `bytes`, and
-  // two offsets of one Stream compare bytewise in the order of their Records.
+  // The WIT has no named offset type yet, so this comment tells what each `list<u8>` offset holds.
+  // An offset is the opaque position of a Record in one Stream, and it is proto `bytes`. A caller
+  // never parses it. It only gives it back to a read, or compares two offsets of one Stream. They
+  // compare bytewise in the order of their Records, so a caller can tell which one is newer
+  // without a call to the Store.
   // TODO: use `type stream-offset = list<u8>` once nexgen reads a named `list<u8>` as `bytes`.
 
   /// @nexus.proto "google.protobuf.Timestamp"
@@ -185,13 +188,13 @@ interface stream-service {
   record append-records-request {
     ref: stream-ref,
     records: list<append-record>,
-    // A call can pass its own Producer. With none, the helper of each context fills the Producer
-    // that applies where it runs.
-    /// @nexus.doc "The Producer of the batch. With none, the helper of each context sets it."
-    /// @nexus.source targets="workflow" python="workflow_producer()"
-    ///   typescript="workflowProducer()" dotnet="StreamWorkflowContext.Producer()"
-    /// @nexus.source targets="client" python="default_producer()" typescript="defaultProducer()"
-    ///   dotnet="StreamActivityContext.Producer()"
+    // A call can pass its own Producer. A call that passes none gets the default, which the
+    // helper of each context picks for where it runs.
+    /// @nexus.doc "The Producer of the batch. Defaults to the Producer of the calling context."
+    /// @nexus.default targets="workflow" python="_support.workflow_producer()"
+    ///   typescript="support.workflowProducer()" dotnet="StreamWorkflowContext.Producer()"
+    /// @nexus.default targets="client" python="_support.default_producer()"
+    ///   typescript="support.defaultProducer()" dotnet="StreamActivityContext.Producer()"
     producer: producer,
     // A call that passes no sequence sends none. The Store then numbers the batch, so nothing
     // dedupes it.
@@ -215,11 +218,11 @@ interface stream-service {
   record close-stream-request {
     ref: stream-ref,
     /// @nexus.doc
-    ///   "The Producer that closes the Stream. With none, the helper of each context sets it."
-    /// @nexus.source targets="workflow" python="workflow_producer()"
-    ///   typescript="workflowProducer()" dotnet="StreamWorkflowContext.Producer()"
-    /// @nexus.source targets="client" python="default_producer()" typescript="defaultProducer()"
-    ///   dotnet="StreamActivityContext.Producer()"
+    ///   "The Producer that closes the Stream. Defaults to the Producer of the calling context."
+    /// @nexus.default targets="workflow" python="_support.workflow_producer()"
+    ///   typescript="support.workflowProducer()" dotnet="StreamWorkflowContext.Producer()"
+    /// @nexus.default targets="client" python="_support.default_producer()"
+    ///   typescript="support.defaultProducer()" dotnet="StreamActivityContext.Producer()"
     producer: producer,
     // Native only. The SDK sets it, and the SDK Stores don't read it.
     /// @nexus.omit
@@ -279,9 +282,12 @@ interface stream-service {
   resource %stream {
     constructor(ref: stream-ref, created: option<bool>);
 
+    // In this release Workflow code can't append to a Stream, close it or read it. So the Workflow
+    // target omits `append`, `close` and `read`, and the client target keeps all three.
     /// @nexus.doc "Append values, and return the offsets of the batch."
     /// @nexus.operation "append-records"
     /// @nexus.varargs "records"
+    /// @nexus.api-omit targets="workflow"
     append: func(
       records: list<append-record>,
       producer: option<producer>,
@@ -291,10 +297,12 @@ interface stream-service {
     /// @nexus.doc "Close the Stream. Readers drain what is left, then end."
     /// @nexus.operation "close-stream"
     /// @nexus.close
+    /// @nexus.api-omit targets="workflow"
     close: func(producer: option<producer>);
 
     /// @nexus.doc "Read one page of Records. The poll iterator reads them all."
     /// @nexus.operation "read-records"
+    /// @nexus.api-omit targets="workflow"
     read: func(
       from-offset: option<list<u8>>,
       max-records: option<s32>,

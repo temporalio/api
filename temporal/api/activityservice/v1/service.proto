@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package temporal.api.activityservice.v1;
+
+option go_package = "go.temporal.io/api/activityservice/v1;activityservice";
+option java_package = "io.temporal.api.activityservice.v1";
+option java_multiple_files = true;
+option java_outer_classname = "ServiceProto";
+option ruby_package = "Temporalio::Api::ActivityService::V1";
+option csharp_namespace = "Temporalio.Api.ActivityService.V1";
+
+import "nexusannotations/v1/options.proto";
+import "temporal/api/activityservice/v1/request_response.proto";
+import "temporal/api/common/v1/message.proto";
+
+// ActivityService is a Nexus service for interacting with standalone activities. It is not served over gRPC. Its
+// operations are exposed on the system Nexus endpoint, "__temporal_system": workflows call them as Nexus operations,
+// and other callers call them via WorkflowService.StartNexusOperation. They run in the caller's namespace.
+service ActivityService {
+    // GetResult waits for a standalone activity to complete.
+    //
+    // The operation's output is the activity's result, as encoded by the activity. If the activity fails, times out
+    // or is terminated, the operation fails with the activity's failure as the cause. If the activity is canceled, the
+    // operation is canceled.
+    //
+    // The operation completes asynchronously while the activity is running. Canceling the operation doesn't cancel the
+    // activity, and the operation still completes when the activity does.
+    rpc GetResult (GetResultRequest) returns (temporal.api.common.v1.Payload) {
+        option (nexusannotations.v1.operation).tags = "exposed";
+    }
+}

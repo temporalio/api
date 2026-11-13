@@ -1,0 +1,37 @@
+package temporal:nexus@1.0.0;
+
+world system {
+  export activity-service;
+}
+
+/// @nexus.endpoint "__temporal_system"
+/// @nexus.service-name "temporal.api.activityservice.v1.ActivityService"
+/// @nexus.namespace dotnet="Temporalio.Workflows" go="go.temporal.io/sdk/internal"
+/// @nexus.facade go="go.temporal.io/sdk/workflow"
+/// @nexus.operations-class dotnet="Workflow"
+/// @nexus.delay-load-temporalio-workflow
+/// @nexus.experimental
+interface activity-service {
+  use nexus:temporal-types/model@1.0.0.{
+    payload,
+  };
+
+  /// @nexus.doc "Request fields for getting the result of a standalone activity."
+  /// @nexus.experimental
+  /// @nexus.proto "temporal.api.activityservice.v1.GetResultRequest" typescript-import="@temporalio/proto"
+  record get-result-request {
+    /// @nexus.doc "ID of the standalone activity."
+    activity-id: string,
+    /// @nexus.doc "Run ID of the activity. Defaults to the latest run."
+    run-id: option<string>,
+  }
+
+  /// @nexus.doc
+  ///   "Wait for a standalone activity to complete and return its result."
+  ///   returns="The activity's result. Fails with the activity's failure if the activity doesn't complete successfully."
+  /// @nexus.operation name="GetResult"
+  /// @nexus.experimental
+  get-activity-result: func(
+    request: get-result-request,
+  ) -> payload;
+}

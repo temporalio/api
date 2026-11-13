@@ -67,4 +67,8 @@ var exemptions = map[string]struct{}{
 	"OperatorService.UpdateNexusEndpoint": {},
 	"OperatorService.DeleteNexusEndpoint": {},
 	"OperatorService.ListNexusEndpoints":  {},
+
+	// ActivityService is a Nexus service, not served over gRPC. Direct calls go through
+	// WorkflowService.StartNexusOperation.
+	"ActivityService.GetResult": {},
 }

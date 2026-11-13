@@ -68,7 +68,8 @@ http-api-docs:
 		--openapiv2_out=openapi \
         --openapiv2_opt=allow_merge=true,merge_file_name=openapiv2,simple_operation_ids=true \
 		temporal/api/workflowservice/v1/* \
-		temporal/api/operatorservice/v1/*
+		temporal/api/operatorservice/v1/* \
+		temporal/api/activityservice/v1/*
 
 	jq --rawfile desc $(OAPI_OUT)/payload_description.txt < $(OAPI_OUT)/openapiv2.swagger.json '.definitions.v1Payload={description: $$desc}' > $(OAPI_OUT)/v2.tmp
 	mv -f $(OAPI_OUT)/v2.tmp $(OAPI_OUT)/openapiv2.json
@@ -147,7 +148,8 @@ nexus-rpc-yaml: nexus-rpc-yaml-install
 		--nexus-rpc-yaml_opt=include_operation_tags=exposed \
 		--nexus-rpc-yaml_out=. \
 		temporal/api/workflowservice/v1/* \
-		temporal/api/operatorservice/v1/*
+		temporal/api/operatorservice/v1/* \
+		temporal/api/activityservice/v1/*
 
 nexus-rpc-yaml-install:
 	printf $(COLOR) "Build and install protoc-gen-nexus-rpc-yaml..."
@@ -170,7 +172,13 @@ system-nexus-wit: system-nexus-wit-install nex-gen-install
 		--file temporal/api/notificationservice/v1/request_response.proto \
 		--input nexus/notification-service.wit \
 		--input nexus/deps \
-		--output nexus/notification-service.wit
+		--output nexus/notification-service.wit && \
+	protoc -I $(PROTO_ROOT) \
+		--system-nexus-wit_opt=output=nexus/activity-service.wit \
+		--system-nexus-wit_opt=nex_gen=$(NEX_GEN) \
+		--system-nexus-wit_opt=linked_input=nexus/deps \
+		--system-nexus-wit_out=. \
+		temporal/api/activityservice/v1/service.proto
 
 system-nexus-wit-install:
 	printf $(COLOR) "Build and install protoc-gen-system-nexus-wit..."

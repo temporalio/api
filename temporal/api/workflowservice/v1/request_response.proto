@@ -603,13 +603,14 @@ message PollActivityTaskQueueResponse {
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration schedule_to_close_timeout = 14;
     // Configured start-to-close timeout for the activity attempt.
+    // With `handoff_options` set, an unset or zero value disables this timeout.
     //
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration start_to_close_timeout = 15;
     // Window within which the activity must report a heartbeat, or be timed out.
-    // When `PollActivityTaskQueueResponse.async_handoff_options` is present, workers use
-    // `AsyncHandoffOptions.heartbeat_timeout` before handoff.
+    // When `PollActivityTaskQueueResponse.handoff_options` is present, workers use
+    // `HandoffOptions.heartbeat_timeout` before handoff.
     google.protobuf.Duration heartbeat_timeout = 16;
     // This is the retry policy the service uses which may be different from the one provided
     // (or not) during activity scheduling. The service can override the provided one if some
@@ -641,13 +642,13 @@ message PollActivityTaskQueueResponse {
     temporal.api.nexus.v1.PropagatedSerializationContext propagated_nexus_serialization_context = 23;
 
     // Handoff attempt within the current activity attempt. Starts at 1 when
-    // `PollActivityTaskQueueResponse.async_handoff_options` are configured at creation or added by update.
+    // `PollActivityTaskQueueResponse.handoff_options` are configured at creation or added by update.
     // Increments on handoff retries and resets to 1 on an activity retry or applied reset.
     // Zero when options are absent.
     int32 handoff_attempt = 24;
 
     // Handoff options for this activity task.
-    temporal.api.activity.v1.AsyncHandoffOptions async_handoff_options = 25;
+    temporal.api.activity.v1.HandoffOptions handoff_options = 25;
 }
 
 message RecordActivityTaskHeartbeatRequest {
@@ -3296,7 +3297,7 @@ message StartActivityExecutionRequest {
     temporal.api.taskqueue.v1.TaskQueue task_queue = 6;
     // Indicates how long the caller is willing to wait for an activity completion. Limits how long
     // retries will be attempted. Either this or `start_to_close_timeout` must be specified,
-    // unless `StartActivityExecutionRequest.async_handoff_options` provides both phase timeouts.
+    // unless `StartActivityExecutionRequest.handoff_options` provides both phase timeouts.
     //
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
@@ -3310,7 +3311,7 @@ message StartActivityExecutionRequest {
     google.protobuf.Duration schedule_to_start_timeout = 8;
     // Maximum time an activity is allowed to execute after being picked up by a worker. This
     // timeout is always retryable. Either this or `schedule_to_close_timeout` must be specified,
-    // unless `StartActivityExecutionRequest.async_handoff_options` provides both phase timeouts. See
+    // unless `StartActivityExecutionRequest.handoff_options` provides both phase timeouts. See
     // `ActivityOptions.start_to_close_timeout`.
     //
     // (-- api-linter: core::0140::prepositions=disabled
@@ -3318,7 +3319,7 @@ message StartActivityExecutionRequest {
     google.protobuf.Duration start_to_close_timeout = 9;
     // Maximum permitted time between successful worker heartbeats.
     // See `ActivityOptions.heartbeat_timeout` for behavior when
-    // `StartActivityExecutionRequest.async_handoff_options` is present.
+    // `StartActivityExecutionRequest.handoff_options` is present.
     google.protobuf.Duration heartbeat_timeout = 10;
     // The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
     // See `ActivityOptions.retry_policy` for behavior with handoff options.
@@ -3361,7 +3362,7 @@ message StartActivityExecutionRequest {
     bool request_eager_execution = 24;
 
     // Two-phase timeout and retry settings.
-    temporal.api.activity.v1.AsyncHandoffOptions async_handoff_options = 25;
+    temporal.api.activity.v1.HandoffOptions handoff_options = 25;
 }
 
 message StartActivityExecutionResponse {

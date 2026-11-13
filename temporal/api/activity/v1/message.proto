@@ -50,10 +50,10 @@ message ActivityExecutionOutcome {
 // `ActivityOptions.schedule_to_close_timeout` bounds. Positive heartbeat timeouts are capped by
 // their phase timeout and those positive bounds. The server stores and returns normalized values.
 // Increasing a bound does not restore a capped value unless that value is also updated.
-message AsyncHandoffOptions {
+message HandoffOptions {
     // Maximum time from the current worker pickup until the server durably accepts handoff. Unset
     // or zero disables this timeout. On timeout, the server retries according to
-    // `AsyncHandoffOptions.retry_policy`.
+    // `HandoffOptions.retry_policy`.
     //
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" identifies the endpoints of the timeout. --)
@@ -78,7 +78,7 @@ message AsyncHandoffOptions {
     // `ActivityOptions.retry_policy`. If omitted, uses the namespace's default activity retry
     // policy, independently of `ActivityOptions.retry_policy`.
     // To change `RetryPolicy.non_retryable_error_types`, replace
-    // `async_handoff_options.retry_policy` as a whole in the update mask.
+    // `handoff_options.retry_policy` as a whole in the update mask.
     temporal.api.common.v1.RetryPolicy retry_policy = 4;
 }
 
@@ -87,7 +87,7 @@ message ActivityOptions {
 
     // Indicates how long the caller is willing to wait for an activity completion. Limits how long
     // retries will be attempted. Either this or `start_to_close_timeout` must be specified,
-    // unless `ActivityOptions.async_handoff_options` provides both phase timeouts.
+    // unless `ActivityOptions.handoff_options` provides both phase timeouts.
     //
     // (-- api-linter: core::0140::prepositions=disabled
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
@@ -95,7 +95,7 @@ message ActivityOptions {
     // Limits time an activity task can stay in a task queue before a worker picks it up. This
     // timeout is always non retryable, as all a retry would achieve is to put it back into the same
     // queue. Defaults to `schedule_to_close_timeout` or workflow execution timeout if not
-    // specified. With `async_handoff_options` set, defaults to a positive
+    // specified. With `handoff_options` set, defaults to a positive
     // `schedule_to_close_timeout`, otherwise remains disabled.
     //
     // (-- api-linter: core::0140::prepositions=disabled
@@ -103,8 +103,8 @@ message ActivityOptions {
     google.protobuf.Duration schedule_to_start_timeout = 3;
     // Maximum time an activity is allowed to execute after being picked up by a worker. This
     // timeout is always retryable. Either this or `schedule_to_close_timeout` must be specified,
-    // unless `ActivityOptions.async_handoff_options` provides both phase timeouts.
-    // When `ActivityOptions.async_handoff_options` is present, the start-to-close timeout runs from
+    // unless `ActivityOptions.handoff_options` provides both phase timeouts.
+    // When `ActivityOptions.handoff_options` is present, the start-to-close timeout runs from
     // the first worker pickup of the activity attempt across both phases, handoff retries, backoff, and
     // queue waits.
     //
@@ -112,14 +112,14 @@ message ActivityOptions {
     //     aip.dev/not-precedent: "to" is used to indicate interval. --)
     google.protobuf.Duration start_to_close_timeout = 4;
     // Maximum permitted time between successful worker heartbeats.
-    // When `ActivityOptions.async_handoff_options` is present, the activity heartbeat timeout
+    // When `ActivityOptions.handoff_options` is present, the activity heartbeat timeout
     // applies after handoff, starting at accepted handoff.
-    // Before handoff, use `AsyncHandoffOptions.heartbeat_timeout`.
+    // Before handoff, use `HandoffOptions.heartbeat_timeout`.
     google.protobuf.Duration heartbeat_timeout = 5;
     // The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
-    // When `ActivityOptions.async_handoff_options` is present, this policy handles post-handoff failures
+    // When `ActivityOptions.handoff_options` is present, this policy handles post-handoff failures
     // and timeouts, plus start-to-close timeouts in either phase. Other pre-handoff failures use
-    // `AsyncHandoffOptions.retry_policy`.
+    // `HandoffOptions.retry_policy`.
     temporal.api.common.v1.RetryPolicy retry_policy = 6;
 
     // Priority metadata. If this message is not present, or any fields are not
@@ -132,7 +132,7 @@ message ActivityOptions {
     google.protobuf.Duration start_delay = 8;
 
     // Two-phase timeout and retry settings.
-    AsyncHandoffOptions async_handoff_options = 9;
+    HandoffOptions handoff_options = 9;
 }
 
 // Information about a standalone activity.
@@ -283,7 +283,7 @@ message ActivityExecutionInfo {
     temporal.api.common.v1.ResolvedPrincipal last_worker_principal = 43;
 
     // Handoff attempt within the current activity attempt. Starts at 1 when
-    // `ActivityExecutionInfo.async_handoff_options` are configured at creation or added by update.
+    // `ActivityExecutionInfo.handoff_options` are configured at creation or added by update.
     // Increments on handoff retries and resets to 1 on an activity retry or applied reset.
     // Zero when options are absent.
     int32 handoff_attempt = 44;
@@ -299,7 +299,7 @@ message ActivityExecutionInfo {
     bool awaiting_completion = 46;
 
     // Server-normalized and defaulted handoff options, if configured.
-    AsyncHandoffOptions async_handoff_options = 47;
+    HandoffOptions handoff_options = 47;
 }
 
 // Limited activity information returned in the list response.

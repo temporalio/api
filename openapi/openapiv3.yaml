@@ -9730,6 +9730,29 @@ paths:
                 $ref: '#/components/schemas/Status'
 components:
   schemas:
+    ActivityBinding:
+      type: object
+      properties:
+        activityTaskToken:
+          type: string
+          format: bytes
+      description: Identifies a specific activity task attempt.
+    ActivityBindingDelta:
+      type: object
+      properties:
+        added:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityBinding'
+        removed:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityBinding'
+          description: |-
+            Retain removals until acknowledged, including removals of unacknowledged additions.
+             If an attempt appears in both lists, removal takes precedence.
+             Removing a binding does not complete, fail, or cancel the activity.
+      description: Cumulative binding changes since the heartbeat group's last acknowledged version.
     ActivityExecutionInfo:
       type: object
       properties:
@@ -13705,6 +13728,11 @@ components:
         standaloneActivityOperatorCommands:
           type: boolean
           description: True if the namespace supports standalone activity operator commands.
+        automaticActivityRescheduling:
+          type: boolean
+          description: |-
+            True if RecordWorkerHeartbeat supports durable activity binding reports and
+             automatic rescheduling of activities when their worker's heartbeat lease expires.
       description: Namespace capability details. Should contain what features are enabled in a namespace.
     NamespaceInfo_Limits:
       type: object
@@ -15481,9 +15509,44 @@ components:
         resourceId:
           type: string
           description: Resource ID for routing. Contains the worker grouping key.
+        baseVersion:
+          type: string
+          description: |-
+            Last durably acknowledged activity-state version for this worker group, initially zero.
+             Activity binding reports require the namespace's automatic_activity_rescheduling capability.
+        targetVersion:
+          type: string
+          description: |-
+            Activity-state version covered by this report. Must be at least base_version.
+             One sender advances a single sequence across all workers in the group as bindings change.
+             A new sender uses a new group identity; lease expiry alone does not reset the sequence.
+             Each attempt includes cumulative changes from base_version through target_version,
+             including changes retained after a timeout or lost response and any newer changes.
+             The server reconciles overlapping reports and prevents stale reports from undoing newer state.
+             Heartbeats with no binding changes may reuse the current version.
+        heartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Requested heartbeat timeout shared by all workers in the group.
+             Unset or zero inherits the namespace default. Positive values request an override.
+             Negative values disable durable worker liveness for this group.
     RecordWorkerHeartbeatResponse:
       type: object
-      properties: {}
+      properties:
+        status:
+          enum:
+            - WORKER_HEARTBEAT_STATUS_UNSPECIFIED
+            - WORKER_HEARTBEAT_STATUS_ACCEPTED
+          type: string
+          description: |-
+            ACCEPTED guarantees durable application of all binding changes through the originating
+             request's target_version across the worker group. The SDK may discard retained changes
+             through that version; changes after it remain pending. Receipt alone is not acceptance.
+             Without acceptance, retain changes, including removals, for the next cumulative report.
+             On an unspecified or unknown status, stop binding updates and report an unsupported
+             response; metadata-only heartbeats may continue.
+          format: enum
     RegisterNamespaceRequest:
       type: object
       properties:
@@ -19505,6 +19568,14 @@ components:
              user specified timeout, API call returns even if specified stage is not reached.
           format: enum
       description: Specifies client's intent to wait for Update results.
+    WorkerActivityInfo:
+      type: object
+      properties:
+        delta:
+          allOf:
+            - $ref: '#/components/schemas/ActivityBindingDelta'
+          description: An absent or empty delta leaves the worker's bindings unchanged.
+      description: Activity binding information reported by a worker for automatic activity rescheduling.
     WorkerConfig:
       type: object
       properties:
@@ -19936,6 +20007,13 @@ components:
           allOf:
             - $ref: '#/components/schemas/EnvironmentInfo'
           description: Information about the environment this SDK is running in.
+        activityInfo:
+          allOf:
+            - $ref: '#/components/schemas/WorkerActivityInfo'
+          description: |-
+            Cumulative activity binding changes for RecordWorkerHeartbeatRequest's version range.
+             Only sent through RecordWorkerHeartbeat, which acknowledges durable acceptance.
+             Omitted from worker visibility responses.
       description: |-
         Worker info message, contains information about the worker and its current state.
          All information is provided by the worker itself.

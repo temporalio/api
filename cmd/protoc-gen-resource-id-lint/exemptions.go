@@ -39,6 +39,10 @@ var exemptions = map[string]struct{}{
 
 	"WorkflowService.ShutdownWorker": {},
 
+	// Direct Nexus calls have no resource in the request itself. The target is derived from the operation input.
+	"WorkflowService.StartNexusOperation":  {},
+	"WorkflowService.CancelNexusOperation": {},
+
 	"WorkflowService.GetWorkerTaskReachability": {},
 
 	"WorkflowService.DescribeDeployment":        {},
@@ -63,4 +67,8 @@ var exemptions = map[string]struct{}{
 	"OperatorService.UpdateNexusEndpoint": {},
 	"OperatorService.DeleteNexusEndpoint": {},
 	"OperatorService.ListNexusEndpoints":  {},
+
+	// ActivityService is a Nexus service, not served over gRPC. Direct calls go through
+	// WorkflowService.StartNexusOperation.
+	"ActivityService.GetResult": {},
 }

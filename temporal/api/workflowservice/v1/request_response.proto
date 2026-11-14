@@ -3755,3 +3755,92 @@ message PollWorkflowExecutionTimeSkippingResponse {
   // The execution's current fast-forward, if any.
   temporal.api.common.v1.TimeSkippingFastForwardInfo fast_forward_info = 3;
 }
+
+message StartNexusOperationRequest {
+    // The namespace the operation runs in. Only applicable to the system Nexus endpoint, must be empty for other
+    // endpoints, whose target namespace is resolved from the endpoint registry.
+    string namespace = 1;
+    // The identity of the client who initiated this request.
+    string identity = 2;
+    // A unique identifier for this request, used as an idempotency key.
+    // When waiting with an ephemeral completion callback, re-issue the request with the same request ID to continue
+    // waiting.
+    string request_id = 3;
+
+    // Endpoint name, resolved via the Temporal service's endpoint registry.
+    string endpoint = 4;
+    // Nexus service name.
+    string service = 5;
+    // Nexus operation name.
+    string operation = 6;
+
+    // Serialized input to the operation.
+    temporal.api.common.v1.Payload input = 7;
+
+    // Links for associating the caller with the operation.
+    repeated temporal.api.common.v1.Link links = 8;
+
+    // Header to attach to the Nexus request.
+    // Users are responsible for encrypting sensitive data in this header as it is transmitted to the handler as-is.
+    // This is useful for propagating tracing information.
+    // Not supported for the system Nexus endpoint.
+    map<string, string> nexus_header = 9;
+
+    // Callback to deliver the operation's outcome to if it completes asynchronously.
+    // Only the ephemeral variant is currently supported. An ephemeral callback turns this request into a long poll:
+    // if the operation completes before the long-poll deadline, its outcome is returned synchronously.
+    temporal.api.common.v1.Callback completion_callback = 10;
+}
+
+message StartNexusOperationResponse {
+    // The operation completed successfully.
+    message Sync {
+        temporal.api.common.v1.Payload payload = 1;
+        // Links associated with the operation, as returned by the handler.
+        repeated temporal.api.common.v1.Link links = 2;
+    }
+
+    // The operation was started and will complete asynchronously.
+    message Async {
+        // Token that can be used to reference the operation, e.g. in CancelNexusOperation.
+        string operation_token = 1;
+        // Links associated with the operation, as returned by the handler.
+        repeated temporal.api.common.v1.Link links = 2;
+    }
+
+    oneof variant {
+        Sync sync_success = 1;
+        // The operation is still running.
+        // If the request carried an ephemeral completion callback, the long-poll deadline was reached before the
+        // operation completed. Re-issue the request with the same request ID to continue waiting.
+        Async async_success = 2;
+        // The operation completed unsuccessfully (failed or canceled).
+        // Failure object must contain an ApplicationFailureInfo or CanceledFailureInfo object.
+        temporal.api.failure.v1.Failure failure = 3;
+    }
+}
+
+message CancelNexusOperationRequest {
+    // The namespace the operation runs in. Only applicable to the system Nexus endpoint, must be empty for other
+    // endpoints, whose target namespace is resolved from the endpoint registry.
+    string namespace = 1;
+    // The identity of the client who initiated this request.
+    string identity = 2;
+
+    // Endpoint name, resolved via the Temporal service's endpoint registry.
+    string endpoint = 3;
+    // Nexus service name.
+    string service = 4;
+    // Nexus operation name.
+    string operation = 5;
+    // Operation token from StartNexusOperationResponse.Async.
+    string operation_token = 6;
+
+    // Header to attach to the Nexus request.
+    // Users are responsible for encrypting sensitive data in this header as it is transmitted to the handler as-is.
+    // Not supported for the system Nexus endpoint.
+    map<string, string> nexus_header = 7;
+}
+
+message CancelNexusOperationResponse {
+}

@@ -234,11 +234,23 @@ message Callback {
         temporal.api.common.v1.Payload source_context = 4;
     }
 
+    // Ephemeral callbacks are never persisted. An ephemeral callback indicates that the caller is waiting for the
+    // outcome on the request that carries it, turning that request into a long poll.
+    // If the operation completes before the long-poll deadline, its outcome is returned synchronously. Otherwise the
+    // request returns as if the operation was started asynchronously, and the caller should re-issue it with the same
+    // request ID to continue waiting.
+    //
+    // Currently only supported in StartNexusOperationRequest targeting the system Nexus endpoint. Other APIs reject
+    // this variant with an error.
+    message Ephemeral {
+    }
+
     reserved 1; // For a generic callback mechanism to be added later.
     oneof variant {
         Nexus nexus = 2;
         Internal internal = 3;
         NexusHandler nexus_handler = 4;
+        Ephemeral ephemeral = 5;
     }
 
     // Links associated with the callback. It can be used to link to underlying resources of the

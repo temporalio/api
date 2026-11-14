@@ -2106,4 +2106,41 @@ service WorkflowService {
             value: "workflow:{workflow_execution.workflow_id}"
         };
     }
+
+    // StartNexusOperation starts a Nexus operation on an endpoint, communicating directly with the endpoint using the
+    // caller's namespace credentials. Unlike StartNexusOperationExecution, no durable caller-side operation is created.
+    // The response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start, or operation
+    // failure. Handler errors (e.g. NOT_FOUND, BAD_REQUEST) are returned as gRPC errors whose status code is derived
+    // from the handler error type, with a `NexusHandlerFailure` error detail carrying the handler error.
+    //
+    // A request carrying an ephemeral completion callback may be held open as a long poll until the operation
+    // completes or the long-poll deadline is reached.
+    //
+    // Currently only supported for the system Nexus endpoint.
+    rpc StartNexusOperation (StartNexusOperationRequest) returns (StartNexusOperationResponse) {
+        option (google.api.http) = {
+            post: "/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}"
+                body: "*"
+            }
+        };
+    }
+
+    // CancelNexusOperation requests cancellation of an asynchronous Nexus operation previously started via
+    // StartNexusOperation.
+    // Cancellation is cooperative: this forwards a cancel request to the handler, but the operation will only
+    // transition to canceled if the handler processes it. Handler errors are returned the same way as in
+    // StartNexusOperation.
+    rpc CancelNexusOperation (CancelNexusOperationRequest) returns (CancelNexusOperationResponse) {
+        option (google.api.http) = {
+            post: "/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}/cancel"
+            body: "*"
+            additional_bindings {
+                post: "/api/v1/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}/cancel"
+                body: "*"
+            }
+        };
+    }
 }

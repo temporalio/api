@@ -42,19 +42,19 @@ OAPI3_PATH := .components.schemas.Payload
 NEX_GEN ?= nex-gen
 
 STABLE_PATH := temporal/api
+BUF_BREAKING_AGAINST ?= https://github.com/temporalio/api.git\#branch=main
 
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
 
 stable-api:
-	rm -rf $(STABLE_PATH)
-	echo $(CURDIR)
-	go -C cmd/generate-stable-protos run . -root $(CURDIR) 
-	buf format -w --path $(STABLE_PATH)
+	bash scripts/stable-api.sh $(CURDIR)
 
 stable-api-test:
 	printf $(COLOR) "Run generate-stable tests..."
 	@cd cmd/generate-stable-protos/ && go test ./...
+	printf $(COLOR) "Check that both Buf modules exclude fixture protos..."
+	files=$$(buf ls-files && buf ls-files --config buf.next.yaml) && ! grep '^cmd/' <<<"$$files"
 
 ##### Compile proto files for go #####
 grpc: stable-api buf-lint api-linter buf-breaking clean go-grpc fix-path
@@ -65,6 +65,7 @@ go-grpc: clean $(PROTO_OUT)
 		--root=$(PROTO_ROOT) \
 		--output=$(PROTO_OUT) \
 		--exclude=internal \
+		--exclude=cmd \
 		--exclude=proto/api/google \
 		--exclude=temporal/api_next \
 		-I $(PROTO_ROOT) \
@@ -144,9 +145,11 @@ buf-lint: $(STAMPDIR)/buf-dep-prune
 
 buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check for stable API against main branch..."
-	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=main')
+	@(cd $(PROTO_ROOT) && buf breaking --against '$(BUF_BREAKING_AGAINST)')
 	@printf $(COLOR) "Run buf breaking changes check for api_next against main branch..."
-	@(cd $(PROTO_ROOT) && buf breaking --config buf.next.yaml --against 'https://github.com/temporalio/api.git#branch=main' --against-config buf.yaml)
+	@(cd $(PROTO_ROOT) && buf breaking --config buf.next.yaml --against '$(BUF_BREAKING_AGAINST)' --against-config buf.yaml)
+	@printf $(COLOR) "Run buf breaking changes check for api_next against previous api_next..."
+	@(cd $(PROTO_ROOT) && bash scripts/check-api-next-breaking.sh '$(BUF_BREAKING_AGAINST)')
 
 nexus-rpc-yaml: nexus-rpc-yaml-install
 	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."

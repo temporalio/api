@@ -13,7 +13,7 @@ func diskOpener(root string) source.Opener {
 }
 
 // baseOpener is the disk corpus plus well-known types, shared by every pass
-// that reads real files unmodified (currently just stripExperimentalChanges,
+// that reads real files unmodified (currently just stripDraftChanges,
 // which lowers the authored api_next tree as-is). Construct this once per
 // pass and share it across every query in that pass; see the comparability
 // note on memOpener below for why.

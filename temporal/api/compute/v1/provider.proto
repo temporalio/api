@@ -22,13 +22,26 @@ message ComputeProvider {
     // contents of the provider_details field.
     string type = 1;
 
-    // Contains provider-specific instructions and configuration.
-    // For server-implemented providers, use the SDK's default content
-    // converter to ensure the server can understand it.
-    // For remote-implemented providers, you might use your own content
-    // converters according to what the remote endpoints understand.
+    // Deprecated. Use detail below.
     temporal.api.common.v1.Payload details = 2;
-    
+
+    // Contains provider-specific instructions and configuration.
+    oneof detail {
+        // Will be an unencrypted, JSON-encoded object of provider-specific
+        // information.
+        // 
+        // Use for server-implemented providers, or for remote-implemented providers
+        // that do not require encryption or non-JSON details.
+        string detail_json = 3;
+
+        // Will be an encrypted, encoded bytestring containing
+        // provider-specific information.
+        //
+        // Use with with remote-implemented providers that require
+        // encryption or non-JSON encoding.
+        temporal.api.common.v1.Payload detail_payload = 4;
+    }
+
     // Optional. If the compute provider is a Nexus service, this should point
     // there.
     string nexus_endpoint = 10;

@@ -36,8 +36,9 @@ OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
 # The Stream WIT uses nexgen directives that no release has yet. Pin a nexgen commit that has them
-# until a release does.
-NEX_GEN_REV := 9653a0f5a845df0c5059554f1b5813db6a74cd1a
+# until a release does. `@nexus.helper` is not in nexgen's `main` yet, so the commit is on a fork.
+NEX_GEN_REPO := https://github.com/moetemp/nexgen
+NEX_GEN_REV := 4eab992027a449192a18ee3b3ab190a23e5ae174
 NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
 NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 
@@ -181,7 +182,7 @@ system-nexus-wit-install:
 nex-gen-install:
 	printf $(COLOR) "Install nexgen if missing..."
 	command -v $(NEX_GEN) >/dev/null || CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install \
-		--git https://github.com/temporalio/nexgen --rev $(NEX_GEN_REV) --locked --features advanced \
+		--git $(NEX_GEN_REPO) --rev $(NEX_GEN_REV) --locked --features advanced \
 		--root $(NEX_GEN_ROOT) nexgen
 
 ##### Clean #####

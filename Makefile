@@ -38,7 +38,7 @@ OAPI3_PATH := .components.schemas.Payload
 # The Stream WIT uses nexgen directives that no release has yet. Pin a nexgen commit that has them
 # until a release does. `@nexus.helper` is not in nexgen's `main` yet, so the commit is on a fork.
 NEX_GEN_REPO := https://github.com/moetemp/nexgen
-NEX_GEN_REV := 4eab992027a449192a18ee3b3ab190a23e5ae174
+NEX_GEN_REV := 9055618618e580b68d61c7d7e52d8f25aea3824c
 NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
 NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 

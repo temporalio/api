@@ -36,9 +36,10 @@ OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
 # The Stream WIT uses nexgen directives that no release has yet. Pin a nexgen commit that has them
-# until a release does. `@nexus.helper` is not in nexgen's `main` yet, so the commit is on a fork.
+# until a release does. The poll iterators of the Workflow target are not in nexgen's `main` yet,
+# so the commit is on a fork.
 NEX_GEN_REPO := https://github.com/moetemp/nexgen
-NEX_GEN_REV := e4b1f297e7a3fa8bc20fbf176fa2727c9e83a20f
+NEX_GEN_REV := 2785462ecdaba5da7a27051fbaaccbaee26ae9e0
 NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
 NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 

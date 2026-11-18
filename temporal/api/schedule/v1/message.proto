@@ -17,7 +17,9 @@ option csharp_namespace = "Temporalio.Api.Schedule.V1";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
+import "temporal/api/activity/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
+import "temporal/api/enums/v1/activity.proto";
 import "temporal/api/enums/v1/schedule.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/workflow/v1/message.proto";
@@ -219,14 +221,32 @@ message SchedulePolicies {
     // This value defaults to one year, and can't be less than 10 seconds.
     google.protobuf.Duration catchup_window = 2;
 
-    // If true, and a workflow run fails or times out, turn on "paused".
-    // This applies after retry policies: the full chain of retries must fail to
-    // trigger a pause here.
+    // If true, and a started execution fails or times out, turn on "paused".
+    // This applies after retry policies: the execution must reach a terminal
+    // failure or timeout to trigger a pause. Cancellation and termination do not
+    // themselves trigger a pause; pausing does not stop executions already running.
     bool pause_on_failure = 3;
 
     // If true, and the action would start a workflow, a timestamp will not be
     // appended to the scheduled workflow id.
+    // Not supported for Activity actions, whose IDs differ between invocations.
     bool keep_original_workflow_id = 4;
+
+    // Draft extension point from the scheduling blueprint; no Activity-specific
+    // policy fields are currently defined.
+    oneof action_policies {
+        ActivitySchedulePolicies activity_policies = 5;
+    }
+
+    // If true, index only Schedule configuration in List views, omitting runtime
+    // state such as recent actions, future action times, pause state, and notes.
+    // Describe continues to return current runtime state. Default false preserves
+    // existing visibility behavior. The field set and rollout remain under review.
+    bool reduced_list_visibility = 7;
+}
+
+// Draft placeholder for Activity-specific scheduling policies.
+message ActivitySchedulePolicies {
 }
 
 message ScheduleAction {
@@ -237,6 +257,10 @@ message ScheduleAction {
         // The workflow id of the started workflow may not match this exactly,
         // it may have a timestamp appended for uniqueness.
         temporal.api.workflow.v1.NewWorkflowExecutionInfo start_workflow = 1;
+
+        // Start a standalone Activity. The scheduler generates a distinct Activity
+        // ID per invocation and manages retry identity and completion tracking.
+        temporal.api.activity.v1.NewActivityExecutionInfo start_activity = 2;
     }
 }
 
@@ -253,6 +277,27 @@ message ScheduleActionResult {
     // If the action was start_workflow, this field will reflect an
     // eventually-consistent view of the started workflow's status.
     temporal.api.enums.v1.WorkflowExecutionStatus start_workflow_status = 12;
+
+    // Typed execution result. Workflow results also populate the legacy Workflow
+    // fields above for older clients. The typed layout is a draft proposal.
+    oneof result {
+        WorkflowScheduleActionResult workflow_result = 13;
+        ActivityScheduleActionResult activity_result = 14;
+    }
+}
+
+// Execution reference and recorded status of a scheduled Workflow.
+message WorkflowScheduleActionResult {
+    temporal.api.common.v1.WorkflowExecution execution = 1;
+    temporal.api.enums.v1.WorkflowExecutionStatus status = 2;
+}
+
+// Execution reference and recorded status of a scheduled standalone Activity.
+// A failed retry attempt does not mark the execution failed; terminal status is
+// recorded after the execution finishes, including retries. Status may lag.
+message ActivityScheduleActionResult {
+    temporal.api.common.v1.ActivityExecution execution = 1;
+    temporal.api.enums.v1.ActivityExecutionStatus status = 2;
 }
 
 message ScheduleState {
@@ -279,7 +324,7 @@ message TriggerImmediatelyRequest {
     // If set, override overlap policy for this one request.
     temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = 1;
     
-    // Timestamp used for the identity of the target workflow.
+    // Timestamp used for the identity of the target execution.
     // If not set the default value is the current time.
     google.protobuf.Timestamp scheduled_time = 2;
 }
@@ -362,6 +407,23 @@ message ScheduleInfo {
     // Information about time skipping for this schedule.
     // If the schedule has never enabled time skipping, this will be unset.
     temporal.api.common.v1.TimeSkippingInfo time_skipping_info = 13;
+
+    // Typed running-execution view. Workflow actions also populate running_workflows
+    // for older clients. These references identify the originally started executions.
+    oneof running_actions {
+        RunningWorkflowExecutions workflow_executions = 14;
+        RunningActivityExecutions activity_executions = 15;
+    }
+}
+
+// Running Workflow executions started by a Schedule.
+message RunningWorkflowExecutions {
+    repeated temporal.api.common.v1.WorkflowExecution executions = 1;
+}
+
+// Running standalone Activity executions started by a Schedule.
+message RunningActivityExecutions {
+    repeated temporal.api.common.v1.ActivityExecution executions = 1;
 }
 
 message Schedule {
@@ -379,8 +441,8 @@ message ScheduleListInfo {
     ScheduleSpec spec = 1;
 
     // From action:
-    // Action is a oneof field, but we need to encode this in JSON and oneof fields don't work
-    // well with JSON. If action is start_workflow, this is set:
+    // Legacy Workflow summary. Populated alongside workflow_info for Workflow
+    // actions so existing clients can continue to read it:
     temporal.api.common.v1.WorkflowType workflow_type = 2;
 
     // From state:
@@ -393,6 +455,27 @@ message ScheduleListInfo {
 
     // Size of the schedule's internal state (including payloads) in bytes.
     int64 state_size_bytes = 7;
+
+    // Typed action summary. Workflow actions also populate workflow_type above.
+    oneof action_info {
+        WorkflowScheduleActionInfo workflow_info = 8;
+        ActivityScheduleActionInfo activity_info = 9;
+    }
+
+    // If true, runtime fields are unavailable, not zero/false. In particular,
+    // paused=false must not be interpreted as an unpaused Schedule. Configuration
+    // and the action summary remain indexed; Describe returns current runtime state.
+    bool reduced_list_visibility = 11;
+}
+
+// Configuration summary of a Workflow action in Schedule List views.
+message WorkflowScheduleActionInfo {
+    temporal.api.common.v1.WorkflowType workflow_type = 1;
+}
+
+// Configuration summary of an Activity action in Schedule List views.
+message ActivityScheduleActionInfo {
+    temporal.api.common.v1.ActivityType activity_type = 1;
 }
 
 // ScheduleListEntry is returned by ListSchedules.

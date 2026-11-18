@@ -9730,6 +9730,14 @@ paths:
                 $ref: '#/components/schemas/Status'
 components:
   schemas:
+    ActivityExecution:
+      type: object
+      properties:
+        activityId:
+          type: string
+        runId:
+          type: string
+      description: Identifies a specific standalone activity execution within a namespace.
     ActivityExecutionInfo:
       type: object
       properties:
@@ -10138,6 +10146,37 @@ components:
           description: |-
             If set, update the retry policy of the activity, replacing it with the specified one.
              The number of attempts at the activity is preserved.
+    ActivityScheduleActionInfo:
+      type: object
+      properties:
+        activityType:
+          $ref: '#/components/schemas/ActivityType'
+      description: Configuration summary of an Activity action in Schedule List views.
+    ActivityScheduleActionResult:
+      type: object
+      properties:
+        execution:
+          $ref: '#/components/schemas/ActivityExecution'
+        status:
+          enum:
+            - ACTIVITY_EXECUTION_STATUS_UNSPECIFIED
+            - ACTIVITY_EXECUTION_STATUS_RUNNING
+            - ACTIVITY_EXECUTION_STATUS_COMPLETED
+            - ACTIVITY_EXECUTION_STATUS_FAILED
+            - ACTIVITY_EXECUTION_STATUS_CANCELED
+            - ACTIVITY_EXECUTION_STATUS_TERMINATED
+            - ACTIVITY_EXECUTION_STATUS_TIMED_OUT
+            - ACTIVITY_EXECUTION_STATUS_PAUSED
+          type: string
+          format: enum
+      description: |-
+        Execution reference and recorded status of a scheduled standalone Activity.
+         A failed retry attempt does not mark the execution failed; terminal status is
+         recorded after the execution finishes, including retries. Status may lag.
+    ActivitySchedulePolicies:
+      type: object
+      properties: {}
+      description: Draft placeholder for Activity-specific scheduling policies.
     ActivityTaskCancelRequestedEventAttributes:
       type: object
       properties:
@@ -13740,6 +13779,81 @@ components:
             - REPLICATION_STATE_HANDOVER
           type: string
           format: enum
+    NewActivityExecutionInfo:
+      type: object
+      properties:
+        activityId:
+          type: string
+          description: |-
+            Identifier for this activity. Required. This identifier should be meaningful in the user's
+             own system. For schedules, the scheduler generates a different Activity ID for each
+             invocation from this value. Retries of one execution retain its Activity ID.
+        activityType:
+          allOf:
+            - $ref: '#/components/schemas/ActivityType'
+          description: The type of the activity, a string that corresponds to a registered activity on a worker.
+        taskQueue:
+          allOf:
+            - $ref: '#/components/schemas/TaskQueue'
+          description: Task queue to schedule this activity on.
+        scheduleToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Indicates how long the caller is willing to wait for an activity completion. Limits how long
+             retries will be attempted. Either this or `start_to_close_timeout` must be specified.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        scheduleToStartTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Limits time an activity task can stay in a task queue before a worker picks it up. This
+             timeout is always non retryable, as all a retry would achieve is to put it back into the same
+             queue. Defaults to `schedule_to_close_timeout` if not specified.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        startToCloseTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: |-
+            Maximum time an activity is allowed to execute after being picked up by a worker. This
+             timeout is always retryable. Either this or `schedule_to_close_timeout` must be
+             specified.
+             (-- api-linter: core::0140::prepositions=disabled
+                 aip.dev/not-precedent: "to" is used to indicate interval. --)
+        heartbeatTimeout:
+          pattern: ^-?(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,9})?s$
+          type: string
+          description: Maximum permitted time between successful worker heartbeats.
+        retryPolicy:
+          allOf:
+            - $ref: '#/components/schemas/RetryPolicy'
+          description: The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+        input:
+          allOf:
+            - $ref: '#/components/schemas/Payloads'
+          description: Serialized arguments to the activity. These are passed as arguments to the activity function.
+        searchAttributes:
+          allOf:
+            - $ref: '#/components/schemas/SearchAttributes'
+          description: Search attributes for indexing.
+        header:
+          allOf:
+            - $ref: '#/components/schemas/Header'
+          description: Header for context propagation and tracing purposes.
+        userMetadata:
+          allOf:
+            - $ref: '#/components/schemas/UserMetadata'
+          description: Metadata for use by user interfaces to display the fixed as-of-start summary and details of the activity.
+        priority:
+          allOf:
+            - $ref: '#/components/schemas/Priority'
+          description: Priority metadata.
+      description: |-
+        Options for starting a standalone activity from a Schedule.
+         The scheduler supplies namespace, request identity, completion callbacks, start timing,
+         and ID reuse/conflict policies. Previous invocation results/failures are not inputs.
     NewWorkflowExecutionInfo:
       type: object
       properties:
@@ -16410,6 +16524,22 @@ components:
           description: |-
             Monotonically increasing value which is incremented on every mutation
              to any field of this message to achieve eventual consistency between task queues and their partitions.
+    RunningActivityExecutions:
+      type: object
+      properties:
+        executions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityExecution'
+      description: Running standalone Activity executions started by a Schedule.
+    RunningWorkflowExecutions:
+      type: object
+      properties:
+        executions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowExecution'
+      description: Running Workflow executions started by a Schedule.
     Schedule:
       type: object
       properties:
@@ -16433,6 +16563,12 @@ components:
              - cron_schedule
              The workflow id of the started workflow may not match this exactly,
              it may have a timestamp appended for uniqueness.
+        startActivity:
+          allOf:
+            - $ref: '#/components/schemas/NewActivityExecutionInfo'
+          description: |-
+            Start a standalone Activity. The scheduler generates a distinct Activity
+             ID per invocation and manages retry identity and completion tracking.
     ScheduleActionResult:
       type: object
       properties:
@@ -16464,6 +16600,10 @@ components:
             If the action was start_workflow, this field will reflect an
              eventually-consistent view of the started workflow's status.
           format: enum
+        workflowResult:
+          $ref: '#/components/schemas/WorkflowScheduleActionResult'
+        activityResult:
+          $ref: '#/components/schemas/ActivityScheduleActionResult'
     ScheduleInfo:
       type: object
       properties:
@@ -16526,6 +16666,10 @@ components:
             Experimental.
              Information about time skipping for this schedule.
              If the schedule has never enabled time skipping, this will be unset.
+        workflowExecutions:
+          $ref: '#/components/schemas/RunningWorkflowExecutions'
+        activityExecutions:
+          $ref: '#/components/schemas/RunningActivityExecutions'
     ScheduleListEntry:
       type: object
       properties:
@@ -16552,8 +16696,8 @@ components:
             - $ref: '#/components/schemas/WorkflowType'
           description: |-
             From action:
-             Action is a oneof field, but we need to encode this in JSON and oneof fields don't work
-             well with JSON. If action is start_workflow, this is set:
+             Legacy Workflow summary. Populated alongside workflow_info for Workflow
+             actions so existing clients can continue to read it:
         notes:
           type: string
           description: 'From state:'
@@ -16572,6 +16716,16 @@ components:
         stateSizeBytes:
           type: string
           description: Size of the schedule's internal state (including payloads) in bytes.
+        workflowInfo:
+          $ref: '#/components/schemas/WorkflowScheduleActionInfo'
+        activityInfo:
+          $ref: '#/components/schemas/ActivityScheduleActionInfo'
+        reducedListVisibility:
+          type: boolean
+          description: |-
+            If true, runtime fields are unavailable, not zero/false. In particular,
+             paused=false must not be interpreted as an unpaused Schedule. Configuration
+             and the action summary remain indexed; Describe returns current runtime state.
       description: |-
         ScheduleListInfo is an abbreviated set of values from Schedule and ScheduleInfo
          that's returned in ListSchedules.
@@ -16635,14 +16789,25 @@ components:
         pauseOnFailure:
           type: boolean
           description: |-
-            If true, and a workflow run fails or times out, turn on "paused".
-             This applies after retry policies: the full chain of retries must fail to
-             trigger a pause here.
+            If true, and a started execution fails or times out, turn on "paused".
+             This applies after retry policies: the execution must reach a terminal
+             failure or timeout to trigger a pause. Cancellation and termination do not
+             themselves trigger a pause; pausing does not stop executions already running.
         keepOriginalWorkflowId:
           type: boolean
           description: |-
             If true, and the action would start a workflow, a timestamp will not be
              appended to the scheduled workflow id.
+             Not supported for Activity actions, whose IDs differ between invocations.
+        activityPolicies:
+          $ref: '#/components/schemas/ActivitySchedulePolicies'
+        reducedListVisibility:
+          type: boolean
+          description: |-
+            If true, index only Schedule configuration in List views, omitting runtime
+             state such as recent actions, future action times, pause state, and notes.
+             Describe continues to return current runtime state. Default false preserves
+             existing visibility behavior. The field set and rollout remain under review.
     ScheduleSpec:
       type: object
       properties:
@@ -18615,7 +18780,7 @@ components:
         scheduledTime:
           type: string
           description: |-
-            Timestamp used for the identity of the target workflow.
+            Timestamp used for the identity of the target execution.
              If not set the default value is the current time.
           format: date-time
     TriggerWorkflowRuleRequest:
@@ -21437,6 +21602,31 @@ components:
               * BETWEEN ... AND
                 STARTS_WITH
       description: Activity trigger will be triggered when an activity is about to start.
+    WorkflowScheduleActionInfo:
+      type: object
+      properties:
+        workflowType:
+          $ref: '#/components/schemas/WorkflowType'
+      description: Configuration summary of a Workflow action in Schedule List views.
+    WorkflowScheduleActionResult:
+      type: object
+      properties:
+        execution:
+          $ref: '#/components/schemas/WorkflowExecution'
+        status:
+          enum:
+            - WORKFLOW_EXECUTION_STATUS_UNSPECIFIED
+            - WORKFLOW_EXECUTION_STATUS_RUNNING
+            - WORKFLOW_EXECUTION_STATUS_COMPLETED
+            - WORKFLOW_EXECUTION_STATUS_FAILED
+            - WORKFLOW_EXECUTION_STATUS_CANCELED
+            - WORKFLOW_EXECUTION_STATUS_TERMINATED
+            - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
+            - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
+            - WORKFLOW_EXECUTION_STATUS_PAUSED
+          type: string
+          format: enum
+      description: Execution reference and recorded status of a scheduled Workflow.
     WorkflowTaskCompletedEventAttributes:
       type: object
       properties:

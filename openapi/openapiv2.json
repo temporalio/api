@@ -13794,6 +13794,18 @@
         }
       }
     },
+    "v1ActivityExecution": {
+      "type": "object",
+      "properties": {
+        "activityId": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        }
+      },
+      "description": "Identifies a specific standalone activity execution within a namespace."
+    },
     "v1ActivityExecutionInfo": {
       "type": "object",
       "properties": {
@@ -14170,6 +14182,31 @@
           "description": "If set, update the retry policy of the activity, replacing it with the specified one.\nThe number of attempts at the activity is preserved."
         }
       }
+    },
+    "v1ActivityScheduleActionInfo": {
+      "type": "object",
+      "properties": {
+        "activityType": {
+          "$ref": "#/definitions/v1ActivityType"
+        }
+      },
+      "description": "Configuration summary of an Activity action in Schedule List views."
+    },
+    "v1ActivityScheduleActionResult": {
+      "type": "object",
+      "properties": {
+        "execution": {
+          "$ref": "#/definitions/v1ActivityExecution"
+        },
+        "status": {
+          "$ref": "#/definitions/v1ActivityExecutionStatus"
+        }
+      },
+      "description": "Execution reference and recorded status of a scheduled standalone Activity.\nA failed retry attempt does not mark the execution failed; terminal status is\nrecorded after the execution finishes, including retries. Status may lag."
+    },
+    "v1ActivitySchedulePolicies": {
+      "type": "object",
+      "description": "Draft placeholder for Activity-specific scheduling policies."
     },
     "v1ActivityTaskCancelRequestedEventAttributes": {
       "type": "object",
@@ -17539,6 +17576,64 @@
       "default": "NAMESPACE_STATE_UNSPECIFIED",
       "description": " - NAMESPACE_STATE_SOFT_DELETED: Set by OperatorService.SoftDeleteNamespace. Executions make no progress, but no data is\nremoved until the namespace is restored or deleted."
     },
+    "v1NewActivityExecutionInfo": {
+      "type": "object",
+      "properties": {
+        "activityId": {
+          "type": "string",
+          "description": "Identifier for this activity. Required. This identifier should be meaningful in the user's\nown system. For schedules, the scheduler generates a different Activity ID for each\ninvocation from this value. Retries of one execution retain its Activity ID."
+        },
+        "activityType": {
+          "$ref": "#/definitions/v1ActivityType",
+          "description": "The type of the activity, a string that corresponds to a registered activity on a worker."
+        },
+        "taskQueue": {
+          "$ref": "#/definitions/v1TaskQueue",
+          "description": "Task queue to schedule this activity on."
+        },
+        "scheduleToCloseTimeout": {
+          "type": "string",
+          "description": "Indicates how long the caller is willing to wait for an activity completion. Limits how long\nretries will be attempted. Either this or `start_to_close_timeout` must be specified."
+        },
+        "scheduleToStartTimeout": {
+          "type": "string",
+          "description": "Limits time an activity task can stay in a task queue before a worker picks it up. This\ntimeout is always non retryable, as all a retry would achieve is to put it back into the same\nqueue. Defaults to `schedule_to_close_timeout` if not specified."
+        },
+        "startToCloseTimeout": {
+          "type": "string",
+          "description": "Maximum time an activity is allowed to execute after being picked up by a worker. This\ntimeout is always retryable. Either this or `schedule_to_close_timeout` must be\nspecified."
+        },
+        "heartbeatTimeout": {
+          "type": "string",
+          "description": "Maximum permitted time between successful worker heartbeats."
+        },
+        "retryPolicy": {
+          "$ref": "#/definitions/v1RetryPolicy",
+          "description": "The retry policy for the activity. Will never exceed `schedule_to_close_timeout`."
+        },
+        "input": {
+          "$ref": "#/definitions/v1Payloads",
+          "description": "Serialized arguments to the activity. These are passed as arguments to the activity function."
+        },
+        "searchAttributes": {
+          "$ref": "#/definitions/v1SearchAttributes",
+          "description": "Search attributes for indexing."
+        },
+        "header": {
+          "$ref": "#/definitions/v1Header",
+          "description": "Header for context propagation and tracing purposes."
+        },
+        "userMetadata": {
+          "$ref": "#/definitions/v1UserMetadata",
+          "description": "Metadata for use by user interfaces to display the fixed as-of-start summary and details of the activity."
+        },
+        "priority": {
+          "$ref": "#/definitions/v1Priority",
+          "description": "Priority metadata."
+        }
+      },
+      "description": "Options for starting a standalone activity from a Schedule.\nThe scheduler supplies namespace, request identity, completion callbacks, start timing,\nand ID reuse/conflict policies. Previous invocation results/failures are not inputs."
+    },
     "v1NewWorkflowExecutionInfo": {
       "type": "object",
       "properties": {
@@ -19558,6 +19653,32 @@
       "default": "ROUTING_CONFIG_UPDATE_STATE_UNSPECIFIED",
       "description": "Indicates whether a change to the Routing Config has been\npropagated to all relevant Task Queues and their partitions.\n\n - ROUTING_CONFIG_UPDATE_STATE_IN_PROGRESS: Update to the RoutingConfig is currently in progress.\n - ROUTING_CONFIG_UPDATE_STATE_COMPLETED: Update to the RoutingConfig has completed successfully."
     },
+    "v1RunningActivityExecutions": {
+      "type": "object",
+      "properties": {
+        "executions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ActivityExecution"
+          }
+        }
+      },
+      "description": "Running standalone Activity executions started by a Schedule."
+    },
+    "v1RunningWorkflowExecutions": {
+      "type": "object",
+      "properties": {
+        "executions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1WorkflowExecution"
+          }
+        }
+      },
+      "description": "Running Workflow executions started by a Schedule."
+    },
     "v1Schedule": {
       "type": "object",
       "properties": {
@@ -19581,6 +19702,10 @@
         "startWorkflow": {
           "$ref": "#/definitions/v1NewWorkflowExecutionInfo",
           "description": "All fields of NewWorkflowExecutionInfo are valid except for:\n- workflow_id_reuse_policy\n- cron_schedule\nThe workflow id of the started workflow may not match this exactly,\nit may have a timestamp appended for uniqueness."
+        },
+        "startActivity": {
+          "$ref": "#/definitions/v1NewActivityExecutionInfo",
+          "description": "Start a standalone Activity. The scheduler generates a distinct Activity\nID per invocation and manages retry identity and completion tracking."
         }
       }
     },
@@ -19604,6 +19729,12 @@
         "startWorkflowStatus": {
           "$ref": "#/definitions/v1WorkflowExecutionStatus",
           "description": "If the action was start_workflow, this field will reflect an\neventually-consistent view of the started workflow's status."
+        },
+        "workflowResult": {
+          "$ref": "#/definitions/v1WorkflowScheduleActionResult"
+        },
+        "activityResult": {
+          "$ref": "#/definitions/v1ActivityScheduleActionResult"
         }
       }
     },
@@ -19680,6 +19811,12 @@
         "timeSkippingInfo": {
           "$ref": "#/definitions/v1TimeSkippingInfo",
           "description": "Experimental.\nInformation about time skipping for this schedule.\nIf the schedule has never enabled time skipping, this will be unset."
+        },
+        "workflowExecutions": {
+          "$ref": "#/definitions/v1RunningWorkflowExecutions"
+        },
+        "activityExecutions": {
+          "$ref": "#/definitions/v1RunningActivityExecutions"
         }
       }
     },
@@ -19710,7 +19847,7 @@
         },
         "workflowType": {
           "$ref": "#/definitions/v1WorkflowType",
-          "title": "From action:\nAction is a oneof field, but we need to encode this in JSON and oneof fields don't work\nwell with JSON. If action is start_workflow, this is set:"
+          "title": "From action:\nLegacy Workflow summary. Populated alongside workflow_info for Workflow\nactions so existing clients can continue to read it:"
         },
         "notes": {
           "type": "string",
@@ -19738,6 +19875,16 @@
           "type": "string",
           "format": "int64",
           "description": "Size of the schedule's internal state (including payloads) in bytes."
+        },
+        "workflowInfo": {
+          "$ref": "#/definitions/v1WorkflowScheduleActionInfo"
+        },
+        "activityInfo": {
+          "$ref": "#/definitions/v1ActivityScheduleActionInfo"
+        },
+        "reducedListVisibility": {
+          "type": "boolean",
+          "description": "If true, runtime fields are unavailable, not zero/false. In particular,\npaused=false must not be interpreted as an unpaused Schedule. Configuration\nand the action summary remain indexed; Describe returns current runtime state."
         }
       },
       "description": "ScheduleListInfo is an abbreviated set of values from Schedule and ScheduleInfo\nthat's returned in ListSchedules."
@@ -19754,7 +19901,7 @@
         "SCHEDULE_OVERLAP_POLICY_ALLOW_ALL"
       ],
       "default": "SCHEDULE_OVERLAP_POLICY_UNSPECIFIED",
-      "description": "ScheduleOverlapPolicy controls what happens when a workflow would be started\nby a schedule, and is already running.\n\n - SCHEDULE_OVERLAP_POLICY_SKIP: SCHEDULE_OVERLAP_POLICY_SKIP (default) means don't start anything. When the\nworkflow completes, the next scheduled event after that time will be considered.\n - SCHEDULE_OVERLAP_POLICY_BUFFER_ONE: SCHEDULE_OVERLAP_POLICY_BUFFER_ONE means start the workflow again soon as the\ncurrent one completes, but only buffer one start in this way. If another start is\nsupposed to happen when the workflow is running, and one is already buffered, then\nonly the first one will be started after the running workflow finishes.\n - SCHEDULE_OVERLAP_POLICY_BUFFER_ALL: SCHEDULE_OVERLAP_POLICY_BUFFER_ALL means buffer up any number of starts to all\nhappen sequentially, immediately after the running workflow completes.\n - SCHEDULE_OVERLAP_POLICY_CANCEL_OTHER: SCHEDULE_OVERLAP_POLICY_CANCEL_OTHER means that if there is another workflow\nrunning, cancel it, and start the new one after the old one completes cancellation.\n - SCHEDULE_OVERLAP_POLICY_TERMINATE_OTHER: SCHEDULE_OVERLAP_POLICY_TERMINATE_OTHER means that if there is another workflow\nrunning, terminate it and start the new one immediately.\n - SCHEDULE_OVERLAP_POLICY_ALLOW_ALL: SCHEDULE_OVERLAP_POLICY_ALLOW_ALL means start any number of concurrent workflows.\nNote that with this policy, last completion result and last failure will not be\navailable since workflows are not sequential."
+      "description": "ScheduleOverlapPolicy controls what happens when an execution would be started\nby a schedule, and is already running.\n\n - SCHEDULE_OVERLAP_POLICY_SKIP: SCHEDULE_OVERLAP_POLICY_SKIP (default) means don't start anything. When the\nexecution completes, the next scheduled event after that time will be considered.\n - SCHEDULE_OVERLAP_POLICY_BUFFER_ONE: SCHEDULE_OVERLAP_POLICY_BUFFER_ONE means start another execution as soon as the\ncurrent one completes, but only buffer one start in this way. If another start is\nsupposed to happen when the execution is running, and one is already buffered, then\nonly the first one will be started after the running execution finishes.\n - SCHEDULE_OVERLAP_POLICY_BUFFER_ALL: SCHEDULE_OVERLAP_POLICY_BUFFER_ALL means buffer up any number of starts to all\nhappen sequentially, immediately after the running execution completes.\n - SCHEDULE_OVERLAP_POLICY_CANCEL_OTHER: SCHEDULE_OVERLAP_POLICY_CANCEL_OTHER means that if there is another execution\nrunning, request cancellation and start the new one after the old execution closes.\n - SCHEDULE_OVERLAP_POLICY_TERMINATE_OTHER: SCHEDULE_OVERLAP_POLICY_TERMINATE_OTHER means that if there is another execution\nrunning, request termination and start the new one after observing its closure.\n - SCHEDULE_OVERLAP_POLICY_ALLOW_ALL: SCHEDULE_OVERLAP_POLICY_ALLOW_ALL means start any number of concurrent executions.\nNote that with this policy, last completion result and last failure will not be\navailable since executions are not sequential."
     },
     "v1SchedulePatch": {
       "type": "object",
@@ -19797,11 +19944,18 @@
         },
         "pauseOnFailure": {
           "type": "boolean",
-          "description": "If true, and a workflow run fails or times out, turn on \"paused\".\nThis applies after retry policies: the full chain of retries must fail to\ntrigger a pause here."
+          "description": "If true, and a started execution fails or times out, turn on \"paused\".\nThis applies after retry policies: the execution must reach a terminal\nfailure or timeout to trigger a pause. Cancellation and termination do not\nthemselves trigger a pause; pausing does not stop executions already running."
         },
         "keepOriginalWorkflowId": {
           "type": "boolean",
-          "description": "If true, and the action would start a workflow, a timestamp will not be\nappended to the scheduled workflow id."
+          "description": "If true, and the action would start a workflow, a timestamp will not be\nappended to the scheduled workflow id.\nNot supported for Activity actions, whose IDs differ between invocations."
+        },
+        "activityPolicies": {
+          "$ref": "#/definitions/v1ActivitySchedulePolicies"
+        },
+        "reducedListVisibility": {
+          "type": "boolean",
+          "description": "If true, index only Schedule configuration in List views, omitting runtime\nstate such as recent actions, future action times, pause state, and notes.\nDescribe continues to return current runtime state. Default false preserves\nexisting visibility behavior. The field set and rollout remain under review."
         }
       }
     },
@@ -20869,7 +21023,7 @@
         "scheduledTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Timestamp used for the identity of the target workflow.\nIf not set the default value is the current time."
+          "description": "Timestamp used for the identity of the target execution.\nIf not set the default value is the current time."
         }
       }
     },
@@ -22726,6 +22880,27 @@
           "description": "Expiration time of the rule. After this time, the rule will be deleted.\nCan be empty if the rule should never expire."
         }
       }
+    },
+    "v1WorkflowScheduleActionInfo": {
+      "type": "object",
+      "properties": {
+        "workflowType": {
+          "$ref": "#/definitions/v1WorkflowType"
+        }
+      },
+      "description": "Configuration summary of a Workflow action in Schedule List views."
+    },
+    "v1WorkflowScheduleActionResult": {
+      "type": "object",
+      "properties": {
+        "execution": {
+          "$ref": "#/definitions/v1WorkflowExecution"
+        },
+        "status": {
+          "$ref": "#/definitions/v1WorkflowExecutionStatus"
+        }
+      },
+      "description": "Execution reference and recorded status of a scheduled Workflow."
     },
     "v1WorkflowTaskCompletedEventAttributes": {
       "type": "object",

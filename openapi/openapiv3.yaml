@@ -4691,7 +4691,13 @@ paths:
          caller's namespace credentials. Unlike StartNexusOperationExecution, no durable caller-side operation is created.
          The response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start, or operation
          failure. Handler errors (e.g. NOT_FOUND, BAD_REQUEST) are returned as gRPC errors whose status code is derived
-         from the handler error type, with a `NexusHandlerFailure` error detail carrying the handler error.
+         from the handler error type, with a `NexusHandlerFailure` error detail carrying the handler error. Handler errors
+         also carry these trailers:
+           - `temporal-nexus-retryable`: "true" or "false", whether the request may be retried according to the handler
+             error's retry behavior, which the status code doesn't reflect.
+           - `temporal-nexus-failure-source`: "worker" if the handler error originated outside the server, e.g. in a Nexus
+             worker's handler. Absent for errors that originated in the server.
+         Operation failures are part of the response, not errors.
 
          A request carrying an ephemeral completion callback may be held open as a long poll until the operation
          completes or the long-poll deadline is reached.
@@ -9821,7 +9827,13 @@ paths:
          caller's namespace credentials. Unlike StartNexusOperationExecution, no durable caller-side operation is created.
          The response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start, or operation
          failure. Handler errors (e.g. NOT_FOUND, BAD_REQUEST) are returned as gRPC errors whose status code is derived
-         from the handler error type, with a `NexusHandlerFailure` error detail carrying the handler error.
+         from the handler error type, with a `NexusHandlerFailure` error detail carrying the handler error. Handler errors
+         also carry these trailers:
+           - `temporal-nexus-retryable`: "true" or "false", whether the request may be retried according to the handler
+             error's retry behavior, which the status code doesn't reflect.
+           - `temporal-nexus-failure-source`: "worker" if the handler error originated outside the server, e.g. in a Nexus
+             worker's handler. Absent for errors that originated in the server.
+         Operation failures are part of the response, not errors.
 
          A request carrying an ephemeral completion callback may be held open as a long poll until the operation
          completes or the long-poll deadline is reached.

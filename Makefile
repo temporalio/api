@@ -36,10 +36,9 @@ OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
 # The Stream WIT uses nexgen directives that no release has yet. Pin a nexgen commit that has them
-# until a release does. The poll iterators of the Workflow target are not in nexgen's `main` yet,
-# so the commit is on a fork.
-NEX_GEN_REPO := https://github.com/moetemp/nexgen
-NEX_GEN_REV := 2785462ecdaba5da7a27051fbaaccbaee26ae9e0
+# until a release does.
+NEX_GEN_REPO := https://github.com/temporalio/nexgen
+NEX_GEN_REV := c7939a91afe1a0aec5ab4a720cda942590cd5421
 NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
 NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 
@@ -160,7 +159,6 @@ nexus-rpc-yaml-install:
 	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Compile system Nexus WIT files #####
-# No Stream operation returns StreamErrorDetails, so add-message selects it by name.
 system-nexus-wit: system-nexus-wit-install nex-gen-install
 	printf $(COLOR) "Generate system Nexus WIT..."
 	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \

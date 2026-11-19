@@ -14202,7 +14202,7 @@
           "$ref": "#/definitions/v1ActivityExecutionStatus"
         }
       },
-      "description": "Execution reference and recorded status of a scheduled standalone Activity.\nA failed retry attempt does not mark the execution failed; terminal status is\nrecorded after the execution finishes, including retries, for completion-tracked\nactions. ALLOW_ALL actions retain their start-only status. Status may lag."
+      "description": "Execution reference and recorded status of a scheduled standalone Activity.\nTerminal status is recorded after execution retries finish, except for start-only\nALLOW_ALL actions. Status is eventually consistent."
     },
     "v1ActivityTaskCancelRequestedEventAttributes": {
       "type": "object",
@@ -19692,7 +19692,7 @@
         },
         "reducedListVisibility": {
           "type": "boolean",
-          "description": "If true, omit recent_actions and future_action_times from Schedule List views.\nSchedule configuration, action summary, pause state, notes, customer Memo and\nsearch attributes, and action type remain available. Applies to Workflow and\nActivity actions. Describe and visibility of started executions are unchanged.\nDefault false preserves existing visibility behavior. The field set and\nrollout remain under review."
+          "description": "If true, omit recent_actions and future_action_times from Schedule List views.\nOther List fields remain available."
         }
       }
     },
@@ -19724,11 +19724,11 @@
         },
         "startWorkflowResult": {
           "$ref": "#/definitions/v1WorkflowExecution",
-          "description": "Deprecated. Use workflow_result.execution. Still populated for Workflow\nactions so older clients can read the started execution."
+          "description": "Deprecated. Use workflow_result.execution. Still populated for Workflow actions."
         },
         "startWorkflowStatus": {
           "$ref": "#/definitions/v1WorkflowExecutionStatus",
-          "description": "Deprecated. Use workflow_result.status. Still populated for Workflow\nactions with the same eventually-consistent recorded status."
+          "description": "Deprecated. Use workflow_result.status. Still populated for Workflow actions."
         },
         "workflowResult": {
           "$ref": "#/definitions/v1WorkflowScheduleActionResult"
@@ -19780,7 +19780,7 @@
             "type": "object",
             "$ref": "#/definitions/v1ScheduleActionResult"
           },
-          "description": "Most recent ten actions (including manual triggers). Entries carry the typed\nWorkflow or Activity result. This Describe view remains available when\nreduced_list_visibility omits recent_actions from Schedule List views."
+          "description": "Most recent ten actions, including manual triggers."
         },
         "futureActionTimes": {
           "type": "array",
@@ -19847,7 +19847,7 @@
         },
         "workflowType": {
           "$ref": "#/definitions/v1WorkflowType",
-          "description": "From action:\nDeprecated. Use workflow_info.workflow_type. Still populated alongside\nworkflow_info for Workflow actions so older clients can read the summary."
+          "description": "Deprecated. Use workflow_info.workflow_type. Still populated for Workflow actions."
         },
         "notes": {
           "type": "string",
@@ -19862,14 +19862,15 @@
             "type": "object",
             "$ref": "#/definitions/v1ScheduleActionResult"
           },
-          "description": "From info (maybe fewer entries). Entries carry the typed Workflow or Activity\nresult. Unavailable when reduced_list_visibility is true; Describe's\nScheduleInfo.recent_actions remains available."
+          "description": "Recent actions. Omitted when reduced_list_visibility is true."
         },
         "futureActionTimes": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "date-time"
-          }
+          },
+          "description": "Upcoming action times. Omitted when reduced_list_visibility is true."
         },
         "stateSizeBytes": {
           "type": "string",
@@ -19884,7 +19885,7 @@
         },
         "reducedListVisibility": {
           "type": "boolean",
-          "description": "Reflects Schedule.reduced_list_visibility. If true, recent_actions and\nfuture_action_times are unavailable, not empty execution/time histories.\nOther List fields, including pause state and notes, remain available.\nDescribe continues to return current runtime state."
+          "description": "Reflects Schedule.reduced_list_visibility."
         }
       },
       "description": "ScheduleListInfo is an abbreviated set of values from Schedule and ScheduleInfo\nthat's returned in ListSchedules."

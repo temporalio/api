@@ -253,18 +253,14 @@ message ScheduleActionResult {
     // Time that the action was taken (real time).
     google.protobuf.Timestamp actual_time = 2;
 
-    // Deprecated. Use execution. Still populated for Workflow actions so older
-    // clients can read the started execution.
+    // Deprecated. Use execution. Still populated for Workflow actions.
     temporal.api.common.v1.WorkflowExecution start_workflow_result = 11 [deprecated = true];
 
-    // Deprecated. Query the underlying Workflow execution for its current status.
-    // Still populated for Workflow actions with the existing eventually-consistent
-    // recorded status. No Activity or generic execution status is added here.
+    // Deprecated. Query the underlying Workflow execution for current status.
+    // Still populated for Workflow actions with its existing behavior.
     temporal.api.enums.v1.WorkflowExecutionStatus start_workflow_status = 12 [deprecated = true];
 
-    // Execution started by the action, for both Workflow and Activity actions.
-    // Workflow actions also populate start_workflow_result for older clients.
-    // No new execution status is exposed by Schedule Describe or List responses.
+    // Execution started by this action.
     temporal.api.common.v1.Execution execution = 13;
 }
 
@@ -356,9 +352,7 @@ message ScheduleInfo {
     // Deprecated. Use running_executions. Still populated for Workflow actions.
     repeated temporal.api.common.v1.WorkflowExecution running_workflows = 9 [deprecated = true];
 
-    // Most recent ten actions (including manual triggers), with execution references.
-    // This Describe view remains available when
-    // reduced_list_visibility omits recent_actions from Schedule List views.
+    // Most recent ten actions, including manual triggers.
     repeated ScheduleActionResult recent_actions = 4;
 
     // Next ten scheduled action times.
@@ -379,10 +373,8 @@ message ScheduleInfo {
     // If the schedule has never enabled time skipping, this will be unset.
     temporal.api.common.v1.TimeSkippingInfo time_skipping_info = 13;
 
-    // Running executions for both Workflow and Activity actions in Describe.
-    // Unaffected by reduced_list_visibility. Workflow actions also populate
-    // running_workflows for older clients. These references identify the
-    // originally started executions.
+    // Currently running executions started by this Schedule.
+    // Run IDs identify the originally started executions.
     repeated temporal.api.common.v1.Execution running_executions = 14;
 }
 
@@ -393,11 +385,7 @@ message Schedule {
     ScheduleState state = 4;
 
     // If true, omit recent_actions and future_action_times from Schedule List views.
-    // Schedule configuration, action summary, pause state, notes, customer Memo and
-    // search attributes, and action type remain available. Applies to Workflow and
-    // Activity actions. Describe and visibility of started executions are unchanged.
-    // Default false preserves existing visibility behavior. The field set and
-    // rollout remain under review.
+    // Other List fields remain available.
     bool reduced_list_visibility = 5;
 }
 
@@ -408,19 +396,17 @@ message ScheduleListInfo {
     // Some fields are dropped from this copy of spec: timezone_data
     ScheduleSpec spec = 1;
 
-    // From action:
-    // Deprecated. Use workflow_info.workflow_type. Still populated alongside
-    // workflow_info for Workflow actions so older clients can read the summary.
+    // Deprecated. Use workflow_info.workflow_type. Still populated for Workflow actions.
     temporal.api.common.v1.WorkflowType workflow_type = 2 [deprecated = true];
 
     // From state:
     string notes = 3;
     bool paused = 4;
 
-    // From info (maybe fewer entries). Entries carry execution references.
-    // Unavailable when reduced_list_visibility is true; Describe's
-    // ScheduleInfo.recent_actions remains available.
+    // Recent actions. Omitted when reduced_list_visibility is true.
     repeated ScheduleActionResult recent_actions = 5;
+
+    // Upcoming action times. Omitted when reduced_list_visibility is true.
     repeated google.protobuf.Timestamp future_action_times = 6;
 
     // Size of the schedule's internal state (including payloads) in bytes.
@@ -433,10 +419,7 @@ message ScheduleListInfo {
         ActivityScheduleActionInfo activity_info = 9;
     }
 
-    // Reflects Schedule.reduced_list_visibility. If true, recent_actions and
-    // future_action_times are unavailable, not empty execution/time histories.
-    // Other List fields, including pause state and notes, remain available.
-    // Describe continues to return current runtime state.
+    // Reflects Schedule.reduced_list_visibility.
     bool reduced_list_visibility = 11;
 }
 

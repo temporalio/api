@@ -17,6 +17,7 @@ option csharp_namespace = "Temporalio.Api.Schedule.V1";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
+import "temporal/api/activity/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/enums/v1/schedule.proto";
 import "temporal/api/enums/v1/workflow.proto";
@@ -205,6 +206,7 @@ message ScheduleSpec {
     bytes timezone_data = 11;
 }
 
+// Shared Schedule policies for Workflow and Activity actions.
 message SchedulePolicies {
     // Policy for overlaps.
     // Note that this can be changed after a schedule has taken some actions,
@@ -219,14 +221,14 @@ message SchedulePolicies {
     // This value defaults to one year, and can't be less than 10 seconds.
     google.protobuf.Duration catchup_window = 2;
 
-    // If true, and a workflow run fails or times out, turn on "paused".
-    // This applies after retry policies: the full chain of retries must fail to
-    // trigger a pause here.
+    // If true, and a started execution fails or times out, turn on "paused".
+    // This applies after retry policies: the execution must reach a terminal
+    // failure or timeout to trigger a pause. Cancellation and termination do not
+    // themselves trigger a pause; pausing does not stop executions already running.
     bool pause_on_failure = 3;
 
-    // If true, and the action would start a workflow, a timestamp will not be
-    // appended to the scheduled workflow id.
-    bool keep_original_workflow_id = 4;
+    // Deprecated. This option was never implemented.
+    bool keep_original_workflow_id = 4 [deprecated = true];
 }
 
 message ScheduleAction {
@@ -237,6 +239,10 @@ message ScheduleAction {
         // The workflow id of the started workflow may not match this exactly,
         // it may have a timestamp appended for uniqueness.
         temporal.api.workflow.v1.NewWorkflowExecutionInfo start_workflow = 1;
+
+        // Start a standalone Activity. The scheduler generates a distinct Activity
+        // ID per invocation and manages retry identity and completion tracking.
+        temporal.api.activity.v1.NewActivityExecutionInfo start_activity = 2;
     }
 }
 
@@ -247,12 +253,15 @@ message ScheduleActionResult {
     // Time that the action was taken (real time).
     google.protobuf.Timestamp actual_time = 2;
 
-    // If action was start_workflow:
-    temporal.api.common.v1.WorkflowExecution start_workflow_result = 11;
+    // Deprecated. Use execution. Still populated for Workflow actions.
+    temporal.api.common.v1.WorkflowExecution start_workflow_result = 11 [deprecated = true];
 
-    // If the action was start_workflow, this field will reflect an
-    // eventually-consistent view of the started workflow's status.
-    temporal.api.enums.v1.WorkflowExecutionStatus start_workflow_status = 12;
+    // Deprecated. Query the underlying Workflow execution for current status.
+    // Still populated for Workflow actions with its existing behavior.
+    temporal.api.enums.v1.WorkflowExecutionStatus start_workflow_status = 12 [deprecated = true];
+
+    // Execution started by this action.
+    temporal.api.common.v1.Execution execution = 13;
 }
 
 message ScheduleState {
@@ -279,7 +288,7 @@ message TriggerImmediatelyRequest {
     // If set, override overlap policy for this one request.
     temporal.api.enums.v1.ScheduleOverlapPolicy overlap_policy = 1;
     
-    // Timestamp used for the identity of the target workflow.
+    // Timestamp used for the identity of the target execution.
     // If not set the default value is the current time.
     google.protobuf.Timestamp scheduled_time = 2;
 }
@@ -340,9 +349,10 @@ message ScheduleInfo {
     // Note that the run_ids in here are the original execution run ids as
     // started by the schedule. If the workflows retried, did continue-as-new,
     // or were reset, they might still be running but with a different run_id.
-    repeated temporal.api.common.v1.WorkflowExecution running_workflows = 9;
+    // Deprecated. Use running_executions. Still populated for Workflow actions.
+    repeated temporal.api.common.v1.WorkflowExecution running_workflows = 9 [deprecated = true];
 
-    // Most recent ten actual action times (including manual triggers).
+    // Most recent ten actions, including manual triggers.
     repeated ScheduleActionResult recent_actions = 4;
 
     // Next ten scheduled action times.
@@ -362,6 +372,10 @@ message ScheduleInfo {
     // Information about time skipping for this schedule.
     // If the schedule has never enabled time skipping, this will be unset.
     temporal.api.common.v1.TimeSkippingInfo time_skipping_info = 13;
+
+    // Currently running executions started by this Schedule.
+    // Run IDs identify the originally started executions.
+    repeated temporal.api.common.v1.Execution running_executions = 14;
 }
 
 message Schedule {
@@ -369,6 +383,10 @@ message Schedule {
     ScheduleAction action = 2;
     SchedulePolicies policies = 3;
     ScheduleState state = 4;
+
+    // If true, omit recent_actions and future_action_times from Schedule List views.
+    // Other List fields remain available.
+    bool reduced_list_visibility = 5;
 }
 
 // ScheduleListInfo is an abbreviated set of values from Schedule and ScheduleInfo
@@ -378,21 +396,41 @@ message ScheduleListInfo {
     // Some fields are dropped from this copy of spec: timezone_data
     ScheduleSpec spec = 1;
 
-    // From action:
-    // Action is a oneof field, but we need to encode this in JSON and oneof fields don't work
-    // well with JSON. If action is start_workflow, this is set:
-    temporal.api.common.v1.WorkflowType workflow_type = 2;
+    // Deprecated. Use workflow_info.workflow_type. Still populated for Workflow actions.
+    temporal.api.common.v1.WorkflowType workflow_type = 2 [deprecated = true];
 
     // From state:
     string notes = 3;
     bool paused = 4;
 
-    // From info (maybe fewer entries):
+    // Recent actions. Omitted when reduced_list_visibility is true.
     repeated ScheduleActionResult recent_actions = 5;
+
+    // Upcoming action times. Omitted when reduced_list_visibility is true.
     repeated google.protobuf.Timestamp future_action_times = 6;
 
     // Size of the schedule's internal state (including payloads) in bytes.
-    int64 state_size_bytes = 7;
+    // Deprecated. This List field was never implemented.
+    int64 state_size_bytes = 7 [deprecated = true];
+
+    // Typed action summary. Workflow actions also populate workflow_type above.
+    oneof action_info {
+        WorkflowScheduleActionInfo workflow_info = 8;
+        ActivityScheduleActionInfo activity_info = 9;
+    }
+
+    // Reflects Schedule.reduced_list_visibility.
+    bool reduced_list_visibility = 11;
+}
+
+// Configuration summary of a Workflow action in Schedule List views.
+message WorkflowScheduleActionInfo {
+    temporal.api.common.v1.WorkflowType workflow_type = 1;
+}
+
+// Configuration summary of an Activity action in Schedule List views.
+message ActivityScheduleActionInfo {
+    temporal.api.common.v1.ActivityType activity_type = 1;
 }
 
 // ScheduleListEntry is returned by ListSchedules.

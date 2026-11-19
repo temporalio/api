@@ -5211,7 +5211,7 @@
     "/api/v1/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}": {
       "post": {
         "summary": "StartNexusOperation starts a Nexus operation on an endpoint, communicating directly with the endpoint using the\ncaller's namespace credentials. Unlike StartNexusOperationExecution, no durable caller-side operation is created.\nThe response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start, or operation\nfailure. Handler errors (e.g. NOT_FOUND, BAD_REQUEST) are returned as gRPC errors whose status code is derived\nfrom the handler error type, with a `NexusHandlerFailure` error detail carrying the handler error. Handler errors\nalso carry these trailers:\n  - `temporal-nexus-retryable`: \"true\" or \"false\", whether the request may be retried according to the handler\n    error's retry behavior, which the status code doesn't reflect.\n  - `temporal-nexus-failure-source`: \"worker\" if the handler error originated outside the server, e.g. in a Nexus\n    worker's handler. Absent for errors that originated in the server.\nOperation failures are part of the response, not errors.",
-        "description": "A request carrying an ephemeral completion callback may be held open as a long poll until the operation\ncompletes or the long-poll deadline is reached.\n\nCurrently only supported for the system Nexus endpoint.",
+        "description": "A request carrying an ephemeral completion callback may be held open as a long poll until the operation\ncompletes or the long-poll deadline is reached.\n\nCurrently only supported for the system Nexus endpoint. The namespace-scoped HTTP route targets the system Nexus\nendpoint, leaving `endpoint` empty.",
         "operationId": "StartNexusOperation2",
         "responses": {
           "200": {
@@ -5230,7 +5230,7 @@
         "parameters": [
           {
             "name": "endpoint",
-            "description": "Endpoint name, resolved via the Temporal service's endpoint registry.",
+            "description": "Endpoint name, resolved via the Temporal service's endpoint registry. Defaults to the system Nexus endpoint\n(`__temporal_system`) if empty.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -5265,7 +5265,7 @@
     },
     "/api/v1/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}/cancel": {
       "post": {
-        "summary": "CancelNexusOperation requests cancellation of an asynchronous Nexus operation previously started via\nStartNexusOperation.\nCancellation is cooperative: this forwards a cancel request to the handler, but the operation will only\ntransition to canceled if the handler processes it. Handler errors are returned the same way as in\nStartNexusOperation.",
+        "summary": "CancelNexusOperation requests cancellation of an asynchronous Nexus operation previously started via\nStartNexusOperation.\nCancellation is cooperative: this forwards a cancel request to the handler, but the operation will only\ntransition to canceled if the handler processes it. Handler errors are returned the same way as in\nStartNexusOperation. The namespace-scoped HTTP route targets the system Nexus endpoint, leaving `endpoint` empty.",
         "operationId": "CancelNexusOperation2",
         "responses": {
           "200": {
@@ -5284,7 +5284,116 @@
         "parameters": [
           {
             "name": "endpoint",
-            "description": "Endpoint name, resolved via the Temporal service's endpoint registry.",
+            "description": "Endpoint name, resolved via the Temporal service's endpoint registry. Defaults to the system Nexus endpoint\n(`__temporal_system`) if empty.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "description": "Nexus service name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "operation",
+            "description": "Nexus operation name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCancelNexusOperationBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/nexus-requests/namespaces/{namespace}/services/{service}/operations/{operation}": {
+      "post": {
+        "summary": "StartNexusOperation starts a Nexus operation on an endpoint, communicating directly with the endpoint using the\ncaller's namespace credentials. Unlike StartNexusOperationExecution, no durable caller-side operation is created.\nThe response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start, or operation\nfailure. Handler errors (e.g. NOT_FOUND, BAD_REQUEST) are returned as gRPC errors whose status code is derived\nfrom the handler error type, with a `NexusHandlerFailure` error detail carrying the handler error. Handler errors\nalso carry these trailers:\n  - `temporal-nexus-retryable`: \"true\" or \"false\", whether the request may be retried according to the handler\n    error's retry behavior, which the status code doesn't reflect.\n  - `temporal-nexus-failure-source`: \"worker\" if the handler error originated outside the server, e.g. in a Nexus\n    worker's handler. Absent for errors that originated in the server.\nOperation failures are part of the response, not errors.",
+        "description": "A request carrying an ephemeral completion callback may be held open as a long poll until the operation\ncompletes or the long-poll deadline is reached.\n\nCurrently only supported for the system Nexus endpoint. The namespace-scoped HTTP route targets the system Nexus\nendpoint, leaving `endpoint` empty.",
+        "operationId": "StartNexusOperation4",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartNexusOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace the operation runs in. Only applicable to the system Nexus endpoint, must be empty for other\nendpoints, whose target namespace is resolved from the endpoint registry.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "description": "Nexus service name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "operation",
+            "description": "Nexus operation name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceStartNexusOperationBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/api/v1/nexus-requests/namespaces/{namespace}/services/{service}/operations/{operation}/cancel": {
+      "post": {
+        "summary": "CancelNexusOperation requests cancellation of an asynchronous Nexus operation previously started via\nStartNexusOperation.\nCancellation is cooperative: this forwards a cancel request to the handler, but the operation will only\ntransition to canceled if the handler processes it. Handler errors are returned the same way as in\nStartNexusOperation. The namespace-scoped HTTP route targets the system Nexus endpoint, leaving `endpoint` empty.",
+        "operationId": "CancelNexusOperation4",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelNexusOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace the operation runs in. Only applicable to the system Nexus endpoint, must be empty for other\nendpoints, whose target namespace is resolved from the endpoint registry.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -10905,7 +11014,7 @@
     "/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}": {
       "post": {
         "summary": "StartNexusOperation starts a Nexus operation on an endpoint, communicating directly with the endpoint using the\ncaller's namespace credentials. Unlike StartNexusOperationExecution, no durable caller-side operation is created.\nThe response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start, or operation\nfailure. Handler errors (e.g. NOT_FOUND, BAD_REQUEST) are returned as gRPC errors whose status code is derived\nfrom the handler error type, with a `NexusHandlerFailure` error detail carrying the handler error. Handler errors\nalso carry these trailers:\n  - `temporal-nexus-retryable`: \"true\" or \"false\", whether the request may be retried according to the handler\n    error's retry behavior, which the status code doesn't reflect.\n  - `temporal-nexus-failure-source`: \"worker\" if the handler error originated outside the server, e.g. in a Nexus\n    worker's handler. Absent for errors that originated in the server.\nOperation failures are part of the response, not errors.",
-        "description": "A request carrying an ephemeral completion callback may be held open as a long poll until the operation\ncompletes or the long-poll deadline is reached.\n\nCurrently only supported for the system Nexus endpoint.",
+        "description": "A request carrying an ephemeral completion callback may be held open as a long poll until the operation\ncompletes or the long-poll deadline is reached.\n\nCurrently only supported for the system Nexus endpoint. The namespace-scoped HTTP route targets the system Nexus\nendpoint, leaving `endpoint` empty.",
         "operationId": "StartNexusOperation",
         "responses": {
           "200": {
@@ -10924,7 +11033,7 @@
         "parameters": [
           {
             "name": "endpoint",
-            "description": "Endpoint name, resolved via the Temporal service's endpoint registry.",
+            "description": "Endpoint name, resolved via the Temporal service's endpoint registry. Defaults to the system Nexus endpoint\n(`__temporal_system`) if empty.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -10959,7 +11068,7 @@
     },
     "/nexus-requests/endpoints/{endpoint}/services/{service}/operations/{operation}/cancel": {
       "post": {
-        "summary": "CancelNexusOperation requests cancellation of an asynchronous Nexus operation previously started via\nStartNexusOperation.\nCancellation is cooperative: this forwards a cancel request to the handler, but the operation will only\ntransition to canceled if the handler processes it. Handler errors are returned the same way as in\nStartNexusOperation.",
+        "summary": "CancelNexusOperation requests cancellation of an asynchronous Nexus operation previously started via\nStartNexusOperation.\nCancellation is cooperative: this forwards a cancel request to the handler, but the operation will only\ntransition to canceled if the handler processes it. Handler errors are returned the same way as in\nStartNexusOperation. The namespace-scoped HTTP route targets the system Nexus endpoint, leaving `endpoint` empty.",
         "operationId": "CancelNexusOperation",
         "responses": {
           "200": {
@@ -10978,7 +11087,116 @@
         "parameters": [
           {
             "name": "endpoint",
-            "description": "Endpoint name, resolved via the Temporal service's endpoint registry.",
+            "description": "Endpoint name, resolved via the Temporal service's endpoint registry. Defaults to the system Nexus endpoint\n(`__temporal_system`) if empty.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "description": "Nexus service name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "operation",
+            "description": "Nexus operation name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceCancelNexusOperationBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/nexus-requests/namespaces/{namespace}/services/{service}/operations/{operation}": {
+      "post": {
+        "summary": "StartNexusOperation starts a Nexus operation on an endpoint, communicating directly with the endpoint using the\ncaller's namespace credentials. Unlike StartNexusOperationExecution, no durable caller-side operation is created.\nThe response follows the Nexus RPC spec semantics: synchronous completion, asynchronous start, or operation\nfailure. Handler errors (e.g. NOT_FOUND, BAD_REQUEST) are returned as gRPC errors whose status code is derived\nfrom the handler error type, with a `NexusHandlerFailure` error detail carrying the handler error. Handler errors\nalso carry these trailers:\n  - `temporal-nexus-retryable`: \"true\" or \"false\", whether the request may be retried according to the handler\n    error's retry behavior, which the status code doesn't reflect.\n  - `temporal-nexus-failure-source`: \"worker\" if the handler error originated outside the server, e.g. in a Nexus\n    worker's handler. Absent for errors that originated in the server.\nOperation failures are part of the response, not errors.",
+        "description": "A request carrying an ephemeral completion callback may be held open as a long poll until the operation\ncompletes or the long-poll deadline is reached.\n\nCurrently only supported for the system Nexus endpoint. The namespace-scoped HTTP route targets the system Nexus\nendpoint, leaving `endpoint` empty.",
+        "operationId": "StartNexusOperation3",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartNexusOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace the operation runs in. Only applicable to the system Nexus endpoint, must be empty for other\nendpoints, whose target namespace is resolved from the endpoint registry.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "description": "Nexus service name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "operation",
+            "description": "Nexus operation name.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowServiceStartNexusOperationBody"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowService"
+        ]
+      }
+    },
+    "/nexus-requests/namespaces/{namespace}/services/{service}/operations/{operation}/cancel": {
+      "post": {
+        "summary": "CancelNexusOperation requests cancellation of an asynchronous Nexus operation previously started via\nStartNexusOperation.\nCancellation is cooperative: this forwards a cancel request to the handler, but the operation will only\ntransition to canceled if the handler processes it. Handler errors are returned the same way as in\nStartNexusOperation. The namespace-scoped HTTP route targets the system Nexus endpoint, leaving `endpoint` empty.",
+        "operationId": "CancelNexusOperation3",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelNexusOperationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "description": "The namespace the operation runs in. Only applicable to the system Nexus endpoint, must be empty for other\nendpoints, whose target namespace is resolved from the endpoint registry.",
             "in": "path",
             "required": true,
             "type": "string"
@@ -11874,13 +12092,13 @@
     "WorkflowServiceCancelNexusOperationBody": {
       "type": "object",
       "properties": {
-        "namespace": {
-          "type": "string",
-          "description": "The namespace the operation runs in. Only applicable to the system Nexus endpoint, must be empty for other\nendpoints, whose target namespace is resolved from the endpoint registry."
-        },
         "identity": {
           "type": "string",
           "description": "The identity of the client who initiated this request."
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "Endpoint name, resolved via the Temporal service's endpoint registry. Defaults to the system Nexus endpoint\n(`__temporal_system`) if empty."
         },
         "operationToken": {
           "type": "string",
@@ -13021,10 +13239,6 @@
     "WorkflowServiceStartNexusOperationBody": {
       "type": "object",
       "properties": {
-        "namespace": {
-          "type": "string",
-          "description": "The namespace the operation runs in. Only applicable to the system Nexus endpoint, must be empty for other\nendpoints, whose target namespace is resolved from the endpoint registry."
-        },
         "identity": {
           "type": "string",
           "description": "The identity of the client who initiated this request."
@@ -13032,6 +13246,10 @@
         "requestId": {
           "type": "string",
           "description": "A unique identifier for this request, used as an idempotency key.\nWhen waiting with an ephemeral completion callback, re-issue the request with the same request ID to continue\nwaiting."
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "Endpoint name, resolved via the Temporal service's endpoint registry. Defaults to the system Nexus endpoint\n(`__temporal_system`) if empty."
         },
         "input": {
           "$ref": "#/definitions/v1Payload",

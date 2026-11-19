@@ -10047,14 +10047,14 @@ components:
              Increments on handoff retries and resets to 1 on an activity retry or applied reset.
              Zero when options are absent.
           format: int32
-        asyncHandoffTime:
+        handoffTime:
           type: string
           description: |-
             Most recent durably recorded handoff time. Retained through retry backoff, waiting for the
              next worker pickup, and terminal closure. Cleared when a reset is applied or the next delivery
              starts on a worker.
           format: date-time
-        awaitingCompletion:
+        handedOff:
           type: boolean
           description: |-
             True while the current delivery awaits external completion, independent of
@@ -13069,20 +13069,25 @@ components:
              To change `RetryPolicy.non_retryable_error_types`, replace
              `handoff_options.retry_policy` as a whole in the update mask.
       description: |-
-        Timeout and retry options for activity handoff and external completion. The completion phase
-         begins when the server durably accepts `RespondActivityTaskHandoff`.
+        An activity attempt has two phases: before handoff and waiting for external completion.
+         Handoff occurs when the server durably accepts `RespondActivityTaskHandoff`.
+
+         This message sets the timeouts before handoff and while waiting for external completion.
+         Its heartbeat timeout and retry policy apply only before handoff. After handoff, use the
+         heartbeat timeout and retry policy in `ActivityOptions`.
+         `ActivityOptions.start_to_close_timeout` spans both phases. If it expires, retries use
+         `ActivityOptions.retry_policy`.
 
          Presence, including an empty message, enables two-phase timeouts and retries. Absence preserves
          existing timeout, retry, and attempt-counting behavior even when handoff is reported.
-         Either `ActivityOptions.start_to_close_timeout` or `ActivityOptions.schedule_to_close_timeout`
-         must be positive; otherwise, both phase timeouts below must be positive so neither phase can
-         wait indefinitely. The earliest applicable deadline wins. `ActivityOptions.start_to_close_timeout`
-         is enforced only when explicitly positive. Only the current phase timeout is active.
+         A positive `ActivityOptions.start_to_close_timeout` or `ActivityOptions.schedule_to_close_timeout`
+         is required unless both phase timeouts are positive. An unset or zero start-to-close timeout
+         remains disabled.
 
-         Positive phase timeouts are capped by positive `ActivityOptions.start_to_close_timeout` and
-         `ActivityOptions.schedule_to_close_timeout` bounds. Positive heartbeat timeouts are capped by
-         their phase timeout and those positive bounds. The server stores and returns normalized values.
-         Increasing a bound does not restore a capped value unless that value is also updated.
+         Phase timeouts are capped by positive `ActivityOptions.start_to_close_timeout` and
+         `ActivityOptions.schedule_to_close_timeout` values. Heartbeat timeouts are also capped by their
+         phase timeout. The server stores and returns the capped values. Increasing a bound does not
+         restore a capped value unless that value is also updated.
     Header:
       type: object
       properties:
@@ -13900,10 +13905,10 @@ components:
         standaloneActivityOperatorCommands:
           type: boolean
           description: True if the namespace supports standalone activity operator commands.
-        standaloneActivityAsyncHandoff:
+        standaloneActivityHandoff:
           type: boolean
           description: True if workers can report standalone activity handoff through `RespondActivityTaskHandoff`.
-        workflowActivityAsyncHandoff:
+        workflowActivityHandoff:
           type: boolean
           description: True if workers can report workflow activity handoff through `RespondActivityTaskHandoff`.
       description: Namespace capability details. Should contain what features are enabled in a namespace.
@@ -14814,11 +14819,11 @@ components:
              configured, increments on handoff retries, and resets to 1 on an activity retry or applied
              reset. Zero when handoff options are absent.
           format: int32
-        asyncHandoffTime:
+        handoffTime:
           type: string
           description: Most recent durably accepted handoff time. Cleared at the next worker pickup or applied reset.
           format: date-time
-        awaitingCompletion:
+        handedOff:
           type: boolean
           description: True while waiting for external completion. Pending pause, cancel, or reset requests do not clear it.
     PendingActivityInfo_PauseInfo:
@@ -15045,11 +15050,11 @@ components:
           format: date-time
         currentAttemptScheduledTime:
           type: string
-          description: When was this task attempt scheduled
+          description: Time this activity attempt was first scheduled. Preserved across handoff retries.
           format: date-time
         startedTime:
           type: string
-          description: Time this activity task started.
+          description: Time this activity attempt first started. Preserved across handoff retries.
           format: date-time
         attempt:
           type: integer

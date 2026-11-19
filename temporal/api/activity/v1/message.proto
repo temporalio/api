@@ -36,20 +36,25 @@ message ActivityExecutionOutcome {
     temporal.api.enums.v1.RetryState retry_state = 3;
 }
 
-// Timeout and retry options for activity handoff and external completion. The completion phase
-// begins when the server durably accepts `RespondActivityTaskHandoff`.
+// An activity attempt has two phases: before handoff and waiting for external completion.
+// Handoff occurs when the server durably accepts `RespondActivityTaskHandoff`.
+//
+// This message sets the timeouts before handoff and while waiting for external completion.
+// Its heartbeat timeout and retry policy apply only before handoff. After handoff, use the
+// heartbeat timeout and retry policy in `ActivityOptions`.
+// `ActivityOptions.start_to_close_timeout` spans both phases. If it expires, retries use
+// `ActivityOptions.retry_policy`.
 //
 // Presence, including an empty message, enables two-phase timeouts and retries. Absence preserves
 // existing timeout, retry, and attempt-counting behavior even when handoff is reported.
-// Either `ActivityOptions.start_to_close_timeout` or `ActivityOptions.schedule_to_close_timeout`
-// must be positive; otherwise, both phase timeouts below must be positive so neither phase can
-// wait indefinitely. The earliest applicable deadline wins. `ActivityOptions.start_to_close_timeout`
-// is enforced only when explicitly positive. Only the current phase timeout is active.
+// A positive `ActivityOptions.start_to_close_timeout` or `ActivityOptions.schedule_to_close_timeout`
+// is required unless both phase timeouts are positive. An unset or zero start-to-close timeout
+// remains disabled.
 //
-// Positive phase timeouts are capped by positive `ActivityOptions.start_to_close_timeout` and
-// `ActivityOptions.schedule_to_close_timeout` bounds. Positive heartbeat timeouts are capped by
-// their phase timeout and those positive bounds. The server stores and returns normalized values.
-// Increasing a bound does not restore a capped value unless that value is also updated.
+// Phase timeouts are capped by positive `ActivityOptions.start_to_close_timeout` and
+// `ActivityOptions.schedule_to_close_timeout` values. Heartbeat timeouts are also capped by their
+// phase timeout. The server stores and returns the capped values. Increasing a bound does not
+// restore a capped value unless that value is also updated.
 message HandoffOptions {
     // Maximum time from the current worker pickup until the server durably accepts handoff. Unset
     // or zero disables this timeout. On timeout, the server retries according to
@@ -291,12 +296,12 @@ message ActivityExecutionInfo {
     // Most recent durably recorded handoff time. Retained through retry backoff, waiting for the
     // next worker pickup, and terminal closure. Cleared when a reset is applied or the next delivery
     // starts on a worker.
-    google.protobuf.Timestamp async_handoff_time = 45;
+    google.protobuf.Timestamp handoff_time = 45;
 
     // True while the current delivery awaits external completion, independent of
     // `ActivityExecutionInfo.run_state`. Cleared when the delivery ends or is reset;
     // pending pause, cancel, or reset requests do not clear it.
-    bool awaiting_completion = 46;
+    bool handed_off = 46;
 
     // Server-normalized and defaulted handoff options, if configured.
     HandoffOptions handoff_options = 47;

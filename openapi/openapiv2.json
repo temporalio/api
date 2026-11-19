@@ -14094,12 +14094,12 @@
           "format": "int32",
           "description": "Handoff attempt within the current activity attempt. Starts at 1 when\n`ActivityExecutionInfo.handoff_options` are configured at creation or added by update.\nIncrements on handoff retries and resets to 1 on an activity retry or applied reset.\nZero when options are absent."
         },
-        "asyncHandoffTime": {
+        "handoffTime": {
           "type": "string",
           "format": "date-time",
           "description": "Most recent durably recorded handoff time. Retained through retry backoff, waiting for the\nnext worker pickup, and terminal closure. Cleared when a reset is applied or the next delivery\nstarts on a worker."
         },
-        "awaitingCompletion": {
+        "handedOff": {
           "type": "boolean",
           "description": "True while the current delivery awaits external completion, independent of\n`ActivityExecutionInfo.run_state`. Cleared when the delivery ends or is reset;\npending pause, cancel, or reset requests do not clear it."
         },
@@ -16795,7 +16795,7 @@
           "description": "Retry policy for failures and heartbeat or start-to-handoff timeouts before accepted handoff.\nRetries increment `PollActivityTaskQueueResponse.handoff_attempt` without incrementing\n`PollActivityTaskQueueResponse.attempt`. Exhausting this policy does not fall back to\n`ActivityOptions.retry_policy`. If omitted, uses the namespace's default activity retry\npolicy, independently of `ActivityOptions.retry_policy`.\nTo change `RetryPolicy.non_retryable_error_types`, replace\n`handoff_options.retry_policy` as a whole in the update mask."
         }
       },
-      "description": "Timeout and retry options for activity handoff and external completion. The completion phase\nbegins when the server durably accepts `RespondActivityTaskHandoff`.\n\nPresence, including an empty message, enables two-phase timeouts and retries. Absence preserves\nexisting timeout, retry, and attempt-counting behavior even when handoff is reported.\nEither `ActivityOptions.start_to_close_timeout` or `ActivityOptions.schedule_to_close_timeout`\nmust be positive; otherwise, both phase timeouts below must be positive so neither phase can\nwait indefinitely. The earliest applicable deadline wins. `ActivityOptions.start_to_close_timeout`\nis enforced only when explicitly positive. Only the current phase timeout is active.\n\nPositive phase timeouts are capped by positive `ActivityOptions.start_to_close_timeout` and\n`ActivityOptions.schedule_to_close_timeout` bounds. Positive heartbeat timeouts are capped by\ntheir phase timeout and those positive bounds. The server stores and returns normalized values.\nIncreasing a bound does not restore a capped value unless that value is also updated."
+      "description": "An activity attempt has two phases: before handoff and waiting for external completion.\nHandoff occurs when the server durably accepts `RespondActivityTaskHandoff`.\n\nThis message sets the timeouts before handoff and while waiting for external completion.\nIts heartbeat timeout and retry policy apply only before handoff. After handoff, use the\nheartbeat timeout and retry policy in `ActivityOptions`.\n`ActivityOptions.start_to_close_timeout` spans both phases. If it expires, retries use\n`ActivityOptions.retry_policy`.\n\nPresence, including an empty message, enables two-phase timeouts and retries. Absence preserves\nexisting timeout, retry, and attempt-counting behavior even when handoff is reported.\nA positive `ActivityOptions.start_to_close_timeout` or `ActivityOptions.schedule_to_close_timeout`\nis required unless both phase timeouts are positive. An unset or zero start-to-close timeout\nremains disabled.\n\nPhase timeouts are capped by positive `ActivityOptions.start_to_close_timeout` and\n`ActivityOptions.schedule_to_close_timeout` values. Heartbeat timeouts are also capped by their\nphase timeout. The server stores and returns the capped values. Increasing a bound does not\nrestore a capped value unless that value is also updated."
     },
     "v1Header": {
       "type": "object",
@@ -17663,11 +17663,11 @@
           "type": "boolean",
           "description": "True if the namespace supports standalone activity operator commands."
         },
-        "standaloneActivityAsyncHandoff": {
+        "standaloneActivityHandoff": {
           "type": "boolean",
           "description": "True if workers can report standalone activity handoff through `RespondActivityTaskHandoff`."
         },
-        "workflowActivityAsyncHandoff": {
+        "workflowActivityHandoff": {
           "type": "boolean",
           "description": "True if workers can report workflow activity handoff through `RespondActivityTaskHandoff`."
         }
@@ -18521,12 +18521,12 @@
           "format": "int32",
           "description": "Handoff attempt within the activity attempt. Starts at 1 when handoff options are\nconfigured, increments on handoff retries, and resets to 1 on an activity retry or applied\nreset. Zero when handoff options are absent."
         },
-        "asyncHandoffTime": {
+        "handoffTime": {
           "type": "string",
           "format": "date-time",
           "description": "Most recent durably accepted handoff time. Cleared at the next worker pickup or applied reset."
         },
-        "awaitingCompletion": {
+        "handedOff": {
           "type": "boolean",
           "description": "True while waiting for external completion. Pending pause, cancel, or reset requests do not clear it."
         }
@@ -18767,12 +18767,12 @@
         "currentAttemptScheduledTime": {
           "type": "string",
           "format": "date-time",
-          "title": "When was this task attempt scheduled"
+          "description": "Time this activity attempt was first scheduled. Preserved across handoff retries."
         },
         "startedTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Time this activity task started."
+          "description": "Time this activity attempt first started. Preserved across handoff retries."
         },
         "attempt": {
           "type": "integer",

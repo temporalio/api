@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -95,7 +96,9 @@ func stableProtosGenerator(root, outDir string) error {
 	return writeFiles(outDir, stableProtos)
 }
 
-func stripDrafts(ctx context.Context, root string, paths []string) ([]string, map[string]string, map[string]draftComments, error) {
+// loadAPINext lowers the api_next corpus, discovers the draft-tag extension set and
+// validates every draft annotation, returning the annotations it accepted.
+func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*ir.File, draftTags, draftAnnotations, error) {
 	// first, lower the api_next set into ir
 	results, err := lowerFiles(ctx, baseOpener(root), paths)
 	if err != nil {
@@ -130,10 +133,21 @@ func stripDrafts(ctx context.Context, root string, paths []string) ([]string, ma
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	annotations := draftAnnotations{}
 	for _, p := range paths {
-		if err := validateDraftAnnotations(tags, byPath[p]); err != nil {
+		accepted, err := validateDraftAnnotations(tags, byPath[p])
+		if err != nil {
 			return nil, nil, nil, err
 		}
+		maps.Copy(annotations, accepted)
+	}
+	return byPath, tags, annotations, nil
+}
+
+func stripDrafts(ctx context.Context, root string, paths []string) ([]string, map[string]string, map[string]draftComments, error) {
+	byPath, tags, _, err := loadAPINext(ctx, root, paths)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	stableOrder := make([]string, 0, len(paths))

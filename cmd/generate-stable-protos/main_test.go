@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/fs"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,15 +44,28 @@ func TestAnnotationClassification(t *testing.T) {
 				t.Fatal(err)
 			}
 			var expected struct {
-				Error string `json:"error"`
+				Error       string           `json:"error"`
+				Annotations draftAnnotations `json:"annotations"`
 			}
 			if err := json.Unmarshal(data, &expected); err != nil {
 				t.Fatal(err)
 			}
-			err = stableProtosGenerator(filepath.Join(fixture, "input"), t.TempDir())
+			root := filepath.Join(fixture, "input")
+			err = stableProtosGenerator(root, t.TempDir())
 			if expected.Error == "" {
 				if err != nil {
 					t.Fatal(err)
+				}
+				paths, err := getAPINextPaths(root)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, _, actual, err := loadAPINext(t.Context(), root, paths)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !maps.Equal(expected.Annotations, actual) {
+					t.Fatalf("draft annotations differ\nexpected: %v\nactual: %v", expected.Annotations, actual)
 				}
 				return
 			}

@@ -10172,7 +10172,8 @@ components:
       description: |-
         Execution reference and recorded status of a scheduled standalone Activity.
          A failed retry attempt does not mark the execution failed; terminal status is
-         recorded after the execution finishes, including retries. Status may lag.
+         recorded after the execution finishes, including retries, for completion-tracked
+         actions. ALLOW_ALL actions retain their start-only status. Status may lag.
     ActivityTaskCancelRequestedEventAttributes:
       type: object
       properties:
@@ -16579,7 +16580,9 @@ components:
         startWorkflowResult:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecution'
-          description: 'If action was start_workflow:'
+          description: |-
+            Deprecated. Use workflow_result.execution. Still populated for Workflow
+             actions so older clients can read the started execution.
         startWorkflowStatus:
           enum:
             - WORKFLOW_EXECUTION_STATUS_UNSPECIFIED
@@ -16593,8 +16596,8 @@ components:
             - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           description: |-
-            If the action was start_workflow, this field will reflect an
-             eventually-consistent view of the started workflow's status.
+            Deprecated. Use workflow_result.status. Still populated for Workflow
+             actions with the same eventually-consistent recorded status.
           format: enum
         workflowResult:
           $ref: '#/components/schemas/WorkflowScheduleActionResult'
@@ -16631,11 +16634,15 @@ components:
              Note that the run_ids in here are the original execution run ids as
              started by the schedule. If the workflows retried, did continue-as-new,
              or were reset, they might still be running but with a different run_id.
+             Deprecated. Use workflow_executions. Still populated for Workflow actions.
         recentActions:
           type: array
           items:
             $ref: '#/components/schemas/ScheduleActionResult'
-          description: Most recent ten actual action times (including manual triggers).
+          description: |-
+            Most recent ten actions (including manual triggers). Entries carry the typed
+             Workflow or Activity result. This Describe view remains available when
+             reduced_list_visibility omits recent_actions from Schedule List views.
         futureActionTimes:
           type: array
           items:
@@ -16692,8 +16699,8 @@ components:
             - $ref: '#/components/schemas/WorkflowType'
           description: |-
             From action:
-             Legacy Workflow summary. Populated alongside workflow_info for Workflow
-             actions so existing clients can continue to read it:
+             Deprecated. Use workflow_info.workflow_type. Still populated alongside
+             workflow_info for Workflow actions so older clients can read the summary.
         notes:
           type: string
           description: 'From state:'
@@ -16703,7 +16710,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ScheduleActionResult'
-          description: 'From info (maybe fewer entries):'
+          description: |-
+            From info (maybe fewer entries). Entries carry the typed Workflow or Activity
+             result. Unavailable when reduced_list_visibility is true; Describe's
+             ScheduleInfo.recent_actions remains available.
         futureActionTimes:
           type: array
           items:
@@ -16800,8 +16810,9 @@ components:
           description: |-
             If true, index only Schedule configuration in List views, omitting runtime
              state such as recent actions, future action times, pause state, and notes.
-             Describe continues to return current runtime state. Default false preserves
-             existing visibility behavior. The field set and rollout remain under review.
+             Applies to both Workflow and Activity actions. Describe continues to return
+             current runtime state, including recent and running executions. Default false
+             preserves existing visibility behavior. The field set and rollout remain under review.
       description: Shared Schedule policies for Workflow and Activity actions.
     ScheduleSpec:
       type: object
@@ -21621,7 +21632,9 @@ components:
             - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           format: enum
-      description: Execution reference and recorded status of a scheduled Workflow.
+      description: |-
+        Execution reference and recorded status of a scheduled Workflow.
+         ALLOW_ALL actions retain their start-only status rather than terminal updates.
     WorkflowTaskCompletedEventAttributes:
       type: object
       properties:

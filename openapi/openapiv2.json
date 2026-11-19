@@ -14202,7 +14202,7 @@
           "$ref": "#/definitions/v1ActivityExecutionStatus"
         }
       },
-      "description": "Execution reference and recorded status of a scheduled standalone Activity.\nA failed retry attempt does not mark the execution failed; terminal status is\nrecorded after the execution finishes, including retries. Status may lag."
+      "description": "Execution reference and recorded status of a scheduled standalone Activity.\nA failed retry attempt does not mark the execution failed; terminal status is\nrecorded after the execution finishes, including retries, for completion-tracked\nactions. ALLOW_ALL actions retain their start-only status. Status may lag."
     },
     "v1ActivityTaskCancelRequestedEventAttributes": {
       "type": "object",
@@ -19720,11 +19720,11 @@
         },
         "startWorkflowResult": {
           "$ref": "#/definitions/v1WorkflowExecution",
-          "title": "If action was start_workflow:"
+          "description": "Deprecated. Use workflow_result.execution. Still populated for Workflow\nactions so older clients can read the started execution."
         },
         "startWorkflowStatus": {
           "$ref": "#/definitions/v1WorkflowExecutionStatus",
-          "description": "If the action was start_workflow, this field will reflect an\neventually-consistent view of the started workflow's status."
+          "description": "Deprecated. Use workflow_result.status. Still populated for Workflow\nactions with the same eventually-consistent recorded status."
         },
         "workflowResult": {
           "$ref": "#/definitions/v1WorkflowScheduleActionResult"
@@ -19768,7 +19768,7 @@
             "type": "object",
             "$ref": "#/definitions/v1WorkflowExecution"
           },
-          "description": "Currently-running workflows started by this schedule. (There might be\nmore than one if the overlap policy allows overlaps.)\nNote that the run_ids in here are the original execution run ids as\nstarted by the schedule. If the workflows retried, did continue-as-new,\nor were reset, they might still be running but with a different run_id."
+          "description": "Currently-running workflows started by this schedule. (There might be\nmore than one if the overlap policy allows overlaps.)\nNote that the run_ids in here are the original execution run ids as\nstarted by the schedule. If the workflows retried, did continue-as-new,\nor were reset, they might still be running but with a different run_id.\nDeprecated. Use workflow_executions. Still populated for Workflow actions."
         },
         "recentActions": {
           "type": "array",
@@ -19776,7 +19776,7 @@
             "type": "object",
             "$ref": "#/definitions/v1ScheduleActionResult"
           },
-          "description": "Most recent ten actual action times (including manual triggers)."
+          "description": "Most recent ten actions (including manual triggers). Entries carry the typed\nWorkflow or Activity result. This Describe view remains available when\nreduced_list_visibility omits recent_actions from Schedule List views."
         },
         "futureActionTimes": {
           "type": "array",
@@ -19843,7 +19843,7 @@
         },
         "workflowType": {
           "$ref": "#/definitions/v1WorkflowType",
-          "title": "From action:\nLegacy Workflow summary. Populated alongside workflow_info for Workflow\nactions so existing clients can continue to read it:"
+          "description": "From action:\nDeprecated. Use workflow_info.workflow_type. Still populated alongside\nworkflow_info for Workflow actions so older clients can read the summary."
         },
         "notes": {
           "type": "string",
@@ -19858,7 +19858,7 @@
             "type": "object",
             "$ref": "#/definitions/v1ScheduleActionResult"
           },
-          "title": "From info (maybe fewer entries):"
+          "description": "From info (maybe fewer entries). Entries carry the typed Workflow or Activity\nresult. Unavailable when reduced_list_visibility is true; Describe's\nScheduleInfo.recent_actions remains available."
         },
         "futureActionTimes": {
           "type": "array",
@@ -19948,7 +19948,7 @@
         },
         "reducedListVisibility": {
           "type": "boolean",
-          "description": "If true, index only Schedule configuration in List views, omitting runtime\nstate such as recent actions, future action times, pause state, and notes.\nDescribe continues to return current runtime state. Default false preserves\nexisting visibility behavior. The field set and rollout remain under review."
+          "description": "If true, index only Schedule configuration in List views, omitting runtime\nstate such as recent actions, future action times, pause state, and notes.\nApplies to both Workflow and Activity actions. Describe continues to return\ncurrent runtime state, including recent and running executions. Default false\npreserves existing visibility behavior. The field set and rollout remain under review."
         }
       },
       "description": "Shared Schedule policies for Workflow and Activity actions."
@@ -22894,7 +22894,7 @@
           "$ref": "#/definitions/v1WorkflowExecutionStatus"
         }
       },
-      "description": "Execution reference and recorded status of a scheduled Workflow."
+      "description": "Execution reference and recorded status of a scheduled Workflow.\nALLOW_ALL actions retain their start-only status rather than terminal updates."
     },
     "v1WorkflowTaskCompletedEventAttributes": {
       "type": "object",

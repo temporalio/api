@@ -9730,14 +9730,6 @@ paths:
                 $ref: '#/components/schemas/Status'
 components:
   schemas:
-    ActivityExecution:
-      type: object
-      properties:
-        activityId:
-          type: string
-        runId:
-          type: string
-      description: Identifies a specific standalone activity execution within a namespace.
     ActivityExecutionInfo:
       type: object
       properties:
@@ -10152,28 +10144,6 @@ components:
         activityType:
           $ref: '#/components/schemas/ActivityType'
       description: Configuration summary of an Activity action in Schedule List views.
-    ActivityScheduleActionResult:
-      type: object
-      properties:
-        execution:
-          $ref: '#/components/schemas/ActivityExecution'
-        status:
-          enum:
-            - ACTIVITY_EXECUTION_STATUS_UNSPECIFIED
-            - ACTIVITY_EXECUTION_STATUS_RUNNING
-            - ACTIVITY_EXECUTION_STATUS_COMPLETED
-            - ACTIVITY_EXECUTION_STATUS_FAILED
-            - ACTIVITY_EXECUTION_STATUS_CANCELED
-            - ACTIVITY_EXECUTION_STATUS_TERMINATED
-            - ACTIVITY_EXECUTION_STATUS_TIMED_OUT
-            - ACTIVITY_EXECUTION_STATUS_PAUSED
-          type: string
-          format: enum
-      description: |-
-        Execution reference and recorded status of a scheduled standalone Activity.
-         A failed retry attempt does not mark the execution failed; terminal status is
-         recorded after the execution finishes, including retries, for completion-tracked
-         actions. ALLOW_ALL actions retain their start-only status. Status may lag.
     ActivityTaskCancelRequestedEventAttributes:
       type: object
       properties:
@@ -16521,22 +16491,6 @@ components:
           description: |-
             Monotonically increasing value which is incremented on every mutation
              to any field of this message to achieve eventual consistency between task queues and their partitions.
-    RunningActivityExecutions:
-      type: object
-      properties:
-        executions:
-          type: array
-          items:
-            $ref: '#/components/schemas/ActivityExecution'
-      description: Running standalone Activity executions started by a Schedule.
-    RunningWorkflowExecutions:
-      type: object
-      properties:
-        executions:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkflowExecution'
-      description: Running Workflow executions started by a Schedule.
     Schedule:
       type: object
       properties:
@@ -16581,8 +16535,8 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorkflowExecution'
           description: |-
-            Deprecated. Use workflow_result.execution. Still populated for Workflow
-             actions so older clients can read the started execution.
+            Deprecated. Use execution. Still populated for Workflow actions so older
+             clients can read the started execution.
         startWorkflowStatus:
           enum:
             - WORKFLOW_EXECUTION_STATUS_UNSPECIFIED
@@ -16596,13 +16550,16 @@ components:
             - WORKFLOW_EXECUTION_STATUS_PAUSED
           type: string
           description: |-
-            Deprecated. Use workflow_result.status. Still populated for Workflow
-             actions with the same eventually-consistent recorded status.
+            Legacy Workflow status retained with its existing behavior for compatibility.
+             No corresponding Activity or generic execution status is added in this proposal.
           format: enum
-        workflowResult:
-          $ref: '#/components/schemas/WorkflowScheduleActionResult'
-        activityResult:
-          $ref: '#/components/schemas/ActivityScheduleActionResult'
+        execution:
+          allOf:
+            - $ref: '#/components/schemas/Execution'
+          description: |-
+            Execution started by the action, for both Workflow and Activity actions.
+             Workflow actions also populate start_workflow_result for older clients.
+             No new execution status is exposed by Schedule Describe or List responses.
     ScheduleInfo:
       type: object
       properties:
@@ -16634,14 +16591,14 @@ components:
              Note that the run_ids in here are the original execution run ids as
              started by the schedule. If the workflows retried, did continue-as-new,
              or were reset, they might still be running but with a different run_id.
-             Deprecated. Use workflow_executions. Still populated for Workflow actions.
+             Deprecated. Use running_executions. Still populated for Workflow actions.
         recentActions:
           type: array
           items:
             $ref: '#/components/schemas/ScheduleActionResult'
           description: |-
-            Most recent ten actions (including manual triggers). Entries carry the typed
-             Workflow or Activity result. This Describe view remains available when
+            Most recent ten actions (including manual triggers), with execution references.
+             This Describe view remains available when
              reduced_list_visibility omits recent_actions from Schedule List views.
         futureActionTimes:
           type: array
@@ -16669,10 +16626,15 @@ components:
             Experimental.
              Information about time skipping for this schedule.
              If the schedule has never enabled time skipping, this will be unset.
-        workflowExecutions:
-          $ref: '#/components/schemas/RunningWorkflowExecutions'
-        activityExecutions:
-          $ref: '#/components/schemas/RunningActivityExecutions'
+        runningExecutions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Execution'
+          description: |-
+            Running executions for both Workflow and Activity actions in Describe.
+             Unaffected by reduced_list_visibility. Workflow actions also populate
+             running_workflows for older clients. These references identify the
+             originally started executions.
     ScheduleListEntry:
       type: object
       properties:
@@ -16711,8 +16673,8 @@ components:
           items:
             $ref: '#/components/schemas/ScheduleActionResult'
           description: |-
-            From info (maybe fewer entries). Entries carry the typed Workflow or Activity
-             result. Unavailable when reduced_list_visibility is true; Describe's
+            From info (maybe fewer entries). Entries carry execution references.
+             Unavailable when reduced_list_visibility is true; Describe's
              ScheduleInfo.recent_actions remains available.
         futureActionTimes:
           type: array
@@ -21614,27 +21576,6 @@ components:
         workflowType:
           $ref: '#/components/schemas/WorkflowType'
       description: Configuration summary of a Workflow action in Schedule List views.
-    WorkflowScheduleActionResult:
-      type: object
-      properties:
-        execution:
-          $ref: '#/components/schemas/WorkflowExecution'
-        status:
-          enum:
-            - WORKFLOW_EXECUTION_STATUS_UNSPECIFIED
-            - WORKFLOW_EXECUTION_STATUS_RUNNING
-            - WORKFLOW_EXECUTION_STATUS_COMPLETED
-            - WORKFLOW_EXECUTION_STATUS_FAILED
-            - WORKFLOW_EXECUTION_STATUS_CANCELED
-            - WORKFLOW_EXECUTION_STATUS_TERMINATED
-            - WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW
-            - WORKFLOW_EXECUTION_STATUS_TIMED_OUT
-            - WORKFLOW_EXECUTION_STATUS_PAUSED
-          type: string
-          format: enum
-      description: |-
-        Execution reference and recorded status of a scheduled Workflow.
-         ALLOW_ALL actions retain their start-only status rather than terminal updates.
     WorkflowTaskCompletedEventAttributes:
       type: object
       properties:

@@ -19,7 +19,6 @@ import "google/protobuf/timestamp.proto";
 
 import "temporal/api/activity/v1/message.proto";
 import "temporal/api/common/v1/message.proto";
-import "temporal/api/enums/v1/activity.proto";
 import "temporal/api/enums/v1/schedule.proto";
 import "temporal/api/enums/v1/workflow.proto";
 import "temporal/api/workflow/v1/message.proto";
@@ -263,36 +262,18 @@ message ScheduleActionResult {
     // Time that the action was taken (real time).
     google.protobuf.Timestamp actual_time = 2;
 
-    // Deprecated. Use workflow_result.execution. Still populated for Workflow
-    // actions so older clients can read the started execution.
+    // Deprecated. Use execution. Still populated for Workflow actions so older
+    // clients can read the started execution.
     temporal.api.common.v1.WorkflowExecution start_workflow_result = 11 [deprecated = true];
 
-    // Deprecated. Use workflow_result.status. Still populated for Workflow
-    // actions with the same eventually-consistent recorded status.
-    temporal.api.enums.v1.WorkflowExecutionStatus start_workflow_status = 12 [deprecated = true];
+    // Legacy Workflow status retained with its existing behavior for compatibility.
+    // No corresponding Activity or generic execution status is added in this proposal.
+    temporal.api.enums.v1.WorkflowExecutionStatus start_workflow_status = 12;
 
-    // Typed execution result for both Workflow and Activity actions. Workflow
-    // results also populate the deprecated Workflow fields above for older clients.
-    oneof result {
-        WorkflowScheduleActionResult workflow_result = 13;
-        ActivityScheduleActionResult activity_result = 14;
-    }
-}
-
-// Execution reference and recorded status of a scheduled Workflow.
-// ALLOW_ALL actions retain their start-only status rather than terminal updates.
-message WorkflowScheduleActionResult {
-    temporal.api.common.v1.WorkflowExecution execution = 1;
-    temporal.api.enums.v1.WorkflowExecutionStatus status = 2;
-}
-
-// Execution reference and recorded status of a scheduled standalone Activity.
-// A failed retry attempt does not mark the execution failed; terminal status is
-// recorded after the execution finishes, including retries, for completion-tracked
-// actions. ALLOW_ALL actions retain their start-only status. Status may lag.
-message ActivityScheduleActionResult {
-    temporal.api.common.v1.ActivityExecution execution = 1;
-    temporal.api.enums.v1.ActivityExecutionStatus status = 2;
+    // Execution started by the action, for both Workflow and Activity actions.
+    // Workflow actions also populate start_workflow_result for older clients.
+    // No new execution status is exposed by Schedule Describe or List responses.
+    temporal.api.common.v1.Execution execution = 13;
 }
 
 message ScheduleState {
@@ -380,11 +361,11 @@ message ScheduleInfo {
     // Note that the run_ids in here are the original execution run ids as
     // started by the schedule. If the workflows retried, did continue-as-new,
     // or were reset, they might still be running but with a different run_id.
-    // Deprecated. Use workflow_executions. Still populated for Workflow actions.
+    // Deprecated. Use running_executions. Still populated for Workflow actions.
     repeated temporal.api.common.v1.WorkflowExecution running_workflows = 9 [deprecated = true];
 
-    // Most recent ten actions (including manual triggers). Entries carry the typed
-    // Workflow or Activity result. This Describe view remains available when
+    // Most recent ten actions (including manual triggers), with execution references.
+    // This Describe view remains available when
     // reduced_list_visibility omits recent_actions from Schedule List views.
     repeated ScheduleActionResult recent_actions = 4;
 
@@ -406,24 +387,11 @@ message ScheduleInfo {
     // If the schedule has never enabled time skipping, this will be unset.
     temporal.api.common.v1.TimeSkippingInfo time_skipping_info = 13;
 
-    // Typed running-execution view for both Workflow and Activity actions in
-    // Describe. Unaffected by reduced_list_visibility. Workflow actions also
-    // populate running_workflows for older clients. These references identify
-    // the originally started executions.
-    oneof running_actions {
-        RunningWorkflowExecutions workflow_executions = 14;
-        RunningActivityExecutions activity_executions = 15;
-    }
-}
-
-// Running Workflow executions started by a Schedule.
-message RunningWorkflowExecutions {
-    repeated temporal.api.common.v1.WorkflowExecution executions = 1;
-}
-
-// Running standalone Activity executions started by a Schedule.
-message RunningActivityExecutions {
-    repeated temporal.api.common.v1.ActivityExecution executions = 1;
+    // Running executions for both Workflow and Activity actions in Describe.
+    // Unaffected by reduced_list_visibility. Workflow actions also populate
+    // running_workflows for older clients. These references identify the
+    // originally started executions.
+    repeated temporal.api.common.v1.Execution running_executions = 14;
 }
 
 message Schedule {
@@ -449,8 +417,8 @@ message ScheduleListInfo {
     string notes = 3;
     bool paused = 4;
 
-    // From info (maybe fewer entries). Entries carry the typed Workflow or Activity
-    // result. Unavailable when reduced_list_visibility is true; Describe's
+    // From info (maybe fewer entries). Entries carry execution references.
+    // Unavailable when reduced_list_visibility is true; Describe's
     // ScheduleInfo.recent_actions remains available.
     repeated ScheduleActionResult recent_actions = 5;
     repeated google.protobuf.Timestamp future_action_times = 6;

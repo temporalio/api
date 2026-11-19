@@ -13794,18 +13794,6 @@
         }
       }
     },
-    "v1ActivityExecution": {
-      "type": "object",
-      "properties": {
-        "activityId": {
-          "type": "string"
-        },
-        "runId": {
-          "type": "string"
-        }
-      },
-      "description": "Identifies a specific standalone activity execution within a namespace."
-    },
     "v1ActivityExecutionInfo": {
       "type": "object",
       "properties": {
@@ -14191,18 +14179,6 @@
         }
       },
       "description": "Configuration summary of an Activity action in Schedule List views."
-    },
-    "v1ActivityScheduleActionResult": {
-      "type": "object",
-      "properties": {
-        "execution": {
-          "$ref": "#/definitions/v1ActivityExecution"
-        },
-        "status": {
-          "$ref": "#/definitions/v1ActivityExecutionStatus"
-        }
-      },
-      "description": "Execution reference and recorded status of a scheduled standalone Activity.\nA failed retry attempt does not mark the execution failed; terminal status is\nrecorded after the execution finishes, including retries, for completion-tracked\nactions. ALLOW_ALL actions retain their start-only status. Status may lag."
     },
     "v1ActivityTaskCancelRequestedEventAttributes": {
       "type": "object",
@@ -19649,32 +19625,6 @@
       "default": "ROUTING_CONFIG_UPDATE_STATE_UNSPECIFIED",
       "description": "Indicates whether a change to the Routing Config has been\npropagated to all relevant Task Queues and their partitions.\n\n - ROUTING_CONFIG_UPDATE_STATE_IN_PROGRESS: Update to the RoutingConfig is currently in progress.\n - ROUTING_CONFIG_UPDATE_STATE_COMPLETED: Update to the RoutingConfig has completed successfully."
     },
-    "v1RunningActivityExecutions": {
-      "type": "object",
-      "properties": {
-        "executions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1ActivityExecution"
-          }
-        }
-      },
-      "description": "Running standalone Activity executions started by a Schedule."
-    },
-    "v1RunningWorkflowExecutions": {
-      "type": "object",
-      "properties": {
-        "executions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v1WorkflowExecution"
-          }
-        }
-      },
-      "description": "Running Workflow executions started by a Schedule."
-    },
     "v1Schedule": {
       "type": "object",
       "properties": {
@@ -19720,17 +19670,15 @@
         },
         "startWorkflowResult": {
           "$ref": "#/definitions/v1WorkflowExecution",
-          "description": "Deprecated. Use workflow_result.execution. Still populated for Workflow\nactions so older clients can read the started execution."
+          "description": "Deprecated. Use execution. Still populated for Workflow actions so older\nclients can read the started execution."
         },
         "startWorkflowStatus": {
           "$ref": "#/definitions/v1WorkflowExecutionStatus",
-          "description": "Deprecated. Use workflow_result.status. Still populated for Workflow\nactions with the same eventually-consistent recorded status."
+          "description": "Legacy Workflow status retained with its existing behavior for compatibility.\nNo corresponding Activity or generic execution status is added in this proposal."
         },
-        "workflowResult": {
-          "$ref": "#/definitions/v1WorkflowScheduleActionResult"
-        },
-        "activityResult": {
-          "$ref": "#/definitions/v1ActivityScheduleActionResult"
+        "execution": {
+          "$ref": "#/definitions/v1Execution",
+          "description": "Execution started by the action, for both Workflow and Activity actions.\nWorkflow actions also populate start_workflow_result for older clients.\nNo new execution status is exposed by Schedule Describe or List responses."
         }
       }
     },
@@ -19768,7 +19716,7 @@
             "type": "object",
             "$ref": "#/definitions/v1WorkflowExecution"
           },
-          "description": "Currently-running workflows started by this schedule. (There might be\nmore than one if the overlap policy allows overlaps.)\nNote that the run_ids in here are the original execution run ids as\nstarted by the schedule. If the workflows retried, did continue-as-new,\nor were reset, they might still be running but with a different run_id.\nDeprecated. Use workflow_executions. Still populated for Workflow actions."
+          "description": "Currently-running workflows started by this schedule. (There might be\nmore than one if the overlap policy allows overlaps.)\nNote that the run_ids in here are the original execution run ids as\nstarted by the schedule. If the workflows retried, did continue-as-new,\nor were reset, they might still be running but with a different run_id.\nDeprecated. Use running_executions. Still populated for Workflow actions."
         },
         "recentActions": {
           "type": "array",
@@ -19776,7 +19724,7 @@
             "type": "object",
             "$ref": "#/definitions/v1ScheduleActionResult"
           },
-          "description": "Most recent ten actions (including manual triggers). Entries carry the typed\nWorkflow or Activity result. This Describe view remains available when\nreduced_list_visibility omits recent_actions from Schedule List views."
+          "description": "Most recent ten actions (including manual triggers), with execution references.\nThis Describe view remains available when\nreduced_list_visibility omits recent_actions from Schedule List views."
         },
         "futureActionTimes": {
           "type": "array",
@@ -19808,11 +19756,13 @@
           "$ref": "#/definitions/v1TimeSkippingInfo",
           "description": "Experimental.\nInformation about time skipping for this schedule.\nIf the schedule has never enabled time skipping, this will be unset."
         },
-        "workflowExecutions": {
-          "$ref": "#/definitions/v1RunningWorkflowExecutions"
-        },
-        "activityExecutions": {
-          "$ref": "#/definitions/v1RunningActivityExecutions"
+        "runningExecutions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Execution"
+          },
+          "description": "Running executions for both Workflow and Activity actions in Describe.\nUnaffected by reduced_list_visibility. Workflow actions also populate\nrunning_workflows for older clients. These references identify the\noriginally started executions."
         }
       }
     },
@@ -19858,7 +19808,7 @@
             "type": "object",
             "$ref": "#/definitions/v1ScheduleActionResult"
           },
-          "description": "From info (maybe fewer entries). Entries carry the typed Workflow or Activity\nresult. Unavailable when reduced_list_visibility is true; Describe's\nScheduleInfo.recent_actions remains available."
+          "description": "From info (maybe fewer entries). Entries carry execution references.\nUnavailable when reduced_list_visibility is true; Describe's\nScheduleInfo.recent_actions remains available."
         },
         "futureActionTimes": {
           "type": "array",
@@ -22883,18 +22833,6 @@
         }
       },
       "description": "Configuration summary of a Workflow action in Schedule List views."
-    },
-    "v1WorkflowScheduleActionResult": {
-      "type": "object",
-      "properties": {
-        "execution": {
-          "$ref": "#/definitions/v1WorkflowExecution"
-        },
-        "status": {
-          "$ref": "#/definitions/v1WorkflowExecutionStatus"
-        }
-      },
-      "description": "Execution reference and recorded status of a scheduled Workflow.\nALLOW_ALL actions retain their start-only status rather than terminal updates."
     },
     "v1WorkflowTaskCompletedEventAttributes": {
       "type": "object",

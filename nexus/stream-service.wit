@@ -190,11 +190,12 @@ interface stream-service {
     /// @nexus.default targets="client" python="_support.default_producer(self._nexus_client)"
     ///   typescript="support.defaultProducer()" dotnet="StreamActivityContext.Producer()"
     producer: producer,
-    // Without a sequence, the Store assigns the number of the batch, and a retry is written
-    // again.
-    /// @nexus.doc
-    ///   "The idempotency number of this batch in its attempt. If empty, the Store assigns it."
-    sequence: option<s64>,
+    // A resend of a batch has the id of its first send, so the Store writes the batch once. For
+    // Workflow code the helper returns nothing, and the SDK sets the id when it sends the batch.
+    /// @nexus.doc "Unique for each append call, and the same on its retries."
+    /// @nexus.source python="append_request_id()" typescript="appendRequestId()"
+    ///   dotnet="StreamWorkflowContext.AppendRequestId()"
+    request-id: option<string>,
   }
 
   /// @nexus.proto "temporal.api.streamservice.v1.AppendRecordsResponse"
@@ -270,7 +271,6 @@ interface stream-service {
     append: func(
       records: list<append-record>,
       producer: option<producer>,
-      sequence: option<s64>,
     ) -> append-records-response;
 
     /// @nexus.doc "Close the Stream. Readers get the Records that are left, then end."

@@ -343,10 +343,22 @@ func rewriteImportPaths(text string) (string, error) {
 				continue
 			}
 			out.WriteString(text[start:partSpan.Start])
-			out.WriteString(strconv.Quote(part.Value[:from] + part.Value[to:]))
+			out.WriteString(quoteLike(partSpan.Text(), part.Value[:from]+part.Value[to:]))
 			start = partSpan.End
 		}
 	}
 	out.WriteString(text[start:])
 	return out.String(), nil
+}
+
+// quoteLike quotes s with the quote character of the literal it replaces. The printer
+// sorts imports by their raw text, so changing the quote would reorder them on the next
+// run.
+func quoteLike(literal, s string) string {
+	quoted := strconv.Quote(s)
+	if !strings.HasPrefix(literal, "'") {
+		return quoted
+	}
+	body := strings.ReplaceAll(quoted[1:len(quoted)-1], `\"`, `"`)
+	return "'" + strings.ReplaceAll(body, "'", `\'`) + "'"
 }

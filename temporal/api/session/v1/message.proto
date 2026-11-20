@@ -67,3 +67,30 @@ message ActivitySessionOptions {
         // Future: references to other types of sessions.
     }
 }
+
+// EXPERIMENTAL. Subject to redesign or removal.
+// Which worker a workflow (which is the session) is bound to. The server records it on history events
+// so it can rebuild the binding from history (for example on reset). See
+// session_info on WorkflowTaskStartedEventAttributes and inherited_session_info
+// on WorkflowExecutionStartedEventAttributes. Not a worker or user option; SDKs
+// should not read or interpret it.
+message SessionInfo {
+    // True when the workflow is bound to a single-session worker. Such a
+    // binding never moves to another worker. False for a multi-session worker,
+    // whose binding moves with the worker that starts the workflow's tasks.
+    bool exclusive_worker = 1;
+    // The worker the workflow is bound to. Always set.
+    BoundWorkerInfo bound_worker_info = 2;
+}
+
+// EXPERIMENTAL. Subject to redesign or removal.
+// The worker a workflow is bound to. Recorded by the server.
+message BoundWorkerInfo {
+    // The worker's queue: the stable identity of a single-session worker, or
+    // the worker address of a multi-session worker. The workflow's tasks are
+    // routed here.
+    string worker_queue = 1;
+    // more fields may be added later, such as the worker's instance key so that
+    // history can send it to matching to understand if the worker's heartbeating
+    // information. 
+}

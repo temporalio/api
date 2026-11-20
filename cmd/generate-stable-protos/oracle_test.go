@@ -22,8 +22,10 @@ import (
 // The projection works on descriptors, where removing a declaration is simple, so it
 // shares no logic with the generator's AST editing.
 func TestStableProjectionOracle(t *testing.T) {
+	t.Parallel()
 	for _, fixture := range oracleFixtures(t) {
 		t.Run(fixture, func(t *testing.T) {
+			t.Parallel()
 			checkAgainstOracle(t, filepath.Join("testdata", fixture, "input"))
 		})
 	}

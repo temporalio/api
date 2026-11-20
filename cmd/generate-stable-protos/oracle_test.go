@@ -1,9 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/fs"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,56 +17,18 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-// TestStableProjectionOracle compares the generator against an independent reference:
-// protoc compiles the api_next input and the generated stable output, and the stable
-// descriptors must equal the input descriptors with the draft declarations projected out.
-// The projection works on descriptors, where removing a declaration is simple, so it
-// shares no logic with the generator's AST editing.
-func TestStableProjectionOracle(t *testing.T) {
-	t.Parallel()
-	for _, fixture := range oracleFixtures(t) {
-		t.Run(fixture, func(t *testing.T) {
-			t.Parallel()
-			checkAgainstOracle(t, filepath.Join("testdata", fixture, "input"))
-		})
-	}
-}
-
-// oracleFixtures lists every fixture the generator is expected to accept.
-func oracleFixtures(t *testing.T) []string {
+// checkAgainstOracle compares the generator's output in out against an independent
+// reference: protoc compiles the api_next input and the stable output, and the stable
+// descriptors must equal the input descriptors with the draft declarations projected
+// out. The projection works on descriptors, where removing a declaration is simple, so
+// it shares no logic with the generator's AST editing.
+func checkAgainstOracle(t *testing.T, root, out string) {
 	t.Helper()
-	fixtures := []string{"imports", "comments"}
-	dirs, err := os.ReadDir("testdata/classification")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, dir := range dirs {
-		data, err := os.ReadFile(filepath.Join("testdata/classification", dir.Name(), "expected.json"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		var expected struct {
-			Error string `json:"error"`
-		}
-		if err := json.Unmarshal(data, &expected); err != nil {
-			t.Fatal(err)
-		}
-		if expected.Error == "" {
-			fixtures = append(fixtures, filepath.Join("classification", dir.Name()))
-		}
-	}
-	return fixtures
-}
-
-func checkAgainstOracle(t *testing.T, root string) {
-	t.Helper()
-	out := t.TempDir()
-	if err := stableProtosGenerator(t.Context(), root, out); err != nil {
-		t.Fatal(err)
-	}
-	input, _ := protocSet(t, []string{root}, protoFiles(t, root, apiNextPrefix))
+	inputTexts := readProtoTree(t, root, apiNextPrefix)
+	outputTexts := readProtoTree(t, out, stableAPIPrefix)
+	input, _ := protocSet(t, []string{root}, slices.Sorted(maps.Keys(inputTexts)))
 	// The output directory comes first so it shadows any stable tree checked in under root.
-	output, warnings := protocSet(t, []string{out, root}, protoFiles(t, out, stableAPIPrefix))
+	output, warnings := protocSet(t, []string{out, root}, slices.Sorted(maps.Keys(outputTexts)))
 	if strings.Contains(warnings, "is unused") {
 		t.Fatalf("stable output has unused imports:\n%s", warnings)
 	}
@@ -101,7 +62,7 @@ func checkAgainstOracle(t *testing.T, root string) {
 	if diff := cmp.Diff(expected, actual, protocmp.Transform()); diff != "" {
 		t.Fatalf("stable descriptors differ from the oracle projection (-expected +actual):\n%s", diff)
 	}
-	checkComments(t, root, out, input, output, removed)
+	checkComments(t, inputTexts, outputTexts, input, output, removed)
 }
 
 // draftOracle projects draft declarations out of protoc-compiled descriptors.
@@ -335,22 +296,12 @@ func protocSet(t *testing.T, includes, files []string) (*descriptorpb.FileDescri
 	return set, string(output)
 }
 
-// protoFiles lists the .proto files under root/prefix, relative to root.
-func protoFiles(t *testing.T, root, prefix string) []string {
+// readProtoTree reads the files under root/prefix, keyed by their path relative to root.
+func readProtoTree(t *testing.T, root, prefix string) map[string]string {
 	t.Helper()
-	var files []string
-	if err := filepath.WalkDir(filepath.Join(root, prefix), func(path string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() || filepath.Ext(path) != ".proto" {
-			return err
-		}
-		relative, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
-		}
-		files = append(files, filepath.ToSlash(relative))
-		return nil
-	}); err != nil {
-		t.Fatal(err)
+	files := map[string]string{}
+	for path, text := range readTree(t, filepath.Join(root, prefix)) {
+		files[prefix+path] = text
 	}
 	return files
 }
@@ -359,7 +310,7 @@ func protoFiles(t *testing.T, root, prefix string) []string {
 // comments inside or attached to a removed declaration or a pruned import, and no other
 // comment to appear. Comments are scanned from the source text rather than taken from
 // SourceCodeInfo, which has no place for a comment inside an option value.
-func checkComments(t *testing.T, root, out string, input, output *descriptorpb.FileDescriptorSet, removed map[string][][]int32) {
+func checkComments(t *testing.T, inputTexts, outputTexts map[string]string, input, output *descriptorpb.FileDescriptorSet, removed map[string][][]int32) {
 	t.Helper()
 	outputDeps := map[string][]string{}
 	for _, fd := range output.GetFile() {
@@ -401,8 +352,7 @@ func checkComments(t *testing.T, root, out string, input, output *descriptorpb.F
 				}
 			}
 		}
-		src := readFile(t, filepath.Join(root, fd.GetName()))
-		for _, c := range scanComments(src) {
+		for _, c := range scanComments(inputTexts[fd.GetName()]) {
 			if !slices.ContainsFunc(spans, c.within) {
 				for _, line := range commentLines([]comment{c}) {
 					surplus[line]--
@@ -410,7 +360,7 @@ func checkComments(t *testing.T, root, out string, input, output *descriptorpb.F
 			}
 		}
 
-		text, ok := strings.CutPrefix(readFile(t, filepath.Join(out, stable)), generatedHeader)
+		text, ok := strings.CutPrefix(outputTexts[stable], generatedHeader)
 		if !ok {
 			t.Fatalf("%s: missing generated header", stable)
 		}
@@ -518,13 +468,4 @@ func normalizeComment(text string) []string {
 		}
 	}
 	return lines
-}
-
-func readFile(t *testing.T, path string) string {
-	t.Helper()
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(data)
 }

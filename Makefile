@@ -159,6 +159,8 @@ nexus-rpc-yaml-install:
 	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Compile system Nexus WIT files #####
+# No request or response of the Stream service uses `StreamErrorDetails`, so `add-message` takes it
+# by name. It is the details message of every Stream error, and the WIT shows it to each SDK.
 system-nexus-wit: system-nexus-wit-install nex-gen-install
 	printf $(COLOR) "Generate system Nexus WIT..."
 	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \

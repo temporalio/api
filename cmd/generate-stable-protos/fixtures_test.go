@@ -15,9 +15,11 @@ import (
 	"github.com/temporalio/api/cmd/generate-stable-protos/internal/oracle"
 )
 
-// TestFixtures runs the generator on every fixture under testdata. A fixture is a
-// directory with an input/ api_next tree, and optionally an expected.json and an
-// expected/ tree holding the raw generator output without its generated header.
+// TestFixtures runs every fixture under testdata. A fixture is a directory with an
+// input/ api_next tree, and optionally an expected.json and an expected/ tree holding the
+// raw generator output without its generated header. A fixture with an output/ tree
+// tests the oracle instead of the generator: output/ stands in for the generator's
+// output, and the oracle must report exactly the expected problems.
 func TestFixtures(t *testing.T) {
 	t.Parallel()
 	for _, fixture := range findFixtures(t) {
@@ -34,6 +36,9 @@ type fixtureExpectation struct {
 	Error string `json:"error"`
 	// Annotations are the draft annotations the generator must accept.
 	Annotations draftAnnotations `json:"annotations"`
+	// Problems are substrings of the problems the oracle must report, one each; any
+	// other problem fails the fixture.
+	Problems []string `json:"problems"`
 }
 
 // findFixtures returns the fixture directories under testdata, relative to it.
@@ -72,8 +77,37 @@ func runFixture(t *testing.T, dir string) {
 		t.Fatal(err)
 	}
 	root := filepath.Join(dir, "input")
-	out := t.TempDir()
+	out := filepath.Join(dir, "output")
+	if _, err := os.Stat(out); errors.Is(err, fs.ErrNotExist) {
+		out = t.TempDir()
+		if !generateFixture(t, dir, root, out, expected) {
+			return
+		}
+	} else if err != nil {
+		t.Fatal(err)
+	}
 
+	problems, err := oracle.Check(oracleConfig, root, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range expected.Problems {
+		i := slices.IndexFunc(problems, func(problem string) bool { return strings.Contains(problem, want) })
+		if i < 0 {
+			t.Errorf("want an oracle problem containing %q", want)
+			continue
+		}
+		problems = slices.Delete(problems, i, i+1)
+	}
+	for _, problem := range problems {
+		t.Errorf("unexpected oracle problem: %s", problem)
+	}
+}
+
+// generateFixture runs the generator on root into out and checks the result against
+// the fixture's expectations. It reports whether out holds output for the oracle.
+func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpectation) bool {
+	t.Helper()
 	if expected.Error != "" {
 		sentinel := map[string]string{"retained": "old"}
 		if err := os.WriteFile(filepath.Join(out, "retained"), []byte("old"), 0o600); err != nil {
@@ -86,7 +120,7 @@ func runFixture(t *testing.T, dir string) {
 		if !reflect.DeepEqual(sentinel, readTree(t, out)) {
 			t.Fatal("generation failure modified output")
 		}
-		return
+		return false
 	}
 
 	if err := stableProtosGenerator(t.Context(), root, out); err != nil {
@@ -129,14 +163,7 @@ func runFixture(t *testing.T, dir string) {
 			}
 		}
 	}
-
-	problems, err := oracle.Check(oracleConfig, root, out)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, problem := range problems {
-		t.Error(problem)
-	}
+	return true
 }
 
 var oracleConfig = oracle.Config{

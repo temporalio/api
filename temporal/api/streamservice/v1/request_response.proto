@@ -52,18 +52,18 @@ message CreateStreamResponse {
 
 // Experimental. Might change in the future.
 // Appends one batch of Records as one Producer. If the same batch arrives again, with the same
-// Producer, attempt and `sequence`, the Store writes it only once.
+// Producer, attempt and `request_id`, the Store writes it only once.
 message AppendRecordsRequest {
     // Required.
     temporal.api.stream.v1.StreamRef ref = 1;
     // Required. The Producer that writes the batch. A Producer sends the same value in its
     // appends and in its close, so the Store orders all of its writes the same way.
     temporal.api.stream.v1.Producer producer = 2;
-    // The idempotency number of this batch within its attempt. A caller that got no response
-    // sends the batch again with the same number, and the Store uses the Producer, the attempt
-    // and this number to write it only once. With zero, the Store assigns the next number, and a
-    // retry of that batch is written again.
-    int64 sequence = 3;
+    // A value that's unique to this append call and the same on its retries. A caller that got no
+    // response sends the batch again with the same value, and the Store returns the offsets of
+    // the first write. A Store remembers the `request_id` of the last batch of each Producer, so
+    // a Producer sends one batch at a time. When it's empty, a retry is written again.
+    string request_id = 3;
     repeated temporal.api.stream.v1.AppendRecord records = 4;
 }
 

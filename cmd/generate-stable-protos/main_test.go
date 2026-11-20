@@ -65,7 +65,7 @@ exec /bin/mv "$@"
 	}
 }
 
-func readTree(t *testing.T, root string) map[string]string {
+func readTree(t testingT, root string) map[string]string {
 	t.Helper()
 	files := map[string]string{}
 	if err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {

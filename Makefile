@@ -35,12 +35,7 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
-# The Stream WIT uses nexgen directives that no release has yet. Pin a nexgen commit that has them
-# until a release does.
-NEX_GEN_REPO := https://github.com/temporalio/nexgen
-NEX_GEN_REV := c7939a91afe1a0aec5ab4a720cda942590cd5421
-NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
-NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
+NEX_GEN ?= nexgen
 
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
@@ -191,12 +186,9 @@ system-nexus-wit-install:
 	printf $(COLOR) "Build and install protoc-gen-system-nexus-wit..."
 	@cd cmd/protoc-gen-system-nexus-wit && go install .
 
-# The git CLI follows a local URL rewrite to SSH, which cargo's own git client can't authenticate.
 nex-gen-install:
 	printf $(COLOR) "Install nexgen if missing..."
-	command -v $(NEX_GEN) >/dev/null || CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install \
-		--git $(NEX_GEN_REPO) --rev $(NEX_GEN_REV) --locked --features advanced \
-		--root $(NEX_GEN_ROOT) nexgen
+	command -v $(NEX_GEN) >/dev/null || cargo install nexgen --version ^0.2 --features advanced
 
 ##### Clean #####
 clean:

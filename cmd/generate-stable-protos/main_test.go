@@ -19,7 +19,7 @@ option java_package = "temporal/api_next/used.proto";
 // import "temporal/api_next/used.proto";
 `
 	expected := `syntax = "proto3";
-import public /* before */ "temporal/api/used.proto" /* after */;
+import public /* before */ 'temporal/api/used.proto' /* after */;
 import "google/protobuf/any.proto";
 import "temporal/api" /* internal comment */ "/another.proto";
 option java_package = "temporal/api_next/used.proto";

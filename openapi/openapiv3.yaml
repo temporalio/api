@@ -10757,6 +10757,18 @@ components:
       description: |-
         BatchOperationUpdateWorkflowExecutionOptions sends UpdateWorkflowExecutionOptions requests to batch workflows.
          Keep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest.
+    BoundWorkerInfo:
+      type: object
+      properties:
+        workerQueue:
+          type: string
+          description: |-
+            The worker's queue: the stable identity of a single-session worker, or
+             the worker address of a multi-session worker. The workflow's tasks are
+             routed here.
+      description: |-
+        EXPERIMENTAL. Subject to redesign or removal.
+         The worker a workflow is bound to. Recorded by the server.
     BuildIdAssignmentRule:
       type: object
       properties:
@@ -16811,6 +16823,26 @@ components:
       properties:
         nonRetryable:
           type: boolean
+    SessionInfo:
+      type: object
+      properties:
+        exclusiveWorker:
+          type: boolean
+          description: |-
+            True when the workflow is bound to a single-session worker. Such a
+             binding never moves to another worker. False for a multi-session worker,
+             whose binding moves with the worker that starts the workflow's tasks.
+        boundWorkerInfo:
+          allOf:
+            - $ref: '#/components/schemas/BoundWorkerInfo'
+          description: The worker the workflow is bound to. Always set.
+      description: |-
+        EXPERIMENTAL. Subject to redesign or removal.
+         Which worker a workflow (which is the session) is bound to. The server records it on history events
+         so it can rebuild the binding from history (for example on reset). See
+         session_info on WorkflowTaskStartedEventAttributes and inherited_session_info
+         on WorkflowExecutionStartedEventAttributes. Not a worker or user option; SDKs
+         should not read or interpret it.
     SetCurrentDeploymentRequest:
       type: object
       properties:
@@ -21042,6 +21074,15 @@ components:
           allOf:
             - $ref: '#/components/schemas/PropagatedSerializationContext'
           description: Serialization context propagated from the Nexus caller that started this workflow.
+        inheritedSessionInfo:
+          allOf:
+            - $ref: '#/components/schemas/SessionInfo'
+          description: |-
+            Session info this run inherited from the previous run (continue-as-new, retry or cron), so the server
+             can rebuild it from history. Nil when the previous run was not bound or this run is on a different
+             task queue. Child workflows never inherit it.
+             Used internally by the server; SDKs should not read or interpret this field.
+             EXPERIMENTAL. Subject to redesign or removal.
       description: Always the first event in workflow history
     WorkflowExecutionTerminatedEventAttributes:
       type: object
@@ -21722,6 +21763,14 @@ components:
             Used by server internally to properly reapply build ID redirects to an execution
              when rebuilding it from events.
              Deprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]
+        sessionInfo:
+          allOf:
+            - $ref: '#/components/schemas/SessionInfo'
+          description: |-
+            Session info of this workflow as of this task start, so the server can rebuild it from history (for
+             example on reset). Nil when the workflow is not bound to a worker.
+             Used internally by the server; SDKs should not read or interpret this field.
+             EXPERIMENTAL. Subject to redesign or removal.
     WorkflowTaskTimedOutEventAttributes:
       type: object
       properties:

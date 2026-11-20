@@ -14804,6 +14804,16 @@
       },
       "description": "BatchOperationUpdateWorkflowExecutionOptions sends UpdateWorkflowExecutionOptions requests to batch workflows.\nKeep the parameters in sync with temporal.api.workflowservice.v1.UpdateWorkflowExecutionOptionsRequest."
     },
+    "v1BoundWorkerInfo": {
+      "type": "object",
+      "properties": {
+        "workerQueue": {
+          "type": "string",
+          "description": "The worker's queue: the stable identity of a single-session worker, or\nthe worker address of a multi-session worker. The workflow's tasks are\nrouted here.\n\nmore fields may be added later, such as the worker's instance key so that\n history can send it to matching to understand if the worker's heartbeating\n information."
+        }
+      },
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nThe worker a workflow is bound to. Recorded by the server."
+    },
     "v1BuildIdAssignmentRule": {
       "type": "object",
       "properties": {
@@ -19927,6 +19937,20 @@
         }
       }
     },
+    "v1SessionInfo": {
+      "type": "object",
+      "properties": {
+        "exclusiveWorker": {
+          "type": "boolean",
+          "description": "True when the workflow is bound to a single-session worker. Such a\nbinding never moves to another worker. False for a multi-session worker,\nwhose binding moves with the worker that starts the workflow's tasks."
+        },
+        "boundWorkerInfo": {
+          "$ref": "#/definitions/v1BoundWorkerInfo",
+          "description": "The worker the workflow is bound to. Always set."
+        }
+      },
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nWhich worker a workflow (which is the session) is bound to. The server records it on history events\nso it can rebuild the binding from history (for example on reset). See\nsession_info on WorkflowTaskStartedEventAttributes and inherited_session_info\non WorkflowExecutionStartedEventAttributes. Not a worker or user option; SDKs\nshould not read or interpret it."
+    },
     "v1SetCurrentDeploymentResponse": {
       "type": "object",
       "properties": {
@@ -22376,6 +22400,10 @@
         "propagatedNexusSerializationContext": {
           "$ref": "#/definitions/v1PropagatedSerializationContext",
           "description": "Serialization context propagated from the Nexus caller that started this workflow."
+        },
+        "inheritedSessionInfo": {
+          "$ref": "#/definitions/v1SessionInfo",
+          "description": "Session info this run inherited from the previous run (continue-as-new, retry or cron), so the server\ncan rebuild it from history. Nil when the previous run was not bound or this run is on a different\ntask queue. Child workflows never inherit it.\nUsed internally by the server; SDKs should not read or interpret this field.\nEXPERIMENTAL. Subject to redesign or removal."
         }
       },
       "title": "Always the first event in workflow history"
@@ -22967,6 +22995,10 @@
           "type": "string",
           "format": "int64",
           "title": "Used by server internally to properly reapply build ID redirects to an execution\nwhen rebuilding it from events.\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
+        },
+        "sessionInfo": {
+          "$ref": "#/definitions/v1SessionInfo",
+          "description": "Session info of this workflow as of this task start, so the server can rebuild it from history (for\nexample on reset). Nil when the workflow is not bound to a worker.\nUsed internally by the server; SDKs should not read or interpret this field.\nEXPERIMENTAL. Subject to redesign or removal."
         }
       }
     },

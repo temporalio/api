@@ -59,7 +59,7 @@ stable-api-test:
 ##### Compile proto files for go #####
 grpc: stable-api buf-lint api-linter resource-id-lint buf-breaking clean go-grpc fix-path
 
-go-grpc: clean $(PROTO_OUT)
+go-grpc: clean $(PROTO_OUT) | stable-api
 	printf $(COLOR) "Compile for go-gRPC..."
 	protogen \
 		--root=$(PROTO_ROOT) \
@@ -79,7 +79,7 @@ fix-path:
 # We need to rewrite bits of this to support our shorthand payload format
 # We use both yq and jq here as they preserve comments and the ordering of the original
 # document
-http-api-docs:
+http-api-docs: | stable-api
 	protoc -I $(PROTO_ROOT) \
 		--openapi_out=$(OAPI_OUT) \
 		--openapi_opt=enum_type=string \
@@ -125,7 +125,7 @@ sync-nexus-annotations:
 ##### Linters #####
 API_LINTER_FMT = 'map(select(.problems != []) | . as $$file | .problems[] | {rule: .rule_doc_uri, location: "\($$file.file_path):\(.location.start_position.line_number)"}) | group_by(.rule) | .[] | .[0].rule + ":\n" + (map("\t" + .location) | join("\n"))'
 
-api-linter:
+api-linter: | stable-api
 	printf $(COLOR) "Run api-linter on temporal/api_next..."
 	@api-linter --set-exit-status $(PROTO_IMPORTS) --config $(PROTO_ROOT)/api-linter.yaml --output-format json $(PROTO_FILES_NEXT) | gojq -r $(API_LINTER_FMT)
 	printf $(COLOR) "Run api-linter on temporal/api..."
@@ -133,7 +133,7 @@ api-linter:
 
 # Every RPC needs a temporal-resource-id request_header annotation for routing, or an entry in
 # cmd/protoc-gen-resource-id-lint/exemptions.go.
-resource-id-lint: resource-id-lint-install
+resource-id-lint: resource-id-lint-install | stable-api
 	printf $(COLOR) "Check temporal-resource-id annotations..."
 	protoc $(PROTO_IMPORTS) \
 		--resource-id-lint_out=. \
@@ -146,16 +146,16 @@ resource-id-lint-install:
 $(STAMPDIR):
 	mkdir $@
 
-$(STAMPDIR)/buf-dep-prune: $(STAMPDIR) buf.yaml
+$(STAMPDIR)/buf-dep-prune: $(STAMPDIR) buf.yaml | stable-api
 	printf $(COLOR) "Pruning buf module"
 	buf dep prune
 	touch $@
 
-buf-lint: $(STAMPDIR)/buf-dep-prune
+buf-lint: $(STAMPDIR)/buf-dep-prune | stable-api
 	printf $(COLOR) "Run buf linter..."
 	(cd $(PROTO_ROOT) && buf lint)
 
-buf-breaking:
+buf-breaking: | stable-api
 	@printf $(COLOR) "Run buf breaking changes check for stable API against main branch..."
 	@(cd $(PROTO_ROOT) && buf breaking --against '$(BUF_BREAKING_AGAINST)')
 	@printf $(COLOR) "Run buf breaking changes check for api_next against main branch..."
@@ -163,7 +163,7 @@ buf-breaking:
 	@printf $(COLOR) "Run buf breaking changes check for api_next against previous api_next..."
 	@(cd $(PROTO_ROOT) && bash scripts/check-api-next-breaking.sh '$(BUF_BREAKING_AGAINST)')
 
-nexus-rpc-yaml: nexus-rpc-yaml-install
+nexus-rpc-yaml: nexus-rpc-yaml-install | stable-api
 	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."
 	mkdir -p nexus
 	protoc -I $(PROTO_ROOT) \
@@ -180,7 +180,7 @@ nexus-rpc-yaml-install:
 	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Compile system Nexus WIT files #####
-system-nexus-wit: system-nexus-wit-install nex-gen-install
+system-nexus-wit: system-nexus-wit-install nex-gen-install | stable-api
 	printf $(COLOR) "Generate system Nexus WIT..."
 	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	protoc -I $(PROTO_ROOT) --include_imports \

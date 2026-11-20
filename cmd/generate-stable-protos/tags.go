@@ -20,11 +20,15 @@ type draftTags map[ir.FullName]struct{}
 func getDraftTags(file *ir.File) (draftTags, error) {
 	tags := make(draftTags)
 	extendees := map[string]string{
-		"draft": "FieldOptions", "draft_message": "MessageOptions",
-		"draft_enum": "EnumOptions", "draft_enum_value": "EnumValueOptions",
-		"draft_service": "ServiceOptions", "draft_method": "MethodOptions",
-		"draft_file": "FileOptions", "draft_oneof": "OneofOptions",
-		"draft_extension": "FieldOptions",
+		"draft":            "FieldOptions",
+		"draft_message":    "MessageOptions",
+		"draft_enum":       "EnumOptions",
+		"draft_enum_value": "EnumValueOptions",
+		"draft_service":    "ServiceOptions",
+		"draft_method":     "MethodOptions",
+		"draft_file":       "FileOptions",
+		"draft_oneof":      "OneofOptions",
+		"draft_extension":  "FieldOptions",
 	}
 	for ext := range seq.Values(file.AllExtensions()) {
 		name, known := extendees[ext.Name()]

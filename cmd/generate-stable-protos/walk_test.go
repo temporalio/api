@@ -28,7 +28,7 @@ func TestDraftSchemaValidation(t *testing.T) {
 			if err := os.WriteFile(path, []byte(tc.schema), 0600); err != nil {
 				t.Fatal(err)
 			}
-			err := stableProtosGenerator(root, t.TempDir())
+			err := stableProtosGenerator(t.Context(), root, t.TempDir())
 			if tc.want == "" {
 				if err != nil {
 					t.Fatal(err)

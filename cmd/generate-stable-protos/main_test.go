@@ -18,7 +18,7 @@ func TestStableProjection(t *testing.T) {
 			expected := readTree(t, filepath.Join("testdata", fixture, "expected"))
 			for range 2 {
 				out := t.TempDir()
-				if err := stableProtosGenerator(filepath.Join("testdata", fixture, "input"), out); err != nil {
+				if err := stableProtosGenerator(t.Context(), filepath.Join("testdata", fixture, "input"), out); err != nil {
 					t.Fatal(err)
 				}
 				formatTree(t, out)
@@ -51,7 +51,7 @@ func TestAnnotationClassification(t *testing.T) {
 				t.Fatal(err)
 			}
 			root := filepath.Join(fixture, "input")
-			err = stableProtosGenerator(root, t.TempDir())
+			err = stableProtosGenerator(t.Context(), root, t.TempDir())
 			if expected.Error == "" {
 				if err != nil {
 					t.Fatal(err)
@@ -85,7 +85,7 @@ func TestProjectionFailures(t *testing.T) {
 				t.Fatal(err)
 			}
 			before := readTree(t, out)
-			if err := stableProtosGenerator(filepath.Join("testdata", fixture, "input"), out); err == nil {
+			if err := stableProtosGenerator(t.Context(), filepath.Join("testdata", fixture, "input"), out); err == nil {
 				t.Fatal("expected invalid input to fail")
 			}
 			if !reflect.DeepEqual(before, readTree(t, out)) {

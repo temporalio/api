@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -131,9 +132,104 @@ func validateDraftAnnotations(tags draftTags, f *ir.File) (draftAnnotations, err
 					return nil, fmt.Errorf("%s: RPC references draft type %s unavailable in the stable API", m.FullName(), t.FullName())
 				}
 			}
+			if err := validateMethodFieldReferences(tags, m, input, output); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return accepted, nil
+}
+
+const fieldPathPattern = `([a-zA-Z_][a-zA-Z_0-9]*(?:\.[a-zA-Z_][a-zA-Z_0-9]*)*)`
+
+var (
+	httpPathVariable = regexp.MustCompile(`\{` + fieldPathPattern + `(?:=[^{}]+)?\}`)
+	headerVariable   = regexp.MustCompile(`\{` + fieldPathPattern + `\}`)
+)
+
+func validateMethodFieldReferences(tags draftTags, method ir.Method, input, output ir.Type) error {
+	for option := range method.Options().Fields() {
+		switch option.Field().FullName() {
+		case "google.api.http":
+			if path := draftHTTPField(tags, option.AsMessage(), input, output); path != "" {
+				return fmt.Errorf("%s: http rule references draft field %s", method.FullName(), path)
+			}
+		case "temporal.api.protometa.v1.request_header":
+			for header := range seq.Values(option.Elements()) {
+				template := messageString(header.AsMessage(), "value")
+				if path := draftTemplateField(tags, input, template, headerVariable); path != "" {
+					return fmt.Errorf("%s: request header references draft field %s", method.FullName(), path)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func draftHTTPField(tags draftTags, rule ir.MessageValue, input, output ir.Type) string {
+	for field := range rule.Fields() {
+		var draftPath string
+		switch field.Field().Name() {
+		case "get", "put", "post", "delete", "patch":
+			template, _ := field.AsString()
+			draftPath = draftTemplateField(tags, input, template, httpPathVariable)
+		case "custom":
+			template := messageString(field.AsMessage(), "path")
+			draftPath = draftTemplateField(tags, input, template, httpPathVariable)
+		case "body":
+			path, _ := field.AsString()
+			if referencesDraftField(tags, input, path) {
+				draftPath = path
+			}
+		case "response_body":
+			path, _ := field.AsString()
+			if referencesDraftField(tags, output, path) {
+				draftPath = path
+			}
+		case "additional_bindings":
+			for binding := range seq.Values(field.Elements()) {
+				if path := draftHTTPField(tags, binding.AsMessage(), input, output); path != "" {
+					return path
+				}
+			}
+		}
+		if draftPath != "" {
+			return draftPath
+		}
+	}
+	return ""
+}
+
+func messageString(value ir.MessageValue, name string) string {
+	text, _ := value.Field(value.Type().MemberByName(name)).AsString()
+	return text
+}
+
+func draftTemplateField(tags draftTags, message ir.Type, template string, variable *regexp.Regexp) string {
+	for _, match := range variable.FindAllStringSubmatch(template, -1) {
+		path := match[1]
+		if referencesDraftField(tags, message, path) {
+			return path
+		}
+	}
+	return ""
+}
+
+func referencesDraftField(tags draftTags, message ir.Type, path string) bool {
+	for name := range strings.SplitSeq(path, ".") {
+		if !message.IsMessage() {
+			return false
+		}
+		field := message.MemberByName(name)
+		if field.IsZero() {
+			return false
+		}
+		if isDraftMember(tags, field) {
+			return true
+		}
+		message = field.Element()
+	}
+	return false
 }
 
 func isDraftType(tags draftTags, t ir.Type) bool {

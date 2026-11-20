@@ -55,7 +55,9 @@ func (tags draftTags) has(opts ir.MessageValue) bool {
 	return false
 }
 
-type draftAnnotations map[string]string
+type draftAnnotations map[ir.FullName]draftFeature
+
+type draftFeature = string
 
 // validateDraftAnnotations rejects unsupported or malformed draft annotations in f and
 // returns the accepted ones.
@@ -74,7 +76,7 @@ func validateDraftAnnotations(tags draftTags, f *ir.File) (draftAnnotations, err
 			if !ok || feature == "" || strings.ContainsFunc(feature, unicode.IsSpace) {
 				return fmt.Errorf("%s: draft feature must be nonempty and contain no whitespace", name)
 			}
-			accepted[name] = feature
+			accepted[ir.FullName(name)] = feature
 		}
 		return nil
 	}

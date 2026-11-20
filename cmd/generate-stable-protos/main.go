@@ -48,14 +48,13 @@ func main() {
 		*outDir = *root
 	}
 
-	if err := stableProtosGenerator(*root, *outDir); err != nil {
+	if err := stableProtosGenerator(context.Background(), *root, *outDir); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func stableProtosGenerator(root, outDir string) error {
-	ctx := context.Background()
+func stableProtosGenerator(ctx context.Context, root, outDir string) error {
 	paths, err := getAPINextPaths(root)
 	if err != nil {
 		return err

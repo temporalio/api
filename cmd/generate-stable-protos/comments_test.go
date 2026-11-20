@@ -68,7 +68,7 @@ func TestDraftCommentOwnership(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(root, fixture), []byte(strings.Replace(string(input), tc.old, tc.new, 1)), 0600); err != nil {
 				t.Fatal(err)
 			}
-			err := stableProtosGenerator(root, out)
+			err := stableProtosGenerator(t.Context(), root, out)
 			if tc.want != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.want) {
 					t.Fatalf("want %q, got %v", tc.want, err)

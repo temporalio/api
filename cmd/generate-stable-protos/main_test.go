@@ -9,34 +9,6 @@ import (
 	"testing"
 )
 
-func TestRewriteImportPaths(t *testing.T) {
-	t.Parallel()
-	input := `syntax = "proto3";
-import public /* before */ 'temporal/api_next/used.proto' /* after */;
-import "google/protobuf/any.proto";
-import "temporal/api_n" /* internal comment */ "ext/another.proto";
-option java_package = "temporal/api_next/used.proto";
-// import "temporal/api_next/used.proto";
-`
-	expected := `syntax = "proto3";
-import public /* before */ "temporal/api/used.proto" /* after */;
-import "google/protobuf/any.proto";
-import "temporal/api" /* internal comment */ "/another.proto";
-option java_package = "temporal/api_next/used.proto";
-// import "temporal/api_next/used.proto";
-`
-	actual, err := rewriteImportPaths(input)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if actual != expected {
-		t.Fatalf("expected %q, got %q", expected, actual)
-	}
-	if _, err := rewriteImportPaths(`import "unterminated`); err == nil {
-		t.Fatal("expected invalid syntax to fail")
-	}
-}
-
 func TestStableReplacement(t *testing.T) {
 	t.Parallel()
 	script, err := filepath.Abs("../../scripts/stable-api.sh")

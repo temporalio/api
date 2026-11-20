@@ -9,6 +9,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -64,13 +65,14 @@ func stableProtosGenerator(ctx context.Context, root, outDir string) error {
 		return fmt.Errorf("no protos found under %q", filepath.Join(root, apiNextPrefix))
 	}
 
-	strippedOrder, strippedProtos, comments, err := stripDrafts(ctx, root, paths)
+	strippedProtos, comments, err := stripDrafts(ctx, root, paths)
 	if err != nil {
 		return err
 	}
+	strippedOrder := slices.Sorted(maps.Keys(strippedProtos))
 
-	// import stripping has to happen after the draft-tagged declarations are deleted
-	// because unused imports are only detectable after it is re-rendered
+	// Strip unused imports after deleting draft-tagged declarations and re-rendering the protos,
+	// because only then can we detect which imports are unused.
 	stableProtos, err := organizeImports(ctx, root, strippedOrder, strippedProtos)
 	if err != nil {
 		return err
@@ -98,14 +100,13 @@ func stableProtosGenerator(ctx context.Context, root, outDir string) error {
 // loadAPINext lowers the api_next corpus, discovers the draft-tag extension set and
 // validates every draft annotation, returning the annotations it accepted.
 func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*ir.File, draftTags, draftAnnotations, error) {
-	// first, lower the api_next set into ir
+	// First, lower the api_next corpus into IR.
 	results, err := lowerFiles(ctx, baseOpener(root), paths)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("lower api_next corpus: %w", err)
 	}
 
-	// need to iterate to find the draft proto- also check
-	// for errors while iterating so it doesnt have to be repeated
+	// Check for errors while indexing files by path so we can look up the draft proto in one pass.
 	byPath := make(map[string]*ir.File, len(paths))
 	for i, p := range paths {
 		if results[i].Fatal != nil {
@@ -116,7 +117,7 @@ func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*
 			return nil, nil, nil, fmt.Errorf("internal error: incremental.Run result %d has path %q, expected %q", i, got, p)
 		}
 		for imp := range seq.Values(irFile.Imports()) {
-			// Draft options reached through a public re-export would leak it into the stable tree.
+			// A public re-export of the draft options proto would leak it into the stable tree.
 			if imp.Direct && imp.Public && imp.Path() == draftTagsPath {
 				return nil, nil, nil, fmt.Errorf("%s: public import of %s is not supported; import it directly", p, draftTagsPath)
 			}
@@ -143,45 +144,43 @@ func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*
 	return byPath, tags, annotations, nil
 }
 
-func stripDrafts(ctx context.Context, root string, paths []string) ([]string, map[string]string, map[string]draftComments, error) {
+func stripDrafts(ctx context.Context, root string, paths []string) (map[string]string, map[string]draftComments, error) {
 	byPath, tags, _, err := loadAPINext(ctx, root, paths)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	stableOrder := make([]string, 0, len(paths))
 	protoTexts := make(map[string]string, len(paths))
 	comments := make(map[string]draftComments, len(paths))
 	for _, p := range paths {
 		irFile := byPath[p]
-		// skip draft.proto itself
+		// Skip draft.proto itself.
 		if p == draftTagsPath {
 			continue
 		}
 
 		dels := findDraftNodes(tags, irFile)
 		if comments[p], err = findDraftComments(irFile, dels); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		edits := make([]edit.Edit, len(dels))
 		for j, d := range dels {
 			edits[j] = edit.Edit{Kind: edit.KindDelete, Target: d}
 		}
 		if err := edit.ApplyEdits(irFile.AST(), edits); err != nil {
-			return nil, nil, nil, fmt.Errorf("delete draft declarations: %s: %w", p, err)
+			return nil, nil, fmt.Errorf("delete draft declarations: %s: %w", p, err)
 		}
 		protoText, err := printFile(irFile)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("print %s: %w", p, err)
+			return nil, nil, fmt.Errorf("print %s: %w", p, err)
 		}
 
 		protoTexts[p] = protoText
-		stableOrder = append(stableOrder, p)
 	}
-	return stableOrder, protoTexts, comments, nil
+	return protoTexts, comments, nil
 }
 
-// strip unused imports and rename import to stable (api_next -> api)
+// organizeImports removes unused imports and rewrites api_next import paths to their stable api paths.
 func organizeImports(ctx context.Context, root string, order []string, texts map[string]string) (map[string]string, error) {
 	results, err := lowerFiles(ctx, memOpener(root, texts), order)
 	if err != nil {
@@ -217,27 +216,23 @@ func organizeImports(ctx context.Context, root string, order []string, texts map
 	return stableTexts, nil
 }
 
-// re-lower one more time to ensure there are no compilation issues
+// verifyGeneratedProtos lowers the generated protos again to check for compilation errors.
 func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[string]string) error {
-	paths := make([]string, 0, len(stableTexts))
-	for p := range stableTexts {
-		paths = append(paths, p)
-	}
-	sort.Strings(paths)
+	paths := slices.Sorted(maps.Keys(stableTexts))
 	results, err := lowerFiles(ctx, memOpener(root, stableTexts), paths)
 	if err != nil {
 		return fmt.Errorf("verify stable tree failed: %w", err)
 	}
-	var jErr error
+	var errs error
 	for i, r := range results {
 		if r.Fatal != nil {
-			jErr = errors.Join(jErr, fmt.Errorf("verification failed at file %q: %w", paths[i], r.Fatal))
+			errs = errors.Join(errs, fmt.Errorf("verification failed at file %q: %w", paths[i], r.Fatal))
 		}
 	}
-	return jErr
+	return errs
 }
 
-// lowerFiles lowers paths in one session; each pass must construct its opener once.
+// lowerFiles lowers paths in one session. Each pass must construct its opener once.
 func lowerFiles(ctx context.Context, opener source.Opener, paths []string) ([]incremental.Result[*ir.File], error) {
 	session := &ir.Session{}
 	lowerQueries := make([]incremental.Query[*ir.File], len(paths))
@@ -254,7 +249,9 @@ func lowerFiles(ctx context.Context, opener source.Opener, paths []string) ([]in
 	return results, nil
 }
 
-// TODO: check if the buf formatter rules can just get pulled into a custom formatter
+// printFile formats the file with the legacy formatter.
+//
+// TODO: Check whether a custom formatter can reuse Buf's formatting rules.
 func printFile(file *ir.File) (string, error) {
 	return printer.PrintFile(printer.Options{Format: true, Formatting: printer.Legacy()}, file.AST())
 }
@@ -338,7 +335,7 @@ func rewriteImportPaths(text string) (string, error) {
 			if err := prototext.Unmarshal([]byte("value: "+partSpan.Text()), &part); err != nil {
 				return "", fmt.Errorf("decode import literal: %w", err)
 			}
-			// The _next suffix can straddle concatenated literals; preserve their comments.
+			// The _next suffix can straddle concatenated literals. Preserve their comments.
 			from := max(len(stableAPIPrefix)-1-offset, 0)
 			to := min(len(apiNextPrefix)-1-offset, len(part.Value))
 			offset += len(part.Value)

@@ -11,5 +11,5 @@ func TestRepoAPINextIdempotent(t *testing.T) {
 	if err := stableProtosGenerator(t.Context(), root, first); err != nil {
 		t.Fatal(err)
 	}
-	checkIdempotent(t, root, first)
+	checkIdempotent(t.Context(), t, root, first, t.TempDir())
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -99,7 +100,7 @@ func runFixture(t *testing.T, dir string) {
 	if !reflect.DeepEqual(actual, readTree(t, again)) {
 		t.Fatal("generator output is not deterministic")
 	}
-	checkIdempotent(t, root, out)
+	checkIdempotent(t.Context(), t, root, out, t.TempDir())
 
 	paths, err := getAPINextPaths(root)
 	if err != nil {
@@ -140,9 +141,10 @@ func sortedKeys(a, b map[string]string) []string {
 // checkIdempotent feeds the stable tree the generator wrote from root into first back in
 // as an api_next tree without drafts. The generator must then reproduce it byte for
 // byte: removing nothing, keeping every comment, and printing its own output unchanged.
-func checkIdempotent(t *testing.T, root, first string) {
+// scratch is an empty directory for the second pass.
+func checkIdempotent(ctx context.Context, t testingT, root, first, scratch string) {
 	t.Helper()
-	next := t.TempDir()
+	next := filepath.Join(scratch, "next")
 	// An import may have comments before its path, and the first literal of a path split
 	// across literals is "temporal/api" on its own.
 	stableImport := regexp.MustCompile(`(?m)^(import\b(?:\s+|/\*[^*]*\*/|public|weak)*["'])` + regexp.QuoteMeta(strings.TrimSuffix(stableAPIPrefix, "/")) + `(["'/])`)
@@ -177,8 +179,8 @@ func checkIdempotent(t *testing.T, root, first string) {
 		}
 	}
 
-	second := t.TempDir()
-	if err := stableProtosGenerator(t.Context(), next, second); err != nil {
+	second := filepath.Join(scratch, "second")
+	if err := stableProtosGenerator(ctx, next, second); err != nil {
 		t.Fatalf("second pass: %v", err)
 	}
 	want, got := readTree(t, first), readTree(t, second)
@@ -189,7 +191,15 @@ func checkIdempotent(t *testing.T, root, first string) {
 	}
 }
 
-func writeFile(t *testing.T, path, text string) {
+// testingT is the part of testing.TB the fixture helpers use, which *rapid.T also has.
+type testingT interface {
+	Helper()
+	Errorf(format string, args ...any)
+	Fatal(args ...any)
+	Fatalf(format string, args ...any)
+}
+
+func writeFile(t testingT, path, text string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)

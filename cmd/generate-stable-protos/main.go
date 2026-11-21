@@ -68,8 +68,8 @@ func stableProtosGenerator(ctx context.Context, root, outDir string) error {
 		return err
 	}
 
-	// import stripping has to happen after the draft-tagged declarations are deleted
-	// because unused imports are only detectable after it is re-rendered
+	// Strip unused imports after deleting draft-tagged declarations and re-rendering the protos,
+	// because only then can we detect which imports are unused.
 	stableProtos, err := organizeImports(ctx, root, strippedOrder, strippedProtos)
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func stableProtosGenerator(ctx context.Context, root, outDir string) error {
 // loadAPINext lowers the api_next corpus, discovers the draft-tag extension set and
 // validates every draft annotation.
 func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*ir.File, draftTags, error) {
-	// first, lower the api_next set into ir
+	// First, lower the api_next corpus into IR.
 	results, err := lowerFiles(ctx, baseOpener(root), paths)
 	if err != nil {
 		return nil, nil, fmt.Errorf("lower api_next corpus: %w", err)
@@ -115,7 +115,7 @@ func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*
 			return nil, nil, fmt.Errorf("internal error: incremental.Run result %d has path %q, expected %q", i, got, p)
 		}
 		for imp := range seq.Values(irFile.Imports()) {
-			// Draft options reached through a public re-export would leak it into the stable tree.
+			// A public re-export of the draft options proto would leak it into the stable tree.
 			if imp.Direct && imp.Public && imp.Path() == draftTagsPath {
 				return nil, nil, fmt.Errorf("%s: public import of %s is not supported; import it directly", p, draftTagsPath)
 			}
@@ -150,7 +150,7 @@ func stripDrafts(ctx context.Context, root string, paths []string) ([]string, ma
 	comments := make(map[string]draftComments, len(paths))
 	for _, p := range paths {
 		irFile := byPath[p]
-		// skip draft.proto itself
+		// Skip draft.proto itself.
 		if p == draftTagsPath {
 			continue
 		}
@@ -177,7 +177,7 @@ func stripDrafts(ctx context.Context, root string, paths []string) ([]string, ma
 	return stableOrder, protoTexts, comments, nil
 }
 
-// strip unused imports and rename import to stable (api_next -> api)
+// organizeImports removes unused imports and rewrites api_next import paths to their stable api paths.
 func organizeImports(ctx context.Context, root string, order []string, texts map[string]string) (map[string]string, error) {
 	results, err := lowerFiles(ctx, memOpener(root, texts), order)
 	if err != nil {
@@ -213,7 +213,7 @@ func organizeImports(ctx context.Context, root string, order []string, texts map
 	return stableTexts, nil
 }
 
-// re-lower one more time to ensure there are no compilation issues
+// verifyGeneratedProtos lowers the generated protos again to check for compilation errors.
 func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[string]string) error {
 	paths := make([]string, 0, len(stableTexts))
 	for p := range stableTexts {
@@ -233,7 +233,7 @@ func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[str
 	return jErr
 }
 
-// lowerFiles lowers paths in one session; each pass must construct its opener once.
+// lowerFiles lowers paths in one session. Each pass must construct its opener once.
 func lowerFiles(ctx context.Context, opener source.Opener, paths []string) ([]incremental.Result[*ir.File], error) {
 	session := &ir.Session{}
 	lowerQueries := make([]incremental.Query[*ir.File], len(paths))
@@ -250,7 +250,7 @@ func lowerFiles(ctx context.Context, opener source.Opener, paths []string) ([]in
 	return results, nil
 }
 
-// TODO: check if the buf formatter rules can just get pulled into a custom formatter
+// TODO: Check whether a custom formatter can reuse Buf's formatting rules.
 func printFile(file *ir.File) (string, error) {
 	return printer.PrintFile(printer.Options{Format: true, Formatting: printer.Legacy()}, file.AST())
 }
@@ -334,7 +334,7 @@ func rewriteImportPaths(text string) (string, error) {
 			if err := prototext.Unmarshal([]byte("value: "+partSpan.Text()), &part); err != nil {
 				return "", fmt.Errorf("decode import literal: %w", err)
 			}
-			// The _next suffix can straddle concatenated literals; preserve their comments.
+			// The _next suffix can straddle concatenated literals. Preserve their comments.
 			from := max(len(stableAPIPrefix)-1-offset, 0)
 			to := min(len(apiNextPrefix)-1-offset, len(part.Value))
 			offset += len(part.Value)

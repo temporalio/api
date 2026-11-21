@@ -6,8 +6,10 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -144,7 +146,6 @@ func stripDrafts(ctx context.Context, root string, paths []string) ([]string, ma
 		return nil, nil, nil, err
 	}
 
-	stableOrder := make([]string, 0, len(paths))
 	protoTexts := make(map[string]string, len(paths))
 	comments := make(map[string]draftComments, len(paths))
 	for _, p := range paths {
@@ -171,9 +172,8 @@ func stripDrafts(ctx context.Context, root string, paths []string) ([]string, ma
 		}
 
 		protoTexts[p] = protoText
-		stableOrder = append(stableOrder, p)
 	}
-	return stableOrder, protoTexts, comments, nil
+	return slices.Sorted(maps.Keys(protoTexts)), protoTexts, comments, nil
 }
 
 // organizeImports removes unused imports and rewrites api_next import paths to their stable api paths.
@@ -214,11 +214,7 @@ func organizeImports(ctx context.Context, root string, order []string, texts map
 
 // verifyGeneratedProtos lowers the generated protos again to check for compilation errors.
 func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[string]string) error {
-	paths := make([]string, 0, len(stableTexts))
-	for p := range stableTexts {
-		paths = append(paths, p)
-	}
-	sort.Strings(paths)
+	paths := slices.Sorted(maps.Keys(stableTexts))
 	results, err := lowerFiles(ctx, memOpener(root, stableTexts), paths)
 	if err != nil {
 		return fmt.Errorf("verify stable tree failed: %w", err)

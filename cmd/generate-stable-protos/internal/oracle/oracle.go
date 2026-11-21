@@ -24,6 +24,8 @@ type Config struct {
 	StablePrefix string
 	// DraftFile is the input path of the file that defines the draft options.
 	DraftFile string
+	// Header is the text the generator prepends to every output file.
+	Header string
 }
 
 // Check compares the stable tree under outputRoot with the api_next tree under
@@ -57,13 +59,15 @@ func Check(cfg Config, inputRoot, outputRoot string) ([]string, error) {
 		return nil, err
 	}
 	expected := map[string]*descriptorpb.FileDescriptorProto{}
+	removed := map[string][][]int32{}
 	inputDeps := map[string]bool{}
 	for _, fd := range input.GetFile() {
 		if fd.GetName() == cfg.DraftFile {
 			continue
 		}
-		projected, _ := p.projectFile(fd)
+		projected, paths := p.projectFile(fd)
 		expected[projected.GetName()] = projected
+		removed[fd.GetName()] = paths
 		for _, dep := range fd.GetDependency() {
 			inputDeps[cfg.stablePath(dep)] = true
 		}
@@ -80,9 +84,14 @@ func Check(cfg Config, inputRoot, outputRoot string) ([]string, error) {
 		actual[fd.GetName()] = normalize(fd)
 	}
 	if diff := cmp.Diff(expected, actual, protocmp.Transform()); diff != "" {
+		// Comment differences would only repeat the declarations that differ.
 		return append(problems, fmt.Sprintf("stable descriptors differ from the oracle projection (-expected +actual):\n%s", diff)), nil
 	}
-	return problems, nil
+	commentProblems, err := checkComments(cfg, inputTexts, outputTexts, input, output, removed)
+	if err != nil {
+		return nil, err
+	}
+	return append(problems, commentProblems...), nil
 }
 
 func (cfg Config) stablePath(path string) string {

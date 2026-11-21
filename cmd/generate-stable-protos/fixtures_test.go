@@ -143,6 +143,7 @@ var oracleConfig = oracle.Config{
 	NextPrefix:   apiNextPrefix,
 	StablePrefix: stableAPIPrefix,
 	DraftFile:    draftTagsPath,
+	Header:       generatedHeader,
 }
 
 func sortedKeys(a, b map[string]string) []string {

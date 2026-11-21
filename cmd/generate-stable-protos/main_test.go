@@ -115,3 +115,49 @@ func readTree(t *testing.T, root string) map[string]string {
 	}
 	return files
 }
+
+func TestStableAPIBufGuards(t *testing.T) {
+	t.Parallel()
+	toolDir := t.TempDir()
+	for name, script := range map[string]string{
+		"go": "exit 0",
+		"buf": `if [[ "$*" == "ls-files --config buf.next.yaml" ]]; then
+  printf '%s\n' "$NEXT_FILES"
+  exit "$NEXT_STATUS"
+fi
+printf '%s\n' "$DEFAULT_FILES"
+exit "$DEFAULT_STATUS"`,
+		"grep": `if [[ "$FILTER_FAIL" == 1 ]]; then exit 2; fi
+exec /usr/bin/grep "$@"`,
+		"awk": `if [[ "$FILTER_FAIL" == 1 ]]; then exit 2; fi
+exec /usr/bin/awk "$@"`,
+	} {
+		if err := os.WriteFile(filepath.Join(toolDir, name), []byte("#!/bin/bash\n"+script+"\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tc := range []struct {
+		name, defaultFiles, nextFiles, defaultStatus, nextStatus, filterFail string
+		wantFailure                                                          bool
+	}{
+		{"clean listings", "temporal/api/service.proto", "temporal/api_next/service.proto", "0", "0", "0", false},
+		{"preview file in default listing", "temporal/api_next/service.proto", "", "0", "0", "0", true},
+		{"stable file in preview listing", "", "temporal/api/service.proto", "0", "0", "0", true},
+		{"fixture in default listing", "cmd/fixture.proto", "", "0", "0", "0", true},
+		{"fixture in preview listing", "", "cmd/fixture.proto", "0", "0", "0", true},
+		{"default Buf failure", "", "", "2", "0", "0", true},
+		{"preview Buf failure", "", "", "0", "2", "0", true},
+		{"filter failure", "", "", "0", "0", "1", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			cmd := exec.Command("make", "-C", "../..", "stable-api-test", "PATH="+toolDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+			cmd.Env = append(os.Environ(), "DEFAULT_FILES="+tc.defaultFiles, "NEXT_FILES="+tc.nextFiles,
+				"DEFAULT_STATUS="+tc.defaultStatus, "NEXT_STATUS="+tc.nextStatus, "FILTER_FAIL="+tc.filterFail)
+			output, err := cmd.CombinedOutput()
+			if (err != nil) != tc.wantFailure {
+				t.Fatalf("want failure %t, got %v\n%s", tc.wantFailure, err, output)
+			}
+		})
+	}
+}

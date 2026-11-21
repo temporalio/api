@@ -53,8 +53,9 @@ stable-api:
 stable-api-test:
 	printf $(COLOR) "Run generate-stable tests..."
 	@cd cmd/generate-stable-protos/ && go test ./...
-	printf $(COLOR) "Check that both Buf modules exclude fixture protos..."
-	files=$$(buf ls-files && buf ls-files --config buf.next.yaml) && ! grep '^cmd/' <<<"$$files"
+	printf $(COLOR) "Check that each Buf module excludes fixture protos and the other API tree..."
+	buf ls-files | awk '/^(cmd|temporal\/api_next)\// { print; forbidden = 1 } END { if (forbidden) exit 1 }'
+	buf ls-files --config buf.next.yaml | awk '/^(cmd|temporal\/api)\// { print; forbidden = 1 } END { if (forbidden) exit 1 }'
 
 ##### Compile proto files for go #####
 grpc: stable-api buf-lint api-linter resource-id-lint buf-breaking clean go-grpc fix-path

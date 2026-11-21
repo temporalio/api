@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/temporalio/api/cmd/generate-stable-protos/internal/oracle"
 )
 
 // TestFixtures runs the generator on every fixture under testdata. A fixture is a
@@ -127,6 +129,20 @@ func runFixture(t *testing.T, dir string) {
 			}
 		}
 	}
+
+	problems, err := oracle.Check(oracleConfig, root, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, problem := range problems {
+		t.Error(problem)
+	}
+}
+
+var oracleConfig = oracle.Config{
+	NextPrefix:   apiNextPrefix,
+	StablePrefix: stableAPIPrefix,
+	DraftFile:    draftTagsPath,
 }
 
 func sortedKeys(a, b map[string]string) []string {

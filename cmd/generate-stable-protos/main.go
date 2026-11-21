@@ -16,6 +16,7 @@ import (
 
 	"github.com/bufbuild/protocompile/experimental/ast/edit"
 	"github.com/bufbuild/protocompile/experimental/ast/printer"
+	"github.com/bufbuild/protocompile/experimental/ast/syntax"
 	"github.com/bufbuild/protocompile/experimental/incremental"
 	"github.com/bufbuild/protocompile/experimental/incremental/queries"
 	"github.com/bufbuild/protocompile/experimental/ir"
@@ -166,6 +167,9 @@ func (cfg config) loadAPINext(ctx context.Context, root string, paths []string) 
 		irFile := results[i].Value
 		if got := irFile.Path(); got != p {
 			return nil, draftTags{}, nil, fmt.Errorf("internal error: incremental.Run result %d has path %q, expected %q", i, got, p)
+		}
+		if strings.HasPrefix(p, cfg.nextDir+"/") && irFile.Syntax() != syntax.Proto3 {
+			return nil, draftTags{}, nil, fmt.Errorf("%s: api_next requires syntax = %q", p, "proto3")
 		}
 		for imp := range seq.Values(irFile.Imports()) {
 			// A public re-export of the draft options proto would leak it into the stable tree.

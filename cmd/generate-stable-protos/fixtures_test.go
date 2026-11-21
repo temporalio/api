@@ -35,6 +35,8 @@ func TestFixtures(t *testing.T) {
 type fixtureExpectation struct {
 	// Error is a substring of the expected generator error; empty means success.
 	Error string `json:"error"`
+	// Diagnostic is an optional compiler diagnostic required alongside Error.
+	Diagnostic string `json:"diagnostic"`
 	// Annotations are the draft annotations the generator must accept.
 	Annotations draftAnnotations `json:"annotations"`
 	// ValidationOnly limits the fixture to source validation until projection supports it.
@@ -129,6 +131,9 @@ func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpect
 		err := testConfig.stableProtosGenerator(t.Context(), root, out)
 		if err == nil || !strings.Contains(err.Error(), expected.Error) {
 			t.Fatalf("want error %q, got %v", expected.Error, err)
+		}
+		if expected.Diagnostic != "" && !strings.Contains(err.Error(), expected.Diagnostic) {
+			t.Errorf("want diagnostic %q, got %v", expected.Diagnostic, err)
 		}
 		if !maps.Equal(before, readTree(t, out)) {
 			t.Fatal("generation failure modified output")

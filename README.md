@@ -6,6 +6,13 @@ This repository contains both the protobuf descriptors and OpenAPI documentation
 
 Install as git submodule to the project.
 
+## Consumers
+
+Compile either `temporal/api` (stable) or `temporal/api_next` (preview). Never compile both together.
+The trees declare the same proto packages, so compiling both causes duplicate symbols.
+The default Buf module in `buf.yaml` excludes `temporal/api_next`.
+Use `buf.next.yaml` to compile the preview tree.
+
 ## Contribution
 
 Edit proto files under `temporal/api_next/`. Run `make stable-api` to regenerate `temporal/api/`, or run

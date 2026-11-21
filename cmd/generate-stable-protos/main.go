@@ -220,13 +220,13 @@ func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[str
 	if err != nil {
 		return fmt.Errorf("verify stable tree failed: %w", err)
 	}
-	var jErr error
+	var errs error
 	for i, r := range results {
 		if r.Fatal != nil {
-			jErr = errors.Join(jErr, fmt.Errorf("verification failed at file %q: %w", paths[i], r.Fatal))
+			errs = errors.Join(errs, fmt.Errorf("verification failed at file %q: %w", paths[i], r.Fatal))
 		}
 	}
-	return jErr
+	return errs
 }
 
 // lowerFiles lowers paths in one session. Each pass must construct its opener once.

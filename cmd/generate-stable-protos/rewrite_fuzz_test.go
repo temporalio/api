@@ -30,7 +30,7 @@ func FuzzRewriteImportPaths(f *testing.F) {
 		f.Add(seed)
 	}
 	f.Fuzz(func(t *testing.T, input string) {
-		output, err := rewriteImportPaths(input)
+		output, err := testConfig.rewriteImportPaths(input)
 		if err != nil {
 			return
 		}
@@ -49,8 +49,8 @@ func FuzzRewriteImportPaths(f *testing.F) {
 			t.Fatalf("import count changed from %d to %d\ninput:  %q\noutput: %q", len(in.paths), len(out.paths), input, output)
 		}
 		for i, path := range in.paths {
-			if rest, ok := strings.CutPrefix(path, apiNextPrefix); ok {
-				path = stableAPIPrefix + rest
+			if rest, ok := strings.CutPrefix(path, oracleConfig.NextPrefix); ok {
+				path = oracleConfig.StablePrefix + rest
 			}
 			if out.paths[i] != path {
 				t.Fatalf("import %d: want %q, got %q\ninput:  %q\noutput: %q", i, path, out.paths[i], input, output)

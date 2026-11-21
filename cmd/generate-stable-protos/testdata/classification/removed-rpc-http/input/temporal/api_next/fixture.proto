@@ -1,0 +1,16 @@
+syntax = "proto3";
+package fixture;
+import "google/api/annotations.proto";
+import "temporal/api_next/protometa/v1/draft.proto";
+message Request { option (temporal.api.protometa.v1.draft_message) = "preview"; Item item = 1; }
+message Item { string draft_id = 1 [(temporal.api.protometa.v1.draft) = "preview"]; }
+message Response { option (temporal.api.protometa.v1.draft_message) = "preview"; }
+message OtherRequest {}
+message OtherResponse {}
+service Service {
+  rpc Stable(OtherRequest) returns (OtherResponse);
+  rpc Call (Request) returns (Response) {
+    option (temporal.api.protometa.v1.draft_method) = "preview";
+    option (google.api.http) = { get: "/items/{item.draft_id=items/*}" };
+  }
+}

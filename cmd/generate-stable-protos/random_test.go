@@ -17,13 +17,13 @@ func TestRandomSchemas(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		root := t.TempDir()
-		writeFile(rt, filepath.Join(root, draftTagsPath), randomDraftSchema)
+		writeFile(rt, filepath.Join(root, testConfig.draftSchema), randomDraftSchema)
 		for path, text := range newSchemaGen(rt).files() {
 			rt.Logf("%s:\n%s", path, text)
 			writeFile(rt, filepath.Join(root, path), text)
 		}
 		out := t.TempDir()
-		if err := stableProtosGenerator(t.Context(), root, out); err != nil {
+		if err := testConfig.stableProtosGenerator(t.Context(), root, out); err != nil {
 			rt.Fatalf("generator rejected the schema: %v", err)
 		}
 		checkIdempotent(t.Context(), rt, root, out, t.TempDir())
@@ -53,17 +53,17 @@ func (g *schemaGen) files() map[string]string {
 	base := g.file("base", rapid.IntRange(1, 4).Draw(g.rt, "base messages"), nil)
 	dependent := g.file("dependent", rapid.IntRange(0, 3).Draw(g.rt, "dependent messages"), g.types)
 	return map[string]string{
-		apiNextPrefix + "base.proto":      base,
-		apiNextPrefix + "dependent.proto": dependent,
+		testConfig.nextDir + "/base.proto":      base,
+		testConfig.nextDir + "/dependent.proto": dependent,
 	}
 }
 
 func (g *schemaGen) file(name string, messages int, imported []string) string {
 	g.b = &strings.Builder{}
 	g.b.WriteString("syntax = \"proto3\";\npackage fixture;\n")
-	g.b.WriteString("import \"" + draftTagsPath + "\";\n")
+	g.b.WriteString("import \"" + testConfig.draftSchema + "\";\n")
 	if name == "dependent" {
-		g.b.WriteString("import \"" + apiNextPrefix + "base.proto\";\n")
+		g.b.WriteString("import \"" + testConfig.nextDir + "/base.proto\";\n")
 	}
 	names := make([]string, messages)
 	for i := range names {

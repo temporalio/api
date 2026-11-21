@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io/fs"
 	"maps"
 	"os"
@@ -128,6 +129,99 @@ extend google.protobuf.FieldOptions { string draft = 50000; }
 				t.Errorf("tree changed after rejected generation\nbefore: %v\nafter: %v", before, after)
 			}
 		})
+	}
+}
+
+func TestGeneratorOutputDirectory(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, state, wantError string
+		invalidSource          bool
+	}{
+		{"missing flag", "omitted", "-out is required", false},
+		{"nonempty output", "nonempty", "must be empty", false},
+		{"nonempty output before input validation", "nonempty", "must be empty", true},
+		{"regular file", "file", "not a directory", false},
+		{"stable path is a file", "stable file", "must be empty", false},
+		{"empty output", "empty", "", false},
+		{"nonexistent output", "nonexistent", "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			workspace := t.TempDir()
+			root, out := filepath.Join(workspace, "source"), filepath.Join(workspace, "out")
+			source := `syntax = "proto3"; package example.api; message Request {}`
+			if tc.invalidSource {
+				source = "invalid protobuf"
+			}
+			writeFile(t, filepath.Join(root, "next/service.proto"), source)
+			writeFile(t, filepath.Join(root, "meta/draft.proto"), `syntax = "proto3";
+package example.meta;
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.FieldOptions { string draft = 50000; }
+`)
+			switch tc.state {
+			case "nonempty":
+				writeFile(t, filepath.Join(out, "retained"), "")
+			case "file":
+				writeFile(t, out, "")
+			case "stable file":
+				writeFile(t, filepath.Join(out, "stable"), "retained")
+			case "empty":
+				if err := os.Mkdir(out, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before := readTree(t, workspace)
+			args := []string{"run", ".", "-root", root, "-next", "next", "-stable", "stable",
+				"-draft-schema", "meta/draft.proto"}
+			if tc.state != "omitted" {
+				args = append(args, "-out", out)
+			}
+			output, err := exec.Command("go", args...).CombinedOutput()
+			if tc.wantError != "" {
+				if err == nil || !strings.Contains(string(output), tc.wantError) {
+					t.Errorf("expected rejection mentioning %q, got %v\n%s", tc.wantError, err, output)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("generate with %s: %v\n%s", tc.state, err, output)
+				}
+				const generated = "out/stable/service.proto"
+				body, err := os.ReadFile(filepath.Join(workspace, generated))
+				if err != nil || !strings.Contains(string(body), "message Request") {
+					t.Fatalf("read generated proto: %v\n%s", err, body)
+				}
+				before[generated] = string(body)
+			}
+			if after := readTree(t, workspace); !maps.Equal(before, after) {
+				t.Errorf("unexpected tree changes\nwant: %v\ngot: %v", before, after)
+			}
+		})
+	}
+}
+
+func TestWriteFilesRejectsExistingFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	const dest = "stable/service.proto"
+	const original = "original proto bytes\n"
+	writeFile(t, filepath.Join(dir, dest), original)
+	out, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer out.Close()
+
+	if err := writeFiles(out, map[string]string{dest: "replacement"}); !errors.Is(err, fs.ErrExist) {
+		t.Errorf("expected file-exists error, got %v", err)
+	}
+	contents, err := out.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != original {
+		t.Errorf("destination contents changed to %q", contents)
 	}
 }
 

@@ -35,6 +35,8 @@ func TestFixtures(t *testing.T) {
 type fixtureExpectation struct {
 	// Error is a substring of the expected generator error; empty means success.
 	Error string `json:"error"`
+	// Diagnostic is an optional compiler diagnostic required alongside Error.
+	Diagnostic string `json:"diagnostic"`
 	// Annotations are the draft annotations the generator must accept.
 	Annotations draftAnnotations `json:"annotations"`
 	// ValidationOnly limits the fixture to source validation until projection supports it.
@@ -42,6 +44,8 @@ type fixtureExpectation struct {
 	// Problems are substrings of the problems the oracle must report, one each; any
 	// other problem fails the fixture.
 	Problems []string `json:"problems"`
+	// DeclarationChanges lists the exact descriptor additions or removals the oracle must report.
+	DeclarationChanges []oracle.DeclarationChange `json:"declaration_changes"`
 }
 
 // findFixtures returns the fixture directories under testdata, relative to it.
@@ -90,9 +94,16 @@ func runFixture(t *testing.T, dir string) {
 		t.Fatal(err)
 	}
 
-	problems, err := oracle.Check(oracleConfig, root, out)
+	result, err := oracle.Check(oracleConfig, root, out)
 	if err != nil {
 		t.Fatal(err)
+	}
+	problems := result.AllProblems()
+	if len(expected.DeclarationChanges) > 0 {
+		if !slices.Equal(result.DeclarationChanges, expected.DeclarationChanges) || result.DescriptorDiff == "" {
+			t.Errorf("want declaration changes %v, got %v\n%s", expected.DeclarationChanges, result.DeclarationChanges, result.DescriptorDiff)
+		}
+		problems = result.Problems
 	}
 	for _, want := range expected.Problems {
 		i := slices.IndexFunc(problems, func(problem string) bool { return strings.Contains(problem, want) })
@@ -120,6 +131,9 @@ func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpect
 		err := testConfig.stableProtosGenerator(t.Context(), root, out)
 		if err == nil || !strings.Contains(err.Error(), expected.Error) {
 			t.Fatalf("want error %q, got %v", expected.Error, err)
+		}
+		if expected.Diagnostic != "" && !strings.Contains(err.Error(), expected.Diagnostic) {
+			t.Errorf("want diagnostic %q, got %v", expected.Diagnostic, err)
 		}
 		if !maps.Equal(before, readTree(t, out)) {
 			t.Fatal("generation failure modified output")

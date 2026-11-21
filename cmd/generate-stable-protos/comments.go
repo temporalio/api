@@ -6,10 +6,127 @@ import (
 	"strings"
 
 	"github.com/bufbuild/protocompile/experimental/ast"
+	"github.com/bufbuild/protocompile/experimental/ast/edit"
 	"github.com/bufbuild/protocompile/experimental/fdp"
 	"github.com/bufbuild/protocompile/experimental/ir"
+	"github.com/bufbuild/protocompile/experimental/parser"
+	"github.com/bufbuild/protocompile/experimental/report"
+	"github.com/bufbuild/protocompile/experimental/seq"
+	"github.com/bufbuild/protocompile/experimental/source"
 	"github.com/bufbuild/protocompile/experimental/token"
 )
+
+// pruneImports removes unused imports and the external trivia attributed to them.
+func pruneImports(f *ir.File) (*ast.File, error) {
+	unused := map[string]ast.DeclImport{}
+	for imp := range seq.Values(f.Imports()) {
+		if !imp.Used && !imp.Decl.IsZero() {
+			unused[imp.Path()] = imp.Decl
+		}
+	}
+	if len(unused) == 0 {
+		return f.AST(), nil
+	}
+	fd, err := fdp.DescriptorProto(f, fdp.IncludeSourceCodeInfo(true))
+	if err != nil {
+		return nil, fmt.Errorf("reading import source info: %w", err)
+	}
+	stream := f.AST().Stream()
+	var text []byte
+	// Replace comment bytes with whitespace so the import offsets remain valid after parsing.
+	mask := func(span source.Span) {
+		if text == nil {
+			text = []byte(stream.File.Text())
+		}
+		for i := span.Start; i < span.End; i++ {
+			if text[i] != '\n' && text[i] != '\r' {
+				text[i] = ' '
+			}
+		}
+	}
+	starts := map[int]bool{}
+	const dependencyTag = 3
+	for _, loc := range fd.GetSourceCodeInfo().GetLocation() {
+		path := loc.GetPath()
+		if len(path) != 2 || path[0] != dependencyTag {
+			continue
+		}
+		dependency := fd.GetDependency()[path[1]]
+		decl, drop := unused[dependency]
+		if !drop {
+			continue
+		}
+		delete(unused, dependency)
+		span := decl.Span()
+		starts[span.Start] = true
+		leading := strings.Fields(strings.Join(loc.GetLeadingDetachedComments(), " ") + " " + loc.GetLeadingComments())
+		trailing := strings.Fields(loc.GetTrailingComments())
+		before, _ := stream.Around(span.Start)
+		_, after := stream.Around(span.End)
+		if !maskImportComments(before, leading, true, mask) || !maskImportComments(after, trailing, false, mask) {
+			return nil, fmt.Errorf("locating comments of import %q", dependency)
+		}
+	}
+	if len(unused) != 0 {
+		return nil, fmt.Errorf("missing source locations for %d unused imports", len(unused))
+	}
+
+	file := f.AST()
+	if text != nil {
+		var diagnostics report.Report
+		file, _ = parser.Parse(f.Path(), source.NewFile(f.Path(), string(text)), &diagnostics)
+		if message, failed := errorDiagnostics(&diagnostics); failed {
+			return nil, fmt.Errorf("parsing source with pruned import comments: %s", message)
+		}
+	}
+	var dels []edit.Edit
+	for decl := range seq.Values(file.Decls()) {
+		if !decl.AsImport().IsZero() && starts[decl.Span().Start] {
+			dels = append(dels, edit.Edit{Kind: edit.KindDelete, Target: decl})
+		}
+	}
+	if err := edit.ApplyEdits(file, dels); err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
+// maskImportComments locates attributed comments in the trivia adjacent to an import.
+func maskImportComments(start token.Token, words []string, backwards bool, mask func(source.Span)) bool {
+	if len(words) == 0 {
+		return true
+	}
+	if start.IsZero() {
+		return false
+	}
+	cursor := token.NewCursorAt(start)
+	next := cursor.NextSkippable
+	if backwards {
+		cursor.NextSkippable()
+		next = cursor.PrevSkippable
+	}
+	for tok := next(); !tok.IsZero() && tok.Kind().IsSkippable(); tok = next() {
+		if tok.Kind() != token.Comment {
+			continue
+		}
+		got := commentTokenWords(tok.Text())
+		if len(got) > len(words) {
+			return false
+		}
+		if backwards && slices.Equal(words[len(words)-len(got):], got) {
+			words = words[:len(words)-len(got)]
+		} else if !backwards && slices.Equal(words[:len(got)], got) {
+			words = words[len(got):]
+		} else {
+			return false
+		}
+		mask(tok.LeafSpan())
+		if len(words) == 0 {
+			return true
+		}
+	}
+	return false
+}
 
 // draftComments holds the comments protoc attributes to a file's removed draft
 // declarations, and how often each comment word may still occur in the stable file.
@@ -134,20 +251,24 @@ func commentWords(stream *token.Stream) map[string]int {
 		if tok.Kind() != token.Comment {
 			continue
 		}
-		text, block := strings.CutPrefix(tok.Text(), "/*")
-		if block {
-			text = strings.TrimSuffix(text, "*/")
-		} else {
-			text = strings.TrimPrefix(text, "//")
-		}
-		for i, line := range strings.Split(text, "\n") {
-			if block && i > 0 {
-				line = strings.TrimPrefix(strings.TrimSpace(line), "*")
-			}
-			for _, w := range strings.Fields(line) {
-				counts[w]++
-			}
+		for _, w := range commentTokenWords(tok.Text()) {
+			counts[w]++
 		}
 	}
 	return counts
+}
+
+func commentTokenWords(text string) []string {
+	text, block := strings.CutPrefix(text, "/*")
+	if !block {
+		return strings.Fields(strings.TrimPrefix(text, "//"))
+	}
+	var words []string
+	for i, line := range strings.Split(strings.TrimSuffix(text, "*/"), "\n") {
+		if i > 0 {
+			line = strings.TrimPrefix(strings.TrimSpace(line), "*")
+		}
+		words = append(words, strings.Fields(line)...)
+	}
+	return words
 }

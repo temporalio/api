@@ -14,8 +14,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bufbuild/protocompile/experimental/ast"
 	"github.com/bufbuild/protocompile/experimental/ast/edit"
 	"github.com/bufbuild/protocompile/experimental/ast/printer"
+	"github.com/bufbuild/protocompile/experimental/ast/syntax"
 	"github.com/bufbuild/protocompile/experimental/incremental"
 	"github.com/bufbuild/protocompile/experimental/incremental/queries"
 	"github.com/bufbuild/protocompile/experimental/ir"
@@ -171,6 +173,9 @@ func (cfg config) loadAPINext(ctx context.Context, root string, paths []string) 
 		if got := irFile.Path(); got != p {
 			return nil, draftTags{}, nil, fmt.Errorf("internal error: incremental.Run result %d has path %q, expected %q", i, got, p)
 		}
+		if strings.HasPrefix(p, cfg.nextDir+"/") && irFile.Syntax() != syntax.Proto3 {
+			return nil, draftTags{}, nil, fmt.Errorf("%s: api_next requires syntax = %q", p, "proto3")
+		}
 		for imp := range seq.Values(irFile.Imports()) {
 			// A public re-export of the draft options proto would leak it into the stable tree.
 			if imp.Direct && imp.Public && imp.Path() == cfg.draftSchema {
@@ -188,7 +193,7 @@ func (cfg config) loadAPINext(ctx context.Context, root string, paths []string) 
 	annotations := draftAnnotations{}
 	for _, p := range paths {
 		f := byPath[p]
-		accepted, err := validateDraftAnnotations(tags, f)
+		accepted, err := validateDraftAnnotations(tags, f, p != cfg.draftSchema)
 		if err != nil {
 			return nil, draftTags{}, nil, err
 		}
@@ -232,7 +237,10 @@ func (cfg config) stripDrafts(ctx context.Context, root string, paths []string) 
 		if err := edit.ApplyEdits(irFile.AST(), edits); err != nil {
 			return nil, nil, fmt.Errorf("delete draft declarations: %s: %w", p, err)
 		}
-		protoText, err := printFile(irFile)
+		formatting := printer.Legacy()
+		// Keep detached comments beside their original imports until pruning determines ownership.
+		formatting.CanonicalizeFileOrder = false
+		protoText, err := printer.PrintFile(printer.Options{Format: true, Formatting: formatting}, irFile.AST())
 		if err != nil {
 			return nil, nil, fmt.Errorf("print %s: %w", p, err)
 		}
@@ -246,27 +254,21 @@ func (cfg config) stripDrafts(ctx context.Context, root string, paths []string) 
 func (cfg config) organizeImports(ctx context.Context, root string, order []string, texts map[string]string) (map[string]string, error) {
 	results, err := lowerFiles(ctx, memOpener(root, texts), order)
 	if err != nil {
-		return nil, fmt.Errorf("re-lower draft-stripped corpus: %w", err)
+		return nil, stableCompileError(err)
 	}
 
 	stableTexts := make(map[string]string, len(order))
 	for i, p := range order {
 		if results[i].Fatal != nil {
-			return nil, fmt.Errorf("%s: %w", p, results[i].Fatal)
+			return nil, stableCompileError(fmt.Errorf("%s: %w", p, results[i].Fatal))
 		}
 		irFile := results[i].Value
 
-		var importDels []edit.Edit
-		for j := 0; j < irFile.Imports().Len(); j++ {
-			imp := irFile.Imports().At(j)
-			if !imp.Used && !imp.Decl.IsZero() {
-				importDels = append(importDels, edit.Edit{Kind: edit.KindDelete, Target: imp.Decl.AsAny()})
-			}
-		}
-		if err := edit.ApplyEdits(irFile.AST(), importDels); err != nil {
+		file, err := pruneImports(irFile)
+		if err != nil {
 			return nil, fmt.Errorf("prune imports: %s: %w", p, err)
 		}
-		protoText, err := printFile(irFile)
+		protoText, err := printFile(file)
 		if err != nil {
 			return nil, fmt.Errorf("print %s: %w", p, err)
 		}
@@ -283,7 +285,7 @@ func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[str
 	paths := slices.Sorted(maps.Keys(stableTexts))
 	results, err := lowerFiles(ctx, memOpener(root, stableTexts), paths)
 	if err != nil {
-		return fmt.Errorf("verify stable tree failed: %w", err)
+		return stableCompileError(err)
 	}
 	var errs error
 	for i, r := range results {
@@ -291,7 +293,14 @@ func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[str
 			errs = errors.Join(errs, fmt.Errorf("verification failed at file %q: %w", paths[i], r.Fatal))
 		}
 	}
-	return errs
+	if errs != nil {
+		return stableCompileError(errs)
+	}
+	return nil
+}
+
+func stableCompileError(err error) error {
+	return fmt.Errorf("stable projection does not compile: a retained declaration likely references a draft declaration: %w", err)
 }
 
 // lowerFiles lowers paths in one session. Each pass must construct its opener once.
@@ -314,8 +323,8 @@ func lowerFiles(ctx context.Context, opener source.Opener, paths []string) ([]in
 // printFile formats the file with the legacy formatter.
 //
 // TODO: Check whether a custom formatter can reuse Buf's formatting rules.
-func printFile(file *ir.File) (string, error) {
-	return printer.PrintFile(printer.Options{Format: true, Formatting: printer.Legacy()}, file.AST())
+func printFile(file *ast.File) (string, error) {
+	return printer.PrintFile(printer.Options{Format: true, Formatting: printer.Legacy()}, file)
 }
 
 func errorDiagnostics(r *report.Report) (renderText string, hasErrors bool) {

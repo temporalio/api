@@ -13,44 +13,32 @@ func validateDraftRules(tags draftTags, f *ir.File, endpointUses rpcEndpointUses
 			continue
 		}
 		parent := t.Parent()
-		if tags.has(t.Options()) && isDraftType(tags, parent) {
+		if tags.has(t.Options()) && tags.typeFeature(parent) != "" {
 			return draftNestingError(t.FullName(), parent.FullName())
 		}
-		draft := isDraftType(tags, t)
+		feature := tags.typeFeature(t)
 		if t.IsEnum() {
-			if err := validateDraftEnum(tags, t, draft); err != nil {
+			if err := validateDraftEnum(tags, t, feature != ""); err != nil {
 				return err
 			}
 			continue
 		}
 
+		for m := range seq.Values(t.Members()) {
+			if err := validateDraftField(tags, m, feature); err != nil {
+				return err
+			}
+		}
 		for o := range seq.Values(t.Oneofs()) {
 			if o.AST().IsZero() {
 				continue
 			}
 			if tags.has(o.Options()) {
-				if draft {
+				if feature != "" {
 					return draftNestingError(o.FullName(), t.FullName())
 				}
-			} else if !draft && allDraft(o.Members(), func(m ir.Member) bool { return isDraftMember(tags, m) }) {
-				for m := range seq.Values(o.Members()) {
-					if tags.has(m.Options()) {
-						return fmt.Errorf("%s: all oneof members are draft; set draft_oneof to a common feature and remove the member draft annotations", o.FullName())
-					}
-				}
-				return fmt.Errorf("%s: all oneof members are draft; add draft_oneof", o.FullName())
-			}
-		}
-		for m := range seq.Values(t.Members()) {
-			if !tags.has(m.Options()) {
-				continue
-			}
-			o := m.Oneof()
-			if !o.AST().IsZero() && (draft || tags.has(o.Options())) {
-				return draftNestingError(m.FullName(), o.FullName())
-			}
-			if draft {
-				return draftNestingError(m.FullName(), t.FullName())
+			} else if feature == "" && allDraft(o.Members(), func(m ir.Member) bool { return tags.has(m.Options()) }) {
+				return fmt.Errorf("%s: all oneof members are draft; set draft_oneof to a common feature and remove the member draft annotations", o.FullName())
 			}
 		}
 	}
@@ -64,7 +52,7 @@ func validateDraftRules(tags draftTags, f *ir.File, endpointUses rpcEndpointUses
 			{"extendee", ext.Container()},
 			{"declaring parent", ext.Parent()},
 		} {
-			if isDraftType(tags, ref.typ) {
+			if tags.typeFeature(ref.typ) != "" {
 				return fmt.Errorf("%s: extension references draft type %s as its %s", ext.FullName(), ref.typ.FullName(), ref.role)
 			}
 		}
@@ -74,6 +62,37 @@ func validateDraftRules(tags draftTags, f *ir.File, endpointUses rpcEndpointUses
 		if err := validateDraftService(tags, s, endpointUses, allowlist); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func validateDraftField(tags draftTags, field ir.Member, messageFeature draftFeature) error {
+	oneof := field.Oneof()
+	containerFeature := tags.feature(oneof.Options())
+	if containerFeature == "" {
+		containerFeature = messageFeature
+	}
+	feature := tags.feature(field.Options())
+	if containerFeature != "" {
+		if feature != "" {
+			if !oneof.AST().IsZero() {
+				return draftNestingError(field.FullName(), oneof.FullName())
+			}
+			return draftNestingError(field.FullName(), field.Parent().FullName())
+		}
+		feature = containerFeature
+	}
+
+	typ := field.Element()
+	if field.IsMap() {
+		_, value := typ.EntryFields()
+		typ = value.Element()
+	}
+	if typeFeature := tags.typeFeature(typ); typeFeature != "" && typeFeature != feature {
+		if feature == "" {
+			return fmt.Errorf("%s: field references draft type %s and requires draft = %q", field.FullName(), typ.FullName(), typeFeature)
+		}
+		return fmt.Errorf("%s: draft feature %q does not match draft type %s feature %q", field.FullName(), feature, typ.FullName(), typeFeature)
 	}
 	return nil
 }
@@ -140,7 +159,7 @@ func validateDraftService(tags draftTags, service ir.Service, endpointUses rpcEn
 		} {
 			name := endpoint.typ.FullName()
 			if feature == "" {
-				if isDraftType(tags, endpoint.typ) {
+				if tags.typeFeature(endpoint.typ) != "" {
 					if !tags.has(endpoint.typ.Options()) {
 						return fmt.Errorf("%s: RPC references draft type %s as its %s; inherited draft status is insufficient, so use a type that explicitly carries draft_message and give draft_method and both endpoints the same feature", method.FullName(), name, endpoint.role)
 					}

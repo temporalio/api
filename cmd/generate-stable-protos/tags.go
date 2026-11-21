@@ -70,12 +70,19 @@ type draftAnnotations map[ir.FullName]draftFeature
 
 type draftFeature = string
 
-// validateDraftAnnotations checks annotation placement and feature names and returns the explicit annotations.
-func validateDraftAnnotations(tags draftTags, f *ir.File) (draftAnnotations, error) {
+// validateDraftAnnotations checks annotation placement, feature names, and enum values in retained options.
+func validateDraftAnnotations(tags draftTags, f *ir.File, projected bool) (draftAnnotations, error) {
 	accepted := draftAnnotations{}
-	check := func(name ir.FullName, placement, option string, opts ir.MessageValue) error {
+	check := func(name ir.FullName, placement, option string, opts ir.MessageValue, draftParent bool) error {
 		v := tags.annotation(opts)
 		if v.IsZero() {
+			if projected && !draftParent {
+				for opt := range opts.Fields() {
+					if value := draftOptionEnumValue(tags, opt); value != "" {
+						return fmt.Errorf("%s: option %s references draft enum value %s", name, opt.Field().FullName(), value)
+					}
+				}
+			}
 			return nil
 		}
 		if option == "" || v.Field().FullName() != tags.packageName.Append(option) {
@@ -88,7 +95,7 @@ func validateDraftAnnotations(tags draftTags, f *ir.File) (draftAnnotations, err
 		accepted[name] = feature
 		return nil
 	}
-	if err := check(ir.FullName(f.Path()), "file", "", f.Options()); err != nil {
+	if err := check(ir.FullName(f.Path()), "file", "", f.Options(), false); err != nil {
 		return nil, err
 	}
 	for t := range seq.Values(f.AllTypes()) {
@@ -96,40 +103,55 @@ func validateDraftAnnotations(tags draftTags, f *ir.File) (draftAnnotations, err
 		if t.IsEnum() {
 			placement, option = "enum", "draft_enum"
 		}
-		if err := check(t.FullName(), placement, option, t.Options()); err != nil {
+		if err := check(t.FullName(), placement, option, t.Options(), tags.typeFeature(t.Parent()) != ""); err != nil {
 			return nil, err
 		}
+		draft := tags.typeFeature(t) != ""
 		for m := range seq.Values(t.Members()) {
 			placement, option := "field", "draft"
 			if m.IsEnumValue() {
 				placement, option = "enum value", "draft_enum_value"
 			}
-			if err := check(m.FullName(), placement, option, m.Options()); err != nil {
+			if err := check(m.FullName(), placement, option, m.Options(), draft || tags.has(m.Oneof().Options())); err != nil {
 				return nil, err
 			}
 		}
 		for o := range seq.Values(t.Oneofs()) {
-			if err := check(o.FullName(), "oneof", "draft_oneof", o.Options()); err != nil {
+			if err := check(o.FullName(), "oneof", "draft_oneof", o.Options(), draft); err != nil {
 				return nil, err
 			}
 		}
 	}
 	for ext := range seq.Values(f.AllExtensions()) {
-		if err := check(ext.FullName(), "extension", "", ext.Options()); err != nil {
+		if err := check(ext.FullName(), "extension", "", ext.Options(), tags.typeFeature(ext.Parent()) != ""); err != nil {
 			return nil, err
 		}
 	}
 	for s := range seq.Values(f.Services()) {
-		if err := check(s.FullName(), "service", "draft_service", s.Options()); err != nil {
+		if err := check(s.FullName(), "service", "draft_service", s.Options(), false); err != nil {
 			return nil, err
 		}
 		for m := range seq.Values(s.Methods()) {
-			if err := check(m.FullName(), "method", "draft_method", m.Options()); err != nil {
+			if err := check(m.FullName(), "method", "draft_method", m.Options(), tags.has(s.Options())); err != nil {
 				return nil, err
 			}
 		}
 	}
 	return accepted, nil
+}
+
+func draftOptionEnumValue(tags draftTags, option ir.Value) ir.FullName {
+	for element := range seq.Values(option.Elements()) {
+		if value := element.AsEnum(); !value.IsZero() && (tags.has(value.Options()) || tags.typeFeature(value.Parent()) != "") {
+			return value.FullName()
+		}
+		for field := range element.AsMessage().Fields() {
+			if value := draftOptionEnumValue(tags, field); value != "" {
+				return value
+			}
+		}
+	}
+	return ""
 }
 
 const fieldPathPattern = `([a-zA-Z_][a-zA-Z_0-9]*(?:\.[a-zA-Z_][a-zA-Z_0-9]*)*)`
@@ -216,7 +238,7 @@ func referencesDraftField(tags draftTags, message ir.Type, path string) bool {
 		if field.IsZero() {
 			return false
 		}
-		if isDraftMember(tags, field) || tags.has(field.Oneof().Options()) {
+		if tags.has(field.Options()) || tags.has(field.Oneof().Options()) {
 			return true
 		}
 		message = field.Element()
@@ -224,21 +246,11 @@ func referencesDraftField(tags draftTags, message ir.Type, path string) bool {
 	return false
 }
 
-func isDraftType(tags draftTags, t ir.Type) bool {
-	if t.IsZero() || t.IsPredeclared() {
-		return false
+func (tags draftTags) typeFeature(t ir.Type) draftFeature {
+	for ; !t.IsZero() && !t.IsPredeclared(); t = t.Parent() {
+		if feature := tags.feature(t.Options()); feature != "" {
+			return feature
+		}
 	}
-	return tags.has(t.Options()) || isDraftType(tags, t.Parent())
-}
-
-func isDraftMember(tags draftTags, m ir.Member) bool {
-	if tags.has(m.Options()) {
-		return true
-	}
-	t := m.Element()
-	if m.IsMap() {
-		_, value := t.EntryFields()
-		t = value.Element()
-	}
-	return isDraftType(tags, t)
+	return ""
 }

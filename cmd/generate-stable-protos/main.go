@@ -103,8 +103,7 @@ func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*
 		return nil, nil, fmt.Errorf("lower api_next corpus: %w", err)
 	}
 
-	// need to iterate to find the draft proto- also check
-	// for errors while iterating so it doesnt have to be repeated
+	// Check for errors while indexing files by path so we can look up the draft proto in one pass.
 	byPath := make(map[string]*ir.File, len(paths))
 	for i, p := range paths {
 		if results[i].Fatal != nil {
@@ -250,6 +249,8 @@ func lowerFiles(ctx context.Context, opener source.Opener, paths []string) ([]in
 	return results, nil
 }
 
+// printFile formats the file with the legacy formatter.
+//
 // TODO: Check whether a custom formatter can reuse Buf's formatting rules.
 func printFile(file *ir.File) (string, error) {
 	return printer.PrintFile(printer.Options{Format: true, Formatting: printer.Legacy()}, file.AST())

@@ -6,8 +6,10 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -63,10 +65,11 @@ func stableProtosGenerator(ctx context.Context, root, outDir string) error {
 		return fmt.Errorf("no protos found under %q", filepath.Join(root, apiNextPrefix))
 	}
 
-	strippedOrder, strippedProtos, comments, err := stripDrafts(ctx, root, paths)
+	strippedProtos, comments, err := stripDrafts(ctx, root, paths)
 	if err != nil {
 		return err
 	}
+	strippedOrder := slices.Sorted(maps.Keys(strippedProtos))
 
 	// Strip unused imports after deleting draft-tagged declarations and re-rendering the protos,
 	// because only then can we detect which imports are unused.
@@ -138,13 +141,12 @@ func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*
 	return byPath, tags, nil
 }
 
-func stripDrafts(ctx context.Context, root string, paths []string) ([]string, map[string]string, map[string]draftComments, error) {
+func stripDrafts(ctx context.Context, root string, paths []string) (map[string]string, map[string]draftComments, error) {
 	byPath, tags, err := loadAPINext(ctx, root, paths)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	stableOrder := make([]string, 0, len(paths))
 	protoTexts := make(map[string]string, len(paths))
 	comments := make(map[string]draftComments, len(paths))
 	for _, p := range paths {
@@ -156,24 +158,23 @@ func stripDrafts(ctx context.Context, root string, paths []string) ([]string, ma
 
 		dels := findDraftNodes(tags, irFile)
 		if comments[p], err = findDraftComments(irFile, dels); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		edits := make([]edit.Edit, len(dels))
 		for j, d := range dels {
 			edits[j] = edit.Edit{Kind: edit.KindDelete, Target: d}
 		}
 		if err := edit.ApplyEdits(irFile.AST(), edits); err != nil {
-			return nil, nil, nil, fmt.Errorf("delete draft declarations: %s: %w", p, err)
+			return nil, nil, fmt.Errorf("delete draft declarations: %s: %w", p, err)
 		}
 		protoText, err := printFile(irFile)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("print %s: %w", p, err)
+			return nil, nil, fmt.Errorf("print %s: %w", p, err)
 		}
 
 		protoTexts[p] = protoText
-		stableOrder = append(stableOrder, p)
 	}
-	return stableOrder, protoTexts, comments, nil
+	return protoTexts, comments, nil
 }
 
 // organizeImports removes unused imports and rewrites api_next import paths to their stable api paths.
@@ -214,11 +215,7 @@ func organizeImports(ctx context.Context, root string, order []string, texts map
 
 // verifyGeneratedProtos lowers the generated protos again to check for compilation errors.
 func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[string]string) error {
-	paths := make([]string, 0, len(stableTexts))
-	for p := range stableTexts {
-		paths = append(paths, p)
-	}
-	sort.Strings(paths)
+	paths := slices.Sorted(maps.Keys(stableTexts))
 	results, err := lowerFiles(ctx, memOpener(root, stableTexts), paths)
 	if err != nil {
 		return fmt.Errorf("verify stable tree failed: %w", err)

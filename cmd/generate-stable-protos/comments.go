@@ -51,14 +51,14 @@ func findDraftComments(f *ir.File, dels []ast.DeclAny) (draftComments, error) {
 }
 
 // checkCommentsAfter rejects comments between a removed declaration and the next code.
-// protoc attaches such comments to the removed declaration or to nothing, and the printer
-// then keeps them. Only a comment on the declaration's own last line, or the doc block
-// directly above the next surviving declaration, may sit there.
+// The protoc compiler attaches such comments to the removed declaration or to nothing,
+// and the printer then keeps them. Only a comment on the declaration's own last line,
+// or the doc block directly above the next surviving declaration, may sit there.
 func checkCommentsAfter(f *ir.File, dels []ast.DeclAny) error {
 	removed := func(offset int) bool {
 		return slices.ContainsFunc(dels, func(d ast.DeclAny) bool { return d.Span().Start <= offset && offset < d.Span().End })
 	}
-	// LeafSpan, because the Span of a brace pair covers its whole body.
+	// Use LeafSpan because the Span of a brace pair covers its whole body.
 	line := func(tok token.Token) int { return tok.LeafSpan().StartLoc().Line }
 	lastLine := func(c token.Token) int {
 		return line(c) + strings.Count(strings.TrimRight(c.Text(), "\n"), "\n")
@@ -81,7 +81,7 @@ func checkCommentsAfter(f *ir.File, dels []ast.DeclAny) error {
 			}
 		}
 		if found && removed(next.LeafSpan().Start) {
-			continue // these belong to the next removed declaration and are checked through it
+			continue // These comments are checked with the next removed declaration, to which they belong.
 		}
 		doc := len(gap)
 		if found && !closesScope(next) {
@@ -98,8 +98,8 @@ func checkCommentsAfter(f *ir.File, dels []ast.DeclAny) error {
 	return nil
 }
 
-// closesScope reports whether tok is the closing token of a pair such as "}"; Text
-// returns the open token's text for both ends.
+// closesScope reports whether tok is the closing token of a pair such as "}".
+// Text returns the open token's text for both ends.
 func closesScope(tok token.Token) bool {
 	if tok.IsLeaf() {
 		return false

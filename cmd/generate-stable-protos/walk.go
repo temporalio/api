@@ -42,7 +42,7 @@ func walkType(tags draftTags, t ir.Type, dels *[]ast.DeclAny) {
 		}
 	}
 	for nested := range seq.Values(t.Nested()) {
-		// Synthetic map entries share the field's AST, already handled above.
+		// Synthetic map entries share the AST of the field handled above.
 		if !nested.IsMapEntry() {
 			walkType(tags, nested, dels)
 		}

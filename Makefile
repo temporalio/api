@@ -35,7 +35,12 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
-NEX_GEN ?= nexgen
+# The Stream WIT uses nexgen directives that no release has yet. Pin a nexgen commit that has them
+# until a release does.
+NEX_GEN_REPO := https://github.com/temporalio/nexgen
+NEX_GEN_REV := ee6256f403e3bc2248945186d459f773615d87ca
+NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
+NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
@@ -164,13 +169,20 @@ system-nexus-wit: system-nexus-wit-install nex-gen-install
 		--system-nexus-wit_opt=linked_input=nexus/deps \
 		--system-nexus-wit_out=. \
 		temporal/api/workflowservice/v1/service.proto \
-		temporal/api/notificationservice/v1/request_response.proto && \
+		temporal/api/notificationservice/v1/request_response.proto \
+		temporal/api/streamservice/v1/request_response.proto && \
 	$(NEX_GEN) add-message \
 		--descriptors "$$tmp/system.bin" \
 		--file temporal/api/notificationservice/v1/request_response.proto \
 		--input nexus/notification-service.wit \
 		--input nexus/deps \
-		--output nexus/notification-service.wit
+		--output nexus/notification-service.wit && \
+	$(NEX_GEN) add-message \
+		--descriptors "$$tmp/system.bin" \
+		--file temporal/api/streamservice/v1/request_response.proto \
+		--input nexus/stream-service.wit \
+		--input nexus/deps \
+		--output nexus/stream-service.wit
 
 system-nexus-wit-install:
 	printf $(COLOR) "Build and install protoc-gen-system-nexus-wit..."
@@ -178,7 +190,10 @@ system-nexus-wit-install:
 
 nex-gen-install:
 	printf $(COLOR) "Install nexgen if missing..."
-	command -v $(NEX_GEN) >/dev/null || cargo install nexgen --version ^0.2 --features advanced
+# The git CLI follows a local URL rewrite to SSH, which cargo's own git client can't authenticate.
+	command -v $(NEX_GEN) >/dev/null || CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install \
+		--git $(NEX_GEN_REPO) --rev $(NEX_GEN_REV) --locked --features advanced \
+		--root $(NEX_GEN_ROOT) nexgen
 
 ##### Clean #####
 clean:

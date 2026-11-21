@@ -64,21 +64,12 @@ func (cfg config) validatePaths() error {
 
 func main() {
 	root := flag.String("root", ".", "directory holding the proto tree; also the sole import path")
-	outDir := flag.String("out", "", "directory to write the projected tree into (defaults to -root/ as api is still different from api_next)")
+	outDir := flag.String("out", "", "required output directory (must be empty or nonexistent)")
 	cfg := defaultConfig()
 	flag.StringVar(&cfg.nextDir, "next", cfg.nextDir, "source proto subdirectory relative to -root")
 	flag.StringVar(&cfg.stableDir, "stable", cfg.stableDir, "stable proto subdirectory relative to -out")
 	flag.StringVar(&cfg.draftSchema, "draft-schema", cfg.draftSchema, "draft option schema path relative to -root")
 	flag.Parse()
-
-	if info, err := os.Stat(*root); err != nil || !info.IsDir() {
-		fmt.Fprintf(os.Stderr, "-root %q must be an existing directory\n", *root)
-		os.Exit(1)
-	}
-	if *outDir == "" {
-		*outDir = *root
-	}
-
 	if err := cfg.stableProtosGenerator(context.Background(), *root, *outDir); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -86,8 +77,33 @@ func main() {
 }
 
 func (cfg config) stableProtosGenerator(ctx context.Context, root, outDir string) error {
+	if outDir == "" {
+		return errors.New("-out is required")
+	}
 	if err := cfg.validatePaths(); err != nil {
 		return err
+	}
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return fmt.Errorf("prepare -out %q: %w", outDir, err)
+	}
+	out, err := os.OpenRoot(outDir)
+	if err != nil {
+		return fmt.Errorf("open -out %q: %w", outDir, err)
+	}
+	defer out.Close()
+	entries, err := fs.ReadDir(out.FS(), ".")
+	if err != nil {
+		return fmt.Errorf("read -out %q: %w", outDir, err)
+	}
+	if len(entries) != 0 {
+		return fmt.Errorf("-out %q must be empty", outDir)
+	}
+	info, err := os.Stat(root)
+	if err != nil {
+		return fmt.Errorf("inspect -root %q: %w", root, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("-root %q must be an existing directory", root)
 	}
 
 	paths, err := cfg.getAPINextPaths(root)
@@ -126,7 +142,7 @@ func (cfg config) stableProtosGenerator(ctx context.Context, root, outDir string
 		return err
 	}
 
-	return writeFiles(outDir, stableProtos)
+	return writeFiles(out, stableProtos)
 }
 
 // loadAPINext lowers the configured source tree, discovers the draft-tag extension set and
@@ -308,14 +324,19 @@ func (cfg config) stablePath(path string) string {
 	return path
 }
 
-func writeFiles(dir string, files map[string]string) error {
-	for path, text := range files {
-		dest := filepath.Join(dir, filepath.FromSlash(path))
-		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+func writeFiles(out *os.Root, files map[string]string) error {
+	for _, path := range slices.Sorted(maps.Keys(files)) {
+		dest := filepath.FromSlash(path)
+		if err := out.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(dest, []byte(text), 0o644); err != nil {
-			return fmt.Errorf("write %q: %w", dest, err)
+		file, err := out.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if err != nil {
+			return err
+		}
+		_, writeErr := file.WriteString(files[path])
+		if err := errors.Join(writeErr, file.Close()); err != nil {
+			return fmt.Errorf("write %q: %w", file.Name(), err)
 		}
 	}
 	return nil

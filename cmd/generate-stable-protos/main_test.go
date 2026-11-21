@@ -12,8 +12,10 @@ import (
 )
 
 func TestStableProjection(t *testing.T) {
+	t.Parallel()
 	for _, fixture := range []string{"classification/valid", "classification/message-types", "imports"} {
 		t.Run(fixture, func(t *testing.T) {
+			t.Parallel()
 			expected := readTree(t, filepath.Join("testdata", fixture, "expected"))
 			for range 2 {
 				out := t.TempDir()
@@ -31,12 +33,14 @@ func TestStableProjection(t *testing.T) {
 }
 
 func TestAnnotationClassification(t *testing.T) {
+	t.Parallel()
 	dirs, err := os.ReadDir("testdata/classification")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, dir := range dirs {
 		t.Run(dir.Name(), func(t *testing.T) {
+			t.Parallel()
 			fixture := filepath.Join("testdata/classification", dir.Name())
 			data, err := os.ReadFile(filepath.Join(fixture, "expected.json"))
 			if err != nil {
@@ -63,8 +67,10 @@ func TestAnnotationClassification(t *testing.T) {
 }
 
 func TestProjectionFailures(t *testing.T) {
+	t.Parallel()
 	for _, fixture := range []string{"dangling", "missing"} {
 		t.Run(fixture, func(t *testing.T) {
+			t.Parallel()
 			out := t.TempDir()
 			sentinel := filepath.Join(out, "retained")
 			if err := os.WriteFile(sentinel, []byte("old"), 0600); err != nil {
@@ -82,6 +88,7 @@ func TestProjectionFailures(t *testing.T) {
 }
 
 func TestRewriteImportPaths(t *testing.T) {
+	t.Parallel()
 	input := `syntax = "proto3";
 import public /* before */ 'temporal/api_next/used.proto' /* after */;
 import "google/protobuf/any.proto";
@@ -109,12 +116,14 @@ option java_package = "temporal/api_next/used.proto";
 }
 
 func TestStableReplacement(t *testing.T) {
+	t.Parallel()
 	script, err := filepath.Abs("../../scripts/stable-api.sh")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, failure := range []string{"generation", "formatting", "replacement", "none"} {
 		t.Run(failure, func(t *testing.T) {
+			t.Parallel()
 			root := t.TempDir()
 			tools := t.TempDir()
 			if err := os.MkdirAll(filepath.Join(root, "temporal/api/nested"), 0755); err != nil {

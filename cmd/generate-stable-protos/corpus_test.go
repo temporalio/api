@@ -16,11 +16,11 @@ func TestRepoAPINext(t *testing.T) {
 	if err := testConfig.stableProtosGenerator(t.Context(), root, out); err != nil {
 		t.Fatal(err)
 	}
-	problems, err := oracle.Check(oracleConfig, root, out)
+	result, err := oracle.Check(oracleConfig, root, out)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, problem := range problems {
+	for _, problem := range result.AllProblems() {
 		t.Error(problem)
 	}
 }

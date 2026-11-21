@@ -1,0 +1,19 @@
+syntax = "proto3";
+package fixture;
+import "temporal/api_next/protometa/v1/annotations.proto";
+import "temporal/api_next/protometa/v1/draft.proto";
+message Request { Item item = 1; }
+message Item {
+  string id = 1;
+  string draft_id = 2 [(temporal.api.protometa.v1.draft) = "feature-a"];
+}
+message Response {}
+service Service {
+  rpc Call (Request) returns (Response) {
+    option (temporal.api.protometa.v1.request_header) = { header: "item-kind" value: "item" };
+    option (temporal.api.protometa.v1.request_header) = {
+      header: "item-id"
+      value: "{item.id}/{item.draft_id}"
+    };
+  }
+}

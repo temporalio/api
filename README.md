@@ -6,9 +6,25 @@ This repository contains both the protobuf descriptors and OpenAPI documentation
 
 Install as git submodule to the project.
 
+## Consumers
+
+Compile either `temporal/api` (stable) or `temporal/api_next` (preview). Never compile both together.
+The trees declare the same proto packages, so compiling both causes duplicate symbols.
+The default Buf module in `buf.yaml` excludes `temporal/api_next`.
+Use `buf.next.yaml` to compile the preview tree.
+
 ## Contribution
 
-Make your change to the temporal/api_next/proto files, and run `make` to update the openapi definitions.
+Edit proto files under `temporal/api_next/`. Run `make stable-api` to regenerate `temporal/api/`, or run
+`make` to also update the OpenAPI definitions. Do not edit `temporal/api/` by hand. Commit the regenerated
+tree with your changes because CI fails if it is stale.
+
+Use the `draft` field option or the `draft_message` message option from
+[`temporal/api_next/protometa/v1/draft.proto`](temporal/api_next/protometa/v1/draft.proto) to mark draft
+declarations. For example, `string user = 7 [(temporal.api.protometa.v1.draft) = "update-user-tagging"];`
+is a draft field. The generator removes annotated declarations from the stable tree.
+See the [draft API specification](docs/draft-apis.md) for annotation rules, runtime behavior, and implementation gaps.
+
 Rust is also required because `make` installs and runs `nex-gen` when regenerating system Nexus WIT files.
 
 ## Breaking changes

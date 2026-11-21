@@ -43,8 +43,13 @@ type schemaGen struct {
 	rt       *rapid.T
 	b        *strings.Builder
 	comments int
-	// types are the message names fields in the current file may reference.
-	types []string
+	// types are the messages fields in the current file may reference and their draft status.
+	types []schemaType
+}
+
+type schemaType struct {
+	name  string
+	draft bool
 }
 
 func newSchemaGen(rt *rapid.T) *schemaGen { return &schemaGen{rt: rt} }
@@ -58,20 +63,20 @@ func (g *schemaGen) files() map[string]string {
 	}
 }
 
-func (g *schemaGen) file(name string, messages int, imported []string) string {
+func (g *schemaGen) file(name string, messages int, imported []schemaType) string {
 	g.b = &strings.Builder{}
 	g.b.WriteString("syntax = \"proto3\";\npackage fixture;\n")
 	g.b.WriteString("import \"" + testConfig.draftSchema + "\";\n")
 	if name == "dependent" {
 		g.b.WriteString("import \"" + testConfig.nextDir + "/base.proto\";\n")
 	}
-	names := make([]string, messages)
-	for i := range names {
-		names[i] = fmt.Sprintf("%s%d", strings.ToUpper(name[:1]), i)
+	types := make([]schemaType, messages)
+	for i := range types {
+		types[i] = schemaType{fmt.Sprintf("%s%d", strings.ToUpper(name[:1]), i), g.draft("message")}
 	}
-	g.types = append(append([]string{}, imported...), names...)
-	for _, n := range names {
-		g.message(n, "", 0, false)
+	g.types = append(append([]schemaType{}, imported...), types...)
+	for _, typ := range types {
+		g.message(typ, "", 0, false)
 	}
 	return g.b.String()
 }
@@ -99,35 +104,37 @@ func (g *schemaGen) draft(what string) bool {
 	return rapid.IntRange(0, 3).Draw(g.rt, "draft "+what) == 0
 }
 
-func (g *schemaGen) message(name, indent string, depth int, inheritedDraft bool) {
+func (g *schemaGen) message(typ schemaType, indent string, depth int, inheritedDraft bool) {
 	g.leading(indent)
-	g.b.WriteString(indent + "message " + name + " {" + g.trailing() + "\n")
+	g.b.WriteString(indent + "message " + typ.name + " {" + g.trailing() + "\n")
 	inner := indent + "  "
-	draft := inheritedDraft
-	if !inheritedDraft && g.draft("message") {
+	if !inheritedDraft && typ.draft {
 		g.b.WriteString(inner + `option (temporal.api.protometa.v1.draft_message) = "feature";` + "\n")
-		draft = true
 	}
 	number := 0
-	field := func(typ string, canAnnotate bool) {
+	field := func(decl string, annotate bool) {
 		number++
 		g.leading(inner)
-		g.b.WriteString(fmt.Sprintf("%s%s f%d = %d", inner, typ, number, number))
-		if canAnnotate && !draft && g.draft("field") {
+		g.b.WriteString(fmt.Sprintf("%s%s f%d = %d", inner, decl, number, number))
+		if annotate {
 			g.b.WriteString(` [(temporal.api.protometa.v1.draft) = "feature"]`)
 		}
 		g.b.WriteString(";" + g.trailing() + "\n")
 	}
+	randomField := func(prefix, suffix string) {
+		ref := g.fieldType()
+		field(prefix+ref.name+suffix, !typ.draft && (ref.draft || g.draft("field")))
+	}
 	for i := range rapid.IntRange(0, 5).Draw(g.rt, "members") {
 		switch rapid.IntRange(0, 6).Draw(g.rt, "member kind") {
 		case 0:
-			field(g.fieldType(), true)
+			randomField("", "")
 		case 1:
-			field("repeated "+g.fieldType(), true)
+			randomField("repeated ", "")
 		case 2:
-			field("optional "+g.fieldType(), true)
+			randomField("optional ", "")
 		case 3:
-			field("map<string, "+g.fieldType()+">", true)
+			randomField("map<string, ", ">")
 		case 4:
 			g.leading(inner)
 			g.b.WriteString(fmt.Sprintf("%soneof o%d {%s\n", inner, i, g.trailing()))
@@ -135,24 +142,25 @@ func (g *schemaGen) message(name, indent string, depth int, inheritedDraft bool)
 			inner += "  "
 			field("string", false)
 			for range rapid.IntRange(0, 2).Draw(g.rt, "additional branches") {
-				field(g.fieldType(), true)
+				randomField("", "")
 			}
 			inner = saved
 			g.b.WriteString(inner + "}" + g.trailing() + "\n")
 		case 5:
 			if depth < 2 {
-				g.message(fmt.Sprintf("N%d", i), inner, depth+1, draft)
+				nested := schemaType{fmt.Sprintf("N%d", i), typ.draft || g.draft("message")}
+				g.message(nested, inner, depth+1, typ.draft)
 			}
 		default:
-			field("string", true)
+			field("string", !typ.draft && g.draft("field"))
 		}
 	}
 	g.b.WriteString(indent + "}" + g.trailing() + "\n")
 }
 
-func (g *schemaGen) fieldType() string {
+func (g *schemaGen) fieldType() schemaType {
 	if len(g.types) > 0 && rapid.Bool().Draw(g.rt, "message type") {
 		return rapid.SampledFrom(g.types).Draw(g.rt, "type")
 	}
-	return rapid.SampledFrom([]string{"string", "int32", "bool", "bytes"}).Draw(g.rt, "scalar")
+	return schemaType{name: rapid.SampledFrom([]string{"string", "int32", "bool", "bytes"}).Draw(g.rt, "scalar")}
 }

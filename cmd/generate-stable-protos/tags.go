@@ -216,7 +216,7 @@ func referencesDraftField(tags draftTags, message ir.Type, path string) bool {
 		if field.IsZero() {
 			return false
 		}
-		if isDraftMember(tags, field) || tags.has(field.Oneof().Options()) {
+		if tags.has(field.Options()) || tags.has(field.Oneof().Options()) {
 			return true
 		}
 		message = field.Element()
@@ -224,21 +224,11 @@ func referencesDraftField(tags draftTags, message ir.Type, path string) bool {
 	return false
 }
 
-func isDraftType(tags draftTags, t ir.Type) bool {
-	if t.IsZero() || t.IsPredeclared() {
-		return false
+func (tags draftTags) typeFeature(t ir.Type) draftFeature {
+	for ; !t.IsZero() && !t.IsPredeclared(); t = t.Parent() {
+		if feature := tags.feature(t.Options()); feature != "" {
+			return feature
+		}
 	}
-	return tags.has(t.Options()) || isDraftType(tags, t.Parent())
-}
-
-func isDraftMember(tags draftTags, m ir.Member) bool {
-	if tags.has(m.Options()) {
-		return true
-	}
-	t := m.Element()
-	if m.IsMap() {
-		_, value := t.EntryFields()
-		t = value.Element()
-	}
-	return isDraftType(tags, t)
+	return ""
 }

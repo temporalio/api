@@ -33,6 +33,8 @@ type fixtureExpectation struct {
 	Error string `json:"error"`
 	// Annotations are the draft annotations the generator must accept.
 	Annotations draftAnnotations `json:"annotations"`
+	// ValidationOnly limits the fixture to source validation until projection supports it.
+	ValidationOnly bool `json:"validation_only"`
 }
 
 // findFixtures returns the fixture directories under testdata, relative to it.
@@ -73,6 +75,10 @@ func runFixture(t *testing.T, dir string) {
 	root := filepath.Join(dir, "input")
 	out := t.TempDir()
 
+	if expected.ValidationOnly {
+		checkFixtureAnnotations(t, root, expected.Annotations)
+		return
+	}
 	if expected.Error != "" {
 		before := readTree(t, out)
 		err := testConfig.stableProtosGenerator(t.Context(), root, out)
@@ -98,17 +104,7 @@ func runFixture(t *testing.T, dir string) {
 	}
 	checkIdempotent(t.Context(), t, root, out, t.TempDir())
 
-	paths, err := testConfig.getAPINextPaths(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _, annotations, err := testConfig.loadAPINext(t.Context(), root, paths)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !maps.Equal(expected.Annotations, annotations) {
-		t.Errorf("draft annotations differ\nexpected: %v\nactual: %v", expected.Annotations, annotations)
-	}
+	checkFixtureAnnotations(t, root, expected.Annotations)
 
 	if _, err := os.Stat(filepath.Join(dir, "expected")); err == nil {
 		bodies := map[string]string{}
@@ -125,6 +121,21 @@ func runFixture(t *testing.T, dir string) {
 				t.Errorf("%s differs from the golden\nexpected:\n%s\nactual:\n%s", path, golden[path], bodies[path])
 			}
 		}
+	}
+}
+
+func checkFixtureAnnotations(t *testing.T, root string, expected draftAnnotations) {
+	t.Helper()
+	paths, err := testConfig.getAPINextPaths(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, annotations, err := testConfig.loadAPINext(t.Context(), root, paths)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !maps.Equal(expected, annotations) {
+		t.Errorf("draft annotations differ\nexpected: %v\nactual: %v", expected, annotations)
 	}
 }
 

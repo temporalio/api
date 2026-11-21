@@ -25,9 +25,7 @@ func getDraftTags(file *ir.File) (draftTags, error) {
 		"draft_enum_value": "EnumValueOptions",
 		"draft_service":    "ServiceOptions",
 		"draft_method":     "MethodOptions",
-		"draft_file":       "FileOptions",
 		"draft_oneof":      "OneofOptions",
-		"draft_extension":  "FieldOptions",
 	}
 	for ext := range seq.Values(file.AllExtensions()) {
 		name, known := extendees[ext.Name()]
@@ -50,94 +48,83 @@ func (tags draftTags) contains(name ir.FullName) bool {
 	return ok
 }
 
-func (tags draftTags) has(opts ir.MessageValue) bool {
+func (tags draftTags) annotation(opts ir.MessageValue) ir.Value {
 	for v := range opts.Fields() {
 		if tags.contains(v.Field().FullName()) {
-			return true
+			return v
 		}
 	}
-	return false
+	return ir.Value{}
+}
+
+func (tags draftTags) has(opts ir.MessageValue) bool {
+	return !tags.annotation(opts).IsZero()
+}
+
+func (tags draftTags) feature(opts ir.MessageValue) draftFeature {
+	feature, _ := tags.annotation(opts).AsString()
+	return feature
 }
 
 type draftAnnotations map[ir.FullName]draftFeature
 
 type draftFeature = string
 
-// validateDraftAnnotations rejects unsupported or malformed draft annotations in f and
-// returns the accepted ones.
+// validateDraftAnnotations checks annotation placement and feature names and returns the explicit annotations.
 func validateDraftAnnotations(tags draftTags, f *ir.File) (draftAnnotations, error) {
 	accepted := draftAnnotations{}
-	draftFieldName := tags.packageName.Append("draft")
-	draftMessageName := tags.packageName.Append("draft_message")
-	check := func(name string, placement string, opts ir.MessageValue) error {
-		for v := range opts.Fields() {
-			if !tags.contains(v.Field().FullName()) {
-				continue
-			}
-			if !((placement == "field" && v.Field().FullName() == draftFieldName) ||
-				(placement == "message" && v.Field().FullName() == draftMessageName)) {
-				return fmt.Errorf("%s: unsupported draft annotation on %s", name, placement)
-			}
-			feature, ok := v.AsString()
-			if !ok || feature == "" || strings.ContainsFunc(feature, unicode.IsSpace) {
-				return fmt.Errorf("%s: draft feature must be nonempty and contain no whitespace", name)
-			}
-			accepted[ir.FullName(name)] = feature
+	check := func(name ir.FullName, placement, option string, opts ir.MessageValue) error {
+		v := tags.annotation(opts)
+		if v.IsZero() {
+			return nil
 		}
+		if option == "" || v.Field().FullName() != tags.packageName.Append(option) {
+			return fmt.Errorf("%s: unsupported draft annotation on %s", name, placement)
+		}
+		feature, ok := v.AsString()
+		if !ok || feature == "" || strings.ContainsFunc(feature, unicode.IsSpace) {
+			return fmt.Errorf("%s: draft feature must be nonempty and contain no whitespace", name)
+		}
+		accepted[name] = feature
 		return nil
 	}
-	if err := check(f.Path(), "file", f.Options()); err != nil {
+	if err := check(ir.FullName(f.Path()), "file", "", f.Options()); err != nil {
 		return nil, err
 	}
 	for t := range seq.Values(f.AllTypes()) {
-		placement := "message"
+		placement, option := "message", "draft_message"
 		if t.IsEnum() {
-			placement = "enum"
+			placement, option = "enum", "draft_enum"
 		}
-		if err := check(string(t.FullName()), placement, t.Options()); err != nil {
+		if err := check(t.FullName(), placement, option, t.Options()); err != nil {
 			return nil, err
 		}
 		for m := range seq.Values(t.Members()) {
-			placement := "field"
+			placement, option := "field", "draft"
 			if m.IsEnumValue() {
-				placement = "enum value"
+				placement, option = "enum value", "draft_enum_value"
 			}
-			if err := check(string(m.FullName()), placement, m.Options()); err != nil {
+			if err := check(m.FullName(), placement, option, m.Options()); err != nil {
 				return nil, err
 			}
 		}
 		for o := range seq.Values(t.Oneofs()) {
-			if err := check(string(o.FullName()), "oneof", o.Options()); err != nil {
+			if err := check(o.FullName(), "oneof", "draft_oneof", o.Options()); err != nil {
 				return nil, err
 			}
 		}
 	}
 	for ext := range seq.Values(f.AllExtensions()) {
-		if err := check(string(ext.FullName()), "extension", ext.Options()); err != nil {
+		if err := check(ext.FullName(), "extension", "", ext.Options()); err != nil {
 			return nil, err
-		}
-		for _, t := range []ir.Type{ext.Element(), ext.Container(), ext.Parent()} {
-			if isDraftType(tags, t) {
-				return nil, fmt.Errorf("%s: extension references draft type %s unsupported by omission", ext.FullName(), t.FullName())
-			}
 		}
 	}
 	for s := range seq.Values(f.Services()) {
-		if err := check(string(s.FullName()), "service", s.Options()); err != nil {
+		if err := check(s.FullName(), "service", "draft_service", s.Options()); err != nil {
 			return nil, err
 		}
 		for m := range seq.Values(s.Methods()) {
-			if err := check(string(m.FullName()), "method", m.Options()); err != nil {
-				return nil, err
-			}
-			input, _ := m.Input()
-			output, _ := m.Output()
-			for _, t := range []ir.Type{input, output} {
-				if isDraftType(tags, t) {
-					return nil, fmt.Errorf("%s: RPC references draft type %s unavailable in the stable API", m.FullName(), t.FullName())
-				}
-			}
-			if err := validateMethodFieldReferences(tags, m, input, output); err != nil {
+			if err := check(m.FullName(), "method", "draft_method", m.Options()); err != nil {
 				return nil, err
 			}
 		}
@@ -229,7 +216,7 @@ func referencesDraftField(tags draftTags, message ir.Type, path string) bool {
 		if field.IsZero() {
 			return false
 		}
-		if isDraftMember(tags, field) {
+		if isDraftMember(tags, field) || tags.has(field.Oneof().Options()) {
 			return true
 		}
 		message = field.Element()

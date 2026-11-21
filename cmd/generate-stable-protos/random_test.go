@@ -79,7 +79,7 @@ func (g *schemaGen) file(name string, messages int, imported []string) string {
 	}
 	g.types = append(append([]string{}, imported...), names...)
 	for _, n := range names {
-		g.message(n, "", 0)
+		g.message(n, "", 0, false)
 	}
 	return g.b.String()
 }
@@ -107,19 +107,21 @@ func (g *schemaGen) draft(what string) bool {
 	return rapid.IntRange(0, 3).Draw(g.rt, "draft "+what) == 0
 }
 
-func (g *schemaGen) message(name, indent string, depth int) {
+func (g *schemaGen) message(name, indent string, depth int, inheritedDraft bool) {
 	g.leading(indent)
 	g.b.WriteString(indent + "message " + name + " {" + g.trailing() + "\n")
 	inner := indent + "  "
-	if g.draft("message") {
+	draft := inheritedDraft
+	if !inheritedDraft && g.draft("message") {
 		g.b.WriteString(inner + `option (temporal.api.protometa.v1.draft_message) = "feature";` + "\n")
+		draft = true
 	}
 	number := 0
-	field := func(typ string) {
+	field := func(typ string, canAnnotate bool) {
 		number++
 		g.leading(inner)
 		g.b.WriteString(fmt.Sprintf("%s%s f%d = %d", inner, typ, number, number))
-		if g.draft("field") {
+		if canAnnotate && !draft && g.draft("field") {
 			g.b.WriteString(` [(temporal.api.protometa.v1.draft) = "feature"]`)
 		}
 		g.b.WriteString(";" + g.trailing() + "\n")
@@ -127,29 +129,30 @@ func (g *schemaGen) message(name, indent string, depth int) {
 	for i := range rapid.IntRange(0, 5).Draw(g.rt, "members") {
 		switch rapid.IntRange(0, 6).Draw(g.rt, "member kind") {
 		case 0:
-			field(g.fieldType())
+			field(g.fieldType(), true)
 		case 1:
-			field("repeated " + g.fieldType())
+			field("repeated "+g.fieldType(), true)
 		case 2:
-			field("optional " + g.fieldType())
+			field("optional "+g.fieldType(), true)
 		case 3:
-			field("map<string, " + g.fieldType() + ">")
+			field("map<string, "+g.fieldType()+">", true)
 		case 4:
 			g.leading(inner)
 			g.b.WriteString(fmt.Sprintf("%soneof o%d {%s\n", inner, i, g.trailing()))
 			saved := inner
 			inner += "  "
-			for range rapid.IntRange(1, 3).Draw(g.rt, "branches") {
-				field(g.fieldType())
+			field("string", false)
+			for range rapid.IntRange(0, 2).Draw(g.rt, "additional branches") {
+				field(g.fieldType(), true)
 			}
 			inner = saved
 			g.b.WriteString(inner + "}" + g.trailing() + "\n")
 		case 5:
 			if depth < 2 {
-				g.message(fmt.Sprintf("N%d", i), inner, depth+1)
+				g.message(fmt.Sprintf("N%d", i), inner, depth+1, draft)
 			}
 		default:
-			field("string")
+			field("string", true)
 		}
 	}
 	g.b.WriteString(indent + "}" + g.trailing() + "\n")

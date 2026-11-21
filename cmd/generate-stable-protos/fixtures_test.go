@@ -37,6 +37,8 @@ type fixtureExpectation struct {
 	Error string `json:"error"`
 	// Annotations are the draft annotations the generator must accept.
 	Annotations draftAnnotations `json:"annotations"`
+	// ValidationOnly limits the fixture to source validation until projection supports it.
+	ValidationOnly bool `json:"validation_only"`
 	// Problems are substrings of the problems the oracle must report, one each; any
 	// other problem fails the fixture.
 	Problems []string `json:"problems"`
@@ -109,6 +111,10 @@ func runFixture(t *testing.T, dir string) {
 // the fixture's expectations. It reports whether out holds output for the oracle.
 func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpectation) bool {
 	t.Helper()
+	if expected.ValidationOnly {
+		checkFixtureAnnotations(t, root, expected.Annotations)
+		return false
+	}
 	if expected.Error != "" {
 		before := readTree(t, out)
 		err := testConfig.stableProtosGenerator(t.Context(), root, out)
@@ -134,17 +140,7 @@ func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpect
 	}
 	checkIdempotent(t.Context(), t, root, out, t.TempDir())
 
-	paths, err := testConfig.getAPINextPaths(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _, annotations, err := testConfig.loadAPINext(t.Context(), root, paths)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !maps.Equal(expected.Annotations, annotations) {
-		t.Errorf("draft annotations differ\nexpected: %v\nactual: %v", expected.Annotations, annotations)
-	}
+	checkFixtureAnnotations(t, root, expected.Annotations)
 
 	if _, err := os.Stat(filepath.Join(dir, "expected")); err == nil {
 		bodies := map[string]string{}
@@ -163,6 +159,21 @@ func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpect
 		}
 	}
 	return true
+}
+
+func checkFixtureAnnotations(t *testing.T, root string, expected draftAnnotations) {
+	t.Helper()
+	paths, err := testConfig.getAPINextPaths(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, annotations, err := testConfig.loadAPINext(t.Context(), root, paths)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !maps.Equal(expected, annotations) {
+		t.Errorf("draft annotations differ\nexpected: %v\nactual: %v", expected, annotations)
+	}
 }
 
 var testConfig = defaultConfig()

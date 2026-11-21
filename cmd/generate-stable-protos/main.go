@@ -146,8 +146,8 @@ func (cfg config) stableProtosGenerator(ctx context.Context, root, outDir string
 	return writeFiles(out, stableProtos)
 }
 
-// loadAPINext lowers the configured source tree, discovers the draft-tag extension set and
-// validates every draft annotation, returning the annotations it accepted.
+// loadAPINext lowers the configured source tree, discovers the draft-tag extension set, and
+// validates the draft schema rules, returning the explicit annotations it accepted.
 func (cfg config) loadAPINext(ctx context.Context, root string, paths []string) (map[string]*ir.File, draftTags, draftAnnotations, error) {
 	if !slices.Contains(paths, cfg.draftSchema) {
 		paths = slices.Concat(paths, []string{cfg.draftSchema})
@@ -177,17 +177,28 @@ func (cfg config) loadAPINext(ctx context.Context, root string, paths []string) 
 		byPath[p] = irFile
 	}
 
-	tags, err := getDraftTags(byPath[cfg.draftSchema])
+	draftSchema := byPath[cfg.draftSchema]
+	tags, err := getDraftTags(draftSchema)
 	if err != nil {
 		return nil, draftTags{}, nil, err
 	}
 	annotations := draftAnnotations{}
 	for _, p := range paths {
-		accepted, err := validateDraftAnnotations(tags, byPath[p])
+		f := byPath[p]
+		accepted, err := validateDraftAnnotations(tags, f)
 		if err != nil {
 			return nil, draftTags{}, nil, err
 		}
+		if len(accepted) > 0 && !f.ImportFor(draftSchema).Direct {
+			return nil, draftTags{}, nil, fmt.Errorf("%s: draft annotations require a direct import of %s", p, cfg.draftSchema)
+		}
 		maps.Copy(annotations, accepted)
+	}
+	endpointUses := make(rpcEndpointUses)
+	for _, p := range paths {
+		if err := validateDraftRules(tags, byPath[p], endpointUses); err != nil {
+			return nil, draftTags{}, nil, err
+		}
 	}
 	return byPath, tags, annotations, nil
 }

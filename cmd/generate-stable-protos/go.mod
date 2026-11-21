@@ -2,7 +2,11 @@ module github.com/temporalio/api/cmd/generate-stable-protos
 
 go 1.26.7
 
-require github.com/bufbuild/protocompile v0.14.2-0.20260825174057-3dfa26e2df9b
+require (
+	github.com/bufbuild/protocompile v0.14.2-0.20260825174057-3dfa26e2df9b
+	github.com/google/go-cmp v0.7.0
+	google.golang.org/protobuf v1.36.12
+)
 
 require (
 	buf.build/gen/go/bufbuild/protodescriptor/protocolbuffers/go v1.36.12-20250109164928-1da0de137947.1 // indirect
@@ -12,5 +16,4 @@ require (
 	github.com/tidwall/btree v1.8.1 // indirect
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	google.golang.org/protobuf v1.36.12 // indirect
 )

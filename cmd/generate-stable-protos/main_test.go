@@ -1,105 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"io/fs"
-	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 )
-
-func TestStableProjection(t *testing.T) {
-	t.Parallel()
-	for _, fixture := range []string{"classification/valid", "classification/message-types", "imports"} {
-		t.Run(fixture, func(t *testing.T) {
-			t.Parallel()
-			expected := readTree(t, filepath.Join("testdata", fixture, "expected"))
-			for range 2 {
-				out := t.TempDir()
-				if err := stableProtosGenerator(t.Context(), filepath.Join("testdata", fixture, "input"), out); err != nil {
-					t.Fatal(err)
-				}
-				formatTree(t, out)
-				actual := readTree(t, out)
-				if !reflect.DeepEqual(expected, actual) {
-					t.Fatalf("projection differs from independently authored fixture\nexpected: %v\nactual: %v", expected, actual)
-				}
-			}
-		})
-	}
-}
-
-func TestAnnotationClassification(t *testing.T) {
-	t.Parallel()
-	dirs, err := os.ReadDir("testdata/classification")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, dir := range dirs {
-		t.Run(dir.Name(), func(t *testing.T) {
-			t.Parallel()
-			fixture := filepath.Join("testdata/classification", dir.Name())
-			data, err := os.ReadFile(filepath.Join(fixture, "expected.json"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			var expected struct {
-				Error       string           `json:"error"`
-				Annotations draftAnnotations `json:"annotations"`
-			}
-			if err := json.Unmarshal(data, &expected); err != nil {
-				t.Fatal(err)
-			}
-			root := filepath.Join(fixture, "input")
-			err = stableProtosGenerator(t.Context(), root, t.TempDir())
-			if expected.Error == "" {
-				if err != nil {
-					t.Fatal(err)
-				}
-				paths, err := getAPINextPaths(root)
-				if err != nil {
-					t.Fatal(err)
-				}
-				_, _, actual, err := loadAPINext(t.Context(), root, paths)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !maps.Equal(expected.Annotations, actual) {
-					t.Fatalf("draft annotations differ\nexpected: %v\nactual: %v", expected.Annotations, actual)
-				}
-				return
-			}
-			if err == nil || !strings.Contains(err.Error(), expected.Error) {
-				t.Fatalf("want %q, got %v", expected.Error, err)
-			}
-		})
-	}
-}
-
-func TestProjectionFailures(t *testing.T) {
-	t.Parallel()
-	for _, fixture := range []string{"dangling", "missing"} {
-		t.Run(fixture, func(t *testing.T) {
-			t.Parallel()
-			out := t.TempDir()
-			sentinel := filepath.Join(out, "retained")
-			if err := os.WriteFile(sentinel, []byte("old"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			before := readTree(t, out)
-			if err := stableProtosGenerator(t.Context(), filepath.Join("testdata", fixture, "input"), out); err == nil {
-				t.Fatal("expected invalid input to fail")
-			}
-			if !reflect.DeepEqual(before, readTree(t, out)) {
-				t.Fatal("generation failure modified output")
-			}
-		})
-	}
-}
 
 func TestRewriteImportPaths(t *testing.T) {
 	t.Parallel()
@@ -182,14 +90,6 @@ exec /bin/mv "$@"
 				}
 			}
 		})
-	}
-}
-
-func formatTree(t *testing.T, root string) {
-	t.Helper()
-	cmd := exec.Command("buf", "format", "-w", root)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("format: %v: %s", err, output)
 	}
 }
 

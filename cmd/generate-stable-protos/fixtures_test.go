@@ -42,6 +42,8 @@ type fixtureExpectation struct {
 	// Problems are substrings of the problems the oracle must report, one each; any
 	// other problem fails the fixture.
 	Problems []string `json:"problems"`
+	// DeclarationChanges lists the exact descriptor additions or removals the oracle must report.
+	DeclarationChanges []oracle.DeclarationChange `json:"declaration_changes"`
 }
 
 // findFixtures returns the fixture directories under testdata, relative to it.
@@ -90,9 +92,16 @@ func runFixture(t *testing.T, dir string) {
 		t.Fatal(err)
 	}
 
-	problems, err := oracle.Check(oracleConfig, root, out)
+	result, err := oracle.Check(oracleConfig, root, out)
 	if err != nil {
 		t.Fatal(err)
+	}
+	problems := result.AllProblems()
+	if len(expected.DeclarationChanges) > 0 {
+		if !slices.Equal(result.DeclarationChanges, expected.DeclarationChanges) || result.DescriptorDiff == "" {
+			t.Errorf("want declaration changes %v, got %v\n%s", expected.DeclarationChanges, result.DeclarationChanges, result.DescriptorDiff)
+		}
+		problems = result.Problems
 	}
 	for _, want := range expected.Problems {
 		i := slices.IndexFunc(problems, func(problem string) bool { return strings.Contains(problem, want) })

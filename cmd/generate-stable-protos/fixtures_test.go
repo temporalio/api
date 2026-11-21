@@ -115,7 +115,7 @@ func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpect
 		if err := os.WriteFile(filepath.Join(out, "retained"), []byte("old"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		err := stableProtosGenerator(t.Context(), root, out)
+		err := testConfig.stableProtosGenerator(t.Context(), root, out)
 		if err == nil || !strings.Contains(err.Error(), expected.Error) {
 			t.Fatalf("want error %q, got %v", expected.Error, err)
 		}
@@ -125,12 +125,12 @@ func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpect
 		return false
 	}
 
-	if err := stableProtosGenerator(t.Context(), root, out); err != nil {
+	if err := testConfig.stableProtosGenerator(t.Context(), root, out); err != nil {
 		t.Fatal(err)
 	}
 	actual := readTree(t, out)
 	again := t.TempDir()
-	if err := stableProtosGenerator(t.Context(), root, again); err != nil {
+	if err := testConfig.stableProtosGenerator(t.Context(), root, again); err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(actual, readTree(t, again)) {
@@ -138,11 +138,11 @@ func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpect
 	}
 	checkIdempotent(t.Context(), t, root, out, t.TempDir())
 
-	paths, err := getAPINextPaths(root)
+	paths, err := testConfig.getAPINextPaths(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _, annotations, err := loadAPINext(t.Context(), root, paths)
+	_, _, annotations, err := testConfig.loadAPINext(t.Context(), root, paths)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,10 +169,12 @@ func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpect
 	return true
 }
 
+var testConfig = defaultConfig()
+
 var oracleConfig = oracle.Config{
-	NextPrefix:   apiNextPrefix,
-	StablePrefix: stableAPIPrefix,
-	DraftFile:    draftTagsPath,
+	NextPrefix:   testConfig.nextDir + "/",
+	StablePrefix: testConfig.stableDir + "/",
+	DraftFile:    testConfig.draftSchema,
 	Header:       generatedHeader,
 }
 
@@ -191,20 +193,20 @@ func checkIdempotent(ctx context.Context, t testingT, root, first, scratch strin
 	next := filepath.Join(scratch, "next")
 	// An import may have comments before its path, and the first literal of a path split
 	// across literals is "temporal/api" on its own.
-	stableImport := regexp.MustCompile(`(?m)^(import\b(?:\s+|/\*[^*]*\*/|public|weak)*["'])` + regexp.QuoteMeta(strings.TrimSuffix(stableAPIPrefix, "/")) + `(["'/])`)
+	stableImport := regexp.MustCompile(`(?m)^(import\b(?:\s+|/\*[^*]*\*/|public|weak)*["'])` + regexp.QuoteMeta(strings.TrimSuffix(oracleConfig.StablePrefix, "/")) + `(["'/])`)
 	for path, text := range readTree(t, first) {
 		body, ok := strings.CutPrefix(text, generatedHeader)
 		if !ok {
 			t.Fatalf("%s: missing generated header", path)
 		}
-		body = stableImport.ReplaceAllString(body, `${1}`+strings.TrimSuffix(apiNextPrefix, "/")+`$2`)
-		writeFile(t, filepath.Join(next, apiNextPrefix, strings.TrimPrefix(path, stableAPIPrefix)), body)
+		body = stableImport.ReplaceAllString(body, `${1}`+strings.TrimSuffix(oracleConfig.NextPrefix, "/")+`$2`)
+		writeFile(t, filepath.Join(next, oracleConfig.NextPrefix, strings.TrimPrefix(path, oracleConfig.StablePrefix)), body)
 	}
-	draft, err := os.ReadFile(filepath.Join(root, draftTagsPath))
+	draft, err := os.ReadFile(filepath.Join(root, oracleConfig.DraftFile))
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(next, draftTagsPath), string(draft))
+	writeFile(t, filepath.Join(next, oracleConfig.DraftFile), string(draft))
 	// Imports outside temporal/, such as google/ and nexusannotations/, resolve as before.
 	entries, err := os.ReadDir(root)
 	if err != nil {
@@ -224,7 +226,7 @@ func checkIdempotent(ctx context.Context, t testingT, root, first, scratch strin
 	}
 
 	second := filepath.Join(scratch, "second")
-	if err := stableProtosGenerator(ctx, next, second); err != nil {
+	if err := testConfig.stableProtosGenerator(ctx, next, second); err != nil {
 		t.Fatalf("second pass: %v", err)
 	}
 	want, got := readTree(t, first), readTree(t, second)

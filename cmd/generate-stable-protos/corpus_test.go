@@ -13,7 +13,7 @@ func TestRepoAPINext(t *testing.T) {
 	t.Parallel()
 	const root = "../.."
 	out := t.TempDir()
-	if err := stableProtosGenerator(t.Context(), root, out); err != nil {
+	if err := testConfig.stableProtosGenerator(t.Context(), root, out); err != nil {
 		t.Fatal(err)
 	}
 	problems, err := oracle.Check(oracleConfig, root, out)
@@ -31,7 +31,7 @@ func TestRepoAPINextIdempotent(t *testing.T) {
 	t.Parallel()
 	const root = "../.."
 	first := t.TempDir()
-	if err := stableProtosGenerator(t.Context(), root, first); err != nil {
+	if err := testConfig.stableProtosGenerator(t.Context(), root, first); err != nil {
 		t.Fatal(err)
 	}
 	checkIdempotent(t.Context(), t, root, first, t.TempDir())

@@ -8,7 +8,6 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -75,15 +74,12 @@ func runFixture(t *testing.T, dir string) {
 	out := t.TempDir()
 
 	if expected.Error != "" {
-		sentinel := map[string]string{"retained": "old"}
-		if err := os.WriteFile(filepath.Join(out, "retained"), []byte("old"), 0o600); err != nil {
-			t.Fatal(err)
-		}
+		before := readTree(t, out)
 		err := testConfig.stableProtosGenerator(t.Context(), root, out)
 		if err == nil || !strings.Contains(err.Error(), expected.Error) {
 			t.Fatalf("want error %q, got %v", expected.Error, err)
 		}
-		if !reflect.DeepEqual(sentinel, readTree(t, out)) {
+		if !maps.Equal(before, readTree(t, out)) {
 			t.Fatal("generation failure modified output")
 		}
 		return
@@ -97,7 +93,7 @@ func runFixture(t *testing.T, dir string) {
 	if err := testConfig.stableProtosGenerator(t.Context(), root, again); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(actual, readTree(t, again)) {
+	if !maps.Equal(actual, readTree(t, again)) {
 		t.Fatal("generator output is not deterministic")
 	}
 	checkIdempotent(t.Context(), t, root, out, t.TempDir())

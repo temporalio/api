@@ -97,28 +97,28 @@ func stableProtosGenerator(ctx context.Context, root, outDir string) error {
 }
 
 // loadAPINext lowers the api_next corpus, discovers the draft-tag extension set and
-// validates every draft annotation.
-func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*ir.File, draftTags, error) {
+// validates every draft annotation, returning the annotations it accepted.
+func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*ir.File, draftTags, draftAnnotations, error) {
 	// First, lower the api_next corpus into IR.
 	results, err := lowerFiles(ctx, baseOpener(root), paths)
 	if err != nil {
-		return nil, nil, fmt.Errorf("lower api_next corpus: %w", err)
+		return nil, nil, nil, fmt.Errorf("lower api_next corpus: %w", err)
 	}
 
 	// Check for errors while indexing files by path so we can look up the draft proto in one pass.
 	byPath := make(map[string]*ir.File, len(paths))
 	for i, p := range paths {
 		if results[i].Fatal != nil {
-			return nil, nil, fmt.Errorf("%s: %w", p, results[i].Fatal)
+			return nil, nil, nil, fmt.Errorf("%s: %w", p, results[i].Fatal)
 		}
 		irFile := results[i].Value
 		if got := irFile.Path(); got != p {
-			return nil, nil, fmt.Errorf("internal error: incremental.Run result %d has path %q, expected %q", i, got, p)
+			return nil, nil, nil, fmt.Errorf("internal error: incremental.Run result %d has path %q, expected %q", i, got, p)
 		}
 		for imp := range seq.Values(irFile.Imports()) {
 			// A public re-export of the draft options proto would leak it into the stable tree.
 			if imp.Direct && imp.Public && imp.Path() == draftTagsPath {
-				return nil, nil, fmt.Errorf("%s: public import of %s is not supported; import it directly", p, draftTagsPath)
+				return nil, nil, nil, fmt.Errorf("%s: public import of %s is not supported; import it directly", p, draftTagsPath)
 			}
 		}
 		byPath[p] = irFile
@@ -126,22 +126,25 @@ func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*
 
 	draftFile, ok := byPath[draftTagsPath]
 	if !ok {
-		return nil, nil, fmt.Errorf("%s not found in the corpus; cannot discover the draft-tag extension set", draftTagsPath)
+		return nil, nil, nil, fmt.Errorf("%s not found in the corpus; cannot discover the draft-tag extension set", draftTagsPath)
 	}
 	tags, err := getDraftTags(draftFile)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+	annotations := draftAnnotations{}
 	for _, p := range paths {
-		if err := validateDraftAnnotations(tags, byPath[p]); err != nil {
-			return nil, nil, err
+		accepted, err := validateDraftAnnotations(tags, byPath[p])
+		if err != nil {
+			return nil, nil, nil, err
 		}
+		maps.Copy(annotations, accepted)
 	}
-	return byPath, tags, nil
+	return byPath, tags, annotations, nil
 }
 
 func stripDrafts(ctx context.Context, root string, paths []string) ([]string, map[string]string, map[string]draftComments, error) {
-	byPath, tags, err := loadAPINext(ctx, root, paths)
+	byPath, tags, _, err := loadAPINext(ctx, root, paths)
 	if err != nil {
 		return nil, nil, nil, err
 	}

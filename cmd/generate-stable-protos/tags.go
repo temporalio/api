@@ -11,15 +11,13 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-const (
-	draftFieldName   ir.FullName = "temporal.api.protometa.v1.draft"
-	draftMessageName ir.FullName = "temporal.api.protometa.v1.draft_message"
-)
-
-type draftTags map[ir.FullName]struct{}
+type draftTags struct {
+	packageName ir.FullName
+	names       map[ir.FullName]struct{}
+}
 
 func getDraftTags(file *ir.File) (draftTags, error) {
-	tags := make(draftTags)
+	tags := draftTags{packageName: file.Package(), names: make(map[ir.FullName]struct{})}
 	extendees := map[string]string{
 		"draft":            "FieldOptions",
 		"draft_message":    "MessageOptions",
@@ -33,23 +31,28 @@ func getDraftTags(file *ir.File) (draftTags, error) {
 	}
 	for ext := range seq.Values(file.AllExtensions()) {
 		name, known := extendees[ext.Name()]
-		if !known || ext.FullName() != ir.FullName("temporal.api.protometa.v1."+ext.Name()) {
+		if !known || ext.FullName() != tags.packageName.Append(ext.Name()) {
 			continue
 		}
 		if ext.Container().FullName() != ir.FullName("google.protobuf."+name) || ext.FDPType() != descriptorpb.FieldDescriptorProto_TYPE_STRING || ext.IsRepeated() {
-			return nil, fmt.Errorf("invalid draft option schema for %s: want singular string extending google.protobuf.%s", ext.FullName(), name)
+			return draftTags{}, fmt.Errorf("invalid draft option schema for %s: want singular string extending google.protobuf.%s", ext.FullName(), name)
 		}
-		tags[ext.FullName()] = struct{}{}
+		tags.names[ext.FullName()] = struct{}{}
 	}
-	if _, ok := tags[draftFieldName]; !ok {
-		return nil, fmt.Errorf("%s not found in %s", draftFieldName, draftTagsPath)
+	if name := tags.packageName.Append("draft"); !tags.contains(name) {
+		return draftTags{}, fmt.Errorf("%s not found in %s", name, file.Path())
 	}
 	return tags, nil
 }
 
+func (tags draftTags) contains(name ir.FullName) bool {
+	_, ok := tags.names[name]
+	return ok
+}
+
 func (tags draftTags) has(opts ir.MessageValue) bool {
 	for v := range opts.Fields() {
-		if _, ok := tags[v.Field().FullName()]; ok {
+		if tags.contains(v.Field().FullName()) {
 			return true
 		}
 	}
@@ -64,9 +67,11 @@ type draftFeature = string
 // returns the accepted ones.
 func validateDraftAnnotations(tags draftTags, f *ir.File) (draftAnnotations, error) {
 	accepted := draftAnnotations{}
+	draftFieldName := tags.packageName.Append("draft")
+	draftMessageName := tags.packageName.Append("draft_message")
 	check := func(name string, placement string, opts ir.MessageValue) error {
 		for v := range opts.Fields() {
-			if _, ok := tags[v.Field().FullName()]; !ok {
+			if !tags.contains(v.Field().FullName()) {
 				continue
 			}
 			if !((placement == "field" && v.Field().FullName() == draftFieldName) ||

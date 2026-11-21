@@ -102,23 +102,23 @@ func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*
 	// First, lower the api_next corpus into IR.
 	results, err := lowerFiles(ctx, baseOpener(root), paths)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("lower api_next corpus: %w", err)
+		return nil, draftTags{}, nil, fmt.Errorf("lower api_next corpus: %w", err)
 	}
 
 	// Check for errors while indexing files by path so we can look up the draft proto in one pass.
 	byPath := make(map[string]*ir.File, len(paths))
 	for i, p := range paths {
 		if results[i].Fatal != nil {
-			return nil, nil, nil, fmt.Errorf("%s: %w", p, results[i].Fatal)
+			return nil, draftTags{}, nil, fmt.Errorf("%s: %w", p, results[i].Fatal)
 		}
 		irFile := results[i].Value
 		if got := irFile.Path(); got != p {
-			return nil, nil, nil, fmt.Errorf("internal error: incremental.Run result %d has path %q, expected %q", i, got, p)
+			return nil, draftTags{}, nil, fmt.Errorf("internal error: incremental.Run result %d has path %q, expected %q", i, got, p)
 		}
 		for imp := range seq.Values(irFile.Imports()) {
 			// A public re-export of the draft options proto would leak it into the stable tree.
 			if imp.Direct && imp.Public && imp.Path() == draftTagsPath {
-				return nil, nil, nil, fmt.Errorf("%s: public import of %s is not supported; import it directly", p, draftTagsPath)
+				return nil, draftTags{}, nil, fmt.Errorf("%s: public import of %s is not supported; import it directly", p, draftTagsPath)
 			}
 		}
 		byPath[p] = irFile
@@ -126,17 +126,17 @@ func loadAPINext(ctx context.Context, root string, paths []string) (map[string]*
 
 	draftFile, ok := byPath[draftTagsPath]
 	if !ok {
-		return nil, nil, nil, fmt.Errorf("%s not found in the corpus; cannot discover the draft-tag extension set", draftTagsPath)
+		return nil, draftTags{}, nil, fmt.Errorf("%s not found in the corpus; cannot discover the draft-tag extension set", draftTagsPath)
 	}
 	tags, err := getDraftTags(draftFile)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, draftTags{}, nil, err
 	}
 	annotations := draftAnnotations{}
 	for _, p := range paths {
 		accepted, err := validateDraftAnnotations(tags, byPath[p])
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, draftTags{}, nil, err
 		}
 		maps.Copy(annotations, accepted)
 	}

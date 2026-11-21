@@ -8,6 +8,7 @@ import (
 )
 
 func TestDraftSchemaValidation(t *testing.T) {
+	t.Parallel()
 	schema, err := os.ReadFile("testdata/classification/valid/input/temporal/api_next/protometa/v1/draft.proto")
 	if err != nil {
 		t.Fatal(err)
@@ -20,6 +21,7 @@ func TestDraftSchemaValidation(t *testing.T) {
 		{"unrelated extension", string(schema) + "extend google.protobuf.FileOptions { bool draft_notes = 98112; }\n", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			root := t.TempDir()
 			path := filepath.Join(root, draftTagsPath)
 			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {

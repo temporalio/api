@@ -12,6 +12,7 @@ import (
 // after it that protoc attaches to nothing. The passing case also pins the raw printer
 // output, which TestStableProjection cannot see because it runs buf format first.
 func TestDraftCommentOwnership(t *testing.T) {
+	t.Parallel()
 	const fixture = "temporal/api_next/fixture.proto"
 	const after = `after a removed draft declaration would survive in the stable output; move it directly above a declaration, or delete it`
 	input, err := os.ReadFile(filepath.Join("testdata/comments/input", fixture))
@@ -58,6 +59,7 @@ func TestDraftCommentOwnership(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			root, out := t.TempDir(), t.TempDir()
 			if err := os.CopyFS(root, os.DirFS("testdata/comments/input")); err != nil {
 				t.Fatal(err)

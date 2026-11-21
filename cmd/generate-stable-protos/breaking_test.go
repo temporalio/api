@@ -9,6 +9,7 @@ import (
 )
 
 func TestDraftBreakingReservations(t *testing.T) {
+	t.Parallel()
 	config, err := filepath.Abs("../../buf.next.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -47,6 +48,7 @@ message Example { %s }
 		{"promoted", "string value = 1;", nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			after := image(t, tc.field)
 			out, err := exec.Command("buf", "breaking", after, "--against", before, "--config", config).CombinedOutput()
 			if len(tc.want) == 0 {
@@ -68,6 +70,7 @@ message Example { %s }
 }
 
 func TestDraftBreakingBootstrap(t *testing.T) {
+	t.Parallel()
 	root, err := filepath.Abs("../..")
 	if err != nil {
 		t.Fatal(err)
@@ -82,6 +85,7 @@ func TestDraftBreakingBootstrap(t *testing.T) {
 		{"invalid draft history naming the bootstrap phrase", "temporal/api_next/no .proto files/example.proto", "invalid proto", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			baseline := t.TempDir()
 			path := filepath.Join(baseline, tc.path)
 			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {

@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bufbuild/protocompile/experimental/ast"
 	"github.com/bufbuild/protocompile/experimental/ast/edit"
 	"github.com/bufbuild/protocompile/experimental/ast/printer"
 	"github.com/bufbuild/protocompile/experimental/ast/syntax"
@@ -232,7 +233,10 @@ func (cfg config) stripDrafts(ctx context.Context, root string, paths []string) 
 		if err := edit.ApplyEdits(irFile.AST(), edits); err != nil {
 			return nil, nil, nil, fmt.Errorf("delete draft declarations: %s: %w", p, err)
 		}
-		protoText, err := printFile(irFile)
+		formatting := printer.Legacy()
+		// Keep detached comments beside their original imports until pruning determines ownership.
+		formatting.CanonicalizeFileOrder = false
+		protoText, err := printer.PrintFile(printer.Options{Format: true, Formatting: formatting}, irFile.AST())
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("print %s: %w", p, err)
 		}
@@ -256,17 +260,11 @@ func (cfg config) organizeImports(ctx context.Context, root string, order []stri
 		}
 		irFile := results[i].Value
 
-		var importDels []edit.Edit
-		for j := 0; j < irFile.Imports().Len(); j++ {
-			imp := irFile.Imports().At(j)
-			if !imp.Used && !imp.Decl.IsZero() {
-				importDels = append(importDels, edit.Edit{Kind: edit.KindDelete, Target: imp.Decl.AsAny()})
-			}
-		}
-		if err := edit.ApplyEdits(irFile.AST(), importDels); err != nil {
+		file, err := pruneImports(irFile)
+		if err != nil {
 			return nil, fmt.Errorf("prune imports: %s: %w", p, err)
 		}
-		protoText, err := printFile(irFile)
+		protoText, err := printFile(file)
 		if err != nil {
 			return nil, fmt.Errorf("print %s: %w", p, err)
 		}
@@ -314,8 +312,8 @@ func lowerFiles(ctx context.Context, opener source.Opener, paths []string) ([]in
 // printFile formats the file with the legacy formatter.
 //
 // TODO: Check whether a custom formatter can reuse Buf's formatting rules.
-func printFile(file *ir.File) (string, error) {
-	return printer.PrintFile(printer.Options{Format: true, Formatting: printer.Legacy()}, file.AST())
+func printFile(file *ast.File) (string, error) {
+	return printer.PrintFile(printer.Options{Format: true, Formatting: printer.Legacy()}, file)
 }
 
 func errorDiagnostics(r *report.Report) (renderText string, hasErrors bool) {

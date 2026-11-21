@@ -134,20 +134,24 @@ func commentWords(stream *token.Stream) map[string]int {
 		if tok.Kind() != token.Comment {
 			continue
 		}
-		text, block := strings.CutPrefix(tok.Text(), "/*")
-		if block {
-			text = strings.TrimSuffix(text, "*/")
-		} else {
-			text = strings.TrimPrefix(text, "//")
-		}
-		for i, line := range strings.Split(text, "\n") {
-			if block && i > 0 {
-				line = strings.TrimPrefix(strings.TrimSpace(line), "*")
-			}
-			for _, w := range strings.Fields(line) {
-				counts[w]++
-			}
+		for _, w := range commentTokenWords(tok.Text()) {
+			counts[w]++
 		}
 	}
 	return counts
+}
+
+func commentTokenWords(text string) []string {
+	text, block := strings.CutPrefix(text, "/*")
+	if !block {
+		return strings.Fields(strings.TrimPrefix(text, "//"))
+	}
+	var words []string
+	for i, line := range strings.Split(strings.TrimSuffix(text, "*/"), "\n") {
+		if i > 0 {
+			line = strings.TrimPrefix(strings.TrimSpace(line), "*")
+		}
+		words = append(words, strings.Fields(line)...)
+	}
+	return words
 }

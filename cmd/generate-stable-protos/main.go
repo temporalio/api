@@ -190,7 +190,7 @@ func (cfg config) loadAPINext(ctx context.Context, root string, paths []string) 
 	annotations := draftAnnotations{}
 	for _, p := range paths {
 		f := byPath[p]
-		accepted, err := validateDraftAnnotations(tags, f)
+		accepted, err := validateDraftAnnotations(tags, f, p != cfg.draftSchema)
 		if err != nil {
 			return nil, draftTags{}, nil, err
 		}
@@ -251,13 +251,13 @@ func (cfg config) stripDrafts(ctx context.Context, root string, paths []string) 
 func (cfg config) organizeImports(ctx context.Context, root string, order []string, texts map[string]string) (map[string]string, error) {
 	results, err := lowerFiles(ctx, memOpener(root, texts), order)
 	if err != nil {
-		return nil, fmt.Errorf("re-lower draft-stripped corpus: %w", err)
+		return nil, stableCompileError(err)
 	}
 
 	stableTexts := make(map[string]string, len(order))
 	for i, p := range order {
 		if results[i].Fatal != nil {
-			return nil, fmt.Errorf("%s: %w", p, results[i].Fatal)
+			return nil, stableCompileError(fmt.Errorf("%s: %w", p, results[i].Fatal))
 		}
 		irFile := results[i].Value
 
@@ -282,7 +282,7 @@ func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[str
 	paths := slices.Sorted(maps.Keys(stableTexts))
 	results, err := lowerFiles(ctx, memOpener(root, stableTexts), paths)
 	if err != nil {
-		return fmt.Errorf("verify stable tree failed: %w", err)
+		return stableCompileError(err)
 	}
 	var errs error
 	for i, r := range results {
@@ -290,7 +290,14 @@ func verifyGeneratedProtos(ctx context.Context, root string, stableTexts map[str
 			errs = errors.Join(errs, fmt.Errorf("verification failed at file %q: %w", paths[i], r.Fatal))
 		}
 	}
-	return errs
+	if errs != nil {
+		return stableCompileError(errs)
+	}
+	return nil
+}
+
+func stableCompileError(err error) error {
+	return fmt.Errorf("stable projection does not compile: a retained declaration likely references a draft declaration: %w", err)
 }
 
 // lowerFiles lowers paths in one session. Each pass must construct its opener once.

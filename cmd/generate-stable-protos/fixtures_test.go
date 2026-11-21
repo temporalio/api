@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -134,6 +135,7 @@ func generateFixture(t *testing.T, dir, root, out string, expected fixtureExpect
 	if !reflect.DeepEqual(actual, readTree(t, again)) {
 		t.Fatal("generator output is not deterministic")
 	}
+	checkIdempotent(t, root, out)
 
 	paths, err := getAPINextPaths(root)
 	if err != nil {
@@ -177,4 +179,66 @@ func sortedKeys(a, b map[string]string) []string {
 	keys := maps.Clone(a)
 	maps.Copy(keys, b)
 	return slices.Sorted(maps.Keys(keys))
+}
+
+// checkIdempotent feeds the stable tree the generator wrote from root into first back in
+// as an api_next tree without drafts. The generator must then reproduce it byte for
+// byte: removing nothing, keeping every comment, and printing its own output unchanged.
+func checkIdempotent(t *testing.T, root, first string) {
+	t.Helper()
+	next := t.TempDir()
+	// An import may have comments before its path, and the first literal of a path split
+	// across literals is "temporal/api" on its own.
+	stableImport := regexp.MustCompile(`(?m)^(import\b(?:\s+|/\*[^*]*\*/|public|weak)*["'])` + regexp.QuoteMeta(strings.TrimSuffix(stableAPIPrefix, "/")) + `(["'/])`)
+	for path, text := range readTree(t, first) {
+		body, ok := strings.CutPrefix(text, generatedHeader)
+		if !ok {
+			t.Fatalf("%s: missing generated header", path)
+		}
+		body = stableImport.ReplaceAllString(body, `${1}`+strings.TrimSuffix(apiNextPrefix, "/")+`$2`)
+		writeFile(t, filepath.Join(next, apiNextPrefix, strings.TrimPrefix(path, stableAPIPrefix)), body)
+	}
+	draft, err := os.ReadFile(filepath.Join(root, draftTagsPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(next, draftTagsPath), string(draft))
+	// Imports outside temporal/, such as google/ and nexusannotations/, resolve as before.
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.Name() == "temporal" {
+			continue
+		}
+		target, err := filepath.Abs(filepath.Join(root, entry.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, filepath.Join(next, entry.Name())); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	second := t.TempDir()
+	if err := stableProtosGenerator(t.Context(), next, second); err != nil {
+		t.Fatalf("second pass: %v", err)
+	}
+	want, got := readTree(t, first), readTree(t, second)
+	for _, path := range sortedKeys(want, got) {
+		if want[path] != got[path] {
+			t.Errorf("%s changed on the second pass\nfirst:\n%s\nsecond:\n%s", path, want[path], got[path])
+		}
+	}
+}
+
+func writeFile(t *testing.T, path, text string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }

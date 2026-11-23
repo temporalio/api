@@ -23,7 +23,7 @@ declaration for Go code generation.
 
 Use the `draft` field option or the `draft_message` message option from
 [`temporal/api_next/protometa/v1/draft.proto`](temporal/api_next/protometa/v1/draft.proto) to mark draft
-declarations. For example, `string user = 7 [(temporal.api.protometa.v1.draft) = "update-user-tagging"];`
+declarations. For example, `string preview_note = 4 [(temporal.api.protometa.v1.draft) = "draft-api-example"];`
 is a draft field. The generator removes annotated declarations from the stable tree.
 See the [draft API specification](docs/draft-apis.md) for annotation rules, runtime behavior, and implementation gaps.
 

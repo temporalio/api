@@ -11,6 +11,9 @@ option csharp_namespace = "Temporalio.Api.StreamService.V1";
 
 // The messages of the Stream service. An SDK Store (Redis or memory) and the server answer the
 // same five operations with them. A field that is only read by the server says so.
+//
+// An SDK calls its Store with the request alone, without a Nexus envelope. So a create and an
+// append keep their `request_id` in the request, as `StartWorkflowExecutionRequest` does.
 
 import "google/protobuf/duration.proto";
 
@@ -111,8 +114,7 @@ message ReadRecordsRequest {
     // limit.
     int64 max_bytes = 4;
     // How long the read waits for a new Record, or for the close of the Stream, before it returns
-    // an empty page. When it's unset, the read returns immediately. The deadline of the request
-    // must be longer than this wait.
+    // an empty page. When it's unset, the read returns immediately.
     google.protobuf.Duration wait = 5;
 }
 
@@ -120,10 +122,10 @@ message ReadRecordsRequest {
 // One page of a read.
 message ReadRecordsResponse {
     repeated temporal.api.stream.v1.StreamRecord records = 1;
-    // Where the next read goes on. The next read passes it as `from_offset`. It's never before
-    // the last Record in this page, and it never skips a Record, but it can be after entries of
-    // the Store that aren't Records. For an empty page it can be the `from_offset` of the
-    // request, which is empty when the request had none.
+    // The last position that the read covered. The next read passes it as `from_offset`. Every
+    // Store can give it, as the offset of the last Record in this page, or as the `from_offset`
+    // of the request for an empty page. A Store can also give a later offset that skips only
+    // entries of its own that aren't Records, so the next read doesn't scan them again.
     bytes last_offset = 2;
     // True when the Stream is closed and this page has its last Record. A read has no other sign
     // of a close, because a close stores no Record. A read of a closed Stream with no Record left

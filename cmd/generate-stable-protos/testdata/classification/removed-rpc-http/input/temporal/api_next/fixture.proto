@@ -1,0 +1,24 @@
+syntax = "proto3";
+package fixture;
+import "temporal/api_next/protometa/v1/draft.proto";
+
+// The HTTP annotations are used only by the preview call.
+
+import "google/api/annotations.proto";
+// This import can be pruned.
+
+// The marker uses the empty message.
+import "google/protobuf/empty.proto";
+message Request { option (temporal.api.protometa.v1.draft_message) = "preview"; Item item = 1; }
+// Item holds the request data.
+message Item { string draft_id = 1 [(temporal.api.protometa.v1.draft) = "preview"]; google.protobuf.Empty marker = 2; }
+message Response { option (temporal.api.protometa.v1.draft_message) = "preview"; }
+message OtherRequest {}
+message OtherResponse {}
+service Service {
+  rpc Stable(OtherRequest) returns (OtherResponse);
+  rpc Call (Request) returns (Response) {
+    option (temporal.api.protometa.v1.draft_method) = "preview";
+    option (google.api.http) = { get: "/items/{item.draft_id=items/*}" };
+  }
+}

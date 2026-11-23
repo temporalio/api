@@ -68,10 +68,7 @@ func validateDraftRules(tags draftTags, f *ir.File, endpointUses rpcEndpointUses
 
 func validateDraftField(tags draftTags, field ir.Member, messageFeature draftFeature) error {
 	oneof := field.Oneof()
-	containerFeature := tags.feature(oneof.Options())
-	if containerFeature == "" {
-		containerFeature = messageFeature
-	}
+	containerFeature := tags.memberContainerFeature(field, messageFeature)
 	feature := tags.feature(field.Options())
 	if containerFeature != "" {
 		if feature != "" {

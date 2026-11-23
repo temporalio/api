@@ -17,7 +17,9 @@ Use `buf.next.yaml` to compile the preview tree.
 
 Edit proto files under `temporal/api_next/`. Run `make stable-api` to regenerate `temporal/api/`, or run
 `make` to also update the OpenAPI definitions. Do not edit `temporal/api/` by hand. Commit the regenerated
-tree with your changes because CI fails if it is stale.
+tree with your changes because CI fails if it is stale. This also regenerates
+`temporal/api/draft-manifest.json`, which records the resolved feature gate for each draft
+declaration for Go code generation.
 
 Use the `draft` field option or the `draft_message` message option from
 [`temporal/api_next/protometa/v1/draft.proto`](temporal/api_next/protometa/v1/draft.proto) to mark draft

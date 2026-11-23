@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"io/fs"
 	"maps"
@@ -24,6 +25,11 @@ package example.meta;
 import "google/protobuf/descriptor.proto";
 extend google.protobuf.FieldOptions { string draft = 50000; }
 extend google.protobuf.MessageOptions { string draft_message = 50000; }
+extend google.protobuf.OneofOptions { string draft_oneof = 50000; }
+extend google.protobuf.EnumOptions { string draft_enum = 50000; }
+extend google.protobuf.EnumValueOptions { string draft_enum_value = 50000; }
+extend google.protobuf.ServiceOptions { string draft_service = 50000; }
+extend google.protobuf.MethodOptions { string draft_method = 50000; }
 `)
 	writeFile(t, filepath.Join(root, "next/shared.proto"), `syntax = "proto3";
 package example.api;
@@ -36,19 +42,79 @@ import "next/meta/options.proto";
 message Request {
   Shared shared = 1;
   string draft_field = 2 [(example.meta.draft) = "feature"];
+  oneof choice {
+    option (example.meta.draft_oneof) = "choice-feature";
+    string left = 3;
+    string right = 4;
+  }
 }
 message DraftMessage {
   option (example.meta.draft_message) = "feature";
+  string child = 1;
+}
+message DraftResponse {
+  option (example.meta.draft_message) = "feature";
+}
+message MixedRequest {
+  option (example.meta.draft_message) = "feature";
+}
+message MixedResponse {
+  option (example.meta.draft_message) = "feature";
+}
+enum Level {
+  LEVEL_UNSPECIFIED = 0;
+  LEVEL_PREVIEW = 1 [(example.meta.draft_enum_value) = "enum-value-feature"];
+}
+enum Mode {
+  option (example.meta.draft_enum) = "enum-feature";
+  MODE_UNSPECIFIED = 0;
+}
+service Preview {
+  option (example.meta.draft_service) = "feature";
+  rpc Call(DraftMessage) returns (DraftResponse);
+}
+service Mixed {
+  rpc Call(Request) returns (Shared);
+  rpc PreviewCall(MixedRequest) returns (MixedResponse) {
+    option (example.meta.draft_method) = "feature";
+  }
 }
 `)
 
 	cmd := exec.Command("go", "run", ".", "-root", root, "-out", out,
-		"-next", "next", "-stable", "stable", "-draft-schema", "next/meta/options.proto")
+		"-next", "next", "-stable", "stable", "-draft-schema", "next/meta/options.proto", "-draft-manifest")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("generate with custom paths: %v\n%s", err, output)
 	}
 	files := readTree(t, out)
-	if paths := slices.Sorted(maps.Keys(files)); !slices.Equal(paths, []string{"stable/service.proto", "stable/shared.proto"}) {
+	var manifest struct {
+		Version int               `json:"version"`
+		Gates   map[string]string `json:"gates"`
+	}
+	if err := json.Unmarshal([]byte(files["stable/draft-manifest.json"]), &manifest); err != nil {
+		t.Fatal(err)
+	}
+	wantGates := map[string]string{
+		"example.api.DraftMessage":        "feature",
+		"example.api.DraftMessage.child":  "feature",
+		"example.api.DraftResponse":       "feature",
+		"example.api.LEVEL_PREVIEW":       "enum-value-feature",
+		"example.api.Mode":                "enum-feature",
+		"example.api.MODE_UNSPECIFIED":    "enum-feature",
+		"example.api.Preview":             "feature",
+		"example.api.Preview.Call":        "feature",
+		"example.api.Mixed.PreviewCall":   "feature",
+		"example.api.MixedRequest":        "feature",
+		"example.api.MixedResponse":       "feature",
+		"example.api.Request.draft_field": "feature",
+		"example.api.Request.choice":      "choice-feature",
+		"example.api.Request.left":        "choice-feature",
+		"example.api.Request.right":       "choice-feature",
+	}
+	if manifest.Version != 1 || !maps.Equal(manifest.Gates, wantGates) {
+		t.Fatalf("unexpected draft manifest: %+v", manifest)
+	}
+	if paths := slices.Sorted(maps.Keys(files)); !slices.Equal(paths, []string{"stable/draft-manifest.json", "stable/service.proto", "stable/shared.proto"}) {
 		t.Fatalf("unexpected generated files: %v", paths)
 	}
 	service := files["stable/service.proto"]

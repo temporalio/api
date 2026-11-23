@@ -212,7 +212,13 @@ func (g *schemaGen) message(typ schemaType, indent string, depth int, inheritedF
 		g.declaration(indent, text+";")
 	}
 	randomField := func(indent, format, containerFeature string) {
-		ref := g.fieldType(containerFeature)
+		var ref schemaType
+		switch format {
+		case "repeated %s", "map<string, %s>":
+			ref = g.scalarType()
+		default:
+			ref = g.fieldType(containerFeature)
+		}
 		feature := ""
 		if containerFeature == "" {
 			feature = ref.feature
@@ -279,6 +285,10 @@ func (g *schemaGen) fieldType(containerFeature string) schemaType {
 			return rapid.SampledFrom(candidates).Draw(g.rt, "type")
 		}
 	}
+	return g.scalarType()
+}
+
+func (g *schemaGen) scalarType() schemaType {
 	return schemaType{name: rapid.SampledFrom([]string{"string", "int32", "bool", "bytes"}).Draw(g.rt, "scalar")}
 }
 

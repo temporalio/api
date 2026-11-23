@@ -80,18 +80,51 @@ func validateDraftField(tags draftTags, field ir.Member, messageFeature draftFea
 		feature = containerFeature
 	}
 
-	typ := field.Element()
-	if field.IsMap() {
-		_, value := typ.EntryFields()
-		typ = value.Element()
-	}
+	typ := fieldValueType(field)
 	if typeFeature := tags.typeFeature(typ); typeFeature != "" && typeFeature != feature {
 		if feature == "" {
 			return fmt.Errorf("%s: field references draft type %s and requires draft = %q", field.FullName(), typ.FullName(), typeFeature)
 		}
 		return fmt.Errorf("%s: draft feature %q does not match draft type %s feature %q", field.FullName(), feature, typ.FullName(), typeFeature)
 	}
+	if field.IsRepeated() || field.IsMap() {
+		if declaration, gate := tags.findCollectionDraft(typ, feature, make(map[ir.FullName]bool)); gate != "" {
+			return fmt.Errorf("%s: retained collection reaches draft declaration %s gated by %q", field.FullName(), declaration, gate)
+		}
+	}
 	return nil
+}
+
+func fieldValueType(field ir.Member) ir.Type {
+	typ := field.Element()
+	if field.IsMap() {
+		_, value := typ.EntryFields()
+		return value.Element()
+	}
+	return typ
+}
+
+func (tags draftTags) findCollectionDraft(typ ir.Type, enabled draftFeature, seen map[ir.FullName]bool) (ir.FullName, draftFeature) {
+	if typ.IsZero() || typ.IsPredeclared() || seen[typ.FullName()] {
+		return "", ""
+	}
+	seen[typ.FullName()] = true
+
+	typeFeature := tags.typeFeature(typ)
+	if typeFeature != "" && typeFeature != enabled {
+		return typ.FullName(), typeFeature
+	}
+	for member := range seq.Values(typ.Members()) {
+		if gate := tags.memberFeature(member, typeFeature); gate != "" && gate != enabled {
+			return member.FullName(), gate
+		}
+		if !typ.IsEnum() {
+			if name, gate := tags.findCollectionDraft(fieldValueType(member), enabled, seen); gate != "" {
+				return name, gate
+			}
+		}
+	}
+	return "", ""
 }
 
 func draftNestingError(name, container ir.FullName) error {

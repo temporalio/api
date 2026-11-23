@@ -13,7 +13,7 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
-"${GO:-go}" -C "$root/cmd/generate-stable-protos" run . -root "$root" -out "$stage"
+"${GO:-go}" -C "$root/cmd/generate-stable-protos" run . -root "$root" -out "$stage" -draft-manifest
 (cd "$stage" && "${BUF:-buf}" format -w --config '{"version":"v2","modules":[{"path":"."}]}' .)
 if [[ -e "$destination" ]]; then mv "$destination" "$backup"; fi
 mv "$stage/temporal/api" "$destination"

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"regexp"
 	"strings"
@@ -253,4 +254,38 @@ func (tags draftTags) typeFeature(t ir.Type) draftFeature {
 		}
 	}
 	return ""
+}
+
+func (tags draftTags) memberContainerFeature(field ir.Member, parent draftFeature) draftFeature {
+	return cmp.Or(tags.feature(field.Oneof().Options()), parent)
+}
+
+func (tags draftTags) collectGates(file *ir.File, gates draftAnnotations) {
+	add := func(name ir.FullName, gate draftFeature) {
+		if gate != "" {
+			gates[name] = gate
+		}
+	}
+	for typ := range seq.Values(file.AllTypes()) {
+		if typ.IsMapEntry() {
+			continue
+		}
+		parent := tags.typeFeature(typ)
+		add(typ.FullName(), parent)
+		for member := range seq.Values(typ.Members()) {
+			add(member.FullName(), cmp.Or(tags.feature(member.Options()), tags.memberContainerFeature(member, parent)))
+		}
+		for oneof := range seq.Values(typ.Oneofs()) {
+			if !oneof.AST().IsZero() {
+				add(oneof.FullName(), cmp.Or(tags.feature(oneof.Options()), parent))
+			}
+		}
+	}
+	for service := range seq.Values(file.Services()) {
+		parent := tags.feature(service.Options())
+		add(service.FullName(), parent)
+		for method := range seq.Values(service.Methods()) {
+			add(method.FullName(), cmp.Or(tags.feature(method.Options()), parent))
+		}
+	}
 }

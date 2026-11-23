@@ -132,7 +132,7 @@ func (cfg config) stableProtosGenerator(ctx context.Context, root, outDir string
 		manifest, err = json.MarshalIndent(struct {
 			Version int              `json:"version"`
 			Gates   draftAnnotations `json:"gates"`
-		}{Version: 1, Gates: gates}, "", "  ")
+		}{Version: 2, Gates: gates}, "", "  ")
 		if err != nil {
 			return fmt.Errorf("encode draft manifest: %w", err)
 		}

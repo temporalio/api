@@ -260,6 +260,10 @@ func (tags draftTags) memberContainerFeature(field ir.Member, parent draftFeatur
 	return cmp.Or(tags.feature(field.Oneof().Options()), parent)
 }
 
+func (tags draftTags) memberFeature(member ir.Member, parent draftFeature) draftFeature {
+	return cmp.Or(tags.feature(member.Options()), tags.memberContainerFeature(member, parent))
+}
+
 func (tags draftTags) collectGates(file *ir.File, gates draftAnnotations) {
 	add := func(name ir.FullName, gate draftFeature) {
 		if gate != "" {
@@ -273,7 +277,7 @@ func (tags draftTags) collectGates(file *ir.File, gates draftAnnotations) {
 		parent := tags.typeFeature(typ)
 		add(typ.FullName(), parent)
 		for member := range seq.Values(typ.Members()) {
-			add(member.FullName(), cmp.Or(tags.feature(member.Options()), tags.memberContainerFeature(member, parent)))
+			add(member.FullName(), tags.memberFeature(member, parent))
 		}
 		for oneof := range seq.Values(typ.Oneofs()) {
 			if !oneof.AST().IsZero() {

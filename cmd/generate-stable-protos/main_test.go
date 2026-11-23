@@ -111,7 +111,7 @@ service Mixed {
 		"example.api.Request.left":        "choice-feature",
 		"example.api.Request.right":       "choice-feature",
 	}
-	if manifest.Version != 1 || !maps.Equal(manifest.Gates, wantGates) {
+	if manifest.Version != 2 || !maps.Equal(manifest.Gates, wantGates) {
 		t.Fatalf("unexpected draft manifest: %+v", manifest)
 	}
 	if paths := slices.Sorted(maps.Keys(files)); !slices.Equal(paths, []string{"stable/draft-manifest.json", "stable/service.proto", "stable/shared.proto"}) {

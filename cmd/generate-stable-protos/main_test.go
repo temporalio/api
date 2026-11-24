@@ -1,122 +1,294 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"io/fs"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
+	"slices"
+	"strings"
 	"testing"
+
+	"github.com/bufbuild/protocompile/experimental/parser"
+	"github.com/bufbuild/protocompile/experimental/report"
+	"github.com/bufbuild/protocompile/experimental/source"
 )
 
-func TestRewriteImportPaths(t *testing.T) {
+func TestGeneratorWithCustomPaths(t *testing.T) {
 	t.Parallel()
-	input := `syntax = "proto3";
-import public /* before */ 'temporal/api_next/used.proto' /* after */;
-import "google/protobuf/any.proto";
-import "temporal/api_n" /* internal comment */ "ext/another.proto";
-option java_package = "temporal/api_next/used.proto";
-// import "temporal/api_next/used.proto";
-`
-	expected := `syntax = "proto3";
-import public /* before */ 'temporal/api/used.proto' /* after */;
-import "google/protobuf/any.proto";
-import "temporal/api" /* internal comment */ "/another.proto";
-option java_package = "temporal/api_next/used.proto";
-// import "temporal/api_next/used.proto";
-`
-	actual, err := rewriteImportPaths(input)
-	if err != nil {
+	root, out := t.TempDir(), t.TempDir()
+	writeFile(t, filepath.Join(root, "next/meta/options.proto"), `syntax = "proto3";
+package example.meta;
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.FieldOptions { string draft = 50000; }
+extend google.protobuf.MessageOptions { string draft_message = 50000; }
+extend google.protobuf.OneofOptions { string draft_oneof = 50000; }
+extend google.protobuf.EnumOptions { string draft_enum = 50000; }
+extend google.protobuf.EnumValueOptions { string draft_enum_value = 50000; }
+extend google.protobuf.ServiceOptions { string draft_service = 50000; }
+extend google.protobuf.MethodOptions { string draft_method = 50000; }
+`)
+	writeFile(t, filepath.Join(root, "next/shared.proto"), `syntax = "proto3";
+package example.api;
+message Shared {}
+`)
+	writeFile(t, filepath.Join(root, "next/service.proto"), `syntax = "proto3";
+package example.api;
+import "ne" /* Keep this comment. */ "xt/shared.proto";
+import "next/meta/options.proto";
+message Request {
+  Shared shared = 1;
+  string draft_field = 2 [(example.meta.draft) = "feature"];
+  oneof choice {
+    option (example.meta.draft_oneof) = "choice-feature";
+    string left = 3;
+    string right = 4;
+  }
+}
+message DraftMessage {
+  option (example.meta.draft_message) = "feature";
+  string child = 1;
+}
+message DraftResponse {
+  option (example.meta.draft_message) = "feature";
+}
+message MixedRequest {
+  option (example.meta.draft_message) = "feature";
+}
+message MixedResponse {
+  option (example.meta.draft_message) = "feature";
+}
+enum Level {
+  LEVEL_UNSPECIFIED = 0;
+  LEVEL_PREVIEW = 1 [(example.meta.draft_enum_value) = "enum-value-feature"];
+}
+enum Mode {
+  option (example.meta.draft_enum) = "enum-feature";
+  MODE_UNSPECIFIED = 0;
+}
+service Preview {
+  option (example.meta.draft_service) = "feature";
+  rpc Call(DraftMessage) returns (DraftResponse);
+}
+service Mixed {
+  rpc Call(Request) returns (Shared);
+  rpc PreviewCall(MixedRequest) returns (MixedResponse) {
+    option (example.meta.draft_method) = "feature";
+  }
+}
+`)
+
+	cmd := exec.Command("go", "run", ".", "-root", root, "-out", out,
+		"-next", "next", "-stable", "stable", "-draft-schema", "next/meta/options.proto", "-draft-manifest")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generate with custom paths: %v\n%s", err, output)
+	}
+	files := readTree(t, out)
+	var manifest struct {
+		Version int               `json:"version"`
+		Gates   map[string]string `json:"gates"`
+	}
+	if err := json.Unmarshal([]byte(files["stable/draft-manifest.json"]), &manifest); err != nil {
 		t.Fatal(err)
 	}
-	if actual != expected {
-		t.Fatalf("expected %q, got %q", expected, actual)
+	wantGates := map[string]string{
+		"example.api.DraftMessage":        "feature",
+		"example.api.DraftMessage.child":  "feature",
+		"example.api.DraftResponse":       "feature",
+		"example.api.LEVEL_PREVIEW":       "enum-value-feature",
+		"example.api.Mode":                "enum-feature",
+		"example.api.MODE_UNSPECIFIED":    "enum-feature",
+		"example.api.Preview":             "feature",
+		"example.api.Preview.Call":        "feature",
+		"example.api.Mixed.PreviewCall":   "feature",
+		"example.api.MixedRequest":        "feature",
+		"example.api.MixedResponse":       "feature",
+		"example.api.Request.draft_field": "feature",
+		"example.api.Request.choice":      "choice-feature",
+		"example.api.Request.left":        "choice-feature",
+		"example.api.Request.right":       "choice-feature",
 	}
-	if _, err := rewriteImportPaths(`import "unterminated`); err == nil {
-		t.Fatal("expected invalid syntax to fail")
+	if manifest.Version != 2 || !maps.Equal(manifest.Gates, wantGates) {
+		t.Fatalf("unexpected draft manifest: %+v", manifest)
+	}
+	if paths := slices.Sorted(maps.Keys(files)); !slices.Equal(paths, []string{"stable/draft-manifest.json", "stable/service.proto", "stable/shared.proto"}) {
+		t.Fatalf("unexpected generated files: %v", paths)
+	}
+	service := files["stable/service.proto"]
+	var diagnostics report.Report
+	file, _ := parser.Parse("stable/service.proto", source.NewFile("stable/service.proto", service), &diagnostics)
+	if errs, hasErrors := errorDiagnostics(&diagnostics); hasErrors {
+		t.Fatalf("parse generated service: %v\n%s", errs, service)
+	}
+	var imports []string
+	for imp := range file.Imports() {
+		imports = append(imports, imp.ImportPath().AsLiteral().Token.AsString().Text())
+	}
+	if !slices.Equal(imports, []string{"stable/shared.proto"}) {
+		t.Fatalf("unexpected generated imports: %v\n%s", imports, service)
+	}
+	for _, want := range []string{"Keep this comment.", "Shared shared = 1;"} {
+		if !strings.Contains(service, want) {
+			t.Errorf("missing %q in generated service:\n%s", want, service)
+		}
+	}
+	for _, draft := range []string{"draft_field", "DraftMessage"} {
+		if strings.Contains(service, draft) {
+			t.Errorf("found %q in generated service:\n%s", draft, service)
+		}
 	}
 }
 
-func TestStableReplacement(t *testing.T) {
+func TestGeneratorRejectsInvalidPaths(t *testing.T) {
 	t.Parallel()
-	script, err := filepath.Abs("../../scripts/stable-api.sh")
-	if err != nil {
-		t.Fatal(err)
+	generator := filepath.Join(t.TempDir(), "generate-stable-protos")
+	if output, err := exec.Command("go", "build", "-o", generator, ".").CombinedOutput(); err != nil {
+		t.Fatalf("build generator: %v\n%s", err, output)
 	}
-	for _, failure := range []string{"generation", "formatting", "replacement", "none"} {
-		t.Run(failure, func(t *testing.T) {
+	for _, tc := range []struct {
+		name, next, stable, source, schema, wantError string
+	}{
+		{"root source", ".", "stable", "./service.proto", "meta/draft.proto", "-next"},
+		{"root destination", "next", ".", "next/service.proto", "meta/draft.proto", "-stable"},
+		{"source traversal", "../next", "stable", "../next/service.proto", "meta/draft.proto", "-next"},
+		{"destination traversal", "next", "../outside", "next/service.proto", "meta/draft.proto", "-stable"},
+		{"absolute source", "$ROOT/next", "stable", "next/service.proto", "meta/draft.proto", "-next"},
+		{"absolute destination", "next", "$ROOT/stable", "next/service.proto", "meta/draft.proto", "-stable"},
+		{"unclean source", "./next", "stable", "next/service.proto", "meta/draft.proto", "-next"},
+		{"unclean destination", "next", "stable/../output", "next/service.proto", "meta/draft.proto", "-stable"},
+		{"absolute schema", "next", "stable", "next/service.proto", "$ROOT/meta/draft.proto", "-draft-schema"},
+		{"schema traversal", "next", "stable", "next/service.proto", "../draft.proto", "-draft-schema"},
+		{"unclean schema", "next", "stable", "next/service.proto", "./meta/draft.proto", "-draft-schema"},
+		{"equal directories", "next", "next", "next/service.proto", "meta/draft.proto", "overlap"},
+		{"destination within source", "next", "next/stable", "next/service.proto", "meta/draft.proto", "overlap"},
+		{"source within destination", "stable/next", "stable", "stable/next/service.proto", "meta/draft.proto", "overlap"},
+		{"source file", "source.proto", "stable", "source.proto", "meta/draft.proto", "-next \"source.proto\" must be a directory"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			root := t.TempDir()
-			tools := t.TempDir()
-			if err := os.MkdirAll(filepath.Join(root, "temporal/api/nested"), 0755); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(filepath.Join(root, "temporal/api/nested/old.proto"), []byte("retained"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			before := readTree(t, filepath.Join(root, "temporal/api"))
-			writeTool := func(name, body string) {
-				t.Helper()
-				if err := os.WriteFile(filepath.Join(tools, name), []byte("#!/bin/bash\nset -eu\n"+body), 0755); err != nil {
-					t.Fatal(err)
-				}
-			}
-			writeTool("go", `[[ "$FAILURE" != generation ]] || exit 1
-while [[ "$1" != -out ]]; do shift; done
-mkdir -p "$2/temporal/api"
-printf generated > "$2/temporal/api/new.proto"
+			workspace := t.TempDir()
+			root := filepath.Join(workspace, "root")
+			writeFile(t, filepath.Join(root, tc.source), `syntax = "proto3";
+package example.api;
+message Request {}
 `)
-			writeTool("buf", `[[ "$FAILURE" != formatting ]]
+			writeFile(t, filepath.Join(root, "meta/draft.proto"), `syntax = "proto3";
+package example.meta;
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.FieldOptions { string draft = 50000; }
 `)
-			writeTool("mv", `if [[ "$FAILURE" == replacement && "$1" == */temporal/api && "$1" == */.stable-api.* ]]; then exit 1; fi
-exec /bin/mv "$@"
-`)
-			cmd := exec.Command("bash", script, root)
-			cmd.Env = append(os.Environ(), "PATH="+tools+":"+os.Getenv("PATH"), "GO="+filepath.Join(tools, "go"), "BUF="+filepath.Join(tools, "buf"), "FAILURE="+failure)
+			before := readTree(t, workspace)
+			next := strings.ReplaceAll(tc.next, "$ROOT", filepath.ToSlash(root))
+			stable := strings.ReplaceAll(tc.stable, "$ROOT", filepath.ToSlash(root))
+			schema := strings.ReplaceAll(tc.schema, "$ROOT", filepath.ToSlash(root))
+			cmd := exec.Command(generator, "-root", root, "-out", filepath.Join(workspace, "out"),
+				"-next", next, "-stable", stable, "-draft-schema", schema)
 			output, err := cmd.CombinedOutput()
-			if failure == "none" {
-				if err != nil {
-					t.Fatalf("%v: %s", err, output)
-				}
-				if !reflect.DeepEqual(readTree(t, filepath.Join(root, "temporal/api")), map[string]string{"new.proto": "generated"}) {
-					t.Fatal("new tree was nested or old files survived")
-				}
-			} else {
-				if err == nil {
-					t.Fatal("expected injected failure")
-				}
-				if !reflect.DeepEqual(before, readTree(t, filepath.Join(root, "temporal/api"))) {
-					t.Fatalf("%s failure modified old tree: %s", failure, output)
-				}
+			if err == nil || !strings.Contains(string(output), tc.wantError) {
+				t.Errorf("expected rejection mentioning %q, got %v\n%s", tc.wantError, err, output)
+			}
+			after := readTree(t, workspace)
+			if !maps.Equal(before, after) {
+				t.Errorf("tree changed after rejected generation\nbefore: %v\nafter: %v", before, after)
 			}
 		})
 	}
 }
 
-func readTree(t *testing.T, root string) map[string]string {
-	t.Helper()
-	files := map[string]string{}
-	if err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			return nil
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		relative, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
-		}
-		files[filepath.ToSlash(relative)] = string(data)
-		return nil
-	}); err != nil {
+func TestGeneratorOutputDirectory(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, state, wantError string
+		invalidSource          bool
+	}{
+		{"missing flag", "omitted", "-out is required", false},
+		{"nonempty output", "nonempty", "must be empty", false},
+		{"nonempty output before input validation", "nonempty", "must be empty", true},
+		{"regular file", "file", "not a directory", false},
+		{"stable path is a file", "stable file", "must be empty", false},
+		{"empty output", "empty", "", false},
+		{"nonexistent output", "nonexistent", "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			workspace := t.TempDir()
+			root, out := filepath.Join(workspace, "source"), filepath.Join(workspace, "out")
+			source := `syntax = "proto3"; package example.api; message Request {}`
+			if tc.invalidSource {
+				source = "invalid protobuf"
+			}
+			writeFile(t, filepath.Join(root, "next/service.proto"), source)
+			writeFile(t, filepath.Join(root, "meta/draft.proto"), `syntax = "proto3";
+package example.meta;
+import "google/protobuf/descriptor.proto";
+extend google.protobuf.FieldOptions { string draft = 50000; }
+`)
+			switch tc.state {
+			case "nonempty":
+				writeFile(t, filepath.Join(out, "retained"), "")
+			case "file":
+				writeFile(t, out, "")
+			case "stable file":
+				writeFile(t, filepath.Join(out, "stable"), "retained")
+			case "empty":
+				if err := os.Mkdir(out, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before := readTree(t, workspace)
+			args := []string{"run", ".", "-root", root, "-next", "next", "-stable", "stable",
+				"-draft-schema", "meta/draft.proto"}
+			if tc.state != "omitted" {
+				args = append(args, "-out", out)
+			}
+			output, err := exec.Command("go", args...).CombinedOutput()
+			if tc.wantError != "" {
+				if err == nil || !strings.Contains(string(output), tc.wantError) {
+					t.Errorf("expected rejection mentioning %q, got %v\n%s", tc.wantError, err, output)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("generate with %s: %v\n%s", tc.state, err, output)
+				}
+				const generated = "out/stable/service.proto"
+				body, err := os.ReadFile(filepath.Join(workspace, generated))
+				if err != nil || !strings.Contains(string(body), "message Request") {
+					t.Fatalf("read generated proto: %v\n%s", err, body)
+				}
+				before[generated] = string(body)
+			}
+			if after := readTree(t, workspace); !maps.Equal(before, after) {
+				t.Errorf("unexpected tree changes\nwant: %v\ngot: %v", before, after)
+			}
+		})
+	}
+}
+
+func TestWriteFilesRejectsExistingFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	const dest = "stable/service.proto"
+	const original = "original proto bytes\n"
+	writeFile(t, filepath.Join(dir, dest), original)
+	out, err := os.OpenRoot(dir)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return files
+	defer out.Close()
+
+	if err := writeFiles(out, map[string]string{dest: "replacement"}); !errors.Is(err, fs.ErrExist) {
+		t.Errorf("expected file-exists error, got %v", err)
+	}
+	contents, err := out.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != original {
+		t.Errorf("destination contents changed to %q", contents)
+	}
 }
 
 func TestStableAPIBufGuards(t *testing.T) {
@@ -163,4 +335,110 @@ exec /usr/bin/awk "$@"`,
 			}
 		})
 	}
+}
+
+func TestGeneratorValidatesRequestHeaderWithRelocatedDraftSchema(t *testing.T) {
+	t.Parallel()
+	root, out := t.TempDir(), t.TempDir()
+	const schema = "temporal/api_next/custom/options.proto"
+	for path, body := range readTree(t, "testdata/classification/rpc-request-header/input") {
+		if path == testConfig.draftSchema {
+			path = schema
+			body = strings.Replace(body, "package temporal.api.protometa.v1;", "package example.meta;", 1)
+		} else {
+			body = strings.NewReplacer(
+				testConfig.draftSchema, schema,
+				"temporal.api.protometa.v1.draft", "example.meta.draft",
+			).Replace(body)
+		}
+		writeFile(t, filepath.Join(root, path), body)
+	}
+
+	cmd := exec.Command("go", "run", ".", "-root", root, "-out", out, "-draft-schema", schema)
+	output, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(output), "fixture.Service.Call: request header references draft field item.draft_id") {
+		t.Fatalf("expected rejection of the draft header field reference, got %v\n%s", err, output)
+	}
+}
+
+func TestStableReplacement(t *testing.T) {
+	t.Parallel()
+	script, err := filepath.Abs("../../scripts/stable-api.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, failure := range []string{"generation", "formatting", "replacement", "none"} {
+		t.Run(failure, func(t *testing.T) {
+			t.Parallel()
+			root := t.TempDir()
+			tools := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(root, "temporal/api/nested"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, "temporal/api/nested/old.proto"), []byte("retained"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			before := readTree(t, filepath.Join(root, "temporal/api"))
+			writeTool := func(name, body string) {
+				t.Helper()
+				if err := os.WriteFile(filepath.Join(tools, name), []byte("#!/bin/bash\nset -eu\n"+body), 0755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			writeTool("go", `[[ "$FAILURE" != generation ]] || exit 1
+while [[ "$1" != -out ]]; do shift; done
+mkdir -p "$2/temporal/api"
+printf generated > "$2/temporal/api/new.proto"
+`)
+			writeTool("buf", `[[ "$FAILURE" != formatting ]]
+`)
+			writeTool("mv", `if [[ "$FAILURE" == replacement && "$1" == */temporal/api && "$1" == */.stable-api.* ]]; then exit 1; fi
+exec /bin/mv "$@"
+`)
+			cmd := exec.Command("bash", script, root)
+			cmd.Env = append(os.Environ(), "PATH="+tools+":"+os.Getenv("PATH"), "GO="+filepath.Join(tools, "go"), "BUF="+filepath.Join(tools, "buf"), "FAILURE="+failure)
+			output, err := cmd.CombinedOutput()
+			if failure == "none" {
+				if err != nil {
+					t.Fatalf("%v: %s", err, output)
+				}
+				if !maps.Equal(readTree(t, filepath.Join(root, "temporal/api")), map[string]string{"new.proto": "generated"}) {
+					t.Fatal("new tree was nested or old files survived")
+				}
+			} else {
+				if err == nil {
+					t.Fatal("expected injected failure")
+				}
+				if !maps.Equal(before, readTree(t, filepath.Join(root, "temporal/api"))) {
+					t.Fatalf("%s failure modified old tree: %s", failure, output)
+				}
+			}
+		})
+	}
+}
+
+func readTree(t testingT, root string) map[string]string {
+	t.Helper()
+	files := map[string]string{}
+	if err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		files[filepath.ToSlash(relative)] = string(data)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return files
 }

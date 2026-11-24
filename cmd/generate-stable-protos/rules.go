@@ -1,0 +1,236 @@
+package main
+
+import (
+	"fmt"
+
+	"github.com/bufbuild/protocompile/experimental/ir"
+	"github.com/bufbuild/protocompile/experimental/seq"
+)
+
+func validateDraftRules(tags draftTags, f *ir.File, endpointUses rpcEndpointUses) error {
+	for t := range seq.Values(f.AllTypes()) {
+		if t.IsMapEntry() {
+			continue
+		}
+		parent := t.Parent()
+		if tags.has(t.Options()) && tags.typeFeature(parent) != "" {
+			return draftNestingError(t.FullName(), parent.FullName())
+		}
+		feature := tags.typeFeature(t)
+		if t.IsEnum() {
+			if err := validateDraftEnum(tags, t, feature != ""); err != nil {
+				return err
+			}
+			continue
+		}
+
+		for m := range seq.Values(t.Members()) {
+			if err := validateDraftField(tags, m, feature); err != nil {
+				return err
+			}
+		}
+		for o := range seq.Values(t.Oneofs()) {
+			if o.AST().IsZero() {
+				continue
+			}
+			if tags.has(o.Options()) {
+				if feature != "" {
+					return draftNestingError(o.FullName(), t.FullName())
+				}
+			} else if feature == "" && allDraft(o.Members(), func(m ir.Member) bool { return tags.has(m.Options()) }) {
+				return fmt.Errorf("%s: all oneof members are draft; set draft_oneof to a common feature and remove the member draft annotations", o.FullName())
+			}
+		}
+	}
+
+	for ext := range seq.Values(f.AllExtensions()) {
+		for _, ref := range []struct {
+			role string
+			typ  ir.Type
+		}{
+			{"value type", ext.Element()},
+			{"extendee", ext.Container()},
+			{"declaring parent", ext.Parent()},
+		} {
+			if tags.typeFeature(ref.typ) != "" {
+				return fmt.Errorf("%s: extension references draft type %s as its %s", ext.FullName(), ref.typ.FullName(), ref.role)
+			}
+		}
+	}
+
+	for s := range seq.Values(f.Services()) {
+		if err := validateDraftService(tags, s, endpointUses); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateDraftField(tags draftTags, field ir.Member, messageFeature draftFeature) error {
+	oneof := field.Oneof()
+	containerFeature := tags.memberContainerFeature(field, messageFeature)
+	feature := tags.feature(field.Options())
+	if containerFeature != "" {
+		if feature != "" {
+			if !oneof.AST().IsZero() {
+				return draftNestingError(field.FullName(), oneof.FullName())
+			}
+			return draftNestingError(field.FullName(), field.Parent().FullName())
+		}
+		feature = containerFeature
+	}
+
+	typ := fieldValueType(field)
+	if typeFeature := tags.typeFeature(typ); typeFeature != "" && typeFeature != feature {
+		if feature == "" {
+			return fmt.Errorf("%s: field references draft type %s and requires draft = %q", field.FullName(), typ.FullName(), typeFeature)
+		}
+		return fmt.Errorf("%s: draft feature %q does not match draft type %s feature %q", field.FullName(), feature, typ.FullName(), typeFeature)
+	}
+	if field.IsRepeated() || field.IsMap() {
+		if declaration, gate := tags.findCollectionDraft(typ, feature, make(map[ir.FullName]bool)); gate != "" {
+			return fmt.Errorf("%s: retained collection reaches draft declaration %s gated by %q", field.FullName(), declaration, gate)
+		}
+	}
+	return nil
+}
+
+func fieldValueType(field ir.Member) ir.Type {
+	typ := field.Element()
+	if field.IsMap() {
+		_, value := typ.EntryFields()
+		return value.Element()
+	}
+	return typ
+}
+
+func (tags draftTags) findCollectionDraft(typ ir.Type, enabled draftFeature, seen map[ir.FullName]bool) (ir.FullName, draftFeature) {
+	if typ.IsZero() || typ.IsPredeclared() || seen[typ.FullName()] {
+		return "", ""
+	}
+	seen[typ.FullName()] = true
+
+	typeFeature := tags.typeFeature(typ)
+	if typeFeature != "" && typeFeature != enabled {
+		return typ.FullName(), typeFeature
+	}
+	for member := range seq.Values(typ.Members()) {
+		if gate := tags.memberFeature(member, typeFeature); gate != "" && gate != enabled {
+			return member.FullName(), gate
+		}
+		if !typ.IsEnum() {
+			if name, gate := tags.findCollectionDraft(fieldValueType(member), enabled, seen); gate != "" {
+				return name, gate
+			}
+		}
+	}
+	return "", ""
+}
+
+func draftNestingError(name, container ir.FullName) error {
+	return fmt.Errorf("%s: draft annotation is not allowed inside draft container %s", name, container)
+}
+
+func allDraft[T any](members seq.Indexer[T], isDraft func(T) bool) bool {
+	for m := range seq.Values(members) {
+		if !isDraft(m) {
+			return false
+		}
+	}
+	return members.Len() > 0
+}
+
+func validateDraftEnum(tags draftTags, enum ir.Type, draft bool) error {
+	if !draft && allDraft(enum.Members(), func(m ir.Member) bool { return tags.has(m.Options()) }) {
+		return fmt.Errorf("%s: all enum values are draft; set draft_enum to a common feature and remove the draft_enum_value annotations", enum.FullName())
+	}
+	byNumber := make(map[int32]ir.Member)
+	for value := range seq.Values(enum.Members()) {
+		valueDraft := tags.has(value.Options())
+		if valueDraft && draft {
+			return draftNestingError(value.FullName(), enum.FullName())
+		}
+		if valueDraft && value.Number() == 0 {
+			return fmt.Errorf("%s: draft enum value in stable enum %s cannot have number zero", value.FullName(), enum.FullName())
+		}
+		if other, ok := byNumber[value.Number()]; ok && (valueDraft || tags.has(other.Options())) {
+			return fmt.Errorf("%s: enum value aliases %s at number %d in %s; aliases involving draft enum values are not allowed",
+				value.FullName(), other.FullName(), value.Number(), enum.FullName())
+		}
+		byNumber[value.Number()] = value
+	}
+	return nil
+}
+
+func validateDraftService(tags draftTags, service ir.Service, endpointUses rpcEndpointUses) error {
+	serviceFeature := tags.feature(service.Options())
+	if serviceFeature == "" && allDraft(service.Methods(), func(m ir.Method) bool { return tags.has(m.Options()) }) {
+		return fmt.Errorf("%s: all RPCs are draft; set draft_service to a common feature, remove the draft_method annotations, and set each request and response type's explicit draft_message to the service feature", service.FullName())
+	}
+	for method := range seq.Values(service.Methods()) {
+		feature, annotation := tags.feature(method.Options()), "draft_method"
+		if serviceFeature != "" {
+			if feature != "" {
+				return fmt.Errorf("%s: draft_method is not allowed inside draft_service %s", method.FullName(), service.FullName())
+			}
+			feature, annotation = serviceFeature, "draft_service"
+		}
+		input, _ := method.Input()
+		output, _ := method.Output()
+		if feature != "" && input.FullName() == output.FullName() {
+			return fmt.Errorf("%s: RPC uses %s as both request and response", method.FullName(), input.FullName())
+		}
+		for _, endpoint := range []struct {
+			role string
+			typ  ir.Type
+		}{
+			{"request", input},
+			{"response", output},
+		} {
+			name := endpoint.typ.FullName()
+			if feature == "" {
+				if tags.typeFeature(endpoint.typ) != "" {
+					if !tags.has(endpoint.typ.Options()) {
+						return fmt.Errorf("%s: RPC references draft type %s as its %s; inherited draft status is insufficient, so use a type that explicitly carries draft_message and give draft_method and both endpoints the same feature", method.FullName(), name, endpoint.role)
+					}
+					return fmt.Errorf("%s: RPC references draft type %s as its %s and requires draft_method", method.FullName(), name, endpoint.role)
+				}
+			} else if actual := tags.feature(endpoint.typ.Options()); actual != feature {
+				if actual == "" {
+					return fmt.Errorf("%s: %s requires %s type %s to explicitly carry draft_message = %q",
+						method.FullName(), annotation, endpoint.role, name, feature)
+				}
+				return fmt.Errorf("%s: %s requires %s type %s to explicitly carry draft_message = %q; found %q",
+					method.FullName(), annotation, endpoint.role, name, feature, actual)
+			} else if err := endpointUses.add(name, rpcPosition{method.FullName(), endpoint.role}); err != nil {
+				// Only draft endpoint types are tracked: stable RPCs may share types
+				// such as google.protobuf.Empty, and stable RPCs cannot use draft types.
+				return err
+			}
+		}
+		if feature == "" {
+			if err := validateMethodFieldReferences(tags, method, input, output); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+type rpcPosition struct {
+	method ir.FullName
+	role   string
+}
+
+// rpcEndpointUses records the one RPC position each draft endpoint type occupies.
+type rpcEndpointUses map[ir.FullName]rpcPosition
+
+func (uses rpcEndpointUses) add(name ir.FullName, position rpcPosition) error {
+	first, exists := uses[name]
+	if !exists {
+		uses[name] = position
+		return nil
+	}
+	return fmt.Errorf("%s: RPC endpoint type is reused at %s %s and %s %s", name,
+		first.method, first.role, position.method, position.role)
+}

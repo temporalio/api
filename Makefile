@@ -38,7 +38,7 @@ OAPI3_PATH := .components.schemas.Payload
 # The Stream WIT needs nexgen features that no release has yet. Pin a nexgen commit that has them
 # until a release does.
 NEX_GEN_REPO := https://github.com/temporalio/nexgen
-NEX_GEN_REV := c177ce6f2d6c1a952f8a2e0338e8605783890de5
+NEX_GEN_REV := 57e74a7de49c74a7d47be29f314128cb592c0e70
 NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
 NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 

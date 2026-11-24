@@ -93,10 +93,10 @@ message LocalActivityProducer {
     string workflow_id = 2;
     // Required.
     string run_id = 3;
-    // Required. The number that the SDK gives the Local Activity call in its run, from a counter.
-    // Two Local Activities of one run never share it, so a Store doesn't take their attempts as
-    // attempts of one Producer. It isn't an Activity id, and a user can't set it.
-    int64 sequence_number = 4;
+    // Required. The id that the SDK gives the call, because a Local Activity has no scheduled
+    // event. Two Local Activities of one run must not share it, or the Store takes them as one
+    // Producer. Each SDK makes it from a counter of its own, unless the user sets it.
+    string activity_id = 4;
     // Required.
     LocalActivityAttempt attempt = 5;
 }
@@ -145,9 +145,9 @@ message ClientProducer {
 
 // Experimental. Might change in the future.
 // The writer of a batch of Records. A Producer is one unit of work, such as one Activity or one
-// Workflow run. Two Producers are the same when they have the same kind and the same ids, and
-// for a Local Activity the same sequence number. Every kind except a client also has the
-// attempt that made the write, and the attempt is not part of what identifies the Producer.
+// Workflow run. Two Producers are the same when they have the same kind and the same ids.
+// Every kind except a client also has the attempt that made the write, and the attempt is not
+// part of what identifies the Producer.
 //
 // A Store that fences fails a write with `FENCED` when a later attempt of the same Producer has
 // already written. A Store that doesn't fence accepts the write. Each Record has its Producer

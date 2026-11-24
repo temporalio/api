@@ -15,17 +15,14 @@ Use `buf.next.yaml` to compile the preview tree.
 
 ## Contribution
 
-Edit proto files under `temporal/api_next/`. Run `make stable-api` to regenerate `temporal/api/`, or run
-`make` to also update the OpenAPI definitions. Do not edit `temporal/api/` by hand. Commit the regenerated
-tree with your changes because CI fails if it is stale. This also regenerates
-`temporal/api/draft-manifest.json`, which records the resolved feature gate for each draft
-declaration for Go code generation.
+Edit `temporal/api_next/` for all schema changes. The generator writes the stable schema to
+`temporal/api/`. Do not edit that folder by hand.
 
-Use the `draft` field option or the `draft_message` message option from
-[`temporal/api_next/protometa/v1/draft.proto`](temporal/api_next/protometa/v1/draft.proto) to mark draft
-declarations. For example, `string preview_note = 4 [(temporal.api.protometa.v1.draft) = "draft-api-example"];`
-is a draft field. The generator removes annotated declarations from the stable tree.
-See the [draft API specification](docs/draft-apis.md) for annotation rules, runtime behavior, and implementation gaps.
+Use a [draft annotation](docs/draft-apis.md) to keep a declaration out of the stable schema while
+you develop it. Remove the annotation when the declaration is ready to ship.
+
+Run `make` to regenerate the stable protos, draft manifest, and OpenAPI definitions. To update
+just `temporal/api/`, run `make stable-api`. Commit the source changes and generated files together.
 
 Rust is also required because `make` installs and runs `nex-gen` when regenerating system Nexus WIT files.
 

@@ -17372,6 +17372,16 @@
       },
       "title": "Metadata relevant for metering purposes"
     },
+    "v1MultiSessionOptions": {
+      "type": "object",
+      "properties": {
+        "workerAddress": {
+          "type": "string",
+          "description": "Where the server routes session work bound to this worker.\nCurrently set by the SDK to the worker's sticky queue name, and not\nuser-configurable. May become configurable in the future."
+        }
+      },
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nServe any number of sessions concurrently. Future admission knobs (e.g.\nsession slots) belong here."
+    },
     "v1NamespaceConfig": {
       "type": "object",
       "properties": {
@@ -20140,6 +20150,16 @@
         }
       }
     },
+    "v1SingleSessionOptions": {
+      "type": "object",
+      "properties": {
+        "stableIdentity": {
+          "type": "string",
+          "description": "Identity the binding is stored under. Required; must be non-empty.\nReuse it across restarts of the same session, not across concurrently\nrunning workers. If multiple workers poll with the same stable_identity\nconcurrently, the server treats them as pollers of a single worker and\nprocess affinity is lost.\n\nNote: this effectively acts as a configurable sticky queue.\nNote: we are currently unsure how this will evolve. May be deprecated as\nthe session model develops."
+        }
+      },
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nServe exactly one session for the worker's lifetime, including across\nprocess restarts with the same stable_identity. The server binds the worker\nto the first session that needs a worker, and dispatches no other work here,\neven after that session completes."
+    },
     "v1StartActivityExecutionResponse": {
       "type": "object",
       "properties": {
@@ -21543,6 +21563,10 @@
         "environment": {
           "$ref": "#/definitions/v1EnvironmentInfo",
           "description": "Information about the environment this SDK is running in."
+        },
+        "sessionOptions": {
+          "$ref": "#/definitions/v1WorkerSessionOptions",
+          "description": "The worker's session options, as sent on its polls. Lets the server recognize a multi-session worker that has\nstopped, so it can move the workflows bound to it to other workers. Unset for a worker without sessions."
         }
       },
       "description": "Worker info message, contains information about the worker and its current state.\nAll information is provided by the worker itself."
@@ -21680,6 +21704,20 @@
         }
       },
       "description": "This is used to send commands to a specific worker or a group of workers.\nRight now, it is used to send commands to a specific worker instance.\nWill be extended to be able to send command to multiple workers."
+    },
+    "v1WorkerSessionOptions": {
+      "type": "object",
+      "properties": {
+        "singleSession": {
+          "$ref": "#/definitions/v1SingleSessionOptions",
+          "description": "If specified, the worker only polls for work belonging to its session."
+        },
+        "multiSession": {
+          "$ref": "#/definitions/v1MultiSessionOptions",
+          "description": "If specified, the worker can serve multiple sessions at once."
+        }
+      },
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nSent on workflow and activity polls. Presence means this worker can serve\nsessions. Currently, the only supported Session type is Workflow Session\n(aka Workflow-as-Session). A Workflow Session can receive both workflow\ntasks and activity tasks of an execution."
     },
     "v1WorkerSlotsInfo": {
       "type": "object",

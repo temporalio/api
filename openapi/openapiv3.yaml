@@ -13601,6 +13601,19 @@ components:
                  aip.dev/not-precedent: Negative values make no sense to represent. --)
           format: uint32
       description: Metadata relevant for metering purposes
+    MultiSessionOptions:
+      type: object
+      properties:
+        workerAddress:
+          type: string
+          description: |-
+            Where the server routes session work bound to this worker.
+             Currently set by the SDK to the worker's sticky queue name, and not
+             user-configurable. May become configurable in the future.
+      description: |-
+        EXPERIMENTAL. Subject to redesign or removal.
+         Serve any number of sessions concurrently. Future admission knobs (e.g.
+         session slots) belong here.
     NamespaceConfig:
       type: object
       properties:
@@ -17328,6 +17341,27 @@ components:
             Link to be associated with the WorkflowExecutionSignaled event.
              Added on the response to propagate the backlink.
              Available from Temporal server 1.31 and up.
+    SingleSessionOptions:
+      type: object
+      properties:
+        stableIdentity:
+          type: string
+          description: |-
+            Identity the binding is stored under. Required; must be non-empty.
+             Reuse it across restarts of the same session, not across concurrently
+             running workers. If multiple workers poll with the same stable_identity
+             concurrently, the server treats them as pollers of a single worker and
+             process affinity is lost.
+
+             Note: this effectively acts as a configurable sticky queue.
+             Note: we are currently unsure how this will evolve. May be deprecated as
+             the session model develops.
+      description: |-
+        EXPERIMENTAL. Subject to redesign or removal.
+         Serve exactly one session for the worker's lifetime, including across
+         process restarts with the same stable_identity. The server binds the worker
+         to the first session that needs a worker, and dispatches no other work here,
+         even after that session completes.
     StartActivityExecutionRequest:
       type: object
       properties:
@@ -19982,6 +20016,12 @@ components:
           allOf:
             - $ref: '#/components/schemas/EnvironmentInfo'
           description: Information about the environment this SDK is running in.
+        sessionOptions:
+          allOf:
+            - $ref: '#/components/schemas/WorkerSessionOptions'
+          description: |-
+            The worker's session options, as sent on its polls. Lets the server recognize a multi-session worker that has
+             stopped, so it can move the workflows bound to it to other workers. Unset for a worker without sessions.
       description: |-
         Worker info message, contains information about the worker and its current state.
          All information is provided by the worker itself.
@@ -20116,6 +20156,23 @@ components:
         This is used to send commands to a specific worker or a group of workers.
          Right now, it is used to send commands to a specific worker instance.
          Will be extended to be able to send command to multiple workers.
+    WorkerSessionOptions:
+      type: object
+      properties:
+        singleSession:
+          allOf:
+            - $ref: '#/components/schemas/SingleSessionOptions'
+          description: If specified, the worker only polls for work belonging to its session.
+        multiSession:
+          allOf:
+            - $ref: '#/components/schemas/MultiSessionOptions'
+          description: If specified, the worker can serve multiple sessions at once.
+      description: |-
+        EXPERIMENTAL. Subject to redesign or removal.
+         Sent on workflow and activity polls. Presence means this worker can serve
+         sessions. Currently, the only supported Session type is Workflow Session
+         (aka Workflow-as-Session). A Workflow Session can receive both workflow
+         tasks and activity tasks of an execution.
     WorkerSlotsInfo:
       type: object
       properties:

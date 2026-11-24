@@ -9816,7 +9816,7 @@ components:
           format: date-time
         lastStartedTime:
           type: string
-          description: Time the last attempt was started.
+          description: Time the current attempt started, or the final attempt if the activity has closed; unset while waiting for a retry.
           format: date-time
         attempt:
           type: integer
@@ -10492,6 +10492,18 @@ components:
       description: |-
         BatchOperationCancelActivities sends cancel requests to a batch of activities.
          Keep the parameter in sync with temporal.api.workflowservice.v1.RequestCancelActivityExecutionRequest.
+    BatchOperationCancelNexusOperations:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        reason:
+          type: string
+          description: Reason for requesting the cancellation, recorded and available via the DescribeNexusOperationExecution API.
+      description: |-
+        BatchOperationCancelNexusOperations sends cancel requests to a batch of Nexus operations.
+         Keep the parameter in sync with temporal.api.workflowservice.v1.RequestCancelNexusOperationExecutionRequest.
     BatchOperationCancellation:
       type: object
       properties:
@@ -10508,6 +10520,12 @@ components:
       description: |-
         BatchOperationDeleteActivities sends deletion requests to a batch of activities.
          Keep the parameter in sync with temporal.api.workflowservice.v1.DeleteActivityExecutionRequest.
+    BatchOperationDeleteNexusOperations:
+      type: object
+      properties: {}
+      description: |-
+        BatchOperationDeleteNexusOperations sends deletion requests to a batch of Nexus operations.
+         Keep the parameter in sync with temporal.api.workflowservice.v1.DeleteNexusOperationExecutionRequest.
     BatchOperationDeletion:
       type: object
       properties:
@@ -10561,6 +10579,9 @@ components:
             - BATCH_OPERATION_TYPE_TERMINATE_ACTIVITY
             - BATCH_OPERATION_TYPE_CANCEL_ACTIVITY
             - BATCH_OPERATION_TYPE_DELETE_ACTIVITY
+            - BATCH_OPERATION_TYPE_TERMINATE_NEXUS_OPERATION
+            - BATCH_OPERATION_TYPE_CANCEL_NEXUS_OPERATION
+            - BATCH_OPERATION_TYPE_DELETE_NEXUS_OPERATION
           type: string
           description: Operation type
           format: enum
@@ -10672,6 +10693,18 @@ components:
       description: |-
         BatchOperationTerminateActivities sends terminate requests to a batch of activities.
          Keep the parameter in sync with temporal.api.workflowservice.v1.TerminateActivityExecutionRequest.
+    BatchOperationTerminateNexusOperations:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        reason:
+          type: string
+          description: Reason for requesting the termination, recorded in the operation's result failure outcome.
+      description: |-
+        BatchOperationTerminateNexusOperations sends terminate requests to a batch of Nexus operations.
+         Keep the parameter in sync with temporal.api.workflowservice.v1.TerminateNexusOperationExecutionRequest.
     BatchOperationTermination:
       type: object
       properties:
@@ -11932,6 +11965,9 @@ components:
             - BATCH_OPERATION_TYPE_TERMINATE_ACTIVITY
             - BATCH_OPERATION_TYPE_CANCEL_ACTIVITY
             - BATCH_OPERATION_TYPE_DELETE_ACTIVITY
+            - BATCH_OPERATION_TYPE_TERMINATE_NEXUS_OPERATION
+            - BATCH_OPERATION_TYPE_CANCEL_NEXUS_OPERATION
+            - BATCH_OPERATION_TYPE_DELETE_NEXUS_OPERATION
           type: string
           description: Batch operation type
           format: enum
@@ -11977,7 +12013,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Execution'
-          description: Executions is the list of workflow OR standalone activity executions to apply the batch operation
+          description: Executions is the list of workflow, standalone activity, or standalone Nexus operation executions to apply the batch operation
     DescribeDeploymentResponse:
       type: object
       properties:
@@ -13738,6 +13774,9 @@ components:
         standaloneActivityOperatorCommands:
           type: boolean
           description: True if the namespace supports standalone activity operator commands.
+        standaloneNexusOperationBatchOperations:
+          type: boolean
+          description: True if the namespace supports batch operations on standalone Nexus operations.
       description: Namespace capability details. Should contain what features are enabled in a namespace.
     NamespaceInfo_Limits:
       type: object
@@ -14557,6 +14596,7 @@ components:
           format: date-time
         lastStartedTime:
           type: string
+          description: Time the current attempt started, or the final attempt if the activity has closed; unset while waiting for a retry.
           format: date-time
         attempt:
           type: integer
@@ -17577,6 +17617,12 @@ components:
           $ref: '#/components/schemas/BatchOperationTerminateActivities'
         deleteActivitiesOperation:
           $ref: '#/components/schemas/BatchOperationDeleteActivities'
+        cancelNexusOperationsOperation:
+          $ref: '#/components/schemas/BatchOperationCancelNexusOperations'
+        terminateNexusOperationsOperation:
+          $ref: '#/components/schemas/BatchOperationTerminateNexusOperations'
+        deleteNexusOperationsOperation:
+          $ref: '#/components/schemas/BatchOperationDeleteNexusOperations'
     StartBatchOperationResponse:
       type: object
       properties: {}
@@ -18022,6 +18068,23 @@ components:
              Time-skipping state propagated by the execution that started this workflow.
              This field is intended for use by the Temporal server, for example when a schedule
              starts a workflow, and is not intended to be set by external clients.
+        eagerWorkerControlTaskQueue:
+          type: string
+          description: |-
+            Experimental. A dedicated per-worker Nexus task queue for control tasks sent to
+             the worker processing the eager Workflow Task. Used only when eager execution is accepted.
+        eagerWorkerCapabilities:
+          allOf:
+            - $ref: '#/components/schemas/StartWorkflowExecutionRequest_Capabilities'
+          description: |-
+            Experimental. SDK capabilities of the worker processing the eager Workflow Task.
+             Used only when eager execution is accepted.
+    StartWorkflowExecutionRequest_Capabilities:
+      type: object
+      properties:
+        supportsWorkflowHeartbeatNotification:
+          type: boolean
+          description: Experimental. Whether this worker supports Workflow heartbeat notifications.
     StartWorkflowExecutionResponse:
       type: object
       properties:
@@ -20138,7 +20201,7 @@ components:
           type: integer
           description: |-
             Number of pollers this poller pool is currently targeting, which may differ from current_pollers.
-             0 if unknown, such as a poller pool of fixed size.
+             0 if the SDK does not report a target. See is_autoscaling for whether the target can change.
           format: int32
     WorkerSelector:
       type: object

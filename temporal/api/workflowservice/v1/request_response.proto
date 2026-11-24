@@ -230,6 +230,18 @@ message StartWorkflowExecutionRequest {
     // This field is intended for use by the Temporal server, for example when a schedule
     // starts a workflow, and is not intended to be set by external clients.
     temporal.api.common.v1.TimeSkippingStatePropagation time_skipping_state_propagation = 31;
+
+    // Experimental. A dedicated per-worker Nexus task queue for control tasks sent to
+    // the worker processing the eager Workflow Task. Used only when eager execution is accepted.
+    string eager_worker_control_task_queue = 32;
+    // Experimental. SDK capabilities of the worker processing the eager Workflow Task.
+    // Used only when eager execution is accepted.
+    Capabilities eager_worker_capabilities = 33;
+
+    message Capabilities {
+        // Experimental. Whether this worker supports Workflow heartbeat notifications.
+        bool supports_workflow_heartbeat_notification = 1;
+    }
 }
 
 message StartWorkflowExecutionResponse {
@@ -311,6 +323,13 @@ message PollWorkflowTaskQueueRequest {
     // A dedicated per-worker Nexus task queue on which the server sends control
     // tasks (e.g. activity cancellation) to this specific worker instance.
     string worker_control_task_queue = 9;
+    // SDK capabilities of the worker making this poll.
+    Capabilities capabilities = 12;
+
+    message Capabilities {
+        // Experimental. Whether this worker supports Workflow heartbeat notifications.
+        bool supports_workflow_heartbeat_notification = 1;
+    }
 
     // Deprecated. Use deployment_options instead.
     // Each worker process should provide an ID unique to the specific set of code it is running
@@ -1942,6 +1961,9 @@ message StartBatchOperationRequest {
         temporal.api.batch.v1.BatchOperationCancelActivities cancel_activities_operation = 19;
         temporal.api.batch.v1.BatchOperationTerminateActivities terminate_activities_operation = 20;
         temporal.api.batch.v1.BatchOperationDeleteActivities delete_activities_operation = 21;
+        temporal.api.batch.v1.BatchOperationCancelNexusOperations cancel_nexus_operations_operation = 23;
+        temporal.api.batch.v1.BatchOperationTerminateNexusOperations terminate_nexus_operations_operation = 24;
+        temporal.api.batch.v1.BatchOperationDeleteNexusOperations delete_nexus_operations_operation = 25;
     }
 }
 
@@ -1992,7 +2014,7 @@ message DescribeBatchOperationResponse {
     string reason = 10;
     // Query is the visibility query that defines the group of workflow to apply the batch operation
     string query = 11;
-    // Executions is the list of workflow OR standalone activity executions to apply the batch operation
+    // Executions is the list of workflow, standalone activity, or standalone Nexus operation executions to apply the batch operation
     repeated temporal.api.common.v1.Execution executions = 12;
 }
 

@@ -16,6 +16,14 @@ import "google/protobuf/empty.proto";
 // sessions. Currently, the only supported Session type is Workflow Session
 // (aka Workflow-as-Session). A Workflow Session can receive both workflow
 // tasks and activity tasks of an execution.
+//
+// The server routes a session's work to the worker's sticky queue, so the
+// sticky queue name depends on the admission mode:
+//   * single_session: the worker polls only its sticky queue, named after
+//     SingleSessionOptions.stable_identity.
+//   * multi_session: the worker polls the normal queue and its sticky queue,
+//     named after the poll's worker_instance_key.
+// The server rejects sticky polls whose name does not follow this rule.
 message WorkerSessionOptions {
     // Admission control. Required: exactly one mode must be set, and the
     // server rejects session options with neither.
@@ -46,10 +54,8 @@ message SingleSessionOptions {
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// Serve any number of sessions concurrently. The server routes each bound
-// session's work to the worker's sticky queue, which must be named after the
-// poll's worker_instance_key. Future admission knobs (e.g. session slots)
-// belong here.
+// Serve any number of sessions concurrently. Future admission knobs (e.g.
+// session slots) belong here.
 message MultiSessionOptions {
 }
 

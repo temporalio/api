@@ -35,10 +35,10 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
-# The Stream WIT uses nexgen directives that no release has yet. Pin a nexgen commit that has them
+# The Stream WIT needs nexgen features that no release has yet. Pin a nexgen commit that has them
 # until a release does.
 NEX_GEN_REPO := https://github.com/temporalio/nexgen
-NEX_GEN_REV := 04e71164e5093336e7dc686add5e96147410205a
+NEX_GEN_REV := c177ce6f2d6c1a952f8a2e0338e8605783890de5
 NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
 NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 

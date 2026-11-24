@@ -23,7 +23,7 @@ func TestRandomSchemas(t *testing.T) {
 		if err := testConfig.stableProtosGenerator(t.Context(), root, out); err != nil {
 			rt.Fatalf("generator rejected the schema: %v", err)
 		}
-		result, err := oracle.Check(oracleConfig, root, out)
+		result, err := oracle.Check(root, out)
 		if err != nil {
 			rt.Fatal(err)
 		}
@@ -49,7 +49,7 @@ func TestRandomSchemasRejectMissingFieldDraft(t *testing.T) {
 		fmt.Fprintf(g.b, "message Stable { %s preview = 1; }\n", fmt.Sprintf(format, typ.name))
 
 		root := t.TempDir()
-		writeRandomSchema(rt, root, map[string]string{oracleConfig.NextPrefix + "base.proto": g.b.String()})
+		writeRandomSchema(rt, root, map[string]string{testConfig.nextDir + "/base.proto": g.b.String()})
 		err := testConfig.stableProtosGenerator(t.Context(), root, t.TempDir())
 		want := fmt.Sprintf("fixture.Stable.preview: field references draft type fixture.Preview and requires draft = %q", typ.feature)
 		if err == nil || !strings.Contains(err.Error(), want) {
@@ -59,7 +59,7 @@ func TestRandomSchemasRejectMissingFieldDraft(t *testing.T) {
 }
 
 func writeRandomSchema(rt *rapid.T, root string, files map[string]string) {
-	files[oracleConfig.DraftFile] = randomDraftSchema
+	files[testConfig.draftSchema] = randomDraftSchema
 	for _, path := range sortedKeys(files, nil) {
 		rt.Logf("%s:\n%s", path, files[path])
 		writeFile(rt, filepath.Join(root, path), files[path])
@@ -99,17 +99,17 @@ func (g *schemaGen) files() map[string]string {
 	base := g.file("base", rapid.IntRange(1, 4).Draw(g.rt, "base messages"), nil)
 	dependent := g.file("dependent", rapid.IntRange(0, 3).Draw(g.rt, "dependent messages"), g.types)
 	return map[string]string{
-		oracleConfig.NextPrefix + "base.proto":      base,
-		oracleConfig.NextPrefix + "dependent.proto": dependent,
+		testConfig.nextDir + "/base.proto":      base,
+		testConfig.nextDir + "/dependent.proto": dependent,
 	}
 }
 
 func (g *schemaGen) startFile(name string) {
 	g.b = &strings.Builder{}
 	g.b.WriteString("syntax = \"proto3\";\npackage fixture;\n")
-	g.b.WriteString("import \"" + oracleConfig.DraftFile + "\";\n")
+	g.b.WriteString("import \"" + testConfig.draftSchema + "\";\n")
 	if name == "dependent" {
-		g.b.WriteString("import \"" + oracleConfig.NextPrefix + "base.proto\";\n")
+		g.b.WriteString("import \"" + testConfig.nextDir + "/base.proto\";\n")
 	}
 }
 

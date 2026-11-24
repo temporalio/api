@@ -26,13 +26,12 @@ const (
 
 // projector projects draft declarations out of protoc-compiled descriptors.
 type projector struct {
-	cfg                                                   Config
 	fieldExt, messageExt, enumExt, enumValueExt, oneofExt protowire.Number
 	serviceExt, methodExt                                 protowire.Number
 }
 
-func newProjector(cfg Config, set *descriptorpb.FileDescriptorSet) (*projector, error) {
-	p := &projector{cfg: cfg}
+func newProjector(set *descriptorpb.FileDescriptorSet) (*projector, error) {
+	p := &projector{}
 	type extension struct{ name, extendee string }
 	numbers := map[extension]*protowire.Number{
 		{"draft", ".google.protobuf.FieldOptions"}:                &p.fieldExt,
@@ -44,7 +43,7 @@ func newProjector(cfg Config, set *descriptorpb.FileDescriptorSet) (*projector, 
 		{"draft_method", ".google.protobuf.MethodOptions"}:        &p.methodExt,
 	}
 	for _, fd := range set.GetFile() {
-		if fd.GetName() != cfg.DraftFile {
+		if fd.GetName() != draftFile {
 			continue
 		}
 		for _, ext := range fd.GetExtension() {
@@ -54,7 +53,7 @@ func newProjector(cfg Config, set *descriptorpb.FileDescriptorSet) (*projector, 
 		}
 	}
 	if p.fieldExt == 0 || p.messageExt == 0 {
-		return nil, fmt.Errorf("draft and draft_message extensions not found in %s", cfg.DraftFile)
+		return nil, fmt.Errorf("draft and draft_message extensions not found in %s", draftFile)
 	}
 	return p, nil
 }
@@ -63,7 +62,7 @@ func newProjector(cfg Config, set *descriptorpb.FileDescriptorSet) (*projector, 
 // declarations it removed.
 func (p *projector) projectFile(fd *descriptorpb.FileDescriptorProto) (*descriptorpb.FileDescriptorProto, [][]int32) {
 	fd = proto.Clone(fd).(*descriptorpb.FileDescriptorProto)
-	fd.Name = new(p.cfg.stablePath(fd.GetName()))
+	fd.Name = new(stablePath(fd.GetName()))
 	prefix := packagePrefix(fd)
 	var msgs []*descriptorpb.DescriptorProto
 	var removed [][]int32

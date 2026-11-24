@@ -13,17 +13,17 @@ import (
 // comments inside or attached to a removed declaration or a pruned import, and no other
 // comment to appear. The source scan also covers comments without SourceCodeInfo
 // locations, such as comments inside option values.
-func checkComments(cfg Config, inputTexts, outputTexts map[string]string, input, output *descriptorpb.FileDescriptorSet, removed map[string][][]int32) ([]string, error) {
+func checkComments(inputTexts, outputTexts map[string]string, input, output *descriptorpb.FileDescriptorSet, removed map[string][][]int32) ([]string, error) {
 	outputFiles := map[string]*descriptorpb.FileDescriptorProto{}
 	for _, fd := range output.GetFile() {
 		outputFiles[fd.GetName()] = fd
 	}
 	var problems []string
 	for _, fd := range input.GetFile() {
-		if fd.GetName() == cfg.DraftFile {
+		if fd.GetName() == draftFile {
 			continue
 		}
-		stable := cfg.stablePath(fd.GetName())
+		stable := stablePath(fd.GetName())
 		projected := outputFiles[stable]
 		locations := map[string]*descriptorpb.SourceCodeInfo_Location{}
 		for _, loc := range fd.GetSourceCodeInfo().GetLocation() {
@@ -34,7 +34,7 @@ func checkComments(cfg Config, inputTexts, outputTexts map[string]string, input,
 		gone := slices.Clone(removed[fd.GetName()])
 		importIndices := map[int32]int32{}
 		for i, dep := range fd.GetDependency() {
-			index := slices.Index(projected.GetDependency(), cfg.stablePath(dep))
+			index := slices.Index(projected.GetDependency(), stablePath(dep))
 			if index < 0 {
 				gone = append(gone, []int32{fileDependenciesTag, int32(i)})
 			}
@@ -79,7 +79,7 @@ func checkComments(cfg Config, inputTexts, outputTexts map[string]string, input,
 			}
 		}
 
-		text, ok := strings.CutPrefix(outputTexts[stable], cfg.Header)
+		text, ok := strings.CutPrefix(outputTexts[stable], generatedHeader)
 		if !ok {
 			problems = append(problems, fmt.Sprintf("%s: missing generated header", stable))
 			continue
@@ -105,7 +105,7 @@ func checkComments(cfg Config, inputTexts, outputTexts map[string]string, input,
 			}
 		}
 		got := map[string][]string{}
-		header := commentLines(scanComments(cfg.Header))
+		header := commentLines(scanComments(generatedHeader))
 		for _, loc := range projected.GetSourceCodeInfo().GetLocation() {
 			recordAttachedComments(got, loc.GetPath(), loc, header)
 		}

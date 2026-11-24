@@ -94,7 +94,7 @@ func runFixture(t *testing.T, dir string) {
 		t.Fatal(err)
 	}
 
-	result, err := oracle.Check(oracleConfig, root, out)
+	result, err := oracle.Check(root, out)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,13 +192,6 @@ func checkFixtureAnnotations(t *testing.T, root string, expected draftAnnotation
 
 var testConfig = defaultConfig()
 
-var oracleConfig = oracle.Config{
-	NextPrefix:   testConfig.nextDir + "/",
-	StablePrefix: testConfig.stableDir + "/",
-	DraftFile:    testConfig.draftSchema,
-	Header:       generatedHeader,
-}
-
 func sortedKeys(a, b map[string]string) []string {
 	keys := maps.Clone(a)
 	maps.Copy(keys, b)
@@ -214,20 +207,20 @@ func checkIdempotent(ctx context.Context, t testingT, root, first, scratch strin
 	next := filepath.Join(scratch, "next")
 	// An import may have comments before its path, and the first literal of a path split
 	// across literals is "temporal/api" on its own.
-	stableImport := regexp.MustCompile(`(?m)^(import\b(?:\s+|/\*[^*]*\*/|public|weak)*["'])` + regexp.QuoteMeta(strings.TrimSuffix(oracleConfig.StablePrefix, "/")) + `(["'/])`)
+	stableImport := regexp.MustCompile(`(?m)^(import\b(?:\s+|/\*[^*]*\*/|public|weak)*["'])` + regexp.QuoteMeta(testConfig.stableDir) + `(["'/])`)
 	for path, text := range readTree(t, first) {
 		body, ok := strings.CutPrefix(text, generatedHeader)
 		if !ok {
 			t.Fatalf("%s: missing generated header", path)
 		}
-		body = stableImport.ReplaceAllString(body, `${1}`+strings.TrimSuffix(oracleConfig.NextPrefix, "/")+`$2`)
-		writeFile(t, filepath.Join(next, oracleConfig.NextPrefix, strings.TrimPrefix(path, oracleConfig.StablePrefix)), body)
+		body = stableImport.ReplaceAllString(body, `${1}`+testConfig.nextDir+`$2`)
+		writeFile(t, filepath.Join(next, testConfig.nextDir, strings.TrimPrefix(path, testConfig.stableDir+"/")), body)
 	}
-	draft, err := os.ReadFile(filepath.Join(root, oracleConfig.DraftFile))
+	draft, err := os.ReadFile(filepath.Join(root, testConfig.draftSchema))
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(next, oracleConfig.DraftFile), string(draft))
+	writeFile(t, filepath.Join(next, testConfig.draftSchema), string(draft))
 	// Imports outside temporal/, such as google/ and nexusannotations/, resolve as before.
 	entries, err := os.ReadDir(root)
 	if err != nil {

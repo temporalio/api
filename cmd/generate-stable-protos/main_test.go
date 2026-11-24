@@ -342,12 +342,12 @@ func TestGeneratorValidatesRequestHeaderWithRelocatedDraftSchema(t *testing.T) {
 	root, out := t.TempDir(), t.TempDir()
 	const schema = "temporal/api_next/custom/options.proto"
 	for path, body := range readTree(t, "testdata/classification/rpc-request-header/input") {
-		if path == oracleConfig.DraftFile {
+		if path == testConfig.draftSchema {
 			path = schema
 			body = strings.Replace(body, "package temporal.api.protometa.v1;", "package example.meta;", 1)
 		} else {
 			body = strings.NewReplacer(
-				oracleConfig.DraftFile, schema,
+				testConfig.draftSchema, schema,
 				"temporal.api.protometa.v1.draft", "example.meta.draft",
 			).Replace(body)
 		}

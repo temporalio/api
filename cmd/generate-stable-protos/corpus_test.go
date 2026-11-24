@@ -16,7 +16,7 @@ func TestRepoAPINext(t *testing.T) {
 	if err := testConfig.stableProtosGenerator(t.Context(), root, out); err != nil {
 		t.Fatal(err)
 	}
-	result, err := oracle.Check(oracleConfig, root, out)
+	result, err := oracle.Check(root, out)
 	if err != nil {
 		t.Fatal(err)
 	}

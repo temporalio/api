@@ -36,6 +36,7 @@ OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
 NEX_GEN ?= nexgen
+BUF_BREAKING_AGAINST ?= https://github.com/temporalio/api.git\#branch=main
 
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
@@ -134,8 +135,8 @@ buf-lint: $(STAMPDIR)/buf-dep-prune
 	(cd $(PROTO_ROOT) && buf lint)
 
 buf-breaking:
-	@printf $(COLOR) "Run buf breaking changes check against main branch..."
-	@(cd $(PROTO_ROOT) && buf breaking --against 'https://github.com/temporalio/api.git#branch=main')
+	@printf $(COLOR) "Run buf breaking changes check..."
+	@(cd $(PROTO_ROOT) && buf breaking --against '$(BUF_BREAKING_AGAINST)')
 
 nexus-rpc-yaml: nexus-rpc-yaml-install
 	printf $(COLOR) "Generate nexus/temporal-proto-models-nexusrpc.yaml..."

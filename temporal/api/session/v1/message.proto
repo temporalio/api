@@ -17,11 +17,13 @@ import "google/protobuf/empty.proto";
 // (aka Workflow-as-Session). A Workflow Session can receive both workflow
 // tasks and activity tasks of an execution.
 message WorkerSessionOptions {
-    // Admission control, if unset the worker accepts an arbitrary number of
-    // sessions (bounded by session slots in the future)
+    // Admission control. Required: exactly one mode must be set, and the
+    // server rejects session options with neither.
     oneof admission {
         // If specified, the worker only polls for work belonging to its session.
         SingleSessionOptions single_session = 1;
+        // If specified, the worker can serve multiple sessions at once.
+        MultiSessionOptions multi_session = 2;
     }
 }
 
@@ -41,6 +43,14 @@ message SingleSessionOptions {
     // Note: we are currently unsure how this will evolve. May be deprecated as
     // the session model develops.
     string stable_identity = 1;
+}
+
+// EXPERIMENTAL. Subject to redesign or removal.
+// Serve any number of sessions concurrently. The server routes each bound
+// session's work to the worker's sticky queue, which must be named after the
+// poll's worker_instance_key. Future admission knobs (e.g. session slots)
+// belong here.
+message MultiSessionOptions {
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.

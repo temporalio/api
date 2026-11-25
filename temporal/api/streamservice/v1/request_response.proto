@@ -25,8 +25,7 @@ import "temporal/api/stream/v1/message.proto";
 // `FAIL` fails with `ALREADY_EXISTS`, and `USE_EXISTING` returns the Stream with `created` false. A
 // retry of the create that made the Stream, with the same request id, returns `created` true. The
 // Store remembers the request id of that create, so a retry after a lost response doesn't fail with
-// `ALREADY_EXISTS`. Either policy fails with `CLOSED` for a closed Stream and with `EXPIRED` for an
-// expired one.
+// `ALREADY_EXISTS`. Either policy fails with `EXPIRED` for an expired Stream.
 //
 // A create has no Retention. Retention is a setting of the Store, as it's a setting of the
 // namespace for Workflows.
@@ -108,13 +107,10 @@ message ReadRecordsResponse {
     // offset that skips only entries of its own that aren't Records, so the next read doesn't
     // scan them again.
     bytes last_offset = 2;
-    // True when the Stream is closed and this page has its last Record. A read of a closed Stream
-    // with no Record left returns immediately with `done`.
-    bool done = 3;
 }
 
 // Experimental. Might change in the future.
-// Gets the status and the newest offset of a Stream.
+// Gets the newest offset of a Stream.
 message DescribeStreamRequest {
     // Required.
     temporal.api.stream.v1.StreamRef ref = 1;
@@ -124,8 +120,7 @@ message DescribeStreamRequest {
 // The state of a Stream. It doesn't include Retention, which is a setting of the Store and not
 // of one Stream.
 message DescribeStreamResponse {
-    temporal.api.enums.v1.StreamStatus status = 1;
     // The offset of the newest Record, or an offset after it that skips no Record. A read from it
     // returns only the Records that come later. It's empty when the Stream has no Record.
-    bytes last_offset = 2;
+    bytes last_offset = 1;
 }

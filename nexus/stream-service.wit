@@ -181,14 +181,6 @@ interface stream-service {
     stream-id-conflict-policy-use-existing,
   }
 
-  /// @nexus.proto "temporal.api.enums.v1.StreamStatus"
-  enum stream-status {
-    /// @nexus.fallback
-    stream-status-unspecified,
-    stream-status-open,
-    stream-status-closed,
-  }
-
   /// @nexus.doc "Append one batch. The Store writes a batch that arrives again only once."
   /// @nexus.proto "temporal.api.streamservice.v1.AppendRecordsRequest"
   record append-records-request {
@@ -232,8 +224,6 @@ interface stream-service {
     records: list<stream-record>,
     /// @nexus.doc "Where the next read goes on. It is never before the last Record in this page."
     last-offset: option<list<u8>>,
-    /// @nexus.doc "True when the Stream is closed and this page has its last Record."
-    done: bool,
   }
 
   /// @nexus.proto "temporal.api.streamservice.v1.DescribeStreamRequest"
@@ -243,7 +233,6 @@ interface stream-service {
 
   /// @nexus.proto "temporal.api.streamservice.v1.DescribeStreamResponse"
   record describe-stream-response {
-    status: option<stream-status>,
     /// @nexus.doc "The newest offset. A read from it gives only later Records. Empty with none."
     last-offset: option<list<u8>>,
   }
@@ -274,7 +263,7 @@ interface stream-service {
       max-bytes: option<s64>,
     ) -> read-records-response;
 
-    /// @nexus.doc "Return the status and the newest offset of the Stream."
+    /// @nexus.doc "Return the newest offset of the Stream."
     /// @nexus.operation "describe-stream"
     describe: func() -> describe-stream-response;
   }

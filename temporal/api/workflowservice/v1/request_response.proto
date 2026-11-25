@@ -3057,10 +3057,38 @@ message RecordWorkerHeartbeatRequest {
 
     // Resource ID for routing. Contains the worker grouping key.
     string resource_id = 4;
+
+    // Opaque server-issued token that identifies the acknowledged base version for this group
+    // and lease run. SDK reuses the last acknowledged token on retry. An empty token uses version
+    // zero as the base, including when the first acknowledgment was lost.
+    bytes ack_token = 5;
+
+    // SDK-generated version of the group's activity bindings after applying this report's delta.
+    // The sender advances one sequence for the group as bindings change. A new sender uses
+    // a new group identity. Lease expiry alone does not reset the sequence.
+    // Each attempt reports cumulative changes after the acknowledged base through this version.
+    // A retry can include changes that occurred after the previous attempt. Within the same run,
+    // the server accepts newer versions with older tokens and uses the version to reject stale changes.
+    // Heartbeats with no binding changes may reuse the current version.
+    int64 activity_binding_version = 6;
+
+    // Requested heartbeat timeout shared by all workers in the group.
+    // Unset or zero inherits the namespace default. Positive values request an override.
+    // Negative values disable lease tracking for this group.
+    google.protobuf.Duration heartbeat_timeout = 7;
 }
 
 message RecordWorkerHeartbeatResponse {
+    // ACCEPTED means the server durably applied the group's binding changes through the request's
+    // activity_binding_version. With an ack_token, the SDK may discard changes through that version
+    // and retain newer changes. Until then, retain changes, including removals, for the next report.
+    // On an unspecified or unknown status, stop binding updates and report an unsupported
+    // response; metadata-only heartbeats may continue.
+    temporal.api.enums.v1.WorkerHeartbeatStatus status = 1;
 
+    // On ACCEPTED, the token acknowledges the originating request's activity_binding_version.
+    // The SDK uses it as the base for its next cumulative report within the same lease run.
+    bytes ack_token = 2;
 }
 
 message ListWorkersRequest {

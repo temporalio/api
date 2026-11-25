@@ -12,9 +12,9 @@ option csharp_namespace = "Temporalio.Api.Session.V1";
 import "google/protobuf/empty.proto";
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// Sent on workflow and activity polls. Presence means this worker can serve
+// Sent on workflow and activity polls. Presence means this worker can service
 // sessions. Currently, the only supported Session type is Workflow Session
-// (aka Workflow-as-Session). A Workflow that is bound to a worker serving sessions
+// (aka Workflow-as-Session). A Workflow that is bound to a worker servicing sessions
 // can receive both workflow tasks and activity tasks of an execution.
 //
 // The server routes a session's work to the worker's sticky queue, so the
@@ -30,16 +30,16 @@ message WorkerSessionOptions {
     oneof admission {
         // If specified, the worker only polls for work belonging to its session.
         SingleSessionOptions single_session = 1;
-        // If specified, the worker can serve multiple sessions at once.
+        // If specified, the worker can service multiple sessions at once.
         MultiSessionOptions multi_session = 2;
     }
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// Serve exactly one session for the worker's lifetime, including across
-// process restarts with the same stable_identity. The server binds the worker
-// to the first session that needs a worker, and dispatches no other work here,
-// even after that session completes.
+// Service exactly one session for the worker's lifetime, including across
+// process restarts with the same stable_identity. The first workflow this
+// worker picks up is bound to it, and from then on the worker only receives
+// that workflow's tasks, even after the workflow completes.
 message SingleSessionOptions {
     // Identity the binding is stored under. Required; must be non-empty.
     // Reuse it across restarts of the same session, not across concurrently
@@ -47,14 +47,14 @@ message SingleSessionOptions {
     // concurrently, the server treats them as pollers of a single worker and
     // process affinity is lost.
     //
-    // Note: this effectively acts as a configurable sticky queue.
+    // Note: this effectively acts as a sticky queue that can be configured by the user.
     // Note: we are currently unsure how this will evolve. May be deprecated as
     // the session model develops.
     string stable_identity = 1;
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// Serve any number of sessions concurrently. Future admission knobs (e.g.
+// Service any number of sessions concurrently. Future admission knobs (e.g.
 // session slots) belong here.
 message MultiSessionOptions {
 }
@@ -65,7 +65,7 @@ message ActivitySessionOptions {
     oneof placement {
         // Run in the workflow's current session (on its sticky queue).
         // Currently requires the activity's task queue to be the workflow's,
-        // and the workflow's worker to serve sessions.
+        // and the workflow's worker to service sessions.
         google.protobuf.Empty workflow_session = 1;
 
         // Future: references to other types of sessions.
@@ -73,13 +73,7 @@ message ActivitySessionOptions {
 }
 
 // EXPERIMENTAL. Subject to redesign or removal.
-// How a workflow is bound to a worker, recorded on history events so the
-// server can rebuild the binding from history (for example on reset). See
-// session_info on WorkflowTaskStartedEventAttributes and inherited_session_info
-// on WorkflowExecutionStartedEventAttributes:
-//   * unset: not bound (started by a worker without sessions).
-//   * {}: bound to a multi-session worker.
-//   * {exclusive_worker: true}: bound to a single-session worker.
+// How a workflow is bound to a worker. Empty for a multi-session worker.
 message SessionInfo {
     // True when the workflow is bound to a single-session worker. Such a
     // binding never moves to another worker.

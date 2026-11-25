@@ -14186,7 +14186,7 @@
         "workflowSession": {
           "type": "object",
           "properties": {},
-          "description": "Run in the workflow's current session (on its sticky queue).\nCurrently requires the activity's task queue to be the workflow's,\nand the workflow's worker to serve sessions."
+          "description": "Run in the workflow's current session (on its sticky queue).\nCurrently requires the activity's task queue to be the workflow's,\nand the workflow's worker to service sessions."
         }
       },
       "description": "EXPERIMENTAL. Subject to redesign or removal.\nResolved activity placement. Unset = normal task-queue routing."
@@ -17416,7 +17416,7 @@
     },
     "v1MultiSessionOptions": {
       "type": "object",
-      "description": "EXPERIMENTAL. Subject to redesign or removal.\nServe any number of sessions concurrently. Future admission knobs (e.g.\nsession slots) belong here."
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nService any number of sessions concurrently. Future admission knobs (e.g.\nsession slots) belong here."
     },
     "v1NamespaceConfig": {
       "type": "object",
@@ -19996,7 +19996,7 @@
           "description": "True when the workflow is bound to a single-session worker. Such a\nbinding never moves to another worker."
         }
       },
-      "description": "EXPERIMENTAL. Subject to redesign or removal.\nHow a workflow is bound to a worker, recorded on history events so the\nserver can rebuild the binding from history (for example on reset). See\nsession_info on WorkflowTaskStartedEventAttributes and inherited_session_info\non WorkflowExecutionStartedEventAttributes:\n  * unset: not bound (started by a worker without sessions).\n  * {}: bound to a multi-session worker.\n  * {exclusive_worker: true}: bound to a single-session worker."
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nHow a workflow is bound to a worker. Empty for a multi-session worker."
     },
     "v1SetCurrentDeploymentResponse": {
       "type": "object",
@@ -20192,10 +20192,10 @@
       "properties": {
         "stableIdentity": {
           "type": "string",
-          "description": "Identity the binding is stored under. Required; must be non-empty.\nReuse it across restarts of the same session, not across concurrently\nrunning workers. If multiple workers poll with the same stable_identity\nconcurrently, the server treats them as pollers of a single worker and\nprocess affinity is lost.\n\nNote: this effectively acts as a configurable sticky queue.\nNote: we are currently unsure how this will evolve. May be deprecated as\nthe session model develops."
+          "description": "Identity the binding is stored under. Required; must be non-empty.\nReuse it across restarts of the same session, not across concurrently\nrunning workers. If multiple workers poll with the same stable_identity\nconcurrently, the server treats them as pollers of a single worker and\nprocess affinity is lost.\n\nNote: this effectively acts as a sticky queue that can be configured by the user.\nNote: we are currently unsure how this will evolve. May be deprecated as\nthe session model develops."
         }
       },
-      "description": "EXPERIMENTAL. Subject to redesign or removal.\nServe exactly one session for the worker's lifetime, including across\nprocess restarts with the same stable_identity. The server binds the worker\nto the first session that needs a worker, and dispatches no other work here,\neven after that session completes."
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nService exactly one session for the worker's lifetime, including across\nprocess restarts with the same stable_identity. The first workflow this\nworker picks up is bound to it, and from then on the worker only receives\nthat workflow's tasks, even after the workflow completes."
     },
     "v1StartActivityExecutionResponse": {
       "type": "object",
@@ -21760,10 +21760,10 @@
         },
         "multiSession": {
           "$ref": "#/definitions/v1MultiSessionOptions",
-          "description": "If specified, the worker can serve multiple sessions at once."
+          "description": "If specified, the worker can service multiple sessions at once."
         }
       },
-      "description": "EXPERIMENTAL. Subject to redesign or removal.\nSent on workflow and activity polls. Presence means this worker can serve\nsessions. Currently, the only supported Session type is Workflow Session\n(aka Workflow-as-Session). A Workflow that is bound to a worker serving sessions\ncan receive both workflow tasks and activity tasks of an execution.\n\nThe server routes a session's work to the worker's sticky queue, so the\nsticky queue name depends on the admission mode:\n  * single_session: the worker polls only its sticky queue, named after\n    SingleSessionOptions.stable_identity.\n  * multi_session: the worker polls the normal queue and its sticky queue,\n    named after the poll's worker_instance_key.\nThe server rejects sticky polls whose name does not follow this rule."
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nSent on workflow and activity polls. Presence means this worker can service\nsessions. Currently, the only supported Session type is Workflow Session\n(aka Workflow-as-Session). A Workflow that is bound to a worker servicing sessions\ncan receive both workflow tasks and activity tasks of an execution.\n\nThe server routes a session's work to the worker's sticky queue, so the\nsticky queue name depends on the admission mode:\n  * single_session: the worker polls only its sticky queue, named after\n    SingleSessionOptions.stable_identity.\n  * multi_session: the worker polls the normal queue and its sticky queue,\n    named after the poll's worker_instance_key.\nThe server rejects sticky polls whose name does not follow this rule."
     },
     "v1WorkerSlotsInfo": {
       "type": "object",
@@ -22487,7 +22487,7 @@
         },
         "inheritedSessionInfo": {
           "$ref": "#/definitions/v1SessionInfo",
-          "description": "Session info this run inherited from the previous run (continue-as-new, retry or cron), so the server\ncan rebuild it from history. Nil when the previous run was not bound or this run is on a different\ntask queue. Child workflows never inherit it.\nUsed internally by the server; SDKs should not read or interpret this field.\nEXPERIMENTAL. Subject to redesign or removal."
+          "description": "Session info this run inherited from the previous run (continue-as-new or retry), so the server\ncan rebuild it from history. Nil when the previous run was not bound or this run is on a different\ntask queue. Child workflows never inherit it.\nUsed internally by the server; SDKs should not read or interpret this field.\nEXPERIMENTAL. Subject to redesign or removal."
         }
       },
       "title": "Always the first event in workflow history"

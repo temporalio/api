@@ -159,6 +159,8 @@ nexus-rpc-yaml-install:
 	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Compile system Nexus WIT files #####
+# The Stream WIT maps the messages of sdk/v1/stream.proto and the responses of the Store messages
+# in streamservice/v1, and no Store request.
 system-nexus-wit: system-nexus-wit-install nex-gen-install
 	printf $(COLOR) "Generate system Nexus WIT..."
 	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
@@ -170,7 +172,8 @@ system-nexus-wit: system-nexus-wit-install nex-gen-install
 		--system-nexus-wit_out=. \
 		temporal/api/workflowservice/v1/service.proto \
 		temporal/api/notificationservice/v1/request_response.proto \
-		temporal/api/streamservice/v1/request_response.proto && \
+		temporal/api/streamservice/v1/request_response.proto \
+		temporal/api/sdk/v1/stream.proto && \
 	$(NEX_GEN) add-message \
 		--descriptors "$$tmp/system.bin" \
 		--file temporal/api/notificationservice/v1/request_response.proto \
@@ -179,7 +182,10 @@ system-nexus-wit: system-nexus-wit-install nex-gen-install
 		--output nexus/notification-service.wit && \
 	$(NEX_GEN) add-message \
 		--descriptors "$$tmp/system.bin" \
-		--file temporal/api/streamservice/v1/request_response.proto \
+		--file temporal/api/sdk/v1/stream.proto \
+		--message temporal.api.streamservice.v1.AppendRecordsResponse \
+		--message temporal.api.streamservice.v1.ReadRecordsResponse \
+		--message temporal.api.streamservice.v1.DescribeStreamResponse \
 		--input nexus/stream-service.wit \
 		--input nexus/deps \
 		--output nexus/stream-service.wit

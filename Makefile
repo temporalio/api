@@ -35,10 +35,10 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
-# The Stream WIT needs nexgen features that no release has yet. Pin a nexgen commit that has them
-# until a release does.
+# The Stream WIT needs nexgen features that are on its main branch but in no release yet. Pin a
+# commit of main until a release has them. Building it needs Rust 1.95 or later.
 NEX_GEN_REPO := https://github.com/temporalio/nexgen
-NEX_GEN_REV := 74f8ce7678f68a0df457c045db7d442dd3e134ff
+NEX_GEN_REV := ee8c81a3eb24a72d9b5c716030964842448e00a8
 NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
 NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 

@@ -150,8 +150,7 @@ interface stream-service {
   }
 
   // Offsets are unique and ordered within one Stream, but they have gaps, so they don't count
-  // Records. A read returns only Records. A close stores no Record, so the read response reports
-  // it with `done`.
+  // Records. A read returns only Records.
   /// @nexus.doc "One Record of a Stream, as a read returns it."
   /// @nexus.proto "temporal.api.stream.v1.StreamRecord"
   record stream-record {
@@ -213,24 +212,6 @@ interface stream-service {
     last-offset: option<list<u8>>,
   }
 
-  // A close has no value, so code with a final value appends it first.
-  /// @nexus.doc "Close a Stream. Readers get the Records that are left. Later appends fail."
-  /// @nexus.proto "temporal.api.streamservice.v1.CloseStreamRequest"
-  record close-stream-request {
-    ref: stream-ref,
-    /// @nexus.doc
-    ///   "The Producer that closes the Stream. Defaults to the Producer of the calling context."
-    /// @nexus.source targets="workflow" python="workflow_producer()"
-    ///   typescript="workflowProducer()" dotnet="StreamWorkflowContext.Producer()"
-    /// @nexus.default targets="client" python="_support.default_producer(self._nexus_client)"
-    ///   typescript="support.defaultProducer()" dotnet="StreamActivityContext.Producer()"
-    producer: producer,
-  }
-
-  /// @nexus.proto "temporal.api.streamservice.v1.CloseStreamResponse"
-  record close-stream-response {
-  }
-
   /// @nexus.doc "Read Records after an offset."
   /// @nexus.proto "temporal.api.streamservice.v1.ReadRecordsRequest"
   record read-records-request {
@@ -242,7 +223,7 @@ interface stream-service {
     max-records: option<s32>,
     /// @nexus.doc "The maximum bytes of Records in a page. A larger Record is returned alone."
     max-bytes: option<s64>,
-    /// @nexus.doc "How long the read waits for a new Record or a close before an empty page."
+    /// @nexus.doc "How long the read waits for a new Record before an empty page."
     wait: option<duration>,
   }
 
@@ -274,8 +255,7 @@ interface stream-service {
   resource %stream {
     constructor(ref: stream-ref, created: option<bool>);
 
-    // The Workflow `append` and `close` have no `producer`, because the request field has a
-    // Workflow source.
+    // The Workflow `append` has no `producer`, because the request field has a Workflow source.
     /// @nexus.doc "Append values, and return the offsets of the batch."
     /// @nexus.operation "append-records"
     /// @nexus.varargs "records"
@@ -283,11 +263,6 @@ interface stream-service {
       records: list<append-record>,
       producer: option<producer>,
     ) -> append-records-response;
-
-    /// @nexus.doc "Close the Stream. Readers get the Records that are left, then end."
-    /// @nexus.operation "close-stream"
-    /// @nexus.close
-    close: func(producer: option<producer>);
 
     // Workflow code and a client read the same way, with a page read or its poll iterator.
     /// @nexus.doc "Read one page of Records. The poll iterator reads them all."
@@ -316,10 +291,6 @@ interface stream-service {
   /// @nexus.operation name="AppendRecords"
   /// @nexus.api-omit
   append-records: func(request: append-records-request) -> append-records-response;
-
-  /// @nexus.operation name="CloseStream"
-  /// @nexus.api-omit
-  close-stream: func(request: close-stream-request) -> close-stream-response;
 
   // A WIT stream can't cross a Nexus call, so a read is a request and a response. The SDK's support
   // helper builds the next request from a page for the poll iterator.

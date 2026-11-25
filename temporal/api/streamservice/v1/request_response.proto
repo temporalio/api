@@ -10,7 +10,7 @@ option ruby_package = "Temporalio::Api::StreamService::V1";
 option csharp_namespace = "Temporalio.Api.StreamService.V1";
 
 // The messages of the Stream service. An SDK Store (Redis or memory) and the server answer the
-// same five operations with them. A field that is only read by the server says so.
+// same four operations with them. A field that is only read by the server says so.
 //
 // The request id of a call is in its envelope, as for every Nexus operation. An SDK that calls a
 // Store with no envelope passes the request id next to the request.
@@ -61,8 +61,7 @@ message CreateStreamResponse {
 message AppendRecordsRequest {
     // Required.
     temporal.api.stream.v1.StreamRef ref = 1;
-    // Required. The Producer that writes the batch. A Producer sends the same value in its
-    // appends and in its close, so the Store orders all of its writes the same way.
+    // Required. The Producer that writes the batch.
     temporal.api.stream.v1.Producer producer = 2;
     // Required. A batch has at least one Record.
     repeated temporal.api.stream.v1.AppendRecord records = 3;
@@ -76,24 +75,8 @@ message AppendRecordsResponse {
 }
 
 // Experimental. Might change in the future.
-// Closes a Stream. Readers still get the Records that are left, and then their reads end. Later
-// appends fail with `CLOSED`. A close writes no Record and has no value, so code with a final
-// value appends it before the close.
-message CloseStreamRequest {
-    // Required.
-    temporal.api.stream.v1.StreamRef ref = 1;
-    // Required. The Producer that closes the Stream.
-    temporal.api.stream.v1.Producer producer = 2;
-}
-
-// Experimental. Might change in the future.
-// The response to a close. The Store sends it after it has recorded the close.
-message CloseStreamResponse {
-}
-
-// Experimental. Might change in the future.
 // Reads one page of Records after an offset. When no Record is left, the read waits for a new
-// one or for the close of the Stream, so a reader long-polls.
+// one, so a reader long-polls.
 message ReadRecordsRequest {
     // Required.
     temporal.api.stream.v1.StreamRef ref = 1;
@@ -110,8 +93,8 @@ message ReadRecordsRequest {
     // this is still returned, alone in its page, so a read always makes progress. Zero means no
     // limit.
     int64 max_bytes = 4;
-    // How long the read waits for a new Record, or for the close of the Stream, before it returns
-    // an empty page. When it's unset, the read returns immediately.
+    // How long the read waits for a new Record before it returns an empty page. When it's unset,
+    // the read returns immediately.
     google.protobuf.Duration wait = 5;
 }
 
@@ -125,9 +108,8 @@ message ReadRecordsResponse {
     // offset that skips only entries of its own that aren't Records, so the next read doesn't
     // scan them again.
     bytes last_offset = 2;
-    // True when the Stream is closed and this page has its last Record. A read has no other sign
-    // of a close, because a close stores no Record. A read of a closed Stream with no Record left
-    // returns immediately with `done`.
+    // True when the Stream is closed and this page has its last Record. A read of a closed Stream
+    // with no Record left returns immediately with `done`.
     bool done = 3;
 }
 

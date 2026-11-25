@@ -3058,15 +3058,15 @@ message RecordWorkerHeartbeatRequest {
     // Resource ID for routing. Contains the worker grouping key.
     string resource_id = 4;
 
-    // Opaque server-issued token that identifies the acknowledged base version for this group
+    // Opaque server-issued token that identifies the acknowledged delta base version for this group
     // and lease run. SDK reuses the last acknowledged token on retry. An empty token uses version
     // zero as the base, including when the first acknowledgment was lost.
     bytes ack_token = 5;
 
-    // SDK-generated version of the group's activity bindings after applying this report's delta.
+    // SDK-generated version of the group's activity bindings represented by this report.
     // The sender advances one sequence for the group as bindings change. A new sender uses
     // a new group identity. Lease expiry alone does not reset the sequence.
-    // Each attempt reports cumulative changes after the acknowledged base through this version.
+    // Each delta attempt reports cumulative changes after the acknowledged base through this version.
     // A retry can include changes that occurred after the previous attempt. Within the same run,
     // the server accepts newer versions with older tokens and uses the version to reject stale changes.
     // Heartbeats with no binding changes may reuse the current version.
@@ -3076,6 +3076,12 @@ message RecordWorkerHeartbeatRequest {
     // Unset or zero inherits the namespace default. Positive values request an override.
     // Negative values disable lease tracking for this group.
     google.protobuf.Duration heartbeat_timeout = 7;
+
+    // Token from a RESYNC_REQUIRED response. Set this in place of ack_token for a recovery
+    // report and include a snapshot for every current worker, including workers with no bindings.
+    // The snapshots replace the group's tracked bindings. The server validates that each activity
+    // attempt still belongs to its reporting worker and prevents older reports from undoing recovery.
+    bytes recovery_token = 8;
 }
 
 message RecordWorkerHeartbeatResponse {
@@ -3089,6 +3095,10 @@ message RecordWorkerHeartbeatResponse {
     // On ACCEPTED, the token acknowledges the originating request's activity_binding_version.
     // The SDK uses it as the base for its next cumulative report within the same lease run.
     bytes ack_token = 2;
+
+    // On RESYNC_REQUIRED, identifies the worker group and lease run to recover. The SDK sends
+    // a fresh snapshot with this token and retains pending changes until the server accepts it.
+    bytes recovery_token = 3;
 }
 
 message ListWorkersRequest {

@@ -11917,16 +11917,21 @@
         "ackToken": {
           "type": "string",
           "format": "byte",
-          "description": "Opaque server-issued token that identifies the acknowledged base version for this group\nand lease run. SDK reuses the last acknowledged token on retry. An empty token uses version\nzero as the base, including when the first acknowledgment was lost."
+          "description": "Opaque server-issued token that identifies the acknowledged delta base version for this group\nand lease run. SDK reuses the last acknowledged token on retry. An empty token uses version\nzero as the base, including when the first acknowledgment was lost."
         },
         "activityBindingVersion": {
           "type": "string",
           "format": "int64",
-          "description": "SDK-generated version of the group's activity bindings after applying this report's delta.\nThe sender advances one sequence for the group as bindings change. A new sender uses\na new group identity. Lease expiry alone does not reset the sequence.\nEach attempt reports cumulative changes after the acknowledged base through this version.\nA retry can include changes that occurred after the previous attempt. Within the same run,\nthe server accepts newer versions with older tokens and uses the version to reject stale changes.\nHeartbeats with no binding changes may reuse the current version."
+          "description": "SDK-generated version of the group's activity bindings represented by this report.\nThe sender advances one sequence for the group as bindings change. A new sender uses\na new group identity. Lease expiry alone does not reset the sequence.\nEach delta attempt reports cumulative changes after the acknowledged base through this version.\nA retry can include changes that occurred after the previous attempt. Within the same run,\nthe server accepts newer versions with older tokens and uses the version to reject stale changes.\nHeartbeats with no binding changes may reuse the current version."
         },
         "heartbeatTimeout": {
           "type": "string",
           "description": "Requested heartbeat timeout shared by all workers in the group.\nUnset or zero inherits the namespace default. Positive values request an override.\nNegative values disable lease tracking for this group."
+        },
+        "recoveryToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "Token from a RESYNC_REQUIRED response. Set this in place of ack_token for a recovery\nreport and include a snapshot for every current worker, including workers with no bindings.\nThe snapshots replace the group's tracked bindings. The server validates that each activity\nattempt still belongs to its reporting worker and prevents older reports from undoing recovery."
         }
       }
     },
@@ -13847,6 +13852,20 @@
         }
       },
       "description": "Cumulative binding changes since the heartbeat group's last acknowledged version."
+    },
+    "v1ActivityBindingSnapshot": {
+      "type": "object",
+      "properties": {
+        "bindings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ActivityBinding"
+          },
+          "description": "An empty snapshot explicitly reports that the worker has no tracked bindings."
+        }
+      },
+      "description": "Complete set of activity bindings tracked by a worker at the reported version."
     },
     "v1ActivityExecutionInfo": {
       "type": "object",
@@ -19161,6 +19180,11 @@
           "type": "string",
           "format": "byte",
           "description": "On ACCEPTED, the token acknowledges the originating request's activity_binding_version.\nThe SDK uses it as the base for its next cumulative report within the same lease run."
+        },
+        "recoveryToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "On RESYNC_REQUIRED, identifies the worker group and lease run to recover. The SDK sends\na fresh snapshot with this token and retains pending changes until the server accepts it."
         }
       }
     },
@@ -21352,7 +21376,11 @@
       "properties": {
         "delta": {
           "$ref": "#/definitions/v1ActivityBindingDelta",
-          "description": "An absent or empty delta leaves the worker's bindings unchanged."
+          "description": "An absent or empty delta leaves the worker's bindings unchanged in a delta report."
+        },
+        "snapshot": {
+          "$ref": "#/definitions/v1ActivityBindingSnapshot",
+          "description": "Set only on a recovery report. Mutually exclusive with delta."
         }
       },
       "description": "Activity binding information reported by a worker for automatic activity rescheduling.\nReporting this information requires the namespace's automatic_activity_rescheduling capability."
@@ -21647,7 +21675,7 @@
         },
         "activityInfo": {
           "$ref": "#/definitions/v1WorkerActivityInfo",
-          "description": "Cumulative activity binding changes for RecordWorkerHeartbeatRequest's version range.\nOnly sent through RecordWorkerHeartbeat, which acknowledges the reported version.\nOmitted from worker visibility responses."
+          "description": "Activity bindings for the version reported in RecordWorkerHeartbeatRequest.\nOnly sent through RecordWorkerHeartbeat, which acknowledges the reported version.\nOmitted from worker visibility responses."
         }
       },
       "description": "Worker info message, contains information about the worker and its current state.\nAll information is provided by the worker itself."
@@ -21656,10 +21684,11 @@
       "type": "string",
       "enum": [
         "WORKER_HEARTBEAT_STATUS_UNSPECIFIED",
-        "WORKER_HEARTBEAT_STATUS_ACCEPTED"
+        "WORKER_HEARTBEAT_STATUS_ACCEPTED",
+        "WORKER_HEARTBEAT_STATUS_RESYNC_REQUIRED"
       ],
       "default": "WORKER_HEARTBEAT_STATUS_UNSPECIFIED",
-      "description": "Acknowledgment status of a heartbeat group's activity binding report.\n\n - WORKER_HEARTBEAT_STATUS_ACCEPTED: The server accepted all binding changes through the request's activity_binding_version."
+      "description": "Acknowledgment status of a heartbeat group's activity binding report.\n\n - WORKER_HEARTBEAT_STATUS_ACCEPTED: The server accepted all binding changes through the request's activity_binding_version.\n - WORKER_HEARTBEAT_STATUS_RESYNC_REQUIRED: The server could not reconcile the report with its acknowledged base. Send a full\nsnapshot with the response's recovery_token. This status acknowledges no changes."
     },
     "v1WorkerHostInfo": {
       "type": "object",

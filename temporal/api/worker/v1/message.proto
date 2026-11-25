@@ -139,7 +139,7 @@ message WorkerHeartbeat {
   // Information about the environment this SDK is running in.
   EnvironmentInfo environment = 25;
 
-  // Cumulative activity binding changes for RecordWorkerHeartbeatRequest's version range.
+  // Activity bindings for the version reported in RecordWorkerHeartbeatRequest.
   // Only sent through RecordWorkerHeartbeat, which acknowledges the reported version.
   // Omitted from worker visibility responses.
   WorkerActivityInfo activity_info = 26;
@@ -148,8 +148,17 @@ message WorkerHeartbeat {
 // Activity binding information reported by a worker for automatic activity rescheduling.
 // Reporting this information requires the namespace's automatic_activity_rescheduling capability.
 message WorkerActivityInfo {
-  // An absent or empty delta leaves the worker's bindings unchanged.
+  // An absent or empty delta leaves the worker's bindings unchanged in a delta report.
   ActivityBindingDelta delta = 1;
+
+  // Set only on a recovery report. Mutually exclusive with delta.
+  ActivityBindingSnapshot snapshot = 2;
+}
+
+// Complete set of activity bindings tracked by a worker at the reported version.
+message ActivityBindingSnapshot {
+  // An empty snapshot explicitly reports that the worker has no tracked bindings.
+  repeated ActivityBinding bindings = 1;
 }
 
 // Identifies a specific activity task attempt.

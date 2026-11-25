@@ -11914,19 +11914,19 @@
           "type": "string",
           "description": "Resource ID for routing. Contains the worker grouping key."
         },
-        "baseVersion": {
+        "ackToken": {
           "type": "string",
-          "format": "int64",
-          "description": "Last durably acknowledged activity-state version for this worker group, initially zero.\nActivity binding reports require the namespace's automatic_activity_rescheduling capability."
+          "format": "byte",
+          "description": "Opaque server-issued token that identifies the acknowledged base version for this group\nand lease run. SDK reuses the last acknowledged token on retry. An empty token uses version\nzero as the base, including when the first acknowledgment was lost."
         },
-        "targetVersion": {
+        "activityBindingVersion": {
           "type": "string",
           "format": "int64",
-          "description": "Activity-state version covered by this report. Must be at least base_version.\nOne sender advances a single sequence across all workers in the group as bindings change.\nA new sender uses a new group identity; lease expiry alone does not reset the sequence.\nEach attempt includes cumulative changes from base_version through target_version,\nincluding changes retained after a timeout or lost response and any newer changes.\nThe server reconciles overlapping reports and prevents stale reports from undoing newer state.\nHeartbeats with no binding changes may reuse the current version."
+          "description": "SDK-generated version of the group's activity bindings after applying this report's delta.\nThe sender advances one sequence for the group as bindings change. A new sender uses\na new group identity. Lease expiry alone does not reset the sequence.\nEach attempt reports cumulative changes after the acknowledged base through this version.\nA retry can include changes that occurred after the previous attempt. Within the same run,\nthe server accepts newer versions with older tokens and uses the version to reject stale changes.\nHeartbeats with no binding changes may reuse the current version."
         },
         "heartbeatTimeout": {
           "type": "string",
-          "description": "Requested heartbeat timeout shared by all workers in the group.\nUnset or zero inherits the namespace default. Positive values request an override.\nNegative values disable durable worker liveness for this group."
+          "description": "Requested heartbeat timeout shared by all workers in the group.\nUnset or zero inherits the namespace default. Positive values request an override.\nNegative values disable lease tracking for this group."
         }
       }
     },
@@ -17605,7 +17605,7 @@
         },
         "automaticActivityRescheduling": {
           "type": "boolean",
-          "description": "True if RecordWorkerHeartbeat supports durable activity binding reports and\nautomatic rescheduling of activities when their worker's heartbeat lease expires."
+          "description": "True if RecordWorkerHeartbeat supports activity binding reports and\nautomatic rescheduling of activities when their worker's heartbeat lease expires."
         }
       },
       "description": "Namespace capability details. Should contain what features are enabled in a namespace."
@@ -19155,7 +19155,12 @@
       "properties": {
         "status": {
           "$ref": "#/definitions/v1WorkerHeartbeatStatus",
-          "description": "ACCEPTED guarantees durable application of all binding changes through the originating\nrequest's target_version across the worker group. The SDK may discard retained changes\nthrough that version; changes after it remain pending. Receipt alone is not acceptance.\nWithout acceptance, retain changes, including removals, for the next cumulative report.\nOn an unspecified or unknown status, stop binding updates and report an unsupported\nresponse; metadata-only heartbeats may continue."
+          "description": "ACCEPTED means the server durably applied the group's binding changes through the request's\nactivity_binding_version. With an ack_token, the SDK may discard changes through that version\nand retain newer changes. Until then, retain changes, including removals, for the next report.\nOn an unspecified or unknown status, stop binding updates and report an unsupported\nresponse; metadata-only heartbeats may continue."
+        },
+        "ackToken": {
+          "type": "string",
+          "format": "byte",
+          "description": "On ACCEPTED, the token acknowledges the originating request's activity_binding_version.\nThe SDK uses it as the base for its next cumulative report within the same lease run."
         }
       }
     },
@@ -21350,7 +21355,7 @@
           "description": "An absent or empty delta leaves the worker's bindings unchanged."
         }
       },
-      "description": "Activity binding information reported by a worker for automatic activity rescheduling."
+      "description": "Activity binding information reported by a worker for automatic activity rescheduling.\nReporting this information requires the namespace's automatic_activity_rescheduling capability."
     },
     "v1WorkerConfig": {
       "type": "object",
@@ -21642,7 +21647,7 @@
         },
         "activityInfo": {
           "$ref": "#/definitions/v1WorkerActivityInfo",
-          "description": "Cumulative activity binding changes for RecordWorkerHeartbeatRequest's version range.\nOnly sent through RecordWorkerHeartbeat, which acknowledges durable acceptance.\nOmitted from worker visibility responses."
+          "description": "Cumulative activity binding changes for RecordWorkerHeartbeatRequest's version range.\nOnly sent through RecordWorkerHeartbeat, which acknowledges the reported version.\nOmitted from worker visibility responses."
         }
       },
       "description": "Worker info message, contains information about the worker and its current state.\nAll information is provided by the worker itself."
@@ -21654,7 +21659,7 @@
         "WORKER_HEARTBEAT_STATUS_ACCEPTED"
       ],
       "default": "WORKER_HEARTBEAT_STATUS_UNSPECIFIED",
-      "description": "Result of durably recording a heartbeat group's activity binding report.\n\n - WORKER_HEARTBEAT_STATUS_ACCEPTED: All binding changes covered by the request's target_version are durable."
+      "description": "Acknowledgment status of a heartbeat group's activity binding report.\n\n - WORKER_HEARTBEAT_STATUS_ACCEPTED: The server accepted all binding changes through the request's activity_binding_version."
     },
     "v1WorkerHostInfo": {
       "type": "object",

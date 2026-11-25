@@ -10881,7 +10881,7 @@
         },
         "sourceContext": {
           "$ref": "#/definitions/v1Payload",
-          "description": "There are restrictions on the maxium payload size a single callback can carry, as well as the\ntotal sum of all source context payloads attached to an execution. See dynamic configuration:\n\"callback.nexusHandler.sourceContext.maxSize\", \"callback.nexusHandler.sourceContext.aggregateMaxSize\".",
+          "description": "There are restrictions on the maxium payload size a single callback can carry, as well as the\ntotal sum of all source context payloads attached to an execution. See dynamic configuration:\n\"callback.nexusHandler.sourceContext.maxSize\", \"callback.totalMaxSizePerExecution\".",
           "title": "Arbitrary user-supplied data from the source operation's callsite. (As applicable, not all operations\nsupport attaching context data.)"
         }
       },
@@ -12731,6 +12731,15 @@
         },
         "deleteActivitiesOperation": {
           "$ref": "#/definitions/v1BatchOperationDeleteActivities"
+        },
+        "cancelNexusOperationsOperation": {
+          "$ref": "#/definitions/v1BatchOperationCancelNexusOperations"
+        },
+        "terminateNexusOperationsOperation": {
+          "$ref": "#/definitions/v1BatchOperationTerminateNexusOperations"
+        },
+        "deleteNexusOperationsOperation": {
+          "$ref": "#/definitions/v1BatchOperationDeleteNexusOperations"
         }
       }
     },
@@ -13851,7 +13860,7 @@
         "lastStartedTime": {
           "type": "string",
           "format": "date-time",
-          "description": "Time the last attempt was started."
+          "description": "Time the current attempt started, or the final attempt if the activity has closed; unset while waiting for a retry."
         },
         "attempt": {
           "type": "integer",
@@ -14520,6 +14529,20 @@
       },
       "description": "BatchOperationCancelActivities sends cancel requests to a batch of activities.\nKeep the parameter in sync with temporal.api.workflowservice.v1.RequestCancelActivityExecutionRequest."
     },
+    "v1BatchOperationCancelNexusOperations": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the worker/client."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for requesting the cancellation, recorded and available via the DescribeNexusOperationExecution API."
+        }
+      },
+      "description": "BatchOperationCancelNexusOperations sends cancel requests to a batch of Nexus operations.\nKeep the parameter in sync with temporal.api.workflowservice.v1.RequestCancelNexusOperationExecutionRequest."
+    },
     "v1BatchOperationCancellation": {
       "type": "object",
       "properties": {
@@ -14533,6 +14556,10 @@
     "v1BatchOperationDeleteActivities": {
       "type": "object",
       "description": "BatchOperationDeleteActivities sends deletion requests to a batch of activities.\nKeep the parameter in sync with temporal.api.workflowservice.v1.DeleteActivityExecutionRequest."
+    },
+    "v1BatchOperationDeleteNexusOperations": {
+      "type": "object",
+      "description": "BatchOperationDeleteNexusOperations sends deletion requests to a batch of Nexus operations.\nKeep the parameter in sync with temporal.api.workflowservice.v1.DeleteNexusOperationExecutionRequest."
     },
     "v1BatchOperationDeletion": {
       "type": "object",
@@ -14683,6 +14710,20 @@
       },
       "description": "BatchOperationTerminateActivities sends terminate requests to a batch of activities.\nKeep the parameter in sync with temporal.api.workflowservice.v1.TerminateActivityExecutionRequest."
     },
+    "v1BatchOperationTerminateNexusOperations": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "description": "The identity of the worker/client."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for requesting the termination, recorded in the operation's result failure outcome."
+        }
+      },
+      "description": "BatchOperationTerminateNexusOperations sends terminate requests to a batch of Nexus operations.\nKeep the parameter in sync with temporal.api.workflowservice.v1.TerminateNexusOperationExecutionRequest."
+    },
     "v1BatchOperationTermination": {
       "type": "object",
       "properties": {
@@ -14718,7 +14759,10 @@
         "BATCH_OPERATION_TYPE_RESET_ACTIVITY",
         "BATCH_OPERATION_TYPE_TERMINATE_ACTIVITY",
         "BATCH_OPERATION_TYPE_CANCEL_ACTIVITY",
-        "BATCH_OPERATION_TYPE_DELETE_ACTIVITY"
+        "BATCH_OPERATION_TYPE_DELETE_ACTIVITY",
+        "BATCH_OPERATION_TYPE_TERMINATE_NEXUS_OPERATION",
+        "BATCH_OPERATION_TYPE_CANCEL_NEXUS_OPERATION",
+        "BATCH_OPERATION_TYPE_DELETE_NEXUS_OPERATION"
       ],
       "default": "BATCH_OPERATION_TYPE_UNSPECIFIED",
       "description": " - BATCH_OPERATION_TYPE_TERMINATE: DEPRECATED: Use BATCH_OPERATION_TYPE_TERMINATE_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_CANCEL: DEPRECATED: Use BATCH_OPERATION_TYPE_CANCEL_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_SIGNAL: DEPRECATED: Use BATCH_OPERATION_TYPE_SIGNAL_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_DELETE: DEPRECATED: Use BATCH_OPERATION_TYPE_DELETE_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_RESET: DEPRECATED: Use BATCH_OPERATION_TYPE_RESET_WORKFLOW instead.\n - BATCH_OPERATION_TYPE_UPDATE_EXECUTION_OPTIONS: DEPRECATED: Use BATCH_OPERATION_TYPE_UPDATE_WORKFLOW_EXECUTION_OPTIONS instead."
@@ -15771,7 +15815,7 @@
             "type": "object",
             "$ref": "#/definitions/v1Execution"
           },
-          "title": "Executions is the list of workflow OR standalone activity executions to apply the batch operation"
+          "title": "Executions is the list of workflow, standalone activity, or standalone Nexus operation executions to apply the batch operation"
         }
       }
     },
@@ -16374,6 +16418,10 @@
         "duration": {
           "type": "string",
           "description": "Fast-forward the current execution by this duration ahead of the current execution time; required field.\nThe duration yields a target time (current execution time + duration), surfaced as `target_time` in\nTimeSkippingFastForwardInfo. Once virtual time reaches that target, the fast-forward completes, time\nskipping is disabled, and no further time is skipped. Time skipping can be resumed either\nby updating the TimeSkippingConfig with a new FastForwardConfig, or by clearing the FastForwardConfig\nto skip through to the end of the execution.\n\nIf this duration exceeds the remaining execution timeout, time will not pass beyond the end\nof the execution, and the fast-forward won't have a chance to complete."
+        },
+        "enableFastForwardPropagation": {
+          "type": "boolean",
+          "description": "By default, a fast-forward is confined to the current execution (including its chain of runs) and is not\npropagated to other transitively related executions (e.g. child workflows, or workflows started by a schedule).\nSet this to true to make the fast-forward target time apply to those related executions as well.\nNote that different executions may complete the fast-forward at different physical times, so poll the\nspecific execution you are waiting on."
         }
       },
       "description": "Controls a time-skipping fast-forward for an execution.\nExperimental. Might change in the future."
@@ -17505,6 +17553,10 @@
         "standaloneActivityOperatorCommands": {
           "type": "boolean",
           "description": "True if the namespace supports standalone activity operator commands."
+        },
+        "standaloneNexusOperationBatchOperations": {
+          "type": "boolean",
+          "description": "True if the namespace supports batch operations on standalone Nexus operations."
         }
       },
       "description": "Namespace capability details. Should contain what features are enabled in a namespace."
@@ -18273,7 +18325,8 @@
         },
         "lastStartedTime": {
           "type": "string",
-          "format": "date-time"
+          "format": "date-time",
+          "description": "Time the current attempt started, or the final attempt if the activity has closed; unset while waiting for a retry."
         },
         "attempt": {
           "type": "integer",

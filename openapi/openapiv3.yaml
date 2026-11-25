@@ -9816,7 +9816,7 @@ components:
           format: date-time
         lastStartedTime:
           type: string
-          description: Time the last attempt was started.
+          description: Time the current attempt started, or the final attempt if the activity has closed; unset while waiting for a retry.
           format: date-time
         attempt:
           type: integer
@@ -10480,6 +10480,18 @@ components:
       description: |-
         BatchOperationCancelActivities sends cancel requests to a batch of activities.
          Keep the parameter in sync with temporal.api.workflowservice.v1.RequestCancelActivityExecutionRequest.
+    BatchOperationCancelNexusOperations:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        reason:
+          type: string
+          description: Reason for requesting the cancellation, recorded and available via the DescribeNexusOperationExecution API.
+      description: |-
+        BatchOperationCancelNexusOperations sends cancel requests to a batch of Nexus operations.
+         Keep the parameter in sync with temporal.api.workflowservice.v1.RequestCancelNexusOperationExecutionRequest.
     BatchOperationCancellation:
       type: object
       properties:
@@ -10496,6 +10508,12 @@ components:
       description: |-
         BatchOperationDeleteActivities sends deletion requests to a batch of activities.
          Keep the parameter in sync with temporal.api.workflowservice.v1.DeleteActivityExecutionRequest.
+    BatchOperationDeleteNexusOperations:
+      type: object
+      properties: {}
+      description: |-
+        BatchOperationDeleteNexusOperations sends deletion requests to a batch of Nexus operations.
+         Keep the parameter in sync with temporal.api.workflowservice.v1.DeleteNexusOperationExecutionRequest.
     BatchOperationDeletion:
       type: object
       properties:
@@ -10549,6 +10567,9 @@ components:
             - BATCH_OPERATION_TYPE_TERMINATE_ACTIVITY
             - BATCH_OPERATION_TYPE_CANCEL_ACTIVITY
             - BATCH_OPERATION_TYPE_DELETE_ACTIVITY
+            - BATCH_OPERATION_TYPE_TERMINATE_NEXUS_OPERATION
+            - BATCH_OPERATION_TYPE_CANCEL_NEXUS_OPERATION
+            - BATCH_OPERATION_TYPE_DELETE_NEXUS_OPERATION
           type: string
           description: Operation type
           format: enum
@@ -10660,6 +10681,18 @@ components:
       description: |-
         BatchOperationTerminateActivities sends terminate requests to a batch of activities.
          Keep the parameter in sync with temporal.api.workflowservice.v1.TerminateActivityExecutionRequest.
+    BatchOperationTerminateNexusOperations:
+      type: object
+      properties:
+        identity:
+          type: string
+          description: The identity of the worker/client.
+        reason:
+          type: string
+          description: Reason for requesting the termination, recorded in the operation's result failure outcome.
+      description: |-
+        BatchOperationTerminateNexusOperations sends terminate requests to a batch of Nexus operations.
+         Keep the parameter in sync with temporal.api.workflowservice.v1.TerminateNexusOperationExecutionRequest.
     BatchOperationTermination:
       type: object
       properties:
@@ -10971,7 +11004,7 @@ components:
 
              There are restrictions on the maxium payload size a single callback can carry, as well as the
              total sum of all source context payloads attached to an execution. See dynamic configuration:
-             "callback.nexusHandler.sourceContext.maxSize", "callback.nexusHandler.sourceContext.aggregateMaxSize".
+             "callback.nexusHandler.sourceContext.maxSize", "callback.totalMaxSizePerExecution".
       description: |-
         NexusHandler callbacks are requests to invoke a specific shape of Nexus operation on a Temporal worker.
          The specified Nexus operation must have the following:
@@ -11908,6 +11941,9 @@ components:
             - BATCH_OPERATION_TYPE_TERMINATE_ACTIVITY
             - BATCH_OPERATION_TYPE_CANCEL_ACTIVITY
             - BATCH_OPERATION_TYPE_DELETE_ACTIVITY
+            - BATCH_OPERATION_TYPE_TERMINATE_NEXUS_OPERATION
+            - BATCH_OPERATION_TYPE_CANCEL_NEXUS_OPERATION
+            - BATCH_OPERATION_TYPE_DELETE_NEXUS_OPERATION
           type: string
           description: Batch operation type
           format: enum
@@ -11953,7 +11989,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Execution'
-          description: Executions is the list of workflow OR standalone activity executions to apply the batch operation
+          description: Executions is the list of workflow, standalone activity, or standalone Nexus operation executions to apply the batch operation
     DescribeDeploymentResponse:
       type: object
       properties:
@@ -12630,6 +12666,14 @@ components:
 
              If this duration exceeds the remaining execution timeout, time will not pass beyond the end
              of the execution, and the fast-forward won't have a chance to complete.
+        enableFastForwardPropagation:
+          type: boolean
+          description: |-
+            By default, a fast-forward is confined to the current execution (including its chain of runs) and is not
+             propagated to other transitively related executions (e.g. child workflows, or workflows started by a schedule).
+             Set this to true to make the fast-forward target time apply to those related executions as well.
+             Note that different executions may complete the fast-forward at different physical times, so poll the
+             specific execution you are waiting on.
       description: |-
         Controls a time-skipping fast-forward for an execution.
          Experimental. Might change in the future.
@@ -13705,6 +13749,9 @@ components:
         standaloneActivityOperatorCommands:
           type: boolean
           description: True if the namespace supports standalone activity operator commands.
+        standaloneNexusOperationBatchOperations:
+          type: boolean
+          description: True if the namespace supports batch operations on standalone Nexus operations.
       description: Namespace capability details. Should contain what features are enabled in a namespace.
     NamespaceInfo_Limits:
       type: object
@@ -14524,6 +14571,7 @@ components:
           format: date-time
         lastStartedTime:
           type: string
+          description: Time the current attempt started, or the final attempt if the activity has closed; unset while waiting for a retry.
           format: date-time
         attempt:
           type: integer
@@ -17503,6 +17551,12 @@ components:
           $ref: '#/components/schemas/BatchOperationTerminateActivities'
         deleteActivitiesOperation:
           $ref: '#/components/schemas/BatchOperationDeleteActivities'
+        cancelNexusOperationsOperation:
+          $ref: '#/components/schemas/BatchOperationCancelNexusOperations'
+        terminateNexusOperationsOperation:
+          $ref: '#/components/schemas/BatchOperationTerminateNexusOperations'
+        deleteNexusOperationsOperation:
+          $ref: '#/components/schemas/BatchOperationDeleteNexusOperations'
     StartBatchOperationResponse:
       type: object
       properties: {}

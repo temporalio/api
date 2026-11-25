@@ -230,7 +230,7 @@ message Callback {
         //
         // There are restrictions on the maxium payload size a single callback can carry, as well as the
         // total sum of all source context payloads attached to an execution. See dynamic configuration:
-        // "callback.nexusHandler.sourceContext.maxSize", "callback.nexusHandler.sourceContext.aggregateMaxSize".
+        // "callback.nexusHandler.sourceContext.maxSize", "callback.totalMaxSizePerExecution".
         temporal.api.common.v1.Payload source_context = 4;
     }
 
@@ -526,6 +526,13 @@ message FastForwardConfig {
     // If this duration exceeds the remaining execution timeout, time will not pass beyond the end
     // of the execution, and the fast-forward won't have a chance to complete.
     google.protobuf.Duration duration = 2;
+
+    // By default, a fast-forward is confined to the current execution (including its chain of runs) and is not
+    // propagated to other transitively related executions (e.g. child workflows, or workflows started by a schedule).
+    // Set this to true to make the fast-forward target time apply to those related executions as well.
+    // Note that different executions may complete the fast-forward at different physical times, so poll the
+    // specific execution you are waiting on.
+    bool enable_fast_forward_propagation = 3;
 }
 
 // The time-skipping state that needs to be propagated from one execution to another, or through a chain of runs

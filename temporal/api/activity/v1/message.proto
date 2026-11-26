@@ -272,3 +272,60 @@ message CallbackInfo {
     // Common callback info.
     temporal.api.callback.v1.CallbackInfo info = 2;
 }
+
+// Options for starting a standalone activity from a Schedule.
+// The scheduler supplies namespace, request identity, completion callbacks, start timing,
+// and ID reuse/conflict policies. Previous invocation results/failures are not inputs.
+message NewActivityExecutionInfo {
+    // Identifier for this activity. Required. This identifier should be meaningful in the user's
+    // own system. For schedules, the scheduler generates a different Activity ID for each
+    // invocation from this value. Retries of one execution retain its Activity ID.
+    string activity_id = 1;
+
+    // The type of the activity, a string that corresponds to a registered activity on a worker.
+    temporal.api.common.v1.ActivityType activity_type = 2;
+
+    // Task queue to schedule this activity on.
+    temporal.api.taskqueue.v1.TaskQueue task_queue = 3;
+
+    // Indicates how long the caller is willing to wait for an activity completion. Limits how long
+    // retries will be attempted. Either this or `start_to_close_timeout` must be specified.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_close_timeout = 4;
+
+    // Limits time an activity task can stay in a task queue before a worker picks it up. This
+    // timeout is always non retryable, as all a retry would achieve is to put it back into the same
+    // queue. Defaults to `schedule_to_close_timeout` if not specified.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration schedule_to_start_timeout = 5;
+
+    // Maximum time an activity is allowed to execute after being picked up by a worker. This
+    // timeout is always retryable. Either this or `schedule_to_close_timeout` must be
+    // specified.
+    // (-- api-linter: core::0140::prepositions=disabled
+    //     aip.dev/not-precedent: "to" is used to indicate interval. --)
+    google.protobuf.Duration start_to_close_timeout = 6;
+
+    // Maximum permitted time between successful worker heartbeats.
+    google.protobuf.Duration heartbeat_timeout = 7;
+
+    // The retry policy for the activity. Will never exceed `schedule_to_close_timeout`.
+    temporal.api.common.v1.RetryPolicy retry_policy = 8;
+
+    // Serialized arguments to the activity. These are passed as arguments to the activity function.
+    temporal.api.common.v1.Payloads input = 9;
+
+    // Search attributes for indexing.
+    temporal.api.common.v1.SearchAttributes search_attributes = 10;
+
+    // Header for context propagation and tracing purposes.
+    temporal.api.common.v1.Header header = 11;
+
+    // Metadata for use by user interfaces to display the fixed as-of-start summary and details of the activity.
+    temporal.api.sdk.v1.UserMetadata user_metadata = 12;
+
+    // Priority metadata.
+    temporal.api.common.v1.Priority priority = 13;
+}

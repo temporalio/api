@@ -35,10 +35,7 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
-# Building nexgen needs Rust 1.95 or later.
-NEX_GEN_VERSION := 0.2.14
-NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_VERSION)
-NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
+NEX_GEN ?= nexgen
 
 $(PROTO_OUT):
 	mkdir $(PROTO_OUT)
@@ -194,8 +191,7 @@ system-nexus-wit-install:
 
 nex-gen-install:
 	printf $(COLOR) "Install nexgen if missing..."
-	command -v $(NEX_GEN) >/dev/null || cargo install nexgen --version $(NEX_GEN_VERSION) \
-		--locked --features advanced --root $(NEX_GEN_ROOT)
+	command -v $(NEX_GEN) >/dev/null || cargo install nexgen --version ^0.2 --features advanced
 
 ##### Clean #####
 clean:

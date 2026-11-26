@@ -35,11 +35,9 @@ PROTO_PATHS = paths=source_relative:$(PROTO_OUT)
 OAPI_OUT := openapi
 OAPI3_PATH := .components.schemas.Payload
 
-# The Stream WIT needs nexgen features that are on its main branch but in no release yet. Pin a
-# commit of main until a release has them. Building it needs Rust 1.95 or later.
-NEX_GEN_REPO := https://github.com/temporalio/nexgen
-NEX_GEN_REV := ee8c81a3eb24a72d9b5c716030964842448e00a8
-NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_REV)
+# Building nexgen needs Rust 1.95 or later.
+NEX_GEN_VERSION := 0.2.14
+NEX_GEN_ROOT := $(CURDIR)/$(STAMPDIR)/nexgen-$(NEX_GEN_VERSION)
 NEX_GEN ?= $(NEX_GEN_ROOT)/bin/nexgen
 
 $(PROTO_OUT):
@@ -196,10 +194,8 @@ system-nexus-wit-install:
 
 nex-gen-install:
 	printf $(COLOR) "Install nexgen if missing..."
-# The git CLI follows a local URL rewrite to SSH, which cargo's own git client can't authenticate.
-	command -v $(NEX_GEN) >/dev/null || CARGO_NET_GIT_FETCH_WITH_CLI=true cargo install \
-		--git $(NEX_GEN_REPO) --rev $(NEX_GEN_REV) --locked --features advanced \
-		--root $(NEX_GEN_ROOT) nexgen
+	command -v $(NEX_GEN) >/dev/null || cargo install nexgen --version $(NEX_GEN_VERSION) \
+		--locked --features advanced --root $(NEX_GEN_ROOT)
 
 ##### Clean #####
 clean:

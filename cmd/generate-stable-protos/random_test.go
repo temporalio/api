@@ -6,11 +6,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/temporalio/api/cmd/generate-stable-protos/internal/oracle"
 	"pgregory.net/rapid"
 )
 
 // TestRandomSchemas generates random api_next trees with all draft placements and
-// requires the generator to accept each one and a
+// requires the generator to accept each one, its output to pass the oracle, and a
 // second pass to reproduce it. Comments only sit where the generator accepts them:
 // directly above a declaration or on the same line as its opening or closing token.
 func TestRandomSchemas(t *testing.T) {
@@ -21,6 +22,13 @@ func TestRandomSchemas(t *testing.T) {
 		out := t.TempDir()
 		if err := testConfig.stableProtosGenerator(t.Context(), root, out); err != nil {
 			rt.Fatalf("generator rejected the schema: %v", err)
+		}
+		result, err := oracle.Check(root, out)
+		if err != nil {
+			rt.Fatal(err)
+		}
+		if problems := result.AllProblems(); len(problems) > 0 {
+			rt.Fatalf("oracle problems:\n%s", strings.Join(problems, "\n"))
 		}
 		checkIdempotent(t.Context(), rt, root, out, t.TempDir())
 	})

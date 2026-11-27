@@ -154,8 +154,7 @@ nexus-rpc-yaml-install:
 	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Compile system Nexus WIT files #####
-# The Stream WIT maps the messages of sdk/v1/stream.proto and the responses of the Store messages
-# in streamservice/v1, and no Store request.
+# SDK requests contain Store routing. Store requests must not enter the generated SDK API.
 system-nexus-wit: system-nexus-wit-install nex-gen-install
 	printf $(COLOR) "Generate system Nexus WIT..."
 	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \

@@ -4,6 +4,7 @@ go 1.26.7
 
 require (
 	github.com/bufbuild/protocompile v0.14.2-0.20260825174057-3dfa26e2df9b
+	github.com/google/go-cmp v0.7.0
 	google.golang.org/protobuf v1.36.12
 	pgregory.net/rapid v1.3.0
 )

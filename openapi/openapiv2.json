@@ -14180,6 +14180,17 @@
         }
       }
     },
+    "v1ActivitySessionOptions": {
+      "type": "object",
+      "properties": {
+        "workflowSession": {
+          "type": "object",
+          "properties": {},
+          "description": "Run in the workflow's current session (on its sticky queue).\nCurrently requires the activity's task queue to be the workflow's,\nand the workflow's worker to service sessions."
+        }
+      },
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nResolved activity placement. Unset = normal task-queue routing."
+    },
     "v1ActivityTaskCancelRequestedEventAttributes": {
       "type": "object",
       "properties": {
@@ -14350,6 +14361,10 @@
         "priority": {
           "$ref": "#/definitions/v1Priority",
           "description": "Priority metadata. If this message is not present, or any fields are not\npresent, they inherit the values from the workflow."
+        },
+        "sessionOptions": {
+          "$ref": "#/definitions/v1ActivitySessionOptions",
+          "description": "Preserves the scheduling command's session routing options so activity state\ncan be reconstructed from history."
         }
       }
     },
@@ -17403,6 +17418,10 @@
       },
       "title": "Metadata relevant for metering purposes"
     },
+    "v1MultiSessionOptions": {
+      "type": "object",
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nService any number of sessions concurrently. Future admission knobs (e.g.\nsession slots) belong here."
+    },
     "v1NamespaceConfig": {
       "type": "object",
       "properties": {
@@ -19973,6 +19992,20 @@
         }
       }
     },
+    "v1SessionInfo": {
+      "type": "object",
+      "properties": {
+        "exclusiveWorker": {
+          "type": "boolean",
+          "description": "True when the workflow is bound to a single-session worker. Such a\nbinding never moves to another worker."
+        },
+        "workerQueue": {
+          "type": "string",
+          "description": "The sticky queue of the worker the workflow is bound to: the stable\nidentity of a single-session worker, or the worker instance key of a\nmulti-session worker. History has no other record of it, so the server\nneeds it to restore the binding when it rebuilds the workflow from\nhistory. Always set."
+        }
+      },
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nHow a workflow is bound to a worker."
+    },
     "v1SetCurrentDeploymentResponse": {
       "type": "object",
       "properties": {
@@ -20161,6 +20194,16 @@
           "description": "Link to be associated with the WorkflowExecutionSignaled event.\nAdded on the response to propagate the backlink.\nAvailable from Temporal server 1.31 and up."
         }
       }
+    },
+    "v1SingleSessionOptions": {
+      "type": "object",
+      "properties": {
+        "stableIdentity": {
+          "type": "string",
+          "description": "Identity the binding is stored under. Required; must be non-empty.\nReuse it across restarts of the same session, not across concurrently\nrunning workers. If multiple workers poll with the same stable_identity\nconcurrently, the server treats them as pollers of a single worker and\nprocess affinity is lost.\n\nNote: this is the name of the worker's sticky queue, specified by the user.\nNote: we are currently unsure how this will evolve. May be deprecated as\nthe session model develops."
+        }
+      },
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nService exactly one session for the worker's lifetime, including across\nprocess restarts with the same stable_identity. The first workflow this\nworker picks up is bound to it, and from then on the worker only receives\nthat workflow's tasks, even after the workflow completes."
     },
     "v1StartActivityExecutionResponse": {
       "type": "object",
@@ -21574,6 +21617,10 @@
         "environment": {
           "$ref": "#/definitions/v1EnvironmentInfo",
           "description": "Information about the environment this SDK is running in."
+        },
+        "sessionOptions": {
+          "$ref": "#/definitions/v1WorkerSessionOptions",
+          "description": "The worker's session options, as sent on its polls. Lets the server recognize a multi-session worker that has\nstopped, so it can move the workflows bound to it to other workers. Unset for a worker without sessions.\nNot used in the case of single-session workers."
         }
       },
       "description": "Worker info message, contains information about the worker and its current state.\nAll information is provided by the worker itself."
@@ -21711,6 +21758,20 @@
         }
       },
       "description": "This is used to send commands to a specific worker or a group of workers.\nRight now, it is used to send commands to a specific worker instance.\nWill be extended to be able to send command to multiple workers."
+    },
+    "v1WorkerSessionOptions": {
+      "type": "object",
+      "properties": {
+        "singleSession": {
+          "$ref": "#/definitions/v1SingleSessionOptions",
+          "description": "If specified, the worker only polls for work belonging to its session."
+        },
+        "multiSession": {
+          "$ref": "#/definitions/v1MultiSessionOptions",
+          "description": "If specified, the worker can service multiple sessions at once."
+        }
+      },
+      "description": "EXPERIMENTAL. Subject to redesign or removal.\nSent on workflow and activity polls. Presence means this worker can service\nsessions. Currently, the only supported Session type is Workflow Session\n(aka Workflow-as-Session). A Workflow that is bound to a worker servicing sessions\ncan receive both workflow tasks and activity tasks of an execution.\n\nThe server routes a session's work to the worker's sticky queue, so the\nsticky queue name depends on the admission mode:\n  * single_session: the worker polls only its sticky queue, named after\n    SingleSessionOptions.stable_identity.\n  * multi_session: the worker polls the normal queue and its sticky queue,\n    named after the poll's worker_instance_key.\nThe server rejects sticky polls whose name does not follow this rule."
     },
     "v1WorkerSlotsInfo": {
       "type": "object",
@@ -22431,6 +22492,10 @@
         "propagatedNexusSerializationContext": {
           "$ref": "#/definitions/v1PropagatedSerializationContext",
           "description": "Serialization context propagated from the Nexus caller that started this workflow."
+        },
+        "inheritedSessionInfo": {
+          "$ref": "#/definitions/v1SessionInfo",
+          "description": "Session info this run inherited from the previous run (continue-as-new or retry), so the server\ncan rebuild it from history. Nil when the previous run was not bound or this run is on a different\ntask queue. Child workflows never inherit it.\nUsed internally by the server; SDKs should not read or interpret this field.\nEXPERIMENTAL. Subject to redesign or removal."
         }
       },
       "title": "Always the first event in workflow history"
@@ -22908,10 +22973,11 @@
         "WORKFLOW_TASK_FAILED_CAUSE_PAYLOADS_TOO_LARGE",
         "WORKFLOW_TASK_FAILED_CAUSE_EXTERNAL_STORAGE_FAILURE",
         "WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_PAUSE_REQUESTED_BEFORE_TASK_STARTED",
-        "WORKFLOW_TASK_FAILED_CAUSE_REQUEST_TOO_LARGE"
+        "WORKFLOW_TASK_FAILED_CAUSE_REQUEST_TOO_LARGE",
+        "WORKFLOW_TASK_FAILED_CAUSE_SESSION_WORKER_REQUIRED"
       ],
       "default": "WORKFLOW_TASK_FAILED_CAUSE_UNSPECIFIED",
-      "description": "Workflow tasks can fail for various reasons. Note that some of these reasons can only originate\nfrom the server, and some of them can only originate from the SDK/worker.\n\n - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_COMMAND: Between starting and completing the workflow task (with a workflow completion command), some\nnew command (like a signal) was processed into workflow history. The outstanding task will be\nfailed with this reason, and a worker must pick up a new task.\n - WORKFLOW_TASK_FAILED_CAUSE_RESET_STICKY_TASK_QUEUE: The worker wishes to fail the task and have the next one be generated on a normal, not sticky\nqueue. Generally workers should prefer to use the explicit `ResetStickyTaskQueue` RPC call.\n - WORKFLOW_TASK_FAILED_CAUSE_NON_DETERMINISTIC_ERROR: The worker encountered a mismatch while replaying history between what was expected, and\nwhat the workflow code actually did.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_CHILD_WORKFLOWS_LIMIT_EXCEEDED: We send the below error codes to users when their requests would violate a size constraint\nof their workflow. We do this to ensure that the state of their workflow does not become too\nlarge because that can cause severe performance degradation. You can modify the thresholds for\neach of these errors within your dynamic config.\n\nSpawning a new child workflow would cause this workflow to exceed its limit of pending child\nworkflows.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_ACTIVITIES_LIMIT_EXCEEDED: Starting a new activity would cause this workflow to exceed its limit of pending activities\nthat we track.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_SIGNALS_LIMIT_EXCEEDED: A workflow has a buffer of signals that have not yet reached their destination. We return this\nerror when sending a new signal would exceed the capacity of this buffer.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_REQUEST_CANCEL_LIMIT_EXCEEDED: Similarly, we have a buffer of pending requests to cancel other workflows. We return this error\nwhen our capacity for pending cancel requests is already reached.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_UPDATE_WORKFLOW_EXECUTION_MESSAGE: Workflow execution update message (update.Acceptance, update.Rejection, or update.Response)\nhas wrong format, or missing required fields.\n - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_UPDATE: Similar to WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_COMMAND, but for updates.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_SCHEDULE_NEXUS_OPERATION_ATTRIBUTES: A workflow task completed with an invalid ScheduleNexusOperation command.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_NEXUS_OPERATIONS_LIMIT_EXCEEDED: A workflow task completed requesting to schedule a Nexus Operation exceeding the server configured limit.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_NEXUS_OPERATION_ATTRIBUTES: A workflow task completed with an invalid RequestCancelNexusOperation command.\n - WORKFLOW_TASK_FAILED_CAUSE_FEATURE_DISABLED: A workflow task completed requesting a feature that's disabled on the server (either system wide or - typically -\nfor the workflow's namespace).\nCheck the workflow task failure message for more information.\n - WORKFLOW_TASK_FAILED_CAUSE_GRPC_MESSAGE_TOO_LARGE: A workflow task failed because a grpc message was too large.\n - WORKFLOW_TASK_FAILED_CAUSE_PAYLOADS_TOO_LARGE: A workflow task failed because payloads were too large.\n - WORKFLOW_TASK_FAILED_CAUSE_EXTERNAL_STORAGE_FAILURE: A workflow task failed because an external storage operation failed.\nCheck the workflow task failure message for more information.\n - WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_PAUSE_REQUESTED_BEFORE_TASK_STARTED: A workflow task is failed because the workflow is paused before the task is started.\n - WORKFLOW_TASK_FAILED_CAUSE_REQUEST_TOO_LARGE: A workflow task failed because the request exceeded a size limit."
+      "description": "Workflow tasks can fail for various reasons. Note that some of these reasons can only originate\nfrom the server, and some of them can only originate from the SDK/worker.\n\n - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_COMMAND: Between starting and completing the workflow task (with a workflow completion command), some\nnew command (like a signal) was processed into workflow history. The outstanding task will be\nfailed with this reason, and a worker must pick up a new task.\n - WORKFLOW_TASK_FAILED_CAUSE_RESET_STICKY_TASK_QUEUE: The worker wishes to fail the task and have the next one be generated on a normal, not sticky\nqueue. Generally workers should prefer to use the explicit `ResetStickyTaskQueue` RPC call.\n - WORKFLOW_TASK_FAILED_CAUSE_NON_DETERMINISTIC_ERROR: The worker encountered a mismatch while replaying history between what was expected, and\nwhat the workflow code actually did.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_CHILD_WORKFLOWS_LIMIT_EXCEEDED: We send the below error codes to users when their requests would violate a size constraint\nof their workflow. We do this to ensure that the state of their workflow does not become too\nlarge because that can cause severe performance degradation. You can modify the thresholds for\neach of these errors within your dynamic config.\n\nSpawning a new child workflow would cause this workflow to exceed its limit of pending child\nworkflows.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_ACTIVITIES_LIMIT_EXCEEDED: Starting a new activity would cause this workflow to exceed its limit of pending activities\nthat we track.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_SIGNALS_LIMIT_EXCEEDED: A workflow has a buffer of signals that have not yet reached their destination. We return this\nerror when sending a new signal would exceed the capacity of this buffer.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_REQUEST_CANCEL_LIMIT_EXCEEDED: Similarly, we have a buffer of pending requests to cancel other workflows. We return this error\nwhen our capacity for pending cancel requests is already reached.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_UPDATE_WORKFLOW_EXECUTION_MESSAGE: Workflow execution update message (update.Acceptance, update.Rejection, or update.Response)\nhas wrong format, or missing required fields.\n - WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_UPDATE: Similar to WORKFLOW_TASK_FAILED_CAUSE_UNHANDLED_COMMAND, but for updates.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_SCHEDULE_NEXUS_OPERATION_ATTRIBUTES: A workflow task completed with an invalid ScheduleNexusOperation command.\n - WORKFLOW_TASK_FAILED_CAUSE_PENDING_NEXUS_OPERATIONS_LIMIT_EXCEEDED: A workflow task completed requesting to schedule a Nexus Operation exceeding the server configured limit.\n - WORKFLOW_TASK_FAILED_CAUSE_BAD_REQUEST_CANCEL_NEXUS_OPERATION_ATTRIBUTES: A workflow task completed with an invalid RequestCancelNexusOperation command.\n - WORKFLOW_TASK_FAILED_CAUSE_FEATURE_DISABLED: A workflow task completed requesting a feature that's disabled on the server (either system wide or - typically -\nfor the workflow's namespace).\nCheck the workflow task failure message for more information.\n - WORKFLOW_TASK_FAILED_CAUSE_GRPC_MESSAGE_TOO_LARGE: A workflow task failed because a grpc message was too large.\n - WORKFLOW_TASK_FAILED_CAUSE_PAYLOADS_TOO_LARGE: A workflow task failed because payloads were too large.\n - WORKFLOW_TASK_FAILED_CAUSE_EXTERNAL_STORAGE_FAILURE: A workflow task failed because an external storage operation failed.\nCheck the workflow task failure message for more information.\n - WORKFLOW_TASK_FAILED_CAUSE_WORKFLOW_PAUSE_REQUESTED_BEFORE_TASK_STARTED: A workflow task is failed because the workflow is paused before the task is started.\n - WORKFLOW_TASK_FAILED_CAUSE_REQUEST_TOO_LARGE: A workflow task failed because the request exceeded a size limit.\n - WORKFLOW_TASK_FAILED_CAUSE_SESSION_WORKER_REQUIRED: A workflow task was completed by a worker that does not service sessions while the workflow has session\nactivities waiting for a session worker. Only a worker servicing sessions can complete the workflow's tasks\nuntil one binds the workflow. The task is retried; check the workflow task failure message for more information."
     },
     "v1WorkflowTaskFailedEventAttributes": {
       "type": "object",
@@ -23022,6 +23088,10 @@
           "type": "string",
           "format": "int64",
           "title": "Used by server internally to properly reapply build ID redirects to an execution\nwhen rebuilding it from events.\nDeprecated. This field should be cleaned up when versioning-2 API is removed. [cleanup-experimental-wv]"
+        },
+        "sessionInfo": {
+          "$ref": "#/definitions/v1SessionInfo",
+          "description": "Session info of this workflow as of this task start, so the server can rebuild it from history (for\nexample on reset). Nil when the workflow is not bound to a worker.\nUsed internally by the server; SDKs should not read or interpret this field.\nEXPERIMENTAL. Subject to redesign or removal."
         }
       }
     },

@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package temporal.api.session.v1;
+
+option go_package = "go.temporal.io/api/session/v1;session";
+option java_package = "io.temporal.api.session.v1";
+option java_multiple_files = true;
+option java_outer_classname = "MessageProto";
+option ruby_package = "Temporalio::Api::Session::V1";
+option csharp_namespace = "Temporalio.Api.Session.V1";
+
+import "google/protobuf/empty.proto";
+
+// EXPERIMENTAL. Subject to redesign or removal.
+// Sent on workflow and activity polls. Presence means this worker can service
+// sessions. Currently, the only supported Session type is Workflow Session
+// (aka Workflow-as-Session). A Workflow that is bound to a worker servicing sessions
+// can receive both workflow tasks and activity tasks of an execution.
+//
+// The server routes a session's work to the worker's sticky queue, so the
+// sticky queue name depends on the admission mode:
+//   * single_session: the worker polls only its sticky queue, named after
+//     SingleSessionOptions.stable_identity.
+//   * multi_session: the worker polls the normal queue and its sticky queue,
+//     named after the poll's worker_instance_key.
+// The server rejects sticky polls whose name does not follow this rule.
+message WorkerSessionOptions {
+    // Admission control. Required: exactly one mode must be set, and the
+    // server rejects session options with neither.
+    oneof admission {
+        // If specified, the worker only polls for work belonging to its session.
+        SingleSessionOptions single_session = 1;
+        // If specified, the worker can service multiple sessions at once.
+        MultiSessionOptions multi_session = 2;
+    }
+}
+
+// EXPERIMENTAL. Subject to redesign or removal.
+// Service exactly one session for the worker's lifetime, including across
+// process restarts with the same stable_identity. The first workflow this
+// worker picks up is bound to it, and from then on the worker only receives
+// that workflow's tasks, even after the workflow completes.
+message SingleSessionOptions {
+    // Identity the binding is stored under. Required; must be non-empty.
+    // Reuse it across restarts of the same session, not across concurrently
+    // running workers. If multiple workers poll with the same stable_identity
+    // concurrently, the server treats them as pollers of a single worker and
+    // process affinity is lost.
+    //
+    // Note: this is the name of the worker's sticky queue, specified by the user.
+    // Note: we are currently unsure how this will evolve. May be deprecated as
+    // the session model develops.
+    string stable_identity = 1;
+}
+
+// EXPERIMENTAL. Subject to redesign or removal.
+// Service any number of sessions concurrently. Future admission knobs (e.g.
+// session slots) belong here.
+message MultiSessionOptions {
+}
+
+// EXPERIMENTAL. Subject to redesign or removal.
+// Resolved activity placement. Unset = normal task-queue routing.
+message ActivitySessionOptions {
+    oneof placement {
+        // Run in the workflow's current session (on its sticky queue).
+        // Currently requires the activity's task queue to be the workflow's,
+        // and the workflow's worker to service sessions.
+        google.protobuf.Empty workflow_session = 1;
+
+        // Future: references to other types of sessions.
+    }
+}
+
+// EXPERIMENTAL. Subject to redesign or removal.
+// How a workflow is bound to a worker.
+message SessionInfo {
+    // True when the workflow is bound to a single-session worker. Such a
+    // binding never moves to another worker.
+    bool exclusive_worker = 1;
+    // The sticky queue of the worker the workflow is bound to: the stable
+    // identity of a single-session worker, or the worker instance key of a
+    // multi-session worker. History has no other record of it, so the server
+    // needs it to restore the binding when it rebuilds the workflow from
+    // history. Always set.
+    string worker_queue = 2;
+}

@@ -38,6 +38,7 @@ import "temporal/api/replication/v1/message.proto";
 import "temporal/api/rules/v1/message.proto";
 import "temporal/api/sdk/v1/worker_config.proto";
 import "temporal/api/schedule/v1/message.proto";
+import "temporal/api/session/v1/message.proto";
 import "temporal/api/taskqueue/v1/message.proto";
 import "temporal/api/update/v1/message.proto";
 import "temporal/api/version/v1/message.proto";
@@ -317,6 +318,7 @@ message PollWorkflowTaskQueueRequest {
     string identity = 3;
     // A unique key for this worker instance, used for tracking worker lifecycle.
     // This is guaranteed to be unique, whereas identity is not guaranteed to be unique.
+    // A multi-session worker's sticky queue is named after it (see WorkerSessionOptions).
     string worker_instance_key = 8;
 
     // A dedicated per-worker Nexus task queue on which the server sends control
@@ -347,6 +349,12 @@ message PollWorkflowTaskQueueRequest {
     // Removed in 1.55.0; was temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat
     reserved 7;
     reserved "worker_heartbeat";
+
+    // EXPERIMENTAL. Subject to redesign or removal. The worker's session options.
+    // A single-session worker sends them on sticky polls only; a multi-session
+    // worker sends them on normal and sticky polls. Unset for a worker without
+    // sessions.
+    temporal.api.session.v1.WorkerSessionOptions session_options = 13;
 }
 
 message PollWorkflowTaskQueueResponse {
@@ -560,6 +568,7 @@ message PollActivityTaskQueueRequest {
     string identity = 3;
     // A unique key for this worker instance, used for tracking worker lifecycle.
     // This is guaranteed to be unique, whereas identity is not guaranteed to be unique.
+    // A multi-session worker's sticky queue is named after it (see WorkerSessionOptions).
     string worker_instance_key = 8;
 
     // A dedicated per-worker Nexus task queue on which the server sends control
@@ -580,6 +589,12 @@ message PollActivityTaskQueueRequest {
     // Removed in 1.55.0; was temporal.api.worker.v1.WorkerHeartbeat worker_heartbeat
     reserved 7;
     reserved "worker_heartbeat";
+
+    // EXPERIMENTAL. Subject to redesign or removal. The worker's session options.
+    // A single-session worker sends them on sticky polls only; a multi-session
+    // worker sends them on normal and sticky polls. Unset for a worker without
+    // sessions.
+    temporal.api.session.v1.WorkerSessionOptions session_options = 13;
 }
 
 message PollActivityTaskQueueResponse {

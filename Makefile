@@ -102,7 +102,7 @@ buf-install:
 
 onelint-install:
 	printf $(COLOR) "Install/update onelint and actionlint..."
-	go install github.com/temporalio/onelint@v0.12.0
+	go install github.com/temporalio/onelint@v0.14.0
 	go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
 
 ##### Sync external proto dependencies #####

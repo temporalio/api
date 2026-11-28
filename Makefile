@@ -154,6 +154,7 @@ nexus-rpc-yaml-install:
 	@cd cmd/protoc-gen-nexus-rpc-yaml && go install .
 
 ##### Compile system Nexus WIT files #####
+# SDK requests contain Store routing. Store requests must not enter the generated SDK API.
 system-nexus-wit: system-nexus-wit-install nex-gen-install
 	printf $(COLOR) "Generate system Nexus WIT..."
 	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
@@ -164,13 +165,24 @@ system-nexus-wit: system-nexus-wit-install nex-gen-install
 		--system-nexus-wit_opt=linked_input=nexus/deps \
 		--system-nexus-wit_out=. \
 		temporal/api/workflowservice/v1/service.proto \
-		temporal/api/notificationservice/v1/request_response.proto && \
+		temporal/api/notificationservice/v1/request_response.proto \
+		temporal/api/streamservice/v1/request_response.proto \
+		temporal/api/sdk/v1/stream.proto && \
 	$(NEX_GEN) add-message \
 		--descriptors "$$tmp/system.bin" \
 		--file temporal/api/notificationservice/v1/request_response.proto \
 		--input nexus/notification-service.wit \
 		--input nexus/deps \
-		--output nexus/notification-service.wit
+		--output nexus/notification-service.wit && \
+	$(NEX_GEN) add-message \
+		--descriptors "$$tmp/system.bin" \
+		--file temporal/api/sdk/v1/stream.proto \
+		--message temporal.api.streamservice.v1.AppendRecordsResponse \
+		--message temporal.api.streamservice.v1.ReadRecordsResponse \
+		--message temporal.api.streamservice.v1.DescribeStreamResponse \
+		--input nexus/stream-service.wit \
+		--input nexus/deps \
+		--output nexus/stream-service.wit
 
 system-nexus-wit-install:
 	printf $(COLOR) "Build and install protoc-gen-system-nexus-wit..."
